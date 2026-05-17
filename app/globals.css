@@ -47,10 +47,16 @@
       transparent 1px
     );
     background-size: 22px 22px;
-    background-attachment: fixed;
+    /* fixed attachment breaks on iOS Safari — only apply on pointer devices */
+    background-attachment: scroll;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Restore fixed attachment on non-touch devices (avoids iOS Safari bug) */
+  @media (hover: hover) {
+    body { background-attachment: fixed; }
   }
 
   ::selection {

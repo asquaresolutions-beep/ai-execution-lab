@@ -43,7 +43,7 @@ export function Sidebar() {
           asquaresolution.com ↗
         </a>
         <p className="mt-1 text-[10px] text-surface-700">
-          Local development · Not deployed
+          A Square Solutions · AI Ops
         </p>
       </div>
     </aside>
