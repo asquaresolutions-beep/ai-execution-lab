@@ -5,6 +5,10 @@ import { TRACKS, getTrack, TRACK_ACCENTS, getTrackStats } from '@/lib/tracks'
 import { TrackRoadmap } from '@/components/tracks/track-roadmap'
 import { cn } from '@/lib/utils'
 
+const SITE_URL  = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
+const SITE_NAME = 'AI Execution Lab'
+const TWITTER   = '@asquaresolution'
+
 interface Props { params: Promise<{ track: string }> }
 
 export function generateStaticParams() {
@@ -15,10 +19,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { track: trackId } = await params
   const track = getTrack(trackId)
   if (!track) return {}
+  const url = `${SITE_URL}/tracks/${trackId}`
   return {
-    title: track.title,
+    title:       track.title,
     description: track.description,
-    openGraph: { title: track.title, description: track.tagline },
+    openGraph: {
+      type:        'website',
+      title:       `${track.title} | ${SITE_NAME}`,
+      description: track.tagline,
+      url,
+      siteName:    SITE_NAME,
+    },
+    twitter: {
+      card:        'summary',
+      title:       `${track.title} | ${SITE_NAME}`,
+      description: track.tagline,
+      creator:     TWITTER,
+    },
+    alternates: { canonical: url },
   }
 }
 

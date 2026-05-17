@@ -17,6 +17,10 @@ import { ContentRenderer } from '@/components/content-renderer'
 import { ReadingProgress } from '@/components/layout/reading-progress'
 import { cn } from '@/lib/utils'
 
+const SITE_URL  = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
+const SITE_NAME = 'AI Execution Lab'
+const TWITTER   = '@asquaresolution'
+
 interface Props {
   params: Promise<{ track: string; module: string; lesson: string }>
 }
@@ -30,10 +34,35 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const track  = getTrack(trackId)
   const lesson = getLesson(trackId, moduleId, lessonId)
   if (!track || !lesson) return {}
+
+  const url        = `${SITE_URL}/tracks/${trackId}/${moduleId}/${lessonId}`
+  const title      = lesson.title
+  const ogTitle    = `${lesson.title} — ${track.title}`
+  const ogImageUrl = `${SITE_URL}/api/og?${new URLSearchParams({
+    title:   lesson.title,
+    section: track.title,
+    description: lesson.description ?? '',
+  }).toString()}`
+
   return {
-    title: `${lesson.title} — ${track.title}`,
+    title:       ogTitle,
     description: lesson.description,
-    openGraph: { title: lesson.title, description: lesson.description },
+    openGraph: {
+      type:        'article',
+      title:       ogTitle,
+      description: lesson.description,
+      url,
+      siteName:    SITE_NAME,
+      images:      [{ url: ogImageUrl, width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card:        'summary_large_image',
+      title:       ogTitle,
+      description: lesson.description,
+      creator:     TWITTER,
+      images:      [ogImageUrl],
+    },
+    alternates: { canonical: url },
   }
 }
 

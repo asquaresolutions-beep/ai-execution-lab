@@ -2,11 +2,13 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { buildTagIndex } from '@/lib/tags'
 import { SECTION_META, ACCENT_CLASSES } from '@/lib/utils'
+import { buildSectionMetadata } from '@/lib/metadata'
 
-export const metadata: Metadata = {
-  title: 'Topics',
-  description: 'Browse all topics across AI execution documentation, systems, labs, case studies, failure reports, and execution logs.',
-}
+export const metadata: Metadata = buildSectionMetadata(
+  'Topics',
+  'Browse all topics across AI execution documentation, systems, labs, case studies, failure reports, and execution logs.',
+  '/tags'
+)
 
 export default function TagsPage() {
   const tags = buildTagIndex()

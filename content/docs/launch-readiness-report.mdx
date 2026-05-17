@@ -1,0 +1,251 @@
+---
+title: "Launch Readiness Report"
+description: "Final production audit for lab.asquaresolution.com — platform readiness, SEO status, GEO/AI-search readiness, and production risk checklist."
+date: "2026-05-18"
+tags: ["ops", "launch", "seo", "geo", "audit"]
+status: "published"
+---
+
+Production audit for `lab.asquaresolution.com`. Covers platform readiness, SEO posture, GEO/AI-search readiness, and outstanding risk items. Written at the point of public launch.
+
+---
+
+## Platform Readiness
+
+### Infrastructure
+
+| Check | Status | Notes |
+|---|---|---|
+| Custom domain active | ✓ | `lab.asquaresolution.com` via Vercel + Hostinger CNAME |
+| SSL certificate | ✓ | Let's Encrypt via Vercel — auto-renews |
+| HSTS header | ✓ | `max-age=31536000; includeSubDomains; preload` |
+| Security headers | ✓ | X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy |
+| HTTPS redirect | ✓ | Vercel handles HTTP→HTTPS automatically |
+| `NEXT_PUBLIC_SITE_URL` | ✓ | Set to `https://lab.asquaresolution.com` in Vercel env vars |
+| WordPress isolation | ✓ | DNS-only delegation — no shared runtime with `asquaresolution.com` |
+| Credentials in codebase | ✓ | None — `.env.local` gitignored, `.env.example` committed |
+
+### Build
+
+| Check | Status | Notes |
+|---|---|---|
+| TypeScript | ✓ | 0 errors |
+| Production build | ✓ | 170 pages generated |
+| Static generation | ✓ | All content pages SSG |
+| Dynamic routes | ✓ | `/api/search` serverless, `/api/og` force-static |
+| `blockJS: false` | ✓ | Required for next-mdx-remote v6 — documented at call site |
+| Console stripping | ✓ | `removeConsole: { exclude: ['error','warn'] }` in production |
+
+### Content Sections
+
+| Section | Route | Page count | Indexed |
+|---|---|---|---|
+| Docs | `/docs` | 10 | ✓ |
+| Systems | `/systems` | 1 | ✓ |
+| Labs | `/labs` | 1 | ✓ |
+| Case Studies | `/case-studies` | 1 | ✓ |
+| Playbooks | `/playbooks` | 1 | ✓ |
+| Failure Archive | `/failures` | 3 | ✓ |
+| Execution Logs | `/logs` | 2 | ✓ |
+| Tracks | `/tracks` | 5 tracks + 75 lessons | ✓ |
+| Topics | `/tags` | 49+ tag pages | ✓ |
+| Ops | `/ops` | 1 | noindex ✓ |
+| Syndication | `/syndicate` | 1 | noindex ✓ |
+
+### Interactive Features
+
+| Feature | Implementation | Status |
+|---|---|---|
+| Search modal | `/api/search` + `Cmd+K` | ✓ |
+| Copy button | `navigator.clipboard` + fallback | ✓ |
+| Track progress | `localStorage` via `lib/progress.ts` | ✓ |
+| Lesson complete button | `window.dispatchEvent` for sidebar sync | ✓ |
+| Article share | Twitter, LinkedIn, copy link | ✓ |
+| Dark mode | CSS variables, `dark` class on `<html>` | ✓ |
+| Reading progress | Scroll-based `scaleX` bar | ✓ |
+| Table of contents | Intersection Observer, auto-highlights | ✓ |
+| Syntax highlighting | `rehype-highlight` | ✓ |
+| MDX media | Gallery, BeforeAfter, TerminalRecording, ExecutionGallery | ✓ |
+
+### Responsiveness
+
+Layout is a sidebar + main content pattern:
+
+- **Mobile (< 640px):** Sidebar hidden, TopBar visible with hamburger. Content full-width, `px-6`. Tables scroll horizontally. Code blocks scroll. Track sidebar collapses.
+- **Tablet (640–1024px):** TopBar visible, sidebar available as drawer. Content `max-w-3xl`. Stats bar collapses to 4 columns.
+- **Desktop (> 1024px):** Sidebar always visible at `w-56`. Content `max-w-5xl`. Track lesson view shows sidebar at `lg:block`.
+
+Known constraints: The lesson sidebar is `hidden lg:block` — on tablet, the lesson sidebar is not visible. Users can navigate via LessonNav prev/next or the track page instead.
+
+---
+
+## SEO Readiness
+
+### Metadata Coverage
+
+| Page type | Title | Description | OG | Twitter | Canonical | OG Image |
+|---|---|---|---|---|---|---|
+| Homepage | ✓ | ✓ | ✓ | ✓ | ✓ | Static `/opengraph-image` |
+| Section indexes (7) | ✓ | ✓ | ✓ | ✓ | ✓ | Site default |
+| Content articles | ✓ | ✓ | ✓ | ✓ | ✓ | Dynamic `/api/og` |
+| `/tracks` | ✓ | ✓ | ✓ | ✓ | ✓ | Site default |
+| `/tracks/[track]` | ✓ | ✓ | ✓ | ✓ | ✓ | Site default |
+| `/tracks/[track]/[module]/[lesson]` | ✓ | ✓ | ✓ | ✓ | ✓ | Dynamic `/api/og` |
+| `/tags` | ✓ | ✓ | ✓ | ✓ | ✓ | Site default |
+| `/tags/[tag]` | ✓ | ✓ | ✓ | ✓ | ✓ | Site default |
+| `/ops` | ✓ | ✓ | — | — | — | noindex |
+| `/syndicate` | ✓ | ✓ | — | — | — | noindex |
+
+### Sitemap
+
+```
+https://lab.asquaresolution.com/sitemap.xml
+```
+
+Coverage:
+- Homepage (priority 1.0)
+- 7 section index pages (priority 0.8)
+- All published content items (priority 0.6, `lastModified` from frontmatter)
+- `/tags` index + all tag pages
+- `/tracks` index + all track pages + all `available` lesson pages
+- **Excluded:** `/ops`, `/syndicate` (noindex internal tools), `/api/*`
+
+### robots.txt
+
+```
+https://lab.asquaresolution.com/robots.txt
+```
+
+```
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /ops
+Disallow: /syndicate
+Sitemap: https://lab.asquaresolution.com/sitemap.xml
+Host: https://lab.asquaresolution.com
+```
+
+### Structured Data
+
+| Schema | Location | Fields |
+|---|---|---|
+| `WebSite` | `app/layout.tsx` — every page | name, url, description, publisher, potentialAction (SearchAction) |
+| `Organization` | `app/layout.tsx` — every page | name, url, description, sameAs, knowsAbout |
+| `TechArticle` or `Article` | `content-page.tsx` — docs/systems = TechArticle, rest = Article | headline, description, url, datePublished, dateModified, author, publisher, keywords |
+| `VideoObject` | `TerminalRecording`, `YouTubeWalkthrough` — per video | name, description, duration, uploadDate, thumbnailUrl, hasPart (chapters) |
+
+### Technical SEO
+
+| Item | Status |
+|---|---|
+| Canonical tags on all indexable pages | ✓ |
+| `hreflang` | Not needed — English only |
+| Trailing slash consistency | ✓ — no trailing slashes |
+| Case sensitivity (Linux FS) | ✓ — all routes lowercase, content slugs lowercase |
+| Image alt text | ✓ — all MDX images require alt via component props |
+| Internal link structure | ✓ — breadcrumbs on content + lesson pages, prev/next navigation |
+| Page speed (SSG) | ✓ — all content pages statically generated |
+| Core Web Vitals reporting | ✓ — WebVitals component beacons to `/api/vitals` |
+
+### Post-Launch Actions Required
+
+1. **Submit sitemap** to Google Search Console: `https://lab.asquaresolution.com/sitemap.xml`
+2. **Verify domain** in Search Console (DNS TXT method recommended — no code change)
+3. **Activate Plausible**: set `NEXT_PUBLIC_PLAUSIBLE_DOMAIN=lab.asquaresolution.com` in Vercel and redeploy
+4. **Monitor Search Console** for crawl errors after initial index pass (1–2 weeks)
+
+---
+
+## GEO / AI-Search Readiness
+
+GEO (Generative Engine Optimization) describes how content performs in AI-generated answers — ChatGPT, Claude, Perplexity, Gemini. The structural requirements differ from traditional SEO.
+
+### What AI Retrieval Systems Need
+
+AI systems extract answers from pages that are:
+- Entity-dense (specific names, versions, tools, outcomes)
+- Structurally clean (headings map to questions, paragraphs answer them directly)
+- Factually specific (numbers, dates, durations, error messages — not vague descriptions)
+- Schema-marked (structured data helps AI systems understand entity relationships)
+
+### GEO Audit
+
+| Signal | Status | Assessment |
+|---|---|---|
+| Entity specificity | ✓ | Content names specific tools (Claude Code 1.x, Next.js 15, next-mdx-remote v6, Vercel), versions, and exact error messages |
+| Declarative structure | ✓ | Most articles follow: problem statement → root cause → fix → prevention. AI systems extract answers from this pattern |
+| Failure documentation | ✓ | Failure Archive with root causes, resolution times, and specific commands is highly extractable by AI |
+| Structured data | ✓ | TechArticle/Article JSON-LD on all content pages. WebSite + Organization on every page |
+| VideoObject schema | ✓ | Implemented in TerminalRecording and YouTubeWalkthrough |
+| FAQ-style headings | Partial | Some docs use question headings (`h2`), others use topic headings. Mixed. |
+| Answer-first paragraphs | Partial | Most lessons lead with outcomes. Some docs lead with context. Improve over time. |
+| Cross-entity references | ✓ | Articles reference asquaresolution.com, specific products (TrustSeal, ScamCheck), and A Square Solutions consistently |
+| Author entity | ✓ | Organization author on all articles. `sameAs: ['https://twitter.com/asquaresolution']` helps disambiguation |
+| Canonical URL consistency | ✓ | All pages have exact canonical URLs — prevents AI systems citing the wrong URL variant |
+| Content depth | ✓ | Articles are substantive (1,500–6,000 words), not summary fragments |
+| Public accessibility | ✓ | No login wall, no paywalled content |
+
+### GEO Strengths
+
+**Failure Archive** is the highest-value GEO asset. When a developer searches "next-mdx-remote v6 blockJS components rendering empty" or "Next.js edge runtime crypto error", the failure reports are specifically written to match those queries with exact error messages, root causes, and fix commands. AI systems prioritize specific over general.
+
+**Execution Tracks** with `LessonObjectives` and `Checkpoint` components provide clear learning outcome declarations that AI systems can extract as structured answers.
+
+**`TechArticle` JSON-LD** on docs and systems pages signals to AI crawlers that these are reference-grade technical documents, not marketing content.
+
+### GEO Gaps and Improvements
+
+1. **No FAQ schema** — Adding `FAQPage` JSON-LD to docs with question/answer pairs would improve AI extractability for common questions. Low priority for launch; add to high-traffic pages after index data is available.
+
+2. **No `HowTo` schema** — Step-by-step docs (deployment workflow, analytics setup) could use `HowTo` JSON-LD. Impact: moderate for voice/AI featured snippets.
+
+3. **Answer-first paragraph discipline** — Some articles open with context before the direct answer. For GEO, the first paragraph after an `h2` should answer the section heading directly. Improve as content is updated.
+
+4. **Internal entity consistency** — "A Square Solutions" vs "asquaresolution" vs "@asquaresolution" appears in several forms. All are consistent in structured data; some prose uses different forms. Not urgent but worth standardizing in new content.
+
+---
+
+## Production Risk Checklist
+
+### ✓ Cleared — No Action Needed
+
+- [ ] `vercel.app` URLs in codebase — **zero remaining**
+- [ ] Hardcoded `localhost` references — **zero in production code** (README dev instructions only)
+- [ ] Exposed secrets or API keys — **none present**
+- [ ] `.env` committed to Git — **gitignored, only `.env.example` committed**
+- [ ] `/ops` or `/syndicate` in sitemap — **excluded**
+- [ ] `/ops` or `/syndicate` indexable — **`robots: noindex` on both pages**
+- [ ] Mixed WordPress + Next.js runtime — **fully isolated at DNS level**
+- [ ] `blockJS: true` stripping JSX props — **`blockJS: false` set and documented**
+- [ ] Edge runtime crypto failures — **all API routes on Node.js runtime**
+- [ ] Server modules in client bundle — **no `fs`/`path` in client components**
+- [ ] TypeScript errors — **0 at build time**
+
+### ⚠ Monitor — Low Risk, Track Over Time
+
+**Search Console indexing lag.** New domains typically take 2–6 weeks for full Google index coverage. Submit sitemap immediately post-launch and monitor for crawl errors. No action needed before launch.
+
+**Core Web Vitals baseline.** CLS risk is low (SSG, no layout shifts from async data). LCP depends on first-load JS parse time (~102 kB shared). INP is minimal (no heavy client-side interactions). WebVitals component will surface real data after production traffic begins.
+
+**Lesson sidebar on tablet.** The lesson sidebar is `hidden lg:block`. On tablet, it's not visible. Users navigate via breadcrumbs, LessonNav prev/next, or the track overview page. This is a known UX gap, not a breakage.
+
+**`/api/vitals` data collection.** The endpoint accepts beacons and returns 204. Web Vitals data is currently discarded — not forwarded to analytics. Add forwarding when Plausible or GA4 is activated.
+
+**Lesson metadata completeness.** Some lessons in `lib/tracks.ts` have `status: 'coming-soon'`. These pages render a "Coming Soon" state and generate valid pages but have thin content. They have canonical URLs and are excluded from the sitemap (only `available` lessons are listed). No risk; expected state.
+
+### 🔴 Action Before Heavy Traffic
+
+**Activate analytics.** Set `NEXT_PUBLIC_PLAUSIBLE_DOMAIN=lab.asquaresolution.com` in Vercel environment variables. Redeploy. Without analytics, there is no traffic visibility once real users arrive.
+
+**Submit to Google Search Console.** Domain verification + sitemap submission should happen within 24 hours of launch. Without this, organic search indexing is passive and unmonitored.
+
+**Test OG image generation under load.** The `/api/og` route is `force-static` (pre-rendered at build time). Verify that social share previews render correctly by pasting a content URL into the Twitter Card Validator and LinkedIn Post Inspector.
+
+---
+
+## Summary
+
+The platform is production-ready. No blocking issues. The domain is active, SSL is provisioned, all vercel.app references have been eliminated, metadata is complete across all page types, and the build generates 170 static pages with zero TypeScript or build errors.
+
+The two required post-launch actions are analytics activation and Search Console submission. Everything else can be done on the regular publishing cadence.

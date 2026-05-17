@@ -4,6 +4,10 @@ import type { Metadata } from 'next'
 import { buildTagIndex, getAllTagSlugs, getTagItems } from '@/lib/tags'
 import { SECTION_META, ACCENT_CLASSES, formatDateMono } from '@/lib/utils'
 
+const SITE_URL  = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
+const SITE_NAME = 'AI Execution Lab'
+const TWITTER   = '@asquaresolution'
+
 interface Props { params: Promise<{ tag: string }> }
 
 export async function generateStaticParams() {
@@ -14,9 +18,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { tag } = await params
   const items   = getTagItems(tag)
   if (items.length === 0) return {}
+  const title       = `#${tag}`
+  const description = `${items.length} items tagged #${tag} — AI execution documentation, failure reports, labs, and logs.`
+  const url         = `${SITE_URL}/tags/${tag}`
   return {
-    title:       `#${tag}`,
-    description: `${items.length} items tagged #${tag} — AI execution documentation, failure reports, labs, and logs.`,
+    title,
+    description,
+    openGraph: {
+      type: 'website',
+      title: `${title} | ${SITE_NAME}`,
+      description,
+      url,
+      siteName: SITE_NAME,
+    },
+    twitter: {
+      card:    'summary',
+      title:   `${title} | ${SITE_NAME}`,
+      description,
+      creator: TWITTER,
+    },
+    alternates: { canonical: url },
   }
 }
 

@@ -1,11 +1,13 @@
 import type { Metadata } from 'next'
 import { TRACKS, TRACK_ACCENTS, getTrackStats } from '@/lib/tracks'
 import { TrackCard } from '@/components/tracks/track-card'
+import { buildSectionMetadata } from '@/lib/metadata'
 
-export const metadata: Metadata = {
-  title: 'Execution Tracks',
-  description: 'Structured operational learning pathways — from zero to production-grade AI systems.',
-}
+export const metadata: Metadata = buildSectionMetadata(
+  'Execution Tracks',
+  'Structured operational learning pathways — from zero to production-grade AI systems. Real workflows, real tools, real implementation.',
+  '/tracks'
+)
 
 const LEVEL_ORDER: Record<string, number> = {
   beginner: 0, intermediate: 1, advanced: 2, operator: 3,
