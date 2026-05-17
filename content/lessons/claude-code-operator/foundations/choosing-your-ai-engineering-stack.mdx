@@ -1,0 +1,604 @@
+<LessonMeta
+  difficulty="operator"
+  implementationTime="2–4 hours (stack audit + decision doc)"
+  evidence="Running in production at A Square Solutions across three live properties since 2025"
+/>
+
+<LessonObjectives items={[
+  "Understand why stack selection is an engineering decision, not a tooling preference",
+  "Map the A Square Solutions production stack and the reasoning behind each component",
+  "Evaluate Claude Code against alternatives — Cursor, Copilot, GPT-based tools — on operational grounds",
+  "Model the cost structure of this stack at zero revenue, at first revenue, and at scale",
+  "Identify the five failure patterns that kill AI engineering stacks in their first 90 days",
+  "Produce a one-page Architecture Decision Record for your own stack"
+]} />
+
+---
+
+## The stack decision is the architecture decision
+
+Most engineers treat tool selection as a preference question. In AI-assisted engineering, it's an architecture question — because your tools shape your execution model, your debugging surface, your cost structure, and your scaling ceiling.
+
+Getting this wrong doesn't just mean using a suboptimal editor. It means:
+
+- AI context that gets stale because your tooling doesn't enforce freshness
+- Deployment failures diagnosed in Vercel logs instead of locally
+- Dependency trees that break silently when AI-generated code adds packages you didn't audit
+- Platform lock-in that makes migrating expensive after you've built 30 lessons worth of content on it
+
+This lesson documents the actual stack running A Square Solutions' production properties — and more importantly, why each component was chosen over the alternatives that were evaluated and rejected.
+
+---
+
+## The A Square Solutions production stack
+
+This is the stack as it runs in production. No hypotheticals.
+
+| Component | Tool | Role in the stack |
+|---|---|---|
+| **AI execution operator** | Claude Code (Anthropic) | Primary engineering interface — handles file reads, edits, terminal execution, git operations |
+| **Version control + hosting** | GitHub | Source of truth, deployment trigger, audit trail |
+| **Deployment platform** | Vercel | Build pipeline, CDN, serverless functions, preview deployments |
+| **Application framework** | Next.js 15 (App Router) | Full-stack React framework — SSG, API routes, RSC, edge-compatible |
+| **Language** | TypeScript 5 | Type safety, IDE intelligence, build-time error detection |
+| **Styling** | Tailwind CSS | Utility-first CSS, no stylesheet context for Claude to misread |
+| **Content layer** | MDX | Markdown + React components — typed, version-controlled content |
+| **CMS / data backend** | WordPress (self-hosted) | 8700+ posts, REST API surface, established authentication model |
+| **Local runtime** | Node.js 20 LTS | Execution environment — local matches Vercel's build environment |
+| **Package execution** | Direct `node` calls | `npm` is blocked in this environment — all scripts use node directly |
+
+The stack has a deliberate shape: maximum capability with minimum coordination overhead. Every tool either serves local execution or production deployment. Nothing sits in between.
+
+---
+
+## Why each tool was selected
+
+### Claude Code over alternatives
+
+The primary alternatives evaluated: **Cursor**, **GitHub Copilot**, **Continue.dev**, **GPT-4 via API**, **Gemini Code Assist**.
+
+**Why Claude Code:**
+
+Claude Code is not an editor plugin — it's an operator. It reads files, edits files, runs terminal commands, commits to git, and executes multi-step agentic tasks across the entire codebase. The alternatives that were evaluated (Cursor, Copilot) operate at the completion or chat level — they suggest; they don't execute.
+
+The practical difference: with Claude Code, "refactor all seven section index pages to use `buildSectionMetadata`" is a single instruction that executes autonomously. With Copilot or Cursor, it's seven separate editor interactions with manual file-switching.
+
+The critical differentiator is **tool use**: Claude Code has access to `Read`, `Edit`, `Write`, `Bash`, `Glob`, `Grep`, and `Agent` tools. It can read the entire codebase before touching a file. It doesn't hallucinate import paths because it checks them with `Glob` first.
+
+<Callout type="info" title="Claude Code's context model">
+Claude Code loads your `CLAUDE.md` at session start, then builds context from file reads as it works. It doesn't preload your entire codebase — it reads what it needs. This is more reliable than editors that try to embed "the whole repo" into a vector store and retrieve stale chunks.
+</Callout>
+
+**Why not Cursor:**
+Cursor is an excellent editor with strong AI completion. It's not an operator. For complex multi-file refactors, build debugging, and git workflow automation, cursor's chat interface requires too much manual direction-setting. It also runs in a GUI context — it can't be scripted or invoked from a terminal pipeline.
+
+**Why not Copilot:**
+Copilot operates at the token-completion level within an active file. It has no cross-file awareness beyond what your LSP provides. It cannot read your filesystem, run commands, or make architectural decisions. For beginner-level completion assistance it's adequate. For operator-level execution it's the wrong tool class.
+
+---
+
+### Next.js 15 App Router over alternatives
+
+Evaluated: **Remix**, **Astro**, **SvelteKit**, **plain React + Vite**, **custom Express**.
+
+**Why Next.js 15 App Router:**
+
+Next.js App Router runs a file-system based routing model that Claude Code navigates reliably. The `app/` directory structure is predictable — route = file path. When Claude Code needs to create a new route, it creates one file. There's no routing config to update.
+
+Server Components eliminate the client/server boundary confusion that makes Claude-generated code unreliable in other frameworks. A Server Component can call `fs.readFileSync` directly; Claude knows this and doesn't generate client-side data fetching for it.
+
+`generateStaticParams` and `generateMetadata` are co-located with route files — when Claude writes a new section, it writes the route file, the metadata, and the static params in one operation. No separate config files to update.
+
+**Why not Remix:**
+Remix's loader/action pattern requires more boilerplate for simple static content. The mental model for Claude-generated code is less consistent than App Router's file-convention approach.
+
+**Why not Astro:**
+Astro's island architecture is excellent for content-heavy sites that don't need React interactivity. The AI Execution Lab uses React-based MDX components with client-side interactions (gallery lightboxes, progress tracking, completion buttons). Astro + React integration adds friction.
+
+**Why not SvelteKit:**
+Svelte is a smaller ecosystem for AI-generated code. Claude Code is less reliable with Svelte patterns than with TypeScript/React patterns where training data is denser. This is a real operational consideration — not a quality judgment on Svelte.
+
+---
+
+### Vercel over alternatives
+
+Evaluated: **Railway**, **Render**, **Netlify**, **AWS Amplify**, **DigitalOcean App Platform**, **self-hosted VPS**.
+
+**Why Vercel:**
+
+Vercel and Next.js share an ownership history (Vercel built Next.js). Edge cases that break other platforms don't break Vercel. The `ImageResponse` API works correctly. The App Router's server action streaming works correctly. RSC payload generation works correctly. On other platforms, these occasionally break in ways that require platform-specific workarounds.
+
+Preview deployments are the critical operational feature. Every branch push creates a full preview URL with its own environment. When Claude Code is working on a feature branch, the preview deployment shows exactly what production will look like. This is the primary mechanism for catching visual regressions without deploying to main.
+
+The deployment dashboard surfaces build logs in a structured way that Claude Code can reference when debugging failures. The failure patterns documented in the Failure Archive (/failures/edge-runtime-deployment-failure, /failures/next-mdx-remote-v6-blockjs) were diagnosed directly from Vercel's build log format.
+
+**Why not self-hosted:**
+Self-hosting is the right choice for workloads with specific infrastructure requirements — GPU access, persistent filesystem, custom networking. For a Next.js application where zero DevOps overhead is a hard requirement, Vercel is correct. The time saved on infrastructure management is reinvested in content and feature work.
+
+---
+
+### WordPress as content backend
+
+Evaluated: **Contentful**, **Sanity**, **PlanetScale + custom API**, **SQLite + Drizzle**, **headless Ghost**.
+
+**Why WordPress:**
+
+A Square Solutions operates three live properties. The main site (`asquaresolution.com`) runs WordPress with 8700+ published posts. Moving this content to a different CMS would require a migration project that would consume months of execution time. The REST API surface is mature and well-documented.
+
+The operational workflow — creating posts, patching content, running bulk operations — maps cleanly to the REST API's CRUD endpoints. WordPress Application Passwords provide a simple, per-operation auth model that doesn't require OAuth flows.
+
+This is explicitly a **legacy pragmatism** choice, not a "WordPress is the best CMS" claim. If building from zero without the existing content investment, a git-based content system (MDX in the repository) would be the default choice — which is exactly what the AI Execution Lab itself uses.
+
+<Callout type="warn" title="Don't build new content systems on WordPress">
+WordPress is the right choice when you have existing WordPress content. It is not the right choice for new projects where you control the data model. For new content, MDX in the repository (as used by this platform) gives you version control, type safety, and zero CMS overhead.
+</Callout>
+
+---
+
+## Stack architecture: how the pieces connect
+
+```
+Local execution
+    │
+    │  Claude Code (operator)
+    │      ├── reads filesystem (Glob, Grep, Read)
+    │      ├── edits files (Edit, Write)
+    │      └── runs terminal (Bash → tsc, next build, git)
+    │
+    ▼
+Git (local) → GitHub (remote) → Vercel (build + deploy)
+                                      │
+                              Preview URL (branch)
+                              Production URL (main)
+                                      │
+                              Next.js App Router
+                                  ├── Static pages (SSG)
+                                  ├── API routes (serverless)
+                                  └── Server Components (RSC)
+                                      │
+                              MDX content (static)
+                              WordPress REST API (dynamic)
+```
+
+The execution flow in practice:
+
+1. **Claude Code reads** the codebase state (CLAUDE.md, relevant files)
+2. **Claude Code edits** files based on the task
+3. **Local TypeScript check** catches type errors before build
+4. **Local build** (`next build`) catches build-time failures before Vercel
+5. **Git push** triggers Vercel deployment
+6. **Preview URL** validates the change before merging to main
+
+The local build step is not optional. See the Vercel Deployment module for why.
+
+---
+
+## Cost model
+
+Real numbers from the operating stack, not theoretical projections.
+
+### Zero-revenue stage
+
+| Tool | Plan | Monthly cost |
+|---|---|---|
+| Claude Code / Claude API | Claude Pro | $20 |
+| GitHub | Free (public repos) | $0 |
+| Vercel | Hobby | $0 |
+| Domain | .com registration | ~$1.25 amortized |
+| WordPress hosting | Depends on provider | $5–15 |
+| Node.js, Next.js, TypeScript, Tailwind | Open source | $0 |
+| **Total** | | **$21–36/month** |
+
+Vercel Hobby tier limits that matter:
+- 100 deployments per day (sufficient for 10–20 deploys/day with branch previews)
+- 100GB bandwidth per month (sufficient until real traffic)
+- Serverless function runtime: 10 seconds max (requires attention for slow API routes)
+- No team collaboration features
+
+When to upgrade to Vercel Pro ($20/month): when you need concurrent builds, longer function timeouts (60 seconds), or team access controls. Not before.
+
+### At first revenue
+
+The stack cost doesn't change until you hit Vercel Hobby limits. The signal to upgrade:
+- Bandwidth approaching 100GB/month
+- Builds consistently failing due to concurrent build limit
+- Need for 60-second serverless functions
+
+The Claude Pro subscription covers unlimited Claude Code usage. The Claude API (if used separately for automation) bills per token — budget $5–20/month for moderate automation use.
+
+<Callout type="info" title="Claude Code vs Claude API — different billing">
+Claude Code running under your Claude Pro subscription does not bill separately for API usage within normal use limits. If you're building automation scripts that call the Claude API directly (not via Claude Code's interface), that's separate API billing. Understand which you're using before running large automation jobs.
+</Callout>
+
+---
+
+## Deployment realities
+
+Things that catch new operators before they become habits.
+
+### Local environment matches production environment
+
+Vercel builds on Linux. Your local machine may run Windows or macOS. Two failure sources:
+
+**File system case sensitivity.** macOS and Windows file systems are case-insensitive by default. Linux is case-sensitive. An import of `'@/components/Layout/sidebar'` will work locally but fail on Vercel if the actual file is `'@/components/layout/sidebar'`. Claude Code doesn't catch this — TypeScript doesn't catch this. It only surfaces at Vercel build time.
+
+<CodeBlock filename="terminal" language="bash">
+{`# Verify import casing matches filesystem before pushing
+# On macOS/Windows, this import works even if wrong case:
+# import { Sidebar } from '@/components/Layout/Sidebar'
+
+# On Vercel (Linux), it fails. Always use lowercase:
+# import { Sidebar } from '@/components/layout/sidebar'`}
+</CodeBlock>
+
+**Node version.** Vercel defaults to the Node version specified in your `package.json` engines field, or falls back to an LTS version. If your local Node version is newer:
+
+<CodeBlock filename="package.json" language="json">
+{`{
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}`}
+</CodeBlock>
+
+<CodeBlock filename=".nvmrc" language="text">
+{`20`}
+</CodeBlock>
+
+Both files should specify the same version. When Claude Code adds a dependency that requires a newer Node API, the mismatch surfaces as a confusing Vercel build error.
+
+### Environment variables are not files
+
+Local development uses `.env.local`. Vercel uses environment variables configured in the dashboard. They don't sync automatically. When Claude Code adds a new feature that reads `process.env.SOME_NEW_VAR`, that variable must be:
+1. Added to `.env.local` (local dev)
+2. Added to Vercel → Project → Settings → Environment Variables (production)
+3. Set for the correct environment (Production / Preview / Development)
+
+Missing step 2 is the most common cause of "works locally, fails in production" bugs.
+
+### npm is blocked on this execution environment
+
+This stack runs on a Windows machine where npm is blocked due to a PATH/ffmpeg conflict. All package execution uses direct Node invocation:
+
+<CodeBlock filename="terminal" language="bash">
+{`# NOT: npm run build
+node node_modules/next/dist/bin/next build
+
+# NOT: npm run typecheck
+node node_modules/typescript/bin/tsc --noEmit
+
+# NOT: npx tsc
+node node_modules/typescript/bin/tsc --noEmit`}
+</CodeBlock>
+
+This is documented in `CLAUDE.md` so Claude Code never generates npm commands. If your environment uses npm normally, you don't have this constraint — but the pattern of explicit Node invocation is worth adopting regardless. It makes scripts environment-independent.
+
+---
+
+## Mistakes beginners make
+
+These are the specific failure modes observed from operating this stack and from the failure reports documented in the Failure Archive.
+
+### Using the AI tool as a magic wand
+
+Claude Code is an operator, not a magic wand. The output quality is directly proportional to the quality of the context you provide. A bare prompt — "fix the navigation" — produces generic code that doesn't understand your routing conventions, your Tailwind token system, or your component patterns.
+
+The operator pattern: load context first, then direct. Read the CLAUDE.md architecture lesson before writing a single prompt.
+
+### Treating deployment as the test environment
+
+Running `git push` to see if the code works is not a workflow — it's a 3-minute feedback loop with a public failure trail. The local build pipeline (TypeScript check → `next build` → visual inspection) exists to catch failures in 30 seconds instead of 3 minutes on Vercel.
+
+Every deployment failure in the Failure Archive (/failures/) was preceded by insufficient local testing. Every resolution was followed by a new local check step that catches that failure class earlier.
+
+### Installing dependencies without audit
+
+When Claude Code generates code that imports a package you don't have, it will ask to install it. Before approving:
+- Verify the package name is spelled correctly (typosquatting exists)
+- Check the package has recent maintenance activity
+- Check the bundle size if it's a client-side import
+- Check it doesn't conflict with existing packages
+
+Claude Code will never maliciously add packages, but it will add packages that seemed reasonable given the context — packages that turn out to be deprecated, unmaintained, or heavier than alternatives.
+
+### Skipping CLAUDE.md
+
+Every session without a CLAUDE.md starts with Claude Code re-learning your stack. It will read files to build context, but it won't know your critical rules, your deployment commands, or your naming conventions. Projects without CLAUDE.md produce inconsistent code and require 10–15 extra messages per session re-establishing basics.
+
+The investment: 1 hour writing a thorough CLAUDE.md. The return: every session from then on starts with full context.
+
+### Using multiple AI tools simultaneously on the same codebase
+
+Using Claude Code for agentic tasks, Cursor for inline completion, and GitHub Copilot for quick suggestions simultaneously creates a context fragmentation problem. Each tool has a different model of the codebase. They make changes that conflict with each other's assumptions.
+
+The operational pattern: one AI operator per codebase. Use Claude Code for everything. Occasionally use Claude.ai (web) for planning discussions that don't involve file changes. Never have two AI agents touching the same files in the same session.
+
+---
+
+## Failure patterns
+
+These are the systemic failure modes that kill AI engineering stacks — not individual bugs, but architectural decisions that compound into operational debt.
+
+<FailureAnalysis
+  title="Overengineering too early"
+  before={`// Week 1: You "just need a simple blog"
+// Result after 3 weeks of AI-assisted over-architecting:
+
+app/
+  api/
+    v1/
+      posts/
+        route.ts          // REST endpoint
+        [id]/route.ts     // Individual post
+        bulk/route.ts     // Bulk operations
+        search/route.ts   // Search endpoint
+  blog/
+    page.tsx              // With GraphQL client
+    [slug]/page.tsx       // With Suspense + Streaming
+    [...catchAll]/page.tsx // Catch-all routes
+
+// 4 abstractions added before a single real user existed
+// Claude Code dutifully built everything you asked for`}
+  after={`// The correct Week 1 architecture:
+
+app/
+  blog/
+    page.tsx              // getAllMeta() — done
+    [slug]/page.tsx       // getItem() — done
+
+// 20 lines of code. Ships in 2 hours. 
+// Extend it when you have a real requirement, not before.`}
+  lesson="Claude Code will build whatever architecture you describe. The constraint is your judgment about what complexity is justified by current requirements. If you can't name a real user who needs the abstraction, don't build it."
+/>
+
+<FailureAnalysis
+  title="Using too many AI tools"
+  before={`# Actual tool chain that broke:
+# - Claude Code for file editing
+# - Cursor for inline suggestions  
+# - Copilot for quick completions
+# - GPT-4 via ChatGPT for architecture questions
+# - Perplexity for package research
+
+# Result: 
+# - Cursor added an import that Claude Code later overwrote
+# - Copilot completed a function with a pattern 
+#   inconsistent with the codebase
+# - GPT-4 suggested an architecture that contradicted 
+#   the existing patterns Claude Code knew about
+# - 45 minutes debugging a conflict between two 
+#   AI-generated suggestions`}
+  after={`# Working tool chain:
+# - Claude Code: all file operations, git, terminal
+# - Claude.ai (web): planning and architecture discussion  
+#   (no file access, no conflicts)
+
+# One operator. One model of the codebase.
+# Zero coordination overhead.`}
+  lesson="AI tool proliferation is not force multiplication — it's context fragmentation. Each AI tool has its own model of your codebase. Multiple tools making changes simultaneously produce conflicts that take longer to resolve than the time saved."
+/>
+
+<FailureAnalysis
+  title="Dependency chaos"
+  before={`// After 60 days of AI-assisted development:
+// package.json has 47 direct dependencies
+
+// Symptoms:
+// - next build takes 4 minutes instead of 45 seconds
+// - TypeScript takes 90 seconds to check
+// - Claude Code hits context limit reading node_modules paths
+// - 3 different date libraries (dayjs, date-fns, moment)
+//   because different sessions each added one
+// - 2 different animation libraries (framer-motion, gsap)
+//   because a prompt mentioned "smooth animation"`}
+  after={`// Dependency governance rules in CLAUDE.md:
+// - Never add a dependency without explicit instruction
+// - For utilities: prefer stdlib or single-file implementation
+// - For UI: prefer Tailwind utilities over component libraries
+// - Approved packages list: [...only what's needed]
+// - Run 'node -e "require.main=module&&console.log(require('./package.json').dependencies)"'
+//   and review after every session`}
+  lesson="AI-generated code adds dependencies to solve immediate problems without considering the aggregate cost. Without explicit governance rules in CLAUDE.md, dependency count grows unbounded. Audit package.json after every session that added new functionality."
+/>
+
+<FailureAnalysis
+  title="Platform lock-in"
+  before={`// Built entirely on Vercel-specific APIs:
+// - next/headers (Vercel edge cache headers)
+// - Vercel KV (Redis-compatible KV store)
+// - Vercel Blob (object storage)
+// - Vercel Postgres (managed PostgreSQL)
+// - Edge runtime on every API route for "performance"
+
+// Reality: Vercel Pro is now $20/month per feature
+// Migration cost: 3 weeks to extract to standard APIs`}
+  after={`// Platform-neutral patterns:
+// - Standard fetch() for data fetching
+// - Standard filesystem for static content
+// - Standard environment variables for config
+// - Avoid runtime='edge' unless you have a specific need
+//   (and document why in the route file)
+
+// Rule: if it only works on Vercel, it needs justification`}
+  lesson="Vercel-specific APIs are convenient but create migration costs. The default should be standard Next.js APIs that work on any hosting platform. Use Vercel-specific features only when they solve a problem you've actually encountered."
+/>
+
+<FailureAnalysis
+  title="Ignoring deployment workflows"
+  before={`# Common beginner deployment workflow:
+# 1. Claude Code edits files
+# 2. git add -A && git commit -m "fix" && git push
+# 3. Wait 3 minutes for Vercel to fail
+# 4. Read Vercel logs
+# 5. Ask Claude Code to fix the Vercel error
+# 6. Repeat from step 2
+
+# This workflow: 
+# - Deploys broken code to production
+# - Burns Vercel build minutes
+# - Produces a messy git history
+# - Takes 15+ minutes per cycle instead of 2`}
+  after={`# Production deployment workflow:
+# 1. Claude Code edits files
+# 2. node node_modules/typescript/bin/tsc --noEmit
+#    → catches type errors in 5 seconds
+# 3. node node_modules/next/dist/bin/next build
+#    → catches build failures in 45 seconds locally
+# 4. Visual inspection of changed routes
+# 5. git add [specific files] && git commit -m "descriptive message"
+# 6. git push → confident deployment
+
+# This workflow:
+# - Never deploys broken code  
+# - 2-minute cycle instead of 15-minute cycle
+# - Clean commit history
+# - Zero Vercel build failures from avoidable errors`}
+  lesson="The local build pipeline is not optional overhead — it's the discipline that separates operators from beginners. Every failure documented in the Failure Archive was cheaper than it would have been with a slower feedback loop."
+/>
+
+---
+
+## Scaling implications
+
+How this stack behaves as complexity grows.
+
+### What scales without changes
+
+- **MDX content**: statically generated at build time. 1000 pages build in the same time as 100 pages (plus linear build time). No database calls at request time.
+- **GitHub**: unlimited repository size and history. No scaling concern.
+- **Claude Code**: context window is 200k tokens. Most tasks fit comfortably. Long-running tasks that exceed a single context window require the multi-agent pattern (covered in the Scaling module).
+
+### What requires attention at 10x
+
+**Vercel build time** grows linearly with page count. At 164 pages, the full build runs in ~45 seconds. At 1640 pages, expect 7–8 minutes. Mitigation: Incremental Static Regeneration (ISR) for frequently-updated content, or moving high-volume content to server-rendered routes.
+
+**TypeScript check time** grows with codebase size. At 200+ files, `tsc --noEmit` exceeds 30 seconds. Mitigation: project references, incremental compilation mode.
+
+**Claude Code context** becomes expensive to fill for very large codebases. The CLAUDE.md pattern helps by front-loading the critical context. The multi-agent orchestration pattern (Track Module 8) handles tasks that span more files than a single context window can hold.
+
+### The scaling ceiling
+
+The current stack runs everything on a single-operator model: one Claude Code session, one developer. The natural scaling unit is adding more tracks, more content, more automation pipelines — all of which this stack handles well. The constraint is not the tools; it's the throughput of a single operator.
+
+For team operation (multiple engineers), the coordination mechanism shifts: CLAUDE.md becomes more important (shared conventions), branch strategy becomes critical (no two sessions should touch the same files simultaneously), and PR review workflows become the quality gate.
+
+---
+
+## Execution checkpoint
+
+Before moving to the Dev Environment Setup lesson, verify your stack decision:
+
+<Checkpoint title="Stack audit — complete before environment setup">
+  <CheckItem>You have an active Claude Pro or Team subscription (required for Claude Code)</CheckItem>
+  <CheckItem>You have a real project to operate on — not a tutorial repo or temp directory</CheckItem>
+  <CheckItem>Your project uses Next.js, or you've documented why your alternative framework was selected</CheckItem>
+  <CheckItem>You have a GitHub repository for your project (public or private)</CheckItem>
+  <CheckItem>You have Vercel connected to your GitHub repository</CheckItem>
+  <CheckItem>You understand the local build pipeline: tsc → next build → push</CheckItem>
+  <CheckItem>You've reviewed the CLAUDE.md pattern and understand what context it should contain</CheckItem>
+  <CheckItem>You have decided on one AI operator tool (Claude Code) — not multiple</CheckItem>
+</Checkpoint>
+
+---
+
+## Implementation task: Architecture Decision Record
+
+Before moving on, write a one-page Architecture Decision Record (ADR) for your stack. This becomes part of your `CLAUDE.md` and gives Claude Code the architectural context it needs to make consistent decisions.
+
+<CodeBlock filename="docs/ADR-001-engineering-stack.md" language="markdown">
+{`# ADR-001: Engineering Stack Selection
+
+## Status
+Accepted — [date]
+
+## Context
+[2-3 sentences on your project and what it needs from the stack]
+
+## Decision
+Primary stack:
+- AI operator: Claude Code (Anthropic)
+- Framework: Next.js [version] App Router
+- Deployment: Vercel [Hobby/Pro]
+- Version control: GitHub
+- [Additional stack components]
+
+## Rationale
+[Why each component was chosen. Be specific — "Next.js because App Router's file conventions map well to Claude Code's file tool model" is more useful than "Next.js because it's popular."]
+
+## Alternatives considered
+[Brief list of what was evaluated and why it wasn't selected]
+
+## Consequences
+[What this stack makes easy, what it makes harder, what the scaling ceiling is]
+
+## Stack governance rules
+- Never add a dependency without explicit justification
+- Use direct node invocation, not npm scripts
+- All environment variables documented in .env.example
+- [Your project-specific rules]`}
+</CodeBlock>
+
+<Callout type="lab" title="This ADR becomes your CLAUDE.md foundation">
+The Architecture Decision Record you write here is the technical foundation for your CLAUDE.md. In the next lesson (CLAUDE.md Architecture), you'll turn this decision document into a session briefing that Claude Code reads at the start of every session.
+</Callout>
+
+---
+
+## Production readiness checklist
+
+<Checkpoint title="Before you treat this stack as production-ready">
+  <CheckItem>Local TypeScript check runs in under 30 seconds</CheckItem>
+  <CheckItem>Local next build runs without errors</CheckItem>
+  <CheckItem>Vercel preview deployments are visible for every branch push</CheckItem>
+  <CheckItem>NEXT_PUBLIC_SITE_URL is set in Vercel environment variables</CheckItem>
+  <CheckItem>No `runtime = 'edge'` in any file unless explicitly required and documented</CheckItem>
+  <CheckItem>package.json engines field specifies Node.js version</CheckItem>
+  <CheckItem>CLAUDE.md exists at project root (even a draft)</CheckItem>
+  <CheckItem>Architecture Decision Record written and committed</CheckItem>
+  <CheckItem>You can name the exact command to roll back a bad deployment</CheckItem>
+</Checkpoint>
+
+---
+
+<ExecutionEvidence
+  context="This stack runs in production at A Square Solutions across three live properties: asquaresolution.com (WordPress, 8700+ posts), TrustSeal, and ScamCheck. The AI Execution Lab platform itself was built end-to-end using this exact stack. Failure patterns documented here are drawn from the Failure Archive — real incidents with resolution timelines."
+  date="2026-05-17"
+/>
+
+---
+
+<Milestone n={1} title="Stack decision made and documented">
+You have evaluated the A Square Solutions stack, understood the architectural rationale behind each component, identified the failure patterns to avoid, and produced an Architecture Decision Record. You're ready to configure the environment in the next lesson.
+</Milestone>
+
+---
+
+## Resources
+
+<Resource
+  title="Failure Archive — Edge Runtime Deployment Failure"
+  description="The Vercel edge runtime failure that informs the 'no edge runtime without justification' rule in this lesson."
+  href="/failures/edge-runtime-deployment-failure"
+  type="docs"
+/>
+
+<Resource
+  title="Failure Archive — next-mdx-remote v6 blockJS"
+  description="The dependency upgrade failure that informs the dependency governance rules. Includes execution evidence."
+  href="/failures/next-mdx-remote-v6-blockjs"
+  type="docs"
+/>
+
+<Resource
+  title="Deployment Pipeline Setup"
+  description="The full local → verify → push pipeline explained in detail — the execution of what's outlined in this lesson."
+  href="/tracks/claude-code-operator/vercel-deployment/deployment-pipeline"
+  type="reference"
+/>
+
+<Resource
+  title="Claude Code Documentation"
+  description="Official reference for Claude Code tool capabilities, permissions model, and CLAUDE.md format."
+  href="https://docs.anthropic.com/en/docs/claude-code"
+  type="docs"
+/>

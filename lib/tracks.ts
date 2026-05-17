@@ -169,6 +169,7 @@ export const TRACKS: Track[] = [
         title: 'Environment + Workspace Setup',
         description: 'Configure Claude Code as a production tool — not just an installed binary.',
         lessons: [
+          { id: 'choosing-your-ai-engineering-stack', title: 'Choosing Your AI Engineering Stack', type: 'lesson', duration: '35 min', description: 'Stack selection, architecture decisions, cost realities, and tradeoffs — before you configure anything.', status: 'available' },
           { id: 'dev-environment',       title: 'Dev Environment Setup',          type: 'lesson',  duration: '20 min', description: 'Install, configure, and verify your Claude Code environment for production use.',               status: 'available' },
           { id: 'claude-md-architecture',title: 'CLAUDE.md Architecture',          type: 'lesson',  duration: '25 min', description: 'Design a CLAUDE.md that fully briefs Claude at the start of every session.',                   status: 'available' },
           { id: 'project-settings',      title: 'Project Settings & Permissions',  type: 'lesson',  duration: '20 min', description: 'Safe, explicit permission configuration for real production codebases.',                       status: 'available' },
