@@ -15,7 +15,7 @@ interface ContentPageProps {
   next?: ContentMeta | null
 }
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-execution-lab.vercel.app'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 
 export async function ContentPage({ item, prev, next }: ContentPageProps) {
   const sectionMeta = SECTION_META[item.section]

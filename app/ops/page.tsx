@@ -313,6 +313,7 @@ export default function OpsPage() {
                 { label: 'Analytics setup',       href: '/docs/analytics-setup' },
                 { label: 'Launch checklist',      href: '/docs/launch-checklist' },
                 { label: 'Deployment workflow',   href: '/docs/deployment-workflow' },
+                { label: 'Production deployment', href: '/docs/production-deployment-guide' },
                 { label: 'Launch assets',         href: '/docs/launch-assets' },
                 { label: 'Execution Tracks',      href: '/tracks' },
                 { label: 'Sitemap',               href: '/sitemap.xml' },

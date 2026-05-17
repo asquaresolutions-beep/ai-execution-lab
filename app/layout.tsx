@@ -22,7 +22,7 @@ const fontMono = JetBrains_Mono({
 })
 
 // ─── Base URL ────────────────────────────────────────────────
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-execution-lab.vercel.app'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

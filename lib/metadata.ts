@@ -6,7 +6,7 @@ import type { ContentItem } from './content'
 // Shared metadata builder for all content article pages
 // ─────────────────────────────────────────────────────────────
 
-const SITE_URL     = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-execution-lab.vercel.app'
+const SITE_URL     = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 const SITE_NAME    = 'AI Execution Lab'
 const AUTHOR_NAME  = 'A Square Solutions'
 const AUTHOR_URL   = 'https://asquaresolution.com'

@@ -1,0 +1,231 @@
+---
+title: "Production Deployment Guide"
+description: "Complete guide for deploying AI Execution Lab to lab.asquaresolution.com — DNS configuration, Vercel setup, environment variables, SSL, and launch verification."
+date: "2026-05-18"
+tags: ["deployment", "ops", "dns", "vercel", "production"]
+status: "published"
+---
+
+This is the authoritative deployment guide for launching AI Execution Lab under `lab.asquaresolution.com`. It covers Vercel project configuration, Hostinger DNS setup, environment variables, SSL, and post-launch verification.
+
+## Architecture Overview
+
+```
+Browser
+  → lab.asquaresolution.com (Hostinger DNS → Vercel Edge Network)
+  → Vercel CDN (static assets, SSG pages)
+  → Vercel Serverless (API routes: /api/og, /api/search, /api/vitals)
+```
+
+The main `asquaresolution.com` WordPress stack runs separately on Hostinger hosting. The lab subdomain is DNS-only delegated to Vercel — no WordPress involvement, no shared PHP runtime, no risk to the main site.
+
+## Prerequisites
+
+Before starting:
+- Vercel project is deployed and the Vercel-generated URL is working (`*.vercel.app`)
+- You have access to Hostinger DNS management for `asquaresolution.com`
+- You are logged in to the Vercel dashboard
+
+---
+
+## Step 1 — Add Custom Domain in Vercel
+
+1. Open the Vercel dashboard → select the `ai-execution-lab` project
+2. Go to **Settings → Domains**
+3. Click **Add Domain**
+4. Enter: `lab.asquaresolution.com`
+5. Click **Add**
+
+Vercel will display the required DNS records. Keep this tab open — you will use these values in Step 2.
+
+Vercel will show one of two record types depending on your configuration:
+
+**Option A — CNAME (most common for subdomains):**
+```
+Type:  CNAME
+Name:  lab
+Value: cname.vercel-dns.com
+```
+
+**Option B — A record (if CNAME is unavailable):**
+```
+Type:  A
+Name:  lab
+Value: 76.76.21.21
+```
+
+Use Option A (CNAME) unless Hostinger explicitly requires A records for subdomains.
+
+---
+
+## Step 2 — Hostinger DNS Configuration
+
+1. Log in to Hostinger hPanel
+2. Navigate to **Domains → Manage → DNS / Nameservers** for `asquaresolution.com`
+3. Add the record Vercel specified in Step 1
+
+### Adding a CNAME record in Hostinger
+
+| Field | Value |
+|---|---|
+| Type | CNAME |
+| Name / Host | `lab` |
+| Points to / Value | `cname.vercel-dns.com` |
+| TTL | 3600 (or lowest available) |
+
+**Important:** The Name/Host field should be `lab` only — not `lab.asquaresolution.com`. Hostinger automatically appends the root domain.
+
+### If the main domain uses Hostinger nameservers
+
+If `asquaresolution.com` is using Hostinger's default nameservers (`ns1.dns-parking.com`, `ns2.dns-parking.com` or similar), adding a DNS record directly in hPanel is correct.
+
+If the domain uses external/custom nameservers, you must add the record at wherever the authoritative nameservers are managed, not in hPanel.
+
+### DNS Propagation
+
+After saving the DNS record:
+- Propagation typically takes **5–30 minutes** for Vercel/Hostinger
+- Maximum propagation globally: up to 48 hours (rare)
+- Check propagation at: `https://dnschecker.org/#CNAME/lab.asquaresolution.com`
+- The record is working when all or most locations show `cname.vercel-dns.com`
+
+---
+
+## Step 3 — Set Environment Variables in Vercel
+
+In Vercel dashboard → **Settings → Environment Variables**:
+
+| Variable | Value | Environments |
+|---|---|---|
+| `NEXT_PUBLIC_SITE_URL` | `https://lab.asquaresolution.com` | Production |
+| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | `lab.asquaresolution.com` | Production (optional) |
+| `NEXT_PUBLIC_GA_ID` | `G-XXXXXXXXXX` | Production (optional) |
+
+Set `NEXT_PUBLIC_SITE_URL` to `Production` environment only. The `vercel.app` URL should remain accessible for preview/staging deployments.
+
+After saving environment variables, trigger a new deployment: **Deployments → Redeploy** (select the latest deployment, choose "Redeploy with existing build cache" or force a fresh build).
+
+---
+
+## Step 4 — SSL Certificate
+
+Vercel provisions SSL automatically via Let's Encrypt once:
+1. The domain is added to the Vercel project
+2. DNS propagation completes and Vercel can verify domain ownership
+
+You do not need to configure SSL manually. Vercel handles certificate issuance and renewal.
+
+**Expected timeline:** SSL certificate provisioned within 5–15 minutes of DNS propagation completing.
+
+**Verification:** Open `https://lab.asquaresolution.com` in a browser. The padlock icon should appear. Click it to confirm: certificate issued to `lab.asquaresolution.com`, valid, issued by Let's Encrypt.
+
+### If SSL fails to provision
+
+Vercel SSL provisioning can fail if:
+- DNS has not fully propagated (wait and retry)
+- A CAA record on `asquaresolution.com` blocks Let's Encrypt
+
+Check for CAA records:
+```
+dig CAA asquaresolution.com
+```
+
+If a CAA record exists and restricts certificate authorities, add:
+```
+Type:  CAA
+Name:  @
+Value: 0 issue "letsencrypt.org"
+```
+
+---
+
+## Step 5 — CDN Implications
+
+**Vercel Edge Network handles all CDN behaviour.** No Hostinger CDN configuration is required or recommended for this subdomain.
+
+The Vercel Edge Network:
+- Serves static pages from the nearest edge location globally
+- Caches `/_next/static/` assets with `Cache-Control: public, max-age=31536000, immutable`
+- Serves API routes (`/api/og`, `/api/search`) from regional serverless functions
+- Handles cache invalidation automatically on each new deployment
+
+**Hostinger CDN/LiteSpeed cache:** The `lab.` subdomain is DNS-pointed to Vercel, so Hostinger's LiteSpeed or CDN configuration does not apply. Changes to LiteSpeed rules on `asquaresolution.com` do not affect the lab.
+
+**No reverse proxy needed.** Do not configure a Hostinger redirect or proxy for `lab.asquaresolution.com` — the CNAME record to `cname.vercel-dns.com` is sufficient.
+
+---
+
+## Step 6 — Post-Launch Verification Checklist
+
+Run these checks after DNS propagates and SSL provisions:
+
+### DNS and SSL
+- [ ] `https://lab.asquaresolution.com` loads without SSL error
+- [ ] Certificate subject is `lab.asquaresolution.com`
+- [ ] HTTP → HTTPS redirect is working (`http://lab.asquaresolution.com` redirects to HTTPS)
+
+### Core pages
+- [ ] Homepage loads: `https://lab.asquaresolution.com`
+- [ ] A content page loads: `https://lab.asquaresolution.com/docs/media-publishing-workflow`
+- [ ] A lesson loads: `https://lab.asquaresolution.com/tracks/claude-code-operator/foundations/choosing-your-ai-engineering-stack`
+- [ ] Tracks index: `https://lab.asquaresolution.com/tracks`
+- [ ] Tags index: `https://lab.asquaresolution.com/tags`
+
+### SEO and metadata
+- [ ] `https://lab.asquaresolution.com/sitemap.xml` returns XML with correct `lab.asquaresolution.com` URLs
+- [ ] `https://lab.asquaresolution.com/robots.txt` shows `Sitemap: https://lab.asquaresolution.com/sitemap.xml`
+- [ ] Page `<title>` tags are correct (not showing `vercel.app`)
+- [ ] `<link rel="canonical">` on article pages points to `lab.asquaresolution.com`
+- [ ] OG image URL in page source uses `lab.asquaresolution.com`
+
+### Internal tools (noindex — should NOT appear in sitemap)
+- [ ] `/ops` returns 200 but is excluded from sitemap.xml
+- [ ] `/syndicate` returns 200 but is excluded from sitemap.xml
+- [ ] Both pages have `<meta name="robots" content="noindex, nofollow">`
+
+### Security headers
+- [ ] `Strict-Transport-Security` header present (check in browser DevTools → Network → Response Headers)
+- [ ] `X-Frame-Options: DENY` present
+- [ ] `X-Content-Type-Options: nosniff` present
+
+### Structured data
+- [ ] Paste a page URL into [Google Rich Results Test](https://search.google.com/test/rich-results) — no errors
+- [ ] WebSite and Organization JSON-LD blocks present on homepage
+
+### API routes
+- [ ] `/api/og?title=Test&section=DOCS` returns an image (PNG, 1200×630)
+- [ ] `/api/search?q=claude` returns JSON results
+
+---
+
+## Step 7 — Google Search Console
+
+Submit after launch:
+1. Go to [Google Search Console](https://search.google.com/search-console)
+2. Add property: `lab.asquaresolution.com` (URL prefix method)
+3. Verify via HTML tag (add to `<head>` in `app/layout.tsx` under the structured data scripts) or via DNS TXT record
+4. Submit sitemap: `https://lab.asquaresolution.com/sitemap.xml`
+
+**Note:** DNS TXT verification is cleanest — it adds a `TXT` record in Hostinger hPanel:
+```
+Type:  TXT
+Name:  @
+Value: google-site-verification=XXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+---
+
+## Environment Isolation
+
+AI Execution Lab is fully isolated from the main A Square Solutions infrastructure:
+
+| Concern | Status |
+|---|---|
+| WordPress database | No connection — lab has no DB |
+| WordPress PHP runtime | No connection — lab is Node.js/Vercel |
+| Hostinger shared hosting | No connection — subdomain DNS-delegated to Vercel |
+| ScamCheck / TrustSeal APIs | No connection — no shared API routes |
+| Credentials / secrets | Not present — no API keys, tokens, or passwords in lab codebase |
+| `.env` files | Gitignored — only `.env.example` is committed |
+
+The only link between the lab and the main domain is the DNS CNAME record. Removing that record would restore the subdomain to unresolved. The main `asquaresolution.com` site is unaffected by any lab deployment.

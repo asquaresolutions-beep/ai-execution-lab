@@ -4,14 +4,14 @@ import { SECTION_META } from '@/lib/utils'
 import { TRACKS, getAllLessonPaths } from '@/lib/tracks'
 import { buildTagIndex } from '@/lib/tags'
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-execution-lab.vercel.app'
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 
 const SECTIONS: ContentSection[] = ['docs', 'systems', 'labs', 'case-studies', 'playbooks', 'failures', 'logs']
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: BASE_URL,                    lastModified: new Date(), changeFrequency: 'weekly',  priority: 1   },
-    { url: `${BASE_URL}/syndicate`,     lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
+    { url: BASE_URL, lastModified: new Date(), changeFrequency: 'weekly', priority: 1 },
+    // /ops and /syndicate are noindex internal tools — excluded from sitemap
     ...SECTIONS.map((section) => ({
       url: `${BASE_URL}${SECTION_META[section].href}`,
       lastModified: new Date(),

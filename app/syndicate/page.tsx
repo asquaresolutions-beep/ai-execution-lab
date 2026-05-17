@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 const SECTIONS: ContentSection[] = ['failures', 'case-studies', 'labs', 'systems', 'playbooks', 'docs']
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-execution-lab.vercel.app'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 
 export default function SyndicatePage() {
   const items = SECTIONS.flatMap((s) => getAllMeta(s))
