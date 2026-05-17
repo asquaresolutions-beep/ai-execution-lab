@@ -95,11 +95,20 @@ export { DeploymentLog }                               from './mdx/deployment-lo
 export { ValidationGate, ValidationPipeline }          from './mdx/validation-gate'
 export { LessonMeta }                                  from './mdx/lesson-meta'
 
-// Media
+// Media — existing
 export { YouTube }     from './media/youtube-embed'
 export { VideoEmbed }  from './media/video-embed'
 export { BeforeAfter } from './media/before-after'
 export { Gallery }     from './media/gallery'
+
+// Media — execution system
+export { TerminalRecording }  from './media/terminal-recording'
+export { YouTubeWalkthrough } from './media/youtube-walkthrough'
+export { ArchitectureDiagram } from './media/architecture-diagram'
+export { ExecutionGallery }   from './media/execution-gallery'
+export { DebugReplay, DebugStep } from './media/debug-replay'
+export { TranscriptBlock }    from './media/transcript-block'
+export { TimelineMarkers }    from './media/timeline-markers'
 
 // ─────────────────────────────────────────────────────────────
 // Standard MDX element overrides

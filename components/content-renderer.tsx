@@ -20,6 +20,14 @@ import {
   DeploymentLog,
   ValidationGate, ValidationPipeline,
   LessonMeta,
+  // Execution media system
+  TerminalRecording,
+  YouTubeWalkthrough,
+  ArchitectureDiagram,
+  ExecutionGallery,
+  DebugReplay, DebugStep,
+  TranscriptBlock,
+  TimelineMarkers,
 } from './mdx-components'
 import remarkGfm from 'remark-gfm'
 import rehypeSlug from 'rehype-slug'
@@ -59,6 +67,15 @@ const allComponents = {
   ValidationGate,
   ValidationPipeline,
   LessonMeta,
+  // Execution media system
+  TerminalRecording,
+  YouTubeWalkthrough,
+  ArchitectureDiagram,
+  ExecutionGallery,
+  DebugReplay,
+  DebugStep,
+  TranscriptBlock,
+  TimelineMarkers,
 }
 
 interface ContentRendererProps {

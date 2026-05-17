@@ -1,0 +1,260 @@
+---
+title: "Media Publishing Workflow"
+description: "How to record, name, store, and publish execution media — screen recordings, walkthrough videos, architecture diagrams, and debug replays."
+date: "2026-05-18"
+tags: ["ops", "media", "workflow", "documentation"]
+status: "published"
+---
+
+This doc covers the complete workflow for adding media assets to AI Execution Lab: recording conventions, file naming, directory structure, transcript formatting, and the MDX components available for each media type.
+
+## Directory Structure
+
+All media assets live under `public/`. The directory structure mirrors the content sections:
+
+```
+public/
+  recordings/          # MP4/WebM terminal recordings
+    {track-id}/
+      {lesson-id}-{descriptor}.mp4
+  diagrams/            # Architecture and system diagrams
+    {section}/
+      {slug}-{descriptor}.png
+  evidence/            # Incident screenshots and deployment evidence
+    {incident-slug}/
+      {nn}-{descriptor}.png
+  thumbnails/          # Video poster images
+    {recording-id}.jpg
+```
+
+## File Naming Conventions
+
+Consistent naming prevents broken references when evidence directories grow.
+
+| Asset type | Pattern | Example |
+|---|---|---|
+| Terminal recording | `{lesson-id}-{topic}.mp4` | `choosing-your-stack-setup.mp4` |
+| Walkthrough video | External (YouTube ID only) | `dQw4w9WgXcQ` |
+| Architecture diagram | `{topic}-{version}.png` | `stack-overview-v2.png` |
+| Evidence screenshot | `{nn}-{descriptor}.png` | `03-build-passing.png` |
+| Thumbnail | `{recording-id}.jpg` | `choosing-your-stack-setup.jpg` |
+
+Sequential two-digit prefixes (`01-`, `02-`) on evidence screenshots ensure correct gallery ordering regardless of file system sort order.
+
+## Terminal Recordings
+
+Record terminal sessions as `.mp4` using any screen recorder. Recommended specs:
+
+- **Resolution:** 1280×800 or 1920×1080
+- **Frame rate:** 30fps
+- **Format:** H.264 MP4 (broadest browser support)
+- **Audio:** Off for terminal-only recordings. On for narrated walkthroughs.
+- **Duration:** Keep under 10 minutes per recording. Split long sessions by chapter.
+
+### MDX Component
+
+```mdx
+<TerminalRecording
+  src="/recordings/choosing-your-stack-setup.mp4"
+  title="Bootstrapping the project from scratch"
+  duration={342}
+  uploadDate="2026-05-18"
+  poster="/thumbnails/choosing-your-stack-setup.jpg"
+  chapters={[
+    { title: "npx create-next-app",  start: 0,   anchor: "setup" },
+    { title: "TypeScript config",    start: 60,  anchor: "typescript" },
+    { title: "Tailwind install",     start: 145, anchor: "tailwind" },
+    { title: "First build",          start: 260, anchor: "first-build" },
+  ]}
+  transcript={[
+    { time: 0,   speaker: "Dev",     text: "Starting from an empty directory." },
+    { time: 12,  speaker: "Claude",  text: "Run npx create-next-app@latest with TypeScript and App Router." },
+    { time: 60,  speaker: "Dev",     text: "tsconfig.json looks correct. Moving to Tailwind." },
+  ]}
+/>
+```
+
+The `duration` field (in seconds) is required for VideoObject JSON-LD. The `uploadDate` must be a valid ISO 8601 date string.
+
+## YouTube Walkthroughs
+
+For longer narrated walkthroughs published to YouTube, use `YouTubeWalkthrough` instead of the plain `YouTube` component. It adds chapter navigation and transcript support.
+
+```mdx
+<YouTubeWalkthrough
+  id="your-video-id"
+  title="Full Claude Code session: content pipeline"
+  duration={1842}
+  uploadDate="2026-05-18"
+  description="Complete walkthrough of building a content pipeline with Claude Code."
+  chapters={[
+    { title: "Project overview",    start: 0    },
+    { title: "Content model",       start: 240  },
+    { title: "MDX components",      start: 680  },
+    { title: "Deployment",          start: 1400 },
+  ]}
+/>
+```
+
+Chapter clicks update the embed src with `?start=<seconds>&autoplay=1`. The chapter navigation uses YouTube-red accent colours to match the embed context.
+
+## Architecture Diagrams
+
+Architecture diagrams support annotation dots — interactive callout pins at specific coordinates.
+
+```mdx
+<ArchitectureDiagram
+  src="/diagrams/stack-overview-v2.png"
+  alt="AI Execution Lab stack: Next.js 15 App Router, MDX content layer, Vercel Edge Network, TypeScript 5"
+  caption="Production stack as of 2026-05-17"
+  annotations={[
+    { x: 20, y: 35, label: "MDX files in /content — processed by next-mdx-remote v6" },
+    { x: 75, y: 15, label: "Vercel Edge Network — SSG with ISR fallback" },
+    { x: 50, y: 70, label: "Tailwind JIT — no CSS runtime" },
+  ]}
+/>
+```
+
+Coordinates are percentages of the image dimensions (0–100). Annotation dots are visible immediately; tooltip text appears on click. The lightbox disables when `noZoom` is set.
+
+## Execution Galleries
+
+`ExecutionGallery` extends the base `Gallery` component with step numbers, outcome badges, and timestamps. Use it for incident evidence, before/after states, and any sequence of screenshots that tells a story.
+
+```mdx
+<ExecutionGallery
+  title="Incident INC-002 — Evidence"
+  images={[
+    {
+      src: "/evidence/next-mdx-remote-v6-upgrade/01-vercel-build-failure.png",
+      alt: "Vercel build log showing post-deploy investigation",
+      caption: "Build succeeded but components rendered empty",
+      step: 1,
+      outcome: "failure",
+      timestamp: "T+0m",
+    },
+    {
+      src: "/evidence/next-mdx-remote-v6-upgrade/02-production-deployments-ready.png",
+      alt: "Vercel dashboard: all deployments in Ready state after fix",
+      caption: "Recovery build deployed",
+      step: 2,
+      outcome: "success",
+      timestamp: "T+41m",
+    },
+  ]}
+/>
+```
+
+Outcome values: `success` (green), `failure` (red), `neutral` (grey). Step numbers appear as small badges in the top-left of each thumbnail.
+
+## Debug Replays
+
+`DebugReplay` with `DebugStep` children documents a debugging session as a structured, expandable narrative. Each step maps to a phase of the debugging process.
+
+Valid phases: `error`, `hypothesis`, `investigation`, `fix`, `verify`.
+
+```mdx
+<DebugReplay title="Tracing undefined props after v6 upgrade">
+  <DebugStep phase="error" title="Components rendered empty after deployment">
+    StepList, Checklist, and LessonObjectives showed wrapper shells but no
+    content items. No build error, no TypeScript error, no console warnings.
+  </DebugStep>
+  <DebugStep phase="hypothesis" title="Prop serialization layer suspected">
+    Array and object literal props — `items={['a', 'b']}` — might be stripped
+    during MDX compilation before reaching the component.
+  </DebugStep>
+  <DebugStep phase="investigation" title="Logged compileMDX serialized output">
+    Added temporary logging to `content-renderer.tsx`. Confirmed: `items` was
+    `undefined` at render time. Props were gone from the serialized JSX, not
+    from the source MDX.
+  </DebugStep>
+  <DebugStep phase="fix" title="Set blockJS: false in compileMDX options">
+    One line in `content-renderer.tsx`. Documented the reason at the call site
+    to prevent it being removed as dead code.
+  </DebugStep>
+  <DebugStep phase="verify" title="Build clean, all components rendering">
+    152 pages, 0 TypeScript errors. Verified in production on Vercel.
+  </DebugStep>
+</DebugReplay>
+```
+
+Steps default to expanded. Pass `defaultOpen={false}` on individual steps to collapse them initially.
+
+## Timeline Markers
+
+`TimelineMarkers` renders a sticky chapter navigation strip for long documents. Clicking a marker scrolls to the corresponding section anchor (`id` on an `h2` or `h3`).
+
+```mdx
+<TimelineMarkers
+  chapters={[
+    { title: "Stack overview",   start: 0,    anchor: "stack-overview" },
+    { title: "Cost model",       start: 0,    anchor: "cost-model" },
+    { title: "Failure patterns", start: 0,    anchor: "failure-patterns" },
+    { title: "Checkpoints",      start: 0,    anchor: "checkpoints" },
+  ]}
+/>
+```
+
+For content-navigation use cases (no video), set `start: 0` on all chapters — the timestamp is omitted when zero. The `anchor` value must match the `id` attribute on the target heading (generated by `rehype-slug` from the heading text).
+
+## Transcript Format
+
+Transcripts are arrays of `TranscriptEntry` objects:
+
+```typescript
+interface TranscriptEntry {
+  time: number       // seconds from start
+  speaker?: string   // "Claude" | "Dev" | "Terminal" | "System" (or any label)
+  text: string       // the transcript text for this cue
+}
+```
+
+Speaker names are case-insensitive for colour matching:
+- `"Claude"` → brand purple
+- `"Dev"` → green
+- `"Terminal"` → yellow
+- `"System"` → muted grey
+
+Transcripts over 30 entries are scrollable. The `TranscriptBlock` component collapses by default when used standalone; it defaults to expanded when embedded inside `TerminalRecording`.
+
+## Alt Text Standards
+
+Every image must have a complete, descriptive alt text. Concise is not enough — write for someone who cannot see the image.
+
+**Wrong:** `alt="Build error"`
+
+**Right:** `alt="Vercel build log showing next-mdx-remote v6 upgrade — build output visible with post-deploy component rendering failure identified"`
+
+For evidence screenshots, the alt text should describe:
+1. What tool or interface is shown
+2. What state it is in
+3. What is notable about this specific capture
+
+This is the correct format for evidence-backed documentation and for GEO/AI-search indexing.
+
+## VideoObject JSON-LD
+
+`TerminalRecording` and `YouTubeWalkthrough` inject VideoObject JSON-LD automatically when `duration` and `uploadDate` are provided. The schema includes:
+
+- `name`, `description`, `duration` (ISO 8601)
+- `uploadDate` (ISO 8601 date)
+- `thumbnailUrl` (if provided; defaults to YouTube maxresdefault for walkthroughs)
+- `hasPart` (Clip array) when chapters are defined
+
+No manual schema injection needed. Do not add a second `VideoObject` block to the same page — duplicate structured data triggers Search Console warnings.
+
+## Quick Reference
+
+| Component | Use case | JSON-LD |
+|---|---|---|
+| `TerminalRecording` | Local MP4/WebM recordings | VideoObject ✓ |
+| `YouTubeWalkthrough` | YouTube embeds with chapters | VideoObject ✓ |
+| `ArchitectureDiagram` | System diagrams with annotations | — |
+| `ExecutionGallery` | Evidence sequences with outcomes | — |
+| `DebugReplay` + `DebugStep` | Structured debug session narrative | — |
+| `TranscriptBlock` | Standalone transcript viewer | — |
+| `TimelineMarkers` | In-page chapter navigation | — |
+| `YouTube` | Simple YouTube embed (no chapters) | — |
+| `VideoEmbed` | Generic video embed | — |
+| `BeforeAfter` | Two-state comparison slider | — |
+| `Gallery` | Basic image grid + lightbox | — |
