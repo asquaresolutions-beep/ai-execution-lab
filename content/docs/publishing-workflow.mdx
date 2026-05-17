@@ -1,0 +1,165 @@
+---
+title: "Publishing Workflow"
+description: "Step-by-step guide to publishing content in every section of the AI Execution Lab. Covers failure reports, execution logs, labs, case studies, playbooks, docs, and systems."
+date: "2026-05-17"
+tags: ["publishing", "workflow", "operations", "content"]
+status: published
+difficulty: beginner
+section: Operations
+---
+
+This document covers the complete publishing workflow for every content type. Every section has a fixed frontmatter schema and a specific publishing pattern.
+
+---
+
+## Quick Reference
+
+| Section | Format | Trigger | Cadence |
+|---------|--------|---------|---------|
+| Failure Archive | Structured incident | After any production failure | As they occur |
+| Execution Logs | Session journal | After any build/deploy session | Daily or weekly |
+| Labs | Research entry | At hypothesis formation | Per experiment |
+| Case Studies | Results write-up | After a measurable outcome | Per project |
+| Playbooks | Step-by-step guide | When a workflow becomes repeatable | Per workflow |
+| Systems | Architecture doc | When a system reaches production | Per system |
+| Docs | Reference entry | When a tool/pattern needs documentation | As needed |
+
+---
+
+## Publishing a Failure Report
+
+<Callout type="danger" title="Real incidents only">
+Every failure report must document an actual production incident. Do not fabricate incidents for content volume.
+</Callout>
+
+**When to publish:** Any time a production deployment fails, a build breaks, or a system-level error requires investigation and recovery.
+
+**File location:** `content/failures/[kebab-case-title].mdx`
+
+**Minimum frontmatter:**
+```yaml
+---
+title: "Short incident title"
+description: "One-sentence summary of what broke and how it was fixed."
+date: "YYYY-MM-DD"
+tags: ["next.js", "vercel", "deployment"]
+status: published
+severity: high          # low | medium | high | critical
+failure_status: resolved # open | investigating | resolved
+failure_type: deployment # build | runtime | deployment | data | performance | dependency
+project: ai-execution-lab
+resolution_time: "X minutes"
+---
+```
+
+**Structure:**
+1. `<IncidentReport>` component with impact, rootCause, resolution, prevention props
+2. `<ExecutionEvidence>` with commitRef and date
+3. "What Happened" — chronological narrative
+4. Timeline table
+5. Root cause explanation
+6. Prevention pattern (numbered list)
+
+---
+
+## Publishing an Execution Log
+
+**When to publish:** After any meaningful build session, debugging session, deployment, or weekly execution summary.
+
+**File location:** `content/logs/YYYY-MM-DD-[short-description].mdx`
+
+**Minimum frontmatter:**
+```yaml
+---
+title: "Session title"
+description: "One-sentence summary of the session."
+date: "YYYY-MM-DD"
+tags: ["claude-code", "next.js"]
+status: published
+log_type: daily        # daily | weekly | deployment | debug | experiment | release
+duration: "~2h"
+outcome: "One-line result of the session."
+project: ai-execution-lab
+---
+```
+
+**Structure:** Lightweight. No required components. Use headers, tables, code blocks as needed. Keep it real and technical — this is a journal, not a polished article.
+
+---
+
+## Publishing a Lab Entry
+
+**When to publish:** At the start of an experiment (with `result: ongoing`) or after completion with a measured result.
+
+**File location:** `content/labs/[slug].mdx`
+
+**Minimum frontmatter:**
+```yaml
+---
+title: "What we tested"
+description: "One-sentence description of the experiment."
+date: "YYYY-MM-DD"
+hypothesis: "The specific claim being tested."
+result: ongoing        # confirmed | refuted | inconclusive | ongoing
+tags: ["geo", "ai-search"]
+status: published
+---
+```
+
+---
+
+## Publishing a Case Study
+
+**When to publish:** After a project produces measurable, verifiable results.
+
+**File location:** `content/case-studies/[slug].mdx`
+
+**Minimum frontmatter:**
+```yaml
+---
+title: "What we built / fixed / measured"
+description: "One-sentence summary."
+date: "YYYY-MM-DD"
+impact: "Specific measurable result — numbers preferred."
+tags: ["wordpress", "seo"]
+status: published
+---
+```
+
+<Callout type="warn" title="Impact must be real">
+The `impact` field shows prominently on the list page and in article headers. It must be a real, verifiable outcome. Vague claims reduce credibility.
+</Callout>
+
+---
+
+## Publishing a Playbook
+
+**When to publish:** When a workflow has been executed successfully at least once and is genuinely repeatable.
+
+**File location:** `content/playbooks/[slug].mdx`
+
+**Minimum frontmatter:**
+```yaml
+---
+title: "How to [do X]"
+description: "One-sentence summary."
+date: "YYYY-MM-DD"
+goal: "What this playbook achieves."
+estimated_time: "30 minutes"
+prerequisites:
+  - "Prerequisite 1"
+  - "Prerequisite 2"
+tags: ["wordpress", "automation"]
+status: published
+---
+```
+
+---
+
+## After Publishing
+
+1. Run `node_modules/.bin/next build` locally — verify 0 errors
+2. Push to GitHub — Vercel auto-deploys
+3. Run the Syndication tool (`/syndicate`) to generate distribution copy
+4. Post to relevant channels within 24 hours of publishing
+5. Link the new content from any related existing content if applicable

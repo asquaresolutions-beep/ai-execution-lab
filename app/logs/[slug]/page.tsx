@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getItem, getAllSlugs, getNeighbors } from '@/lib/content'
 import { ContentPage } from '@/components/content-page'
+import { buildArticleMetadata } from '@/lib/metadata'
 import type { Metadata } from 'next'
 
 interface Props { params: Promise<{ slug: string }> }
@@ -13,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const item = getItem('logs', slug)
   if (!item) return {}
-  return { title: item.frontmatter.title, description: item.frontmatter.description }
+  return buildArticleMetadata(item)
 }
 
 export default async function LogPage({ params }: Props) {

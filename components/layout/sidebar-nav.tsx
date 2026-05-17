@@ -37,6 +37,12 @@ const NAV = [
     ],
   },
   {
+    group: 'Discover',
+    items: [
+      { href: '/tags',      label: 'Topics'       },
+    ],
+  },
+  {
     group: 'Publish',
     items: [
       { href: '/syndicate', label: 'Syndication' },

@@ -3,6 +3,18 @@ import type { ContentMeta, ContentSection } from '@/lib/content'
 import { SECTION_META, ACCENT_CLASSES, formatDateMono, cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 
+// Tag pill — links to /tags/[tag]
+function TagPill({ tag }: { tag: string }) {
+  return (
+    <Link
+      href={`/tags/${tag}`}
+      className="text-[11px] text-surface-700 bg-white/[0.03] rounded px-1.5 py-0.5 border border-white/[0.05] hover:text-brand-400 hover:border-brand-500/20 transition-colors"
+    >
+      #{tag}
+    </Link>
+  )
+}
+
 interface SectionIndexProps {
   section: ContentSection
   items: ContentMeta[]
@@ -101,12 +113,7 @@ export function SectionIndex({ section, items }: SectionIndexProps) {
                 {item.frontmatter.tags && item.frontmatter.tags.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {item.frontmatter.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-[11px] text-surface-700 bg-white/[0.03] rounded px-1.5 py-0.5 border border-white/[0.05]"
-                      >
-                        {tag}
-                      </span>
+                      <TagPill key={tag} tag={tag} />
                     ))}
                   </div>
                 )}

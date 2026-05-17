@@ -1,0 +1,157 @@
+---
+title: "Frontmatter Reference"
+description: "Complete reference for all frontmatter fields available across every content section. Required fields, optional fields, valid values, and examples."
+date: "2026-05-17"
+tags: ["publishing", "frontmatter", "reference"]
+status: published
+difficulty: beginner
+section: Operations
+---
+
+Every MDX file in `content/` starts with a YAML frontmatter block. This reference documents every available field.
+
+---
+
+## Universal fields (all sections)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `title` | string | ✓ | Article title. Appears in page header, list cards, OG meta, and JSON-LD. |
+| `description` | string | ✓ | One-sentence summary. Used in cards, meta description, and OG. |
+| `date` | string | ✓ | Publication date in `YYYY-MM-DD` format. |
+| `updated` | string | — | Last updated date. Shows "updated X" in article meta if different from date. |
+| `tags` | string[] | — | Kebab-case tags. Power tag pages, related content, syndication hashtags. |
+| `status` | enum | — | `published` (default), `draft`, `archived`. Drafts hidden in production builds. |
+
+---
+
+## Failures-specific fields
+
+```yaml
+severity: high           # low | medium | high | critical
+failure_status: resolved # open | investigating | resolved
+failure_type: deployment # build | runtime | deployment | data | performance | dependency
+project: ai-execution-lab
+resolution_time: "23 minutes"
+```
+
+| Field | Description |
+|-------|-------------|
+| `severity` | Incident severity. Controls colored dot on list page. |
+| `failure_status` | Current status. `resolved` shows green on list. |
+| `failure_type` | Category of failure. Shown as a badge on cards. |
+| `project` | Which project the failure occurred in. |
+| `resolution_time` | Human-readable time to resolve. Shown in cards and syndication. |
+
+---
+
+## Logs-specific fields
+
+```yaml
+log_type: daily     # daily | weekly | deployment | debug | experiment | release
+duration: "~2h"
+outcome: "What was shipped or learned."
+project: ai-execution-lab
+```
+
+| Field | Description |
+|-------|-------------|
+| `log_type` | Controls the type badge on the log list page. |
+| `duration` | Session length estimate. Shown in list row. |
+| `outcome` | Single-line result. Shows under the title in list view. |
+
+---
+
+## Labs-specific fields
+
+```yaml
+hypothesis: "The specific claim being tested."
+result: confirmed   # confirmed | refuted | inconclusive | ongoing
+```
+
+| Field | Description |
+|-------|-------------|
+| `hypothesis` | The testable claim. Shown in article header block. |
+| `result` | Experiment outcome. Controls result badge color. `ongoing` = blue. |
+
+---
+
+## Case Studies fields
+
+```yaml
+impact: "Specific measurable result — numbers preferred."
+```
+
+| Field | Description |
+|-------|-------------|
+| `impact` | The measured outcome. Shown in green block in article header + list cards. |
+
+---
+
+## Docs-specific fields
+
+```yaml
+difficulty: intermediate  # beginner | intermediate | advanced
+section: Operations       # Sidebar grouping label
+```
+
+---
+
+## Systems-specific fields
+
+```yaml
+stack:
+  - "Next.js 15"
+  - "Vercel"
+  - "TypeScript"
+```
+
+The `stack` array renders as a dot-separated list in the article header meta row.
+
+---
+
+## Playbooks-specific fields
+
+```yaml
+goal: "What this playbook achieves."
+estimated_time: "30 minutes"
+prerequisites:
+  - "Claude Code installed"
+  - "Vercel account"
+```
+
+---
+
+## Complete example (Failure Report)
+
+```yaml
+---
+title: "Edge Runtime Deployment Failure"
+description: "export const runtime = 'edge' in app/opengraph-image.tsx blocked the entire Vercel deployment."
+date: "2026-05-10"
+updated: "2026-05-10"
+tags: ["vercel", "edge-runtime", "deployment", "next.js"]
+status: published
+severity: high
+failure_status: resolved
+failure_type: deployment
+project: ai-execution-lab
+resolution_time: "23 minutes"
+---
+```
+
+## Complete example (Execution Log)
+
+```yaml
+---
+title: "Tracks Phase 4 + Failure Archive Build"
+description: "Built Phase 4 Execution Tracks, Failure Archive section, and 3 real incident reports."
+date: "2026-05-14"
+tags: ["next.js", "claude-code", "execution-tracks"]
+status: published
+log_type: daily
+duration: "~6h"
+outcome: "99 → 103 pages shipped. Failure Archive live."
+project: ai-execution-lab
+---
+```

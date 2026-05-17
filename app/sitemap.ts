@@ -2,6 +2,7 @@ import { MetadataRoute } from 'next'
 import { getAllMeta, type ContentSection } from '@/lib/content'
 import { SECTION_META } from '@/lib/utils'
 import { TRACKS, getAllLessonPaths } from '@/lib/tracks'
+import { buildTagIndex } from '@/lib/tags'
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-execution-lab.vercel.app'
 
@@ -28,6 +29,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }))
   )
 
+  // Tag routes
+  const tagRoutes: MetadataRoute.Sitemap = [
+    { url: `${BASE_URL}/tags`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 0.6 },
+    ...buildTagIndex().map(({ tag }) => ({
+      url: `${BASE_URL}/tags/${tag}`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.5,
+    })),
+  ]
+
   // Track routes
   const trackRoutes: MetadataRoute.Sitemap = [
     { url: `${BASE_URL}/tracks`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 0.9 },
@@ -52,5 +64,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
       })),
   ]
 
-  return [...staticRoutes, ...contentRoutes, ...trackRoutes]
+  return [...staticRoutes, ...contentRoutes, ...tagRoutes, ...trackRoutes]
 }

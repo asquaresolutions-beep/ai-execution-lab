@@ -186,12 +186,13 @@ export async function ContentPage({ item, prev, next }: ContentPageProps) {
               {fm.tags && fm.tags.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-1.5">
                   {fm.tags.map((tag) => (
-                    <span
+                    <Link
                       key={tag}
-                      className="text-xs text-surface-600 bg-white/[0.03] rounded-full px-2.5 py-0.5 border border-white/[0.06]"
+                      href={`/tags/${tag}`}
+                      className="text-xs text-surface-600 bg-white/[0.03] rounded-full px-2.5 py-0.5 border border-white/[0.06] hover:text-brand-400 hover:border-brand-500/20 transition-colors"
                     >
-                      {tag}
-                    </span>
+                      #{tag}
+                    </Link>
                   ))}
                 </div>
               )}

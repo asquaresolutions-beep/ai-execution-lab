@@ -4,6 +4,7 @@ import './globals.css'
 import { Sidebar } from '@/components/layout/sidebar'
 import { TopBar } from '@/components/layout/top-bar'
 import { SearchModal } from '@/components/search/search-modal'
+import { Analytics } from '@/components/analytics'
 
 // ─── Fonts ───────────────────────────────────────────────────
 const fontSans = Inter({
@@ -132,6 +133,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Global search modal — registers Cmd+K globally */}
         <SearchModal />
+
+        {/* Analytics — production only, env-gated */}
+        <Analytics />
       </body>
     </html>
   )

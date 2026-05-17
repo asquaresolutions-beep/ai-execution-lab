@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getItem, getAllSlugs, getNeighbors } from '@/lib/content'
 import { ContentPage } from '@/components/content-page'
+import { buildArticleMetadata } from '@/lib/metadata'
 import type { Metadata } from 'next'
 
 interface Props { params: Promise<{ slug: string }> }
@@ -13,12 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const item = getItem('docs', slug)
   if (!item) return {}
-  const fm = item.frontmatter
-  return {
-    title: fm.title,
-    description: fm.description,
-    openGraph: { title: fm.title, description: fm.description },
-  }
+  return buildArticleMetadata(item)
 }
 
 export default async function DocPage({ params }: Props) {
