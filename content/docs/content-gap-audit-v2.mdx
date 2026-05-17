@@ -1,0 +1,492 @@
+---
+title: "Content Gap Audit — High-Value Missing Content"
+description: "Systematic audit of highest-value missing content across AI Execution Lab: GEO opportunity topics, authority-building gaps, beginner bottlenecks, and operational blind spots."
+date: "2026-05-18"
+tags: ["ops", "audit", "content-gaps", "geo", "authority", "roadmap"]
+status: "published"
+---
+
+This audit identifies the highest-value missing content across AI Execution Lab. Not topics — specific lesson titles, playbooks, and failure reports that should exist but don't. Every gap identified here has a rationale: why it's missing, why it matters, and what publishing it would accomplish.
+
+Audit scope: 5 tracks, 18 modules, 30 available lessons, 3 failures, 1 playbook, 1 case study, 22 docs. Audit method documented in Section 1.
+
+---
+
+## 1. Audit Methodology
+
+Gaps were identified through four methods:
+
+**Method 1 — Track coverage analysis.** Every Coming Soon lesson slot represents a promised gap. Beyond the stubs, I identified lessons the track logically requires but that weren't planned at all.
+
+**Method 2 — Operational need analysis.** What does an operator actually need to do the work described by each track? Compared the "what you need" list against "what exists." Gaps in operational necessity are highest-priority.
+
+**Method 3 — GEO opportunity analysis.** What topics are (a) specific enough to be citable, (b) verifiable, and (c) not well-documented on the open web? Topics at the intersection of these three criteria have high AI search citation probability because AI systems cite sources that are specific and rare.
+
+**Method 4 — Beginner friction analysis.** Where in the track structure does a beginner most likely abandon? This is determined by looking at where the track assumes prior knowledge that isn't documented anywhere on the platform, and where Coming Soon blocks the only logical next step.
+
+---
+
+## 2. Highest GEO Opportunity Topics
+
+These topics have high AI search citation probability because they are specific, operationally verifiable, and not well-documented anywhere. "High citation probability" means: if a user asks an AI search system a question in this space, the platform could plausibly be cited — but only if the content exists and is specific enough.
+
+### 2.1 — Claude Code CLAUDE.md examples by project type
+
+**Why high GEO value:** "CLAUDE.md" is a Claude Code-specific concept. There is almost no third-party documentation on CLAUDE.md architecture for specific project types (Next.js projects, WordPress automation projects, multi-repo monorepos). Every AI system that answers "how should I structure my CLAUDE.md" has almost nothing to cite.
+
+**Specific lessons needed:**
+- `claude-md-for-nextjs-projects` — exact file structure, what to include, what to exclude
+- `claude-md-for-wordpress-automation` — context loading for WP REST API work
+- `claude-md-for-multi-repo-projects` — project settings vs workspace settings boundary
+- `claude-md-templates-library` — 5+ real templates with reasoning for each field
+
+---
+
+### 2.2 — next-mdx-remote v6 migration
+
+**Why high GEO value:** The `next-mdx-remote` v6 release introduced breaking changes that have no clear migration guide in the official documentation. This platform hit the `blockjs` error directly (documented in `next-mdx-remote-v6-blockjs.mdx`). Operators hitting this error are searching for exact solutions — not conceptual explanations.
+
+**Specific content needed:**
+- `next-mdx-remote-v6-breaking-changes` — complete list of what changed from v5 to v6
+- `migrating-next-mdx-remote-v5-to-v6` — step-by-step with the actual error messages and fixes
+- *The failure report exists. A companion lesson on the migration path itself does not.*
+
+---
+
+### 2.3 — Vercel edge runtime Node.js incompatibility
+
+**Why high GEO value:** The edge runtime / Node.js incompatibility is one of the most common Vercel deployment failures for developers who assumed their code would run the same in edge as in Node.js. The failure report exists (`edge-runtime-deployment-failure.mdx`). The systematic lesson explaining the full boundary — what works, what doesn't, and how to decide which runtime to use — does not.
+
+**Specific content needed:**
+- `vercel-edge-runtime-vs-nodejs-runtime` — what the two runtimes are, exact API boundaries
+- `when-to-use-edge-runtime` — decision framework with tradeoffs
+- `diagnosing-edge-runtime-errors` — systematic error taxonomy
+
+---
+
+### 2.4 — WordPress Application Password not working
+
+**Why high GEO value:** WordPress Application Passwords (introduced in WP 5.6) are the standard for REST API authentication, but they fail silently in several configurations: hosting providers that disable them, security plugins that block them, multisite setups, and misconfigured permalink structures. This is a widespread operational problem with scattered documentation.
+
+**Specific content needed:**
+- `wordpress-application-password-troubleshooting` — exact error responses, root causes, fixes
+- `wp-rest-api-auth-environment-matrix` — which auth method works in which environment
+
+---
+
+### 2.5 — Perplexity source selection criteria
+
+**Why high GEO value:** Operators optimizing for GEO need to understand how AI search systems select sources to cite. Perplexity's behavior is partially documented by researchers but there's almost no operational documentation written from the perspective of a content publisher trying to get cited. This is a gap the platform can own because it's actively running GEO experiments.
+
+**Specific content needed:**
+- `how-perplexity-selects-sources` — what signals affect citation selection based on documented research + platform's own experiments
+- `geo-experiment-perplexity-results` — case study of specific experiments run on this platform
+
+---
+
+### 2.6 — Claude API extended thinking operational patterns
+
+**Why high GEO value:** Extended thinking (Claude's extended reasoning mode) is a relatively new API capability. Operational documentation on when to use it, what it costs in tokens, and when it produces worse results than standard mode is sparse.
+
+**Specific content needed:**
+- `claude-extended-thinking-when-to-use` — use cases where it helps vs hurts
+- `extended-thinking-token-cost-analysis` — real cost modeling at different task types
+- `extended-thinking-prompt-patterns` — prompts that work well with extended thinking enabled
+
+---
+
+### 2.7 — Vercel function timeout and streaming workarounds
+
+**Why high GEO value:** Vercel's 10-second function timeout (on free/pro plans) hits many AI application developers. The workarounds — streaming responses, edge functions, background jobs via Vercel Cron — are scattered across Vercel docs and community posts. A consolidated operational guide doesn't exist.
+
+**Specific content needed:**
+- `vercel-function-timeout-limits-and-workarounds` — tier limits, streaming patterns, edge function migration
+- `streaming-claude-responses-vercel` — complete implementation with error handling
+
+---
+
+### 2.8 — LiteSPeed UCSS and CSS stripping behavior
+
+**Why high GEO value:** The Lab already has a case study (`litespeed-ucss-scoped-css-stripping.mdx`) on this. LiteSpeed's Unused CSS removal feature has specific, non-obvious behaviors around scoped CSS and dynamic class names. There is almost no community documentation on this that's specific enough to be useful.
+
+**Specific content needed:**
+- `litespeed-ucss-exclusion-patterns` — how to prevent UCSS from stripping needed classes
+- `scoped-css-and-caching-plugins` — compatibility matrix for scoped CSS with major WP caching plugins
+
+---
+
+### 2.9 — WordPress bulk post operations with Claude
+
+**Why high GEO value:** Claude Code + WP REST API bulk operations (updating thousands of posts, bulk metadata changes, category restructuring) are poorly documented. This is a real operational task for sites with large post counts. A Square Solutions manages 8700+ posts.
+
+**Specific content needed:**
+- `bulk-post-updates-wp-rest-api` — read, transform, write at scale with rate limiting and error handling
+- `wp-bulk-metadata-operations` — custom field bulk updates with validation
+
+---
+
+### 2.10 — Claude Code context window management at project scale
+
+**Why high GEO value:** When a codebase grows large enough that the context window fills on every session, operators need specific strategies. The `context-loading-strategies` lesson covers this conceptually. A more specific lesson on what to do when the codebase exceeds context is missing and highly searchable.
+
+**Specific content needed:**
+- `context-window-full-recovery-patterns` — what to do when Claude loses context mid-session
+- `codebase-chunking-for-large-projects` — how to structure work to stay within context limits
+
+---
+
+### 2.11 — server-component vs client-component errors in Next.js App Router
+
+**Why high GEO value:** The `server-module-client-bundle` failure is documented. A systematic lesson on the server/client boundary — why it exists, how to diagnose boundary violations, and how to fix them — does not exist. This is one of the most common Next.js App Router errors.
+
+**Specific content needed:**
+- `nextjs-server-client-boundary-explained` — what the boundary is, why it exists, common violations
+- `use-client-directive-placement-guide` — where to add it, where not to, performance implications
+
+---
+
+### 2.12 — AdSense RPM by traffic source and niche
+
+**Why high GEO value:** `adsense-approval-reality` covers approval. RPM optimization — what traffic sources produce what RPM ranges, which niches pay what, how to read RPM trends in AdSense — is a different topic and barely exists as operational documentation outside of affiliate bait articles with fake numbers.
+
+**Specific content needed:**
+- `adsense-rpm-by-traffic-source` — search vs social vs direct vs referral RPM ranges with real data
+- `adsense-rpm-optimization-operations` — ad placement, ad format, and timing changes with measurable impact
+
+---
+
+### 2.13 — Git operations for AI-generated code
+
+**Why high GEO value:** AI-generated code has specific characteristics that affect git workflow: large batch commits, difficult-to-review diffs, frequent reverting when AI goes wrong. A git workflow optimized for AI-assisted development is different from standard git workflow.
+
+**Specific content needed:**
+- `git-workflow-for-ai-generated-code` — commit granularity, branch strategy, review patterns
+- `reviewing-ai-commits-before-push` — what to check, what AI commonly gets wrong
+
+---
+
+### 2.14 — Google Search Console for content strategy (not just SEO)
+
+**Why high GEO value:** Most Search Console documentation is written for SEO practitioners. Using it as a content strategy tool — which pages are getting impressions but no clicks, which queries suggest missing content, how to find the queries that AI search is now answering instead — is a different use case with almost no documentation.
+
+**Specific content needed:**
+- `search-console-for-content-strategy` — turning GSC data into publishing decisions
+- `gsc-queries-that-reveal-missing-content` — identifying content gaps from impression data
+
+---
+
+### 2.15 — env vars management across Vercel preview and production environments
+
+**Why high GEO value:** Managing environment variables across development, preview, and production in Vercel — especially when different API keys, secrets, and feature flags apply to each — has no good single-source documentation. The failure modes (production key leaking to preview, env var not available at build time, etc.) are common and painful.
+
+**Specific content needed:**
+- `vercel-env-vars-complete-guide` — scoping, encryption, access at build time vs runtime
+- `env-var-troubleshooting-vercel` — exact error messages and fixes for common env var failures
+
+---
+
+## 3. Highest Authority-Building Topics
+
+These topics build platform authority — they establish A Square Solutions as the definitive source on specific operational domains. Different from GEO opportunity: authority-building content may be broader and deeper than a single query can capture.
+
+### Production Claude Code operator patterns
+
+**The gap:** No source on the internet documents what it looks like to operate Claude Code on a real project for 6–12 months: how context management evolves, what CLAUDE.md iterations were made, which prompt patterns were abandoned and why, what the failure rate looks like over time.
+
+**Content needed:**
+- `claude-code-operator-after-6-months` — retrospective case study on a real project
+- `prompt-pattern-evolution-over-time` — which patterns worked at 1 month vs 6 months
+- `claude-code-operational-metrics` — how to measure Claude Code effectiveness in a real workflow
+
+---
+
+### Real failure documentation with root cause analysis
+
+**The gap:** The 3 existing failure reports are strong. The gap is volume. An operator who finds one specific failure documented in detail will trust the source. An operator who finds 30 failures documented in detail trusts the source for everything AI engineering.
+
+**Authority claim:** At 30+ failure reports with detailed root cause analysis, the platform becomes the go-to reference for production AI engineering failures — a role no current source fills.
+
+---
+
+### WP REST API operational procedures
+
+**The gap:** The WP REST API documentation is comprehensive but not operational. It tells you what the API does, not what an operator does with it at scale. The `wp-auth-patterns` and `content-patching-system` lessons are the start. A complete operational reference doesn't exist anywhere.
+
+**Content needed:**
+- `wp-rest-api-complete-operator-reference` — every endpoint an AI-assisted WordPress operator uses
+- `wp-rest-api-rate-limits-and-handling` — what the limits are, how to handle throttling
+- `wp-rest-api-pagination-at-scale` — bulk retrieval patterns for large post counts
+
+---
+
+### GEO experiments with measured outcomes
+
+**The gap:** GEO theory is everywhere. Documented GEO experiments with specific outcomes — "we changed X, and citation rate changed by Y, measured by Z" — are almost nowhere. If the platform runs and documents GEO experiments consistently, it becomes the primary empirical reference for GEO practitioners.
+
+**Content needed:**
+- A running `geo-experiments` section (not yet created)
+- `geo-experiment-001-schema-markup-citation-rate` — first experiment with methodology and results
+- `geo-experiment-002-answer-format-citation-rate` — second experiment
+
+---
+
+## 4. Beginner Bottlenecks
+
+These are the points in the platform where beginners most likely abandon, identified by analyzing where tracks assume knowledge not documented on the platform.
+
+### Bottleneck 1 — Claude Code Operator: Lesson 1 → Lesson 2 transition
+
+**Problem:** `choosing-your-ai-engineering-stack` (Lesson 1) is operator-level complexity. It compares tools, discusses cost models, and assumes the reader is evaluating stacks for a real project. A beginner who is just trying to understand what Claude Code is lands on this lesson and it's immediately too advanced.
+
+**What's missing:** A true beginner-level Lesson 0 for the Claude Code track: "What is Claude Code, what does it do, who is it for, how is it different from ChatGPT." Not a marketing overview — an operational explanation.
+
+**Specific lesson needed:** `what-is-claude-code-operator-explainer` — a 600-word orientation before the stack comparison lesson.
+
+---
+
+### Bottleneck 2 — AI Business Zero Budget: Module 1 Complete, Module 2 Empty
+
+**Problem:** Module 1 of this track is the strongest module on the platform — 11 lessons, all available. Module 2 (First Product) is entirely Coming Soon. A beginner who completes Module 1 is told "great, now go build your first product" — and hits a wall. There are no lessons on what to actually build or how.
+
+**What's missing:** The first 3 lessons of Module 2 need to exist for the track to be functional:
+- `mvp-with-claude` — how to scope and build a minimum viable product using Claude
+- `landing-page-with-claude` — how to build a simple landing page with Claude Code and Vercel
+- `launch-before-you-are-ready` — mindset and operational patterns for launching imperfect products
+
+---
+
+### Bottleneck 3 — GEO Track: One Lesson, Then Nothing
+
+**Problem:** The GEO track has 1 lesson. `geo-vs-seo` is a conceptual framing lesson. After reading it, there is nowhere to go on the platform. No lessons on how to actually optimize for GEO. A user who finds this track via AI search and reads one lesson cannot take any action.
+
+**What's missing:** The track needs a minimum of 4 more lessons before it's viable:
+- `rag-pipeline-for-content-publishers` — how AI search systems retrieve and rank content
+- `citation-signal-optimization` — what structural signals increase citation probability
+- `pillar-architecture-for-geo` — how to build a content structure that AI systems recognize as authoritative
+- `entity-optimization-basics` — entities, attributes, and how to make them machine-readable
+
+---
+
+### Bottleneck 4 — AI Automation Systems: One Lesson, Then Nothing
+
+**Problem:** Same problem as the GEO track. `pipeline-design` is the only lesson. It's a solid conceptual lesson but it doesn't show an operator how to actually build a pipeline. The track is announced; the content isn't there.
+
+**What's missing:**
+- `trigger-architecture` — event-driven vs scheduled vs webhook-triggered automation
+- `claude-as-orchestrator-pattern` — using Claude to route tasks to other systems
+- `automation-error-handling-and-retry` — what happens when a step fails
+
+---
+
+### Bottleneck 5 — First-time deployer: Missing env vars lesson
+
+**Problem:** The Vercel Deployment module has `deployment-pipeline` and `build-failure-diagnosis`. A beginner deploying their first real application will immediately need to set environment variables. There is no lesson on this anywhere on the platform. They will hit a production failure before finishing the module.
+
+**Specific lesson needed:** `vercel-env-vars-and-secrets-for-beginners` — a beginner-level lesson on creating, scoping, and troubleshooting env vars in Vercel.
+
+---
+
+## 5. Operational Blind Spots
+
+These are topics that are underdocumented not just on this platform, but almost everywhere on the open web. Publishing in these areas would establish the platform as a primary source.
+
+### Blind spot 1 — Claude Code failure rate in production
+
+No source documents what percentage of Claude Code tasks fail on the first attempt, require correction, produce incorrect output, or require rollback in real production usage. This data exists in any operator's actual usage — but no one publishes it. A case study on "our Claude Code task failure rate over 6 months" would be unique.
+
+### Blind spot 2 — Cost per shipped feature with AI-assisted development
+
+What does it actually cost to ship a feature using Claude Code vs doing it manually? Token costs, time costs, correction costs. This calculation has not been published in a reproducible way anywhere. The platform can own this.
+
+### Blind spot 3 — WordPress at 8000+ posts with AI operations
+
+There's abundant documentation for WordPress with a few hundred posts. At 8000+ posts, different patterns apply: indexing, query performance, REST API pagination, bulk operations, taxonomy at scale, and search infrastructure all behave differently. A Square Solutions operates at this scale. The operational knowledge should be documented.
+
+### Blind spot 4 — GEO measurement methodology
+
+How do you actually measure whether your content is being cited by AI systems? Manual testing is impractical at scale. Automated monitoring of AI responses is legal-grey territory. The methodological question of "how to measure GEO effectiveness" has almost no documented answers. The platform should document its own methodology.
+
+### Blind spot 5 — Prompt drift over time in production
+
+When the same prompt is run monthly for 12 months, does the output drift as the underlying model is updated? This is a real operational question for anyone using Claude in automated workflows. Nobody has documented this with real data.
+
+---
+
+## 6. WordPress Operations Gap
+
+A Square Solutions manages 8700+ WordPress posts across its main property. This represents deep operational knowledge that is almost entirely undocumented on the Lab.
+
+The gap is significant: the `claude-code-wp-rest-api` doc and two lessons (`wp-auth-patterns`, `content-patching-system`) cover basic WP REST API operations. The full scope of what an operator running 8700+ posts actually does with WordPress + AI is not documented.
+
+### What should exist as WordPress + AI Operations content
+
+**Tier 1 — Immediate (highest GEO value, most operational need):**
+
+| Lesson title | Why critical |
+|---|---|
+| `wp-rest-api-pagination-bulk-retrieval` | At 8700 posts, every bulk operation requires pagination. No working guide exists. |
+| `wordpress-application-password-troubleshooting` | Application Passwords fail silently in many configs. Platform already hit this. |
+| `wp-bulk-metadata-update-with-claude` | Custom field bulk operations at scale. Common need, no good guide. |
+| `wordpress-taxonomy-restructuring-operations` | Reorganizing categories/tags on a large site. Operational procedure that doesn't exist. |
+| `wp-rest-api-error-handling-patterns` | WP API error responses are inconsistent. Error handling patterns aren't documented. |
+
+**Tier 2 — High value:**
+
+| Lesson title | Why critical |
+|---|---|
+| `claude-code-wordpress-content-audit` | Using Claude to audit 8700 posts for quality, duplicates, and thin content |
+| `wp-media-library-bulk-operations` | Alt text, metadata, and attachment operations via REST API |
+| `wordpress-search-console-content-strategy` | Using GSC + WP admin together for content decisions |
+| `wp-performance-with-large-post-counts` | Query optimization, caching configuration, and REST API performance at scale |
+| `wordpress-to-nextjs-content-migration` | Content migration patterns for hybrid WP + Next.js architectures |
+
+**Tier 3 — Medium value:**
+
+| Lesson title | Why |
+|---|---|
+| `wordpress-user-role-management-via-api` | Automating user management for multi-author operations |
+| `wp-acf-fields-via-rest-api` | Advanced Custom Fields via REST API — requires ACF REST API plugin, poorly documented |
+| `wordpress-comment-moderation-automation` | Claude-assisted spam filtering and comment management |
+
+**Track recommendation:** Create a dedicated "WordPress + AI Operations" track with these lessons organized into 4 modules: REST API Operations, Bulk Operations at Scale, Content Intelligence, and Performance + Architecture. This track leverages existing A Square Solutions expertise directly and fills a content gap with almost no good competition.
+
+---
+
+## 7. Analytics + Monetization Gap
+
+Operators learning to build AI-assisted businesses need analytics and monetization documentation. The platform has one excellent beginner lesson (`adsense-approval-reality`) and one supporting lesson (`google-analytics-data-thinking`). The gap is large.
+
+### What's missing
+
+**AdSense and advertising:**
+
+| Lesson title | Why |
+|---|---|
+| `adsense-rpm-what-affects-it` | RPM is the number operators care about. What moves it is not documented honestly anywhere. |
+| `adsense-rpm-by-traffic-source` | Search traffic RPM vs social traffic RPM — major difference, not documented |
+| `adsense-ad-placement-optimization` | Placement changes that have measurable RPM impact |
+| `adsense-auto-ads-vs-manual-placement` | When auto ads are appropriate, when they hurt |
+| `first-adsense-payout-realistic-timeline` | How long it actually takes to reach the $100 threshold |
+
+**Search Console operational use:**
+
+| Lesson title | Why |
+|---|---|
+| `search-console-for-content-strategy` | GSC as a content planning tool, not just an SEO tool |
+| `search-console-impression-data-interpretation` | What impressions without clicks signal, what to do about it |
+| `gsc-performance-report-operator-workflow` | Weekly GSC review routine for operators |
+
+**Google Analytics 4:**
+
+| Lesson title | Why |
+|---|---|
+| `ga4-for-content-operators` | GA4 for understanding content performance, not just traffic numbers |
+| `ga4-engagement-metrics-for-lab-content` | Engagement time, scroll depth, and session metrics for learning content specifically |
+
+**Revenue beyond AdSense:**
+
+| Lesson title | Why |
+|---|---|
+| `stripe-setup-for-zero-budget-products` | The AI Business track promises a revenue module. Stripe setup doesn't exist. |
+| `gumroad-vs-stripe-for-first-product` | Decision framework for payment providers at zero-revenue stage |
+
+---
+
+## 8. Deployment Systems Gap
+
+The Claude Code Operator track's Vercel Deployment module (Module 4) has 2 available lessons and 2 Coming Soon. The Coming Soon lessons (`env-vars-secrets`, `rollback-strategies`) are the most practically essential lessons in the entire module. Almost every operator will hit both of these within their first real project.
+
+### What's missing — Vercel Deployment
+
+| Lesson title | Urgency | Why |
+|---|---|---|
+| `vercel-env-vars-and-secrets` | Critical | Every real app needs env vars. No lesson. |
+| `vercel-rollback-strategies` | Critical | Every real app will have a failed deployment. No lesson. |
+| `vercel-function-timeout-limits` | High | AI apps frequently hit the 10s limit. Workarounds not documented. |
+| `vercel-preview-deployments-workflow` | High | Preview deploys are core to the Vercel workflow. Not covered. |
+| `vercel-build-logs-reading-guide` | Medium | Detailed guide to reading Vercel build output for debugging. |
+| `vercel-cron-jobs-for-automation` | Medium | Scheduled functions for automation use cases. |
+| `vercel-domains-and-dns-setup` | Medium | Custom domain configuration — common beginner friction point. |
+
+### What's missing — broader deployment
+
+Beyond Vercel, the following deployment topics have no coverage:
+
+| Lesson title | Why |
+|---|---|
+| `github-actions-for-deployment` | CI/CD beyond Vercel's built-in git integration |
+| `monorepo-deployment-patterns` | Deploying from a monorepo — increasingly common for AI builders |
+| `deployment-testing-before-production` | Smoke testing, preview verification, go/no-go procedures |
+
+### What's missing — local development
+
+| Lesson title | Why |
+|---|---|
+| `local-development-with-cursor-and-claude-code` | Most operators use an IDE alongside Claude Code. No lesson on the combined workflow. |
+| `local-env-file-management` | `.env`, `.env.local`, `.env.production` — the full management pattern |
+| `hot-reload-and-development-server-patterns` | Next.js dev server patterns for AI-built applications |
+
+---
+
+## 9. Priority Matrix
+
+Scored 1–3 on each dimension. Score of 10–12 = publish immediately. Score of 7–9 = publish within 2 months. Score of 4–6 = publish within 6 months.
+
+| Content item | GEO value | Authority value | Effort | Audience size | Total |
+|---|---|---|---|---|---|
+| `vercel-env-vars-and-secrets` | 3 | 2 | 1 (low effort) | 3 | **9** |
+| `claude-md-for-nextjs-projects` | 3 | 3 | 2 | 3 | **11** |
+| `wordpress-application-password-troubleshooting` | 3 | 2 | 1 | 3 | **9** |
+| `rag-pipeline-for-content-publishers` | 3 | 3 | 2 | 2 | **10** |
+| `citation-signal-optimization` | 3 | 3 | 3 | 2 | **11** |
+| `vercel-edge-runtime-vs-nodejs-runtime` | 3 | 2 | 2 | 3 | **10** |
+| `mvp-with-claude` | 2 | 2 | 2 | 3 | **9** |
+| `wp-rest-api-pagination-bulk-retrieval` | 3 | 3 | 2 | 2 | **10** |
+| `adsense-rpm-by-traffic-source` | 3 | 2 | 1 | 3 | **9** |
+| `vercel-rollback-strategies` | 2 | 2 | 1 | 3 | **8** |
+| `claude-extended-thinking-when-to-use` | 3 | 3 | 2 | 2 | **10** |
+| `next-mdx-remote-v6-breaking-changes` | 3 | 2 | 1 | 2 | **8** |
+| `search-console-for-content-strategy` | 2 | 2 | 1 | 3 | **8** |
+| `trigger-architecture` | 2 | 3 | 2 | 2 | **9** |
+| `bulk-post-updates-wp-rest-api` | 3 | 3 | 2 | 2 | **10** |
+| `context-window-full-recovery-patterns` | 3 | 2 | 1 | 3 | **9** |
+| `claude-code-operator-after-6-months` | 2 | 3 | 3 | 2 | **10** |
+| `stripe-setup-for-zero-budget-products` | 1 | 2 | 2 | 3 | **8** |
+| `geo-experiment-perplexity-results` | 3 | 3 | 3 | 2 | **11** |
+| `vercel-function-timeout-limits` | 3 | 2 | 1 | 3 | **9** |
+| `pillar-architecture-for-geo` | 2 | 3 | 2 | 2 | **9** |
+| `wp-bulk-metadata-update-with-claude` | 3 | 3 | 2 | 2 | **10** |
+| `prompt-failure-patterns` | 3 | 3 | 2 | 3 | **11** |
+| `git-workflow-for-ai-generated-code` | 2 | 2 | 1 | 3 | **8** |
+| `landing-page-with-claude` | 1 | 2 | 2 | 3 | **8** |
+| `vercel-preview-deployments-workflow` | 2 | 1 | 1 | 3 | **7** |
+| `local-development-with-cursor-and-claude-code` | 2 | 2 | 2 | 3 | **9** |
+| `entity-optimization-basics` | 2 | 3 | 2 | 2 | **9** |
+| `claude-code-wp-content-audit` | 2 | 3 | 3 | 2 | **10** |
+| `gsc-performance-report-operator-workflow` | 2 | 2 | 1 | 3 | **8** |
+
+### Score key
+
+- **GEO value:** 3 = high citation probability (specific, verifiable, underserved); 2 = moderate; 1 = low
+- **Authority value:** 3 = builds definitive cluster authority; 2 = adds depth; 1 = incremental
+- **Effort:** 3 = high effort (3+ hours, requires new execution); 2 = medium (1–2 hours, some prior work); 1 = low (< 1 hour, mostly documentation of existing work)
+- **Audience size:** 3 = large (affects most operators); 2 = medium (affects operators in specific use case); 1 = narrow (niche audience)
+
+### Immediate priority list (score 10+)
+
+1. `claude-md-for-nextjs-projects` — score 11
+2. `citation-signal-optimization` — score 11
+3. `prompt-failure-patterns` — score 11
+4. `geo-experiment-perplexity-results` — score 11
+5. `rag-pipeline-for-content-publishers` — score 10
+6. `vercel-edge-runtime-vs-nodejs-runtime` — score 10
+7. `wp-rest-api-pagination-bulk-retrieval` — score 10
+8. `claude-extended-thinking-when-to-use` — score 10
+9. `bulk-post-updates-wp-rest-api` — score 10
+10. `claude-code-operator-after-6-months` — score 10
+11. `wp-bulk-metadata-update-with-claude` — score 10
+12. `claude-code-wp-content-audit` — score 10
+
+---
+
+*Audit conducted 2026-05-18. Next audit: after 30 new pieces published or 2026-08-01, whichever comes first. Gap analysis should be updated when new tracks are defined or when Search Console data reveals new query opportunities.*

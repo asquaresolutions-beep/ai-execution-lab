@@ -1,0 +1,560 @@
+---
+title: "Track Design v2 — 12 New Flagship Tracks"
+description: "Complete design specifications for 12 new AI Execution Lab tracks: modules, lessons, implementation projects, operational outcomes, and audience targeting."
+date: "2026-05-18"
+tags: ["ops", "tracks", "design", "roadmap", "curriculum"]
+status: "published"
+---
+
+This document specifies the architecture for 12 new execution tracks. All tracks follow the execution-first, implementation-before-theory framework established by existing tracks. Each track is designed as a standalone entry point for its target audience, while cross-linking to the broader ecosystem.
+
+Implementation priority order is specified for each track. Tracks are added to `lib/tracks.ts` as `status: 'available'` as modules are built.
+
+---
+
+## Implementation Priority
+
+| Track | Priority | Rationale |
+|---|---|---|
+| AI for Non-Developers | 1 | Largest underserved audience; no coding prerequisite |
+| Solo AI Founder Systems | 2 | Bridges business + operator; high search demand |
+| AI-Assisted Freelancing | 3 | Clear monetization path; high global demand |
+| AI for Students | 4 | Large audience; academic credibility signal |
+| AI Research Operations | 5 | Authority building; citation-friendly content |
+| AI-Assisted Agency Building | 6 | Higher value per operator; team workflow focus |
+| AI Content Systems (Enhanced) | 7 | Upgrades existing content distribution track |
+| AI Business Operations | 8 | Expands existing business track into full ops |
+| AI Automation Infrastructure | 9 | Deepens existing automation track |
+| GEO / AI Search Operations | 10 | Deepens existing GEO track |
+| AI for Researchers | 11 | Specialized audience; niche authority |
+| AI for Medical / Science / Engineering | 12 | High authority niche; complex to build correctly |
+
+---
+
+## Track 1: AI for Non-Developers
+
+**ID:** `ai-for-non-developers`  
+**Level:** beginner  
+**Accent:** green  
+**Estimated hours:** 35  
+**Tagline:** Build real AI-powered workflows without writing code.
+
+**Description:** A complete execution track for people who want to build, run, and benefit from AI systems without programming skills. Covers no-code AI workflows, AI-assisted business operations, content production, automation, and tools that substitute for technical capability.
+
+**Audience:** Non-technical professionals, small business owners, content creators, educators — anyone who wants to use AI to work smarter without learning to code.
+
+**Prerequisites:**
+- Basic computer literacy (files, browser, email)
+- Access to the internet
+- Willingness to follow operational procedures
+
+**Outcomes:**
+- Build a complete AI-powered workflow for your current work
+- Automate repetitive tasks without writing code
+- Use Claude, Zapier, and Make to connect tools you already use
+- Create AI-assisted content at 5× your current speed
+- Understand what AI can and cannot do — no hype, no fear
+
+**Tools:** Claude AI (web), Zapier, Make.com, Notion AI, Canva AI, Google Sheets
+
+---
+
+### Module 1: AI Tools Orientation
+*What AI tools can actually do — and what they can't*
+
+- `ai-tools-reality-check` — What AI Does and Does Not Do (30 min) — Lesson
+  *What AI is genuinely good at, where it fails, and how to set accurate expectations before spending money*
+- `choosing-your-ai-tools` — Choosing Your AI Tools Without Getting Scammed (25 min) — Lesson
+  *The $0 stack that covers 90% of non-developer use cases; which "AI tools" are just ChatGPT wrappers*
+- `prompting-without-coding` — Prompting for Non-Technical Users (25 min) — Lesson
+  *How to communicate with AI tools clearly without knowing any programming concepts*
+- `first-ai-workflow` — Your First Real AI Workflow (30 min) — Playbook
+  *Build a complete AI-assisted workflow for a task you do every week*
+
+### Module 2: No-Code AI Automation
+*Connect tools and automate tasks without writing a line of code*
+
+- `zapier-for-ai-workflows` — Zapier + AI Workflows (35 min) — Playbook
+- `make-automation-basics` — Make.com Automation Basics (30 min) — Playbook
+- `google-sheets-ai` — Google Sheets + AI Formulas (25 min) — Lesson
+- `automation-checklist` — Your No-Code Automation Checklist (20 min) — Checkpoint
+
+### Module 3: AI-Assisted Business Operations
+*Replace tools, reduce costs, operate more efficiently*
+
+- `customer-service-ai` — AI for Customer Communication (25 min) — Lesson
+- `document-workflow-ai` — Document and Report Automation (30 min) — Playbook
+- `ai-for-meetings` — Meeting Notes, Summaries, and Action Items (20 min) — Lesson
+- `business-ops-stack` — Non-Developer Business AI Stack (25 min) — Lesson
+
+### Module 4: Content Without Code
+*Produce quality content at scale without a team*
+
+- `ai-writing-workflow` — AI-Assisted Writing Workflow (30 min) — Playbook
+- `image-generation-workflow` — AI Image and Design Workflow (25 min) — Playbook
+- `social-content-system` — Social Content System Without Ads (25 min) — Lesson
+- `content-calendar-ai` — AI-Assisted Content Calendar (20 min) — Playbook
+
+### Module 5: Final Project
+- `non-dev-ai-audit` — Final Project: AI Workflow Audit of Your Business (60 min) — Project
+
+---
+
+## Track 2: Solo AI Founder Systems
+
+**ID:** `solo-ai-founder`  
+**Level:** intermediate  
+**Accent:** amber  
+**Estimated hours:** 50  
+**Tagline:** Build and run a real AI-powered business alone — systems that scale without hiring.
+
+**Description:** A systems-level track for solo founders building AI-powered businesses without teams. Covers the full operating stack: product development with Claude Code, customer systems, financial infrastructure, content operations, and the specific patterns that allow one person to run what used to require five.
+
+**Audience:** Solo founders, indie hackers, solopreneurs building AI tools, content businesses, or services. Assumes some technical comfort but not a software engineering background.
+
+**Prerequisites:**
+- Basic familiarity with AI tools (Claude or equivalent)
+- One specific project or business to work on
+- Completed AI Business Zero Budget track OR equivalent practical experience
+
+**Outcomes:**
+- Build and maintain a production AI product without a development team
+- Run customer-facing operations with AI handling first-response
+- Maintain financial systems and metrics without hiring a finance person
+- Produce and distribute content without a content team
+- Know exactly when to hire vs. when to build another system
+
+**Tools:** Claude Code, Stripe, ConvertKit, Vercel, WordPress, Airtable, Zapier
+
+---
+
+### Module 1: Solo Operations Architecture
+- `solo-stack-design` — The Solo Founder Operating Stack (35 min) — Lesson
+- `async-first-systems` — Async-First Systems Design (25 min) — Lesson
+- `decision-making-solo` — Decision-Making Without a Team (20 min) — Lesson
+- `solo-ops-audit` — Ops Audit: What's Taking Your Time (30 min) — Playbook
+
+### Module 2: Product Development Alone
+- `solo-dev-with-claude` — Solo Product Development with Claude Code (40 min) — Playbook
+- `feature-triage-solo` — Feature Triage for Solo Builders (25 min) — Lesson
+- `testing-without-qa` — Testing Without a QA Team (30 min) — Lesson
+- `release-discipline` — Release Discipline for Solo Products (20 min) — Lesson
+
+### Module 3: Customer Systems
+- `ai-customer-service` — AI-Handled First-Response System (35 min) — Playbook
+- `feedback-loop-system` — Building a Feedback Loop Without Support Staff (25 min) — Lesson
+- `churn-detection-solo` — Early Churn Detection for Solo SaaS (20 min) — Lesson
+
+### Module 4: Financial Systems
+- `revenue-tracking-solo` — Revenue Tracking Without an Accountant (25 min) — Playbook
+- `pricing-iteration` — Pricing Iteration System (20 min) — Lesson
+- `cost-control-discipline` — Cost Control as a Founder Discipline (20 min) — Lesson
+
+### Module 5: Scaling Without Hiring
+- `when-to-hire` — When to Hire vs. Build Another System (25 min) — Lesson
+- `contractor-ai-hybrid` — Contractor + AI Hybrid Model (30 min) — Lesson
+- `solo-founder-project` — Final Project: Your 90-Day Solo Operating Plan (90 min) — Project
+
+---
+
+## Track 3: AI-Assisted Freelancing
+
+**ID:** `ai-freelancing`  
+**Level:** beginner  
+**Accent:** cyan  
+**Estimated hours:** 30  
+**Tagline:** Deliver better work faster — and price it accordingly.
+
+**Description:** A practical track for freelancers in any field who want to use AI to deliver higher-quality work, win better clients, and build a sustainable practice. Covers AI integration into every phase of freelance work — proposal writing, delivery, communication, pricing, and positioning.
+
+**Audience:** Freelancers in writing, design, development, consulting, research, marketing, accounting — any knowledge work field.
+
+**Prerequisites:**
+- At least some freelance experience (or clear intent to start)
+- Basic familiarity with one AI tool
+
+**Outcomes:**
+- Cut delivery time by 40-60% using AI without reducing quality
+- Write proposals that win at a higher rate with less effort
+- Set prices that reflect AI-assisted output quality, not hours worked
+- Build client systems that reduce administrative overhead
+- Create a service offering that AI can't easily commoditize
+
+**Tools:** Claude AI, Notion, Calendly, Stripe, Google Docs, Canva AI
+
+---
+
+### Module 1: Freelance AI Stack
+- `freelance-ai-reality` — AI in Freelancing: What It Changes and What It Doesn't (25 min) — Lesson
+- `freelance-ai-tools` — The Freelance AI Stack by Discipline (30 min) — Lesson
+- `ai-workflow-by-type` — AI Workflows for Your Type of Freelance Work (35 min) — Playbook
+- `quality-control-freelance` — Maintaining Quality When AI Does the Draft (20 min) — Lesson
+
+### Module 2: Proposal + Client Systems
+- `ai-proposal-system` — AI-Assisted Proposal System (30 min) — Playbook
+- `client-qualification` — Client Qualification with AI Support (20 min) — Lesson
+- `scope-documentation` — Scope Documentation and Change Control (25 min) — Playbook
+- `client-communication-ai` — AI-Enhanced Client Communication (20 min) — Lesson
+
+### Module 3: Delivery Acceleration
+- `research-acceleration` — AI-Accelerated Research Workflow (30 min) — Playbook
+- `first-draft-system` — First Draft in 20% of the Time (25 min) — Playbook
+- `revision-workflow` — Revision Workflow with AI Feedback (20 min) — Lesson
+- `delivery-checklist` — AI-Assisted Delivery Quality Checklist (15 min) — Checkpoint
+
+### Module 4: Pricing + Positioning
+- `pricing-for-ai-freelancers` — Pricing When AI Does the Heavy Lifting (25 min) — Lesson
+- `positioning-differentiation` — Positioning: What AI Can't Replace About You (20 min) — Lesson
+- `service-evolution` — Evolving Your Service as AI Capabilities Change (20 min) — Lesson
+- `freelance-project` — Final Project: AI-Enhanced Service Offering (60 min) — Project
+
+---
+
+## Track 4: AI for Students
+
+**ID:** `ai-for-students`  
+**Level:** beginner  
+**Accent:** purple  
+**Estimated hours:** 25  
+**Tagline:** Learn faster, research smarter, build a career — using AI as your real tool, not a shortcut.
+
+**Description:** A practical track for students in any discipline who want to use AI to accelerate learning, improve research, produce better work, and build career capital. Focused on legitimate AI use — not shortcuts that produce shallow work, but systems that produce genuinely better results.
+
+**Audience:** Undergraduate and graduate students in any field. Also useful for self-directed learners and career changers.
+
+**Prerequisites:**
+- Basic computer literacy
+- Enrolled in study or actively learning something
+
+**Outcomes:**
+- Build a personal AI-assisted learning system for your discipline
+- Conduct research faster and more thoroughly using AI tools
+- Write and document better with AI as a thinking partner (not a ghostwriter)
+- Build a portfolio of real work that demonstrates AI-native skills
+- Develop career positioning that uses AI capability as a differentiator
+
+**Tools:** Claude AI, Notion, Google Scholar/Semantic Scholar, Zotero, VS Code (for technical students)
+
+---
+
+### Module 1: Learning Acceleration Systems
+- `ai-learning-reality` — AI for Learning: What It Accelerates and What It Harms (20 min) — Lesson
+- `personal-learning-stack` — Building Your Personal AI Learning Stack (25 min) — Lesson
+- `concept-mastery-ai` — Using AI to Test Your Own Understanding (20 min) — Playbook
+- `note-taking-ai` — AI-Enhanced Note-Taking System (20 min) — Playbook
+
+### Module 2: Research + Writing
+- `research-workflow-student` — AI-Assisted Research Workflow for Students (30 min) — Playbook
+- `literature-review-ai` — Literature Review with AI Support (25 min) — Playbook
+- `ai-writing-partner` — Writing with AI as a Partner (Not a Ghost) (25 min) — Lesson
+- `citation-integrity` — Maintaining Citation Integrity with AI Tools (15 min) — Lesson
+
+### Module 3: Career Building
+- `career-positioning-ai` — Career Positioning in an AI World (25 min) — Lesson
+- `portfolio-with-ai` — Building a Portfolio That Shows AI Capability (30 min) — Playbook
+- `job-search-ai` — AI-Accelerated Job Search System (25 min) — Playbook
+- `student-project` — Final Project: AI-Assisted Capstone Work (90 min) — Project
+
+---
+
+## Track 5: AI Research Operations
+
+**ID:** `ai-research-operations`  
+**Level:** intermediate  
+**Accent:** purple  
+**Estimated hours:** 40  
+**Tagline:** Systematic AI integration into professional research workflows — from literature to publication.
+
+**Description:** A systematic track for professional researchers, scientists, and analysts who want to integrate AI into every phase of research — literature review, hypothesis generation, data analysis, writing, and publication. Built for people who produce verifiable knowledge, not content.
+
+**Audience:** Academic researchers, R&D professionals, market researchers, independent analysts, policy researchers.
+
+**Prerequisites:**
+- Active research work in any discipline
+- Familiarity with systematic research process
+- Basic comfort with digital tools
+
+**Outcomes:**
+- Build an AI-augmented literature review system for your field
+- Use AI to accelerate hypothesis generation and protocol design
+- Integrate AI into data analysis while maintaining methodological integrity
+- Produce research writing that AI assists without compromising authorship
+- Understand AI's limitations and failure modes in research contexts
+
+**Tools:** Claude AI, Perplexity, Zotero, Python (for analysis), Overleaf / Word, R (for statistical research)
+
+---
+
+### Module 1: Research Workflow Fundamentals
+- `ai-in-research-reality` — What AI Can and Cannot Do in Research (30 min) — Lesson
+- `research-ai-stack` — The Researcher's AI Stack (25 min) — Lesson
+- `ai-integrity-framework` — Research Integrity with AI Tools (25 min) — Lesson
+- `workflow-audit` — Auditing Your Research Workflow for AI Integration (20 min) — Playbook
+
+### Module 2: Literature Review Systems
+- `systematic-review-ai` — AI-Augmented Systematic Literature Review (45 min) — Playbook
+- `knowledge-synthesis` — Synthesizing Large Bodies of Literature with AI (35 min) — Playbook
+- `gap-identification` — Using AI to Identify Research Gaps (30 min) — Lesson
+- `reference-management` — AI-Enhanced Reference Management System (20 min) — Playbook
+
+### Module 3: Analysis + Interpretation
+- `data-analysis-ai` — AI-Assisted Data Analysis Workflow (40 min) — Playbook
+- `statistical-interpretation` — Using AI to Interpret Statistical Results (30 min) — Lesson
+- `qualitative-analysis-ai` — AI in Qualitative Research Analysis (35 min) — Lesson
+- `error-detection` — Using AI to Detect Analytical Errors (25 min) — Lesson
+
+### Module 4: Writing + Documentation
+- `research-writing-ai` — AI-Assisted Academic Writing (35 min) — Playbook
+- `peer-review-preparation` — Preparing for Peer Review with AI Assistance (25 min) — Lesson
+- `grant-writing-ai` — AI-Assisted Grant Proposal Writing (35 min) — Playbook
+- `research-project` — Final Project: AI-Integrated Research Protocol (90 min) — Project
+
+---
+
+## Track 6: AI-Assisted Agency Building
+
+**ID:** `ai-agency-building`  
+**Level:** intermediate  
+**Accent:** brand  
+**Estimated hours:** 45  
+**Tagline:** Build and run an AI-augmented agency that delivers better results with fewer people.
+
+**Description:** A systems-level track for founders building service businesses — agencies, consultancies, studios — that use AI to deliver higher quality, faster, without proportional team growth. Covers client systems, delivery infrastructure, team management, pricing, and the operational patterns that distinguish AI-augmented agencies from traditional ones.
+
+**Audience:** Agency founders, consultants building a practice, freelancers transitioning to team-based work.
+
+**Prerequisites:**
+- Completed AI-Assisted Freelancing track or equivalent experience
+- At least one ongoing client relationship or clear business model
+
+**Outcomes:**
+- Build a repeatable service delivery system using AI at every stage
+- Hire and manage a hybrid human + AI delivery team
+- Price services based on outcome value, not hours worked
+- Create proprietary methodologies that AI enables but can't replace
+- Operate at 3-5× the revenue per employee of traditional agencies
+
+**Tools:** Claude Code, Notion, Linear, Slack, Google Analytics, Stripe
+
+---
+
+### Module 1: Agency AI Architecture
+- `agency-ai-model` — The AI-Augmented Agency Model (30 min) — Lesson
+- `service-productization` — Productizing Agency Services for AI Delivery (25 min) — Lesson
+- `quality-system-design` — Quality Systems for AI-Assisted Delivery (30 min) — Lesson
+- `ai-agency-pricing` — Pricing AI-Augmented Services (25 min) — Lesson
+
+### Module 2: Client + Delivery Systems
+- `client-onboarding-system` — Systematic Client Onboarding (35 min) — Playbook
+- `delivery-pipeline-agency` — AI-Accelerated Delivery Pipeline (40 min) — Playbook
+- `revision-management` — Revision and Approval Management (20 min) — Playbook
+- `client-reporting-ai` — AI-Assisted Client Reporting System (25 min) — Playbook
+
+### Module 3: Team Operations
+- `hiring-for-ai-agency` — Hiring for an AI-Augmented Team (30 min) — Lesson
+- `ai-human-workflow` — Designing Human + AI Workflow Handoffs (35 min) — Lesson
+- `knowledge-management` — Agency Knowledge Management System (25 min) — Playbook
+- `training-ai-systems` — Training New Hires on AI-Assisted Workflows (20 min) — Playbook
+
+### Module 4: Growth Systems
+- `lead-generation-agency` — AI-Assisted Lead Generation for Agencies (30 min) — Playbook
+- `case-study-system` — Building a Case Study Machine (25 min) — Playbook
+- `agency-project` — Final Project: AI Agency Operating Manual (120 min) — Project
+
+---
+
+## Track 7: AI Business Operations
+
+**ID:** `ai-business-operations`  
+**Level:** intermediate  
+**Accent:** amber  
+**Estimated hours:** 50  
+**Tagline:** Systematic AI integration across every business function — from operations to growth.
+
+**Description:** A comprehensive operations track for business owners and operators who want to systematically integrate AI across their entire operation. Covers finance, marketing, customer success, product, HR, and operations — the full stack of running a business with AI as infrastructure.
+
+**Prerequisites:**
+- Running an existing business (any stage)
+- Completed AI Business Zero Budget track or equivalent
+
+**Modules:**
+1. Operations Audit + AI Mapping
+2. Finance + Analytics Systems
+3. Marketing + Growth Systems
+4. Customer Success Systems
+5. Product + Development Operations
+6. Final Project: Full Business AI Integration
+
+---
+
+## Track 8: AI Content Systems (Enhanced)
+
+**ID:** `ai-content-systems`  
+**Level:** intermediate  
+**Accent:** green  
+**Estimated hours:** 40  
+**Tagline:** Build content production infrastructure that compounds authority over time.
+
+**Description:** A comprehensive upgrade to the existing AI Content + Distribution track. Goes deeper on content architecture, production systems, AI-assisted editing, multi-channel distribution, and the analytics stack that connects content to revenue.
+
+**Prerequisites:**
+- Basic content production experience
+- Access to a website or content platform
+
+**Modules:**
+1. Content Architecture + Strategy
+2. AI Production Workflows
+3. Editing + Quality Systems
+4. Multi-Channel Distribution
+5. Analytics + Revenue Attribution
+6. Final Project: 30-Day Content Operation
+
+---
+
+## Track 9: AI Automation Infrastructure
+
+**ID:** `ai-automation-infrastructure`  
+**Level:** advanced  
+**Accent:** purple  
+**Estimated hours:** 55  
+**Tagline:** Build production automation pipelines that handle real data, real errors, and real scale.
+
+**Description:** A deep technical track on production AI automation. Goes significantly beyond the existing AI Automation Systems track — covers advanced error handling, distributed job queues, monitoring dashboards, testing frameworks, and the operational discipline required for automation that touches production data.
+
+**Prerequisites:**
+- Python or JavaScript proficiency
+- Completed AI Automation Systems track OR equivalent production experience
+- A real automation use case to work on
+
+**Modules:**
+1. Advanced Pipeline Architecture
+2. Error Handling + Retry Systems
+3. Job Queue Infrastructure
+4. Testing Automation Pipelines
+5. Monitoring + Observability
+6. Final Project: Production Automation System
+
+---
+
+## Track 10: GEO / AI Search Operations
+
+**ID:** `geo-operations`  
+**Level:** intermediate  
+**Accent:** cyan  
+**Estimated hours:** 45  
+**Tagline:** Engineer systematic AI search visibility — not by guessing, but by understanding how AI systems select sources.
+
+**Description:** A deep operational track on Generative Engine Optimization — significantly expanding the existing GEO + AI Search track. Covers RAG system mechanics, citation signal engineering, content architecture for AI visibility, systematic testing frameworks, and production GEO operations at scale.
+
+**Prerequisites:**
+- Basic SEO understanding
+- Access to content you can modify
+- Completed GEO + AI Search track (basic) or equivalent
+
+**Modules:**
+1. RAG + Retrieval Mechanics
+2. Citation Signal Engineering
+3. Entity + Schema Architecture
+4. GEO Testing Infrastructure
+5. Production GEO Operations
+6. Final Project: Full GEO Audit + 90-Day Strategy
+
+---
+
+## Track 11: AI for Researchers
+
+**ID:** `ai-for-researchers`  
+**Level:** intermediate  
+**Accent:** purple  
+**Estimated hours:** 35  
+**Tagline:** Rigorous AI integration into scientific and scholarly research — without compromising methodology.
+
+*Note: Overlaps significantly with AI Research Operations. Differentiation: AI Research Operations covers professional/industry researchers; AI for Researchers targets academic/scholarly contexts with emphasis on methodology integrity.*
+
+**Prerequisites:**
+- Graduate-level research experience or equivalent
+- Active research project
+
+**Modules:**
+1. Scholarly AI Stack
+2. Literature + Knowledge Systems
+3. Methodology + Analysis
+4. Scholarly Writing + Publication
+5. Final Project: AI Research Protocol Documentation
+
+---
+
+## Track 12: AI for Medical / Science / Engineering Workflows
+
+**ID:** `ai-domain-workflows`  
+**Level:** advanced  
+**Accent:** brand  
+**Estimated hours:** 60  
+**Tagline:** Domain-specific AI integration for technical professionals — with appropriate rigor for high-stakes work.
+
+**Note on scope:** This track is complex because it crosses three distinct domains. Initial implementation covers shared operational patterns; domain-specific modules (medical vs. engineering vs. science) are optional branches.
+
+**Prerequisites:**
+- Professional qualification in target domain
+- Completed AI Research Operations track or equivalent
+
+**Modules:**
+1. AI in High-Stakes Environments (shared)
+2. Domain-Specific Tool Stacks
+3. Quality + Verification Systems
+4. Regulatory + Ethics Framework
+5. Branch: Medical Workflows
+6. Branch: Engineering Design + Analysis Workflows
+7. Branch: Scientific Research Workflows
+8. Final Project: AI Integration Protocol for Your Practice
+
+---
+
+## Cross-Track Connection Matrix
+
+| Track | Primary Feeds Into | Also Connects To |
+|---|---|---|
+| AI for Non-Developers | AI Business Zero Budget, AI-Assisted Freelancing | AI Content Systems |
+| Solo AI Founder | AI Business Operations, Claude Code Operator | GEO Operations |
+| AI-Assisted Freelancing | AI Agency Building, Solo AI Founder | AI Content Systems |
+| AI for Students | AI Research Operations, AI for Researchers | AI-Assisted Freelancing |
+| AI Research Operations | AI for Researchers, AI Automation Infrastructure | GEO Operations |
+| AI Agency Building | AI Business Operations, Claude Code Operator | AI Automation Infrastructure |
+| AI Business Operations | All business tracks | All automation tracks |
+| AI Content Systems | GEO Operations, AI Business Operations | AI Automation Infrastructure |
+| AI Automation Infrastructure | Claude Code Operator | AI Business Operations |
+| GEO Operations | AI Content Systems, AI Business Operations | Research tracks |
+| AI for Researchers | AI Research Operations, AI Domain Workflows | AI for Students |
+| AI Domain Workflows | AI Research Operations | Claude Code Operator |
+
+---
+
+## Implementation Notes
+
+### Adding tracks to lib/tracks.ts
+
+Tracks are added to `lib/tracks.ts` as full entries when at least one module has at least 2 lessons written and published. Do not add a track with 0 available content — it creates a poor first impression and wastes crawl budget.
+
+**First batch for lib/tracks.ts addition (Q3 2026):**
+1. `ai-for-non-developers` — when Module 1 is complete (4 lessons)
+2. `solo-ai-founder` — when Module 1 is complete (4 lessons)
+3. `ai-freelancing` — when Module 1 is complete (4 lessons)
+
+**Second batch (Q4 2026):**
+4. `ai-for-students` — when Module 1 is complete
+5. `ai-research-operations` — when Module 1 is complete
+
+### Lesson content standards for new tracks
+
+All lessons in new tracks must follow the same standards as existing content:
+- `LessonMeta` with difficulty, implementationTime, and evidence fields
+- `LessonObjectives` with 4-6 specific, verifiable objectives
+- Implementation sections (not conceptual explanations)
+- `Checkpoint` at end with verifiable completion criteria
+- Cross-links to related failures, playbooks, and lessons where relevant
+- Global pricing in USD (not India-specific)
+- No country-specific examples unless explicitly scoped
+
+---
+
+*Track design v2 — 2026-05-18. Review when implementation begins on each track.*

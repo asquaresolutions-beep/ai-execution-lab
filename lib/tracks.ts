@@ -469,6 +469,283 @@ export const TRACKS: Track[] = [
       },
     ],
   },
+
+  // ──────────────────────────────────────────────────────────
+  // 6. AI for Non-Developers
+  // ──────────────────────────────────────────────────────────
+  {
+    id:            'ai-for-non-developers',
+    title:         'AI for Non-Developers',
+    tagline:       'Build real AI-powered workflows without writing code.',
+    description:   'A complete execution track for people who want to build, run, and benefit from AI systems without programming skills. Covers no-code AI workflows, AI-assisted business operations, content production, and automation tools that substitute for technical capability.',
+    level:         'beginner',
+    estimatedHours: 35,
+    accent:        'green',
+    status:        'available',
+    outcomes: [
+      'Build a complete AI-powered workflow for your current work without coding',
+      'Automate repetitive tasks using no-code tools and AI integrations',
+      'Produce content at 5× your current speed with maintained quality',
+      'Connect the tools you already use through AI-powered automation',
+      'Set accurate expectations for what AI can and cannot do for non-technical users',
+    ],
+    prerequisites: [
+      'Basic computer literacy — files, browser, email',
+      'No coding knowledge required',
+    ],
+    tools: ['Claude AI (web)', 'Zapier', 'Make.com', 'Notion AI', 'Google Sheets'],
+    modules: [
+      {
+        id: 'ai-tools-orientation',
+        title: 'AI Tools Orientation',
+        description: 'What AI tools can actually do — and what they can\'t. Start here.',
+        lessons: [
+          { id: 'ai-tools-reality-check',      title: 'What AI Does and Does Not Do',              type: 'lesson',     duration: '30 min', description: 'Accurate expectations before spending time or money on AI tools.',                   status: 'coming-soon' },
+          { id: 'choosing-your-ai-tools',       title: 'Choosing Your AI Tools Without Overpaying', type: 'lesson',     duration: '25 min', description: 'The $0 stack that covers 90% of non-developer use cases.',                         status: 'coming-soon' },
+          { id: 'prompting-without-coding',     title: 'Prompting for Non-Technical Users',         type: 'lesson',     duration: '25 min', description: 'How to communicate with AI clearly without any programming background.',            status: 'coming-soon' },
+          { id: 'first-ai-workflow',            title: 'Your First Real AI Workflow',               type: 'playbook',   duration: '30 min', description: 'Build a complete AI-assisted workflow for a task you do every week.',              status: 'coming-soon' },
+        ],
+      },
+      {
+        id: 'no-code-automation',
+        title: 'No-Code AI Automation',
+        description: 'Connect tools and automate tasks without writing a line of code.',
+        lessons: [
+          { id: 'zapier-for-ai-workflows',      title: 'Zapier + AI Workflows',                    type: 'playbook',   duration: '35 min', description: 'Build Zapier automations that use Claude AI at each step.',                        status: 'coming-soon' },
+          { id: 'make-automation-basics',       title: 'Make.com Automation Basics',               type: 'playbook',   duration: '30 min', description: 'Visual automation builder for connecting apps with AI processing.',                status: 'coming-soon' },
+          { id: 'google-sheets-ai',             title: 'Google Sheets + AI Formulas',              type: 'lesson',     duration: '25 min', description: 'Use AI to write, clean, and analyze data in Google Sheets.',                       status: 'coming-soon' },
+          { id: 'automation-checklist',         title: 'Your No-Code Automation Checklist',        type: 'checkpoint', duration: '20 min', description: 'Verify your automations work reliably before relying on them.',                    status: 'coming-soon' },
+        ],
+      },
+      {
+        id: 'business-operations',
+        title: 'AI-Assisted Business Operations',
+        description: 'Replace manual overhead with AI — customer communication, documents, meetings.',
+        lessons: [
+          { id: 'customer-communication-ai',   title: 'AI for Customer Communication',            type: 'lesson',     duration: '25 min', description: 'Handle first-response customer inquiries at scale using AI tools.',               status: 'coming-soon' },
+          { id: 'document-workflow-ai',         title: 'Document and Report Automation',           type: 'playbook',   duration: '30 min', description: 'Automate document generation, formatting, and distribution.',                     status: 'coming-soon' },
+          { id: 'ai-for-meetings',              title: 'Meeting Notes, Summaries, Action Items',   type: 'lesson',     duration: '20 min', description: 'AI tools that turn meetings into searchable, actionable records.',                 status: 'coming-soon' },
+        ],
+      },
+      {
+        id: 'content-without-code',
+        title: 'Content Without Code',
+        description: 'Produce quality content at scale without a team or technical skills.',
+        lessons: [
+          { id: 'ai-writing-workflow-beginner', title: 'AI-Assisted Writing Workflow',             type: 'playbook',   duration: '30 min', description: 'Research → outline → draft → edit → publish using AI at each stage.',             status: 'coming-soon' },
+          { id: 'image-generation-workflow',    title: 'AI Image and Design Workflow',             type: 'playbook',   duration: '25 min', description: 'Generate and use AI images for content without design experience.',               status: 'coming-soon' },
+          { id: 'non-dev-final-project',        title: 'Final Project: AI Workflow Audit',         type: 'project',    duration: '60 min', description: 'Audit your current work and implement AI workflows that save 5+ hours per week.', status: 'coming-soon' },
+        ],
+      },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 7. Solo AI Founder Systems
+  // ──────────────────────────────────────────────────────────
+  {
+    id:            'solo-ai-founder',
+    title:         'Solo AI Founder Systems',
+    tagline:       'Build and run a real AI-powered business alone — systems that scale without hiring.',
+    description:   'A systems-level track for solo founders building AI-powered businesses without teams. Covers the full operating stack: product development with AI tools, customer systems, financial infrastructure, content operations, and the patterns that allow one person to run what used to require five.',
+    level:         'intermediate',
+    estimatedHours: 50,
+    accent:        'amber',
+    status:        'available',
+    outcomes: [
+      'Build and maintain a production AI product without a development team',
+      'Run customer-facing operations with AI handling first-response',
+      'Maintain financial systems and metrics without hiring',
+      'Produce and distribute content without a content team',
+      'Know exactly when to build another system vs. when to hire',
+    ],
+    prerequisites: [
+      'Basic familiarity with AI tools (Claude or equivalent)',
+      'A specific project or business concept to work on',
+      'Completed AI Business Zero Budget track or equivalent experience',
+    ],
+    tools: ['Claude Code', 'Stripe', 'ConvertKit', 'Vercel', 'WordPress', 'Zapier'],
+    modules: [
+      {
+        id: 'solo-operations-architecture',
+        title: 'Solo Operations Architecture',
+        description: 'Design the operating system of a one-person AI business before building it.',
+        lessons: [
+          { id: 'solo-stack-design',            title: 'The Solo Founder Operating Stack',          type: 'lesson',     duration: '35 min', description: 'Which tools, systems, and patterns run a solo AI business efficiently.',            status: 'coming-soon' },
+          { id: 'async-first-systems',          title: 'Async-First Systems Design',               type: 'lesson',     duration: '25 min', description: 'Build systems that don\'t require your constant presence to function.',            status: 'coming-soon' },
+          { id: 'decision-making-solo',         title: 'Decision-Making Without a Team',           type: 'lesson',     duration: '20 min', description: 'Frameworks for making fast, documented decisions alone.',                         status: 'coming-soon' },
+          { id: 'solo-ops-audit',               title: 'Ops Audit: What\'s Taking Your Time',      type: 'playbook',   duration: '30 min', description: 'Systematically identify where your time goes and which operations to automate.',  status: 'coming-soon' },
+        ],
+      },
+      {
+        id: 'solo-product-development',
+        title: 'Product Development Alone',
+        description: 'Ship and maintain a real product without a development team.',
+        lessons: [
+          { id: 'solo-dev-with-claude',         title: 'Solo Product Development with Claude Code', type: 'playbook',   duration: '40 min', description: 'End-to-end: feature planning, building, testing, and shipping alone with AI.',     status: 'coming-soon' },
+          { id: 'feature-triage-solo',          title: 'Feature Triage for Solo Builders',         type: 'lesson',     duration: '25 min', description: 'How to decide what to build when you can only do one thing at a time.',           status: 'coming-soon' },
+          { id: 'release-discipline-solo',      title: 'Release Discipline for Solo Products',     type: 'lesson',     duration: '20 min', description: 'Shipping cadence, version control, and rollback plans for one-person teams.',     status: 'coming-soon' },
+        ],
+      },
+      {
+        id: 'solo-customer-systems',
+        title: 'Customer Systems',
+        description: 'Handle customers at scale without a customer success team.',
+        lessons: [
+          { id: 'ai-customer-first-response',   title: 'AI-Handled First-Response System',         type: 'playbook',   duration: '35 min', description: 'Configure AI tools to handle common customer questions before you see them.',     status: 'coming-soon' },
+          { id: 'feedback-loop-system',         title: 'Building a Feedback Loop Without Staff',   type: 'lesson',     duration: '25 min', description: 'Collect, synthesize, and act on customer feedback as a solo founder.',           status: 'coming-soon' },
+          { id: 'churn-detection-solo',         title: 'Early Churn Detection',                    type: 'lesson',     duration: '20 min', description: 'Signals and systems that tell you when a customer is about to leave.',            status: 'coming-soon' },
+        ],
+      },
+      {
+        id: 'solo-financial-systems',
+        title: 'Financial Systems',
+        description: 'Run business finances without an accountant until you genuinely need one.',
+        lessons: [
+          { id: 'revenue-tracking-solo',        title: 'Revenue Tracking Without an Accountant',   type: 'playbook',   duration: '25 min', description: 'The minimal financial system that tells you what you need to know.',              status: 'coming-soon' },
+          { id: 'pricing-iteration-system',     title: 'Pricing Iteration System',                 type: 'lesson',     duration: '20 min', description: 'How to test and adjust pricing without losing customers or leaving money behind.', status: 'coming-soon' },
+        ],
+      },
+      {
+        id: 'solo-scaling',
+        title: 'Scaling Without Hiring',
+        description: 'Grow revenue without proportional growth in team size.',
+        lessons: [
+          { id: 'when-to-hire-solo',            title: 'When to Hire vs. Build Another System',    type: 'lesson',     duration: '25 min', description: 'The specific signals that tell you hiring is the right move vs. more automation.',status: 'coming-soon' },
+          { id: 'contractor-ai-hybrid',         title: 'Contractor + AI Hybrid Model',             type: 'lesson',     duration: '30 min', description: 'How to use part-time contractors efficiently when AI alone isn\'t enough.',      status: 'coming-soon' },
+          { id: 'solo-founder-project',         title: 'Final Project: 90-Day Solo Operating Plan',type: 'project',    duration: '90 min', description: 'Build your complete operating plan: systems, tools, KPIs, and automation map.', status: 'coming-soon' },
+        ],
+      },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 8. AI-Assisted Freelancing
+  // ──────────────────────────────────────────────────────────
+  {
+    id:            'ai-freelancing',
+    title:         'AI-Assisted Freelancing',
+    tagline:       'Deliver better work faster — and price it accordingly.',
+    description:   'A practical track for freelancers in any field who want to use AI to deliver higher-quality work, win better clients, and build a sustainable practice. Covers AI integration into every phase of freelance work — proposals, delivery, communication, pricing, and positioning.',
+    level:         'beginner',
+    estimatedHours: 30,
+    accent:        'cyan',
+    status:        'available',
+    outcomes: [
+      'Cut delivery time by 40–60% using AI without reducing quality',
+      'Write proposals that win at a higher rate with less effort',
+      'Set prices that reflect AI-assisted output quality, not hours worked',
+      'Build client systems that reduce administrative overhead',
+      'Create a service offering that AI cannot easily commoditize',
+    ],
+    prerequisites: [
+      'At least some freelance experience (or clear intent to start)',
+      'Basic familiarity with one AI tool',
+    ],
+    tools: ['Claude AI', 'Notion', 'Calendly', 'Stripe', 'Google Docs', 'Canva AI'],
+    modules: [
+      {
+        id: 'freelance-ai-stack',
+        title: 'Freelance AI Stack',
+        description: 'What AI changes for freelancers — and the tools that deliver that change.',
+        lessons: [
+          { id: 'freelance-ai-reality',         title: 'AI in Freelancing: What Changes and What Doesn\'t', type: 'lesson', duration: '25 min', description: 'Clear-eyed assessment of where AI helps freelancers and where it creates risk.',   status: 'coming-soon' },
+          { id: 'freelance-ai-tools',           title: 'The Freelance AI Stack by Discipline',    type: 'lesson',   duration: '30 min', description: 'Tool recommendations for writing, design, development, research, and consulting.', status: 'coming-soon' },
+          { id: 'ai-workflow-by-type',          title: 'AI Workflows for Your Type of Work',      type: 'playbook', duration: '35 min', description: 'Adapt the delivery acceleration workflow to your specific service type.',           status: 'coming-soon' },
+          { id: 'quality-control-freelance',    title: 'Maintaining Quality When AI Drafts',      type: 'lesson',   duration: '20 min', description: 'The review and verification layer that keeps AI-assisted work at your standard.',  status: 'coming-soon' },
+        ],
+      },
+      {
+        id: 'proposal-client-systems',
+        title: 'Proposal + Client Systems',
+        description: 'Win better work and manage clients with less administrative overhead.',
+        lessons: [
+          { id: 'ai-proposal-system',           title: 'AI-Assisted Proposal System',             type: 'playbook', duration: '30 min', description: 'A repeatable proposal system that produces custom proposals in 30 minutes.',         status: 'coming-soon' },
+          { id: 'client-qualification',         title: 'Client Qualification with AI Support',    type: 'lesson',   duration: '20 min', description: 'Identify high-value clients and pass on bad-fit engagements faster.',             status: 'coming-soon' },
+          { id: 'client-communication-ai',      title: 'AI-Enhanced Client Communication',        type: 'lesson',   duration: '20 min', description: 'Communication templates and AI assistance for professional client interactions.',  status: 'coming-soon' },
+        ],
+      },
+      {
+        id: 'delivery-acceleration',
+        title: 'Delivery Acceleration',
+        description: 'Produce better work in less time — with AI at every stage.',
+        lessons: [
+          { id: 'research-acceleration-fl',     title: 'AI-Accelerated Research Workflow',        type: 'playbook', duration: '30 min', description: 'Cut research time by 60% without cutting depth using structured AI prompting.',     status: 'coming-soon' },
+          { id: 'first-draft-system',           title: 'First Draft in 20% of the Time',          type: 'playbook', duration: '25 min', description: 'AI-assisted first draft workflow that produces something real, not just filler.',   status: 'coming-soon' },
+          { id: 'revision-workflow-fl',         title: 'Revision Workflow with AI Feedback',      type: 'lesson',   duration: '20 min', description: 'Use AI as a critic to improve work before client review.',                        status: 'coming-soon' },
+        ],
+      },
+      {
+        id: 'pricing-positioning-fl',
+        title: 'Pricing + Positioning',
+        description: 'Capture the value of AI-accelerated output in your pricing.',
+        lessons: [
+          { id: 'pricing-for-ai-freelancers',   title: 'Pricing When AI Does the Heavy Lifting',  type: 'lesson',   duration: '25 min', description: 'Why hourly pricing breaks down with AI and what to charge instead.',               status: 'coming-soon' },
+          { id: 'positioning-differentiation',  title: 'What AI Can\'t Replace About You',        type: 'lesson',   duration: '20 min', description: 'Identify and articulate the parts of your work that AI cannot commoditize.',       status: 'coming-soon' },
+          { id: 'freelance-final-project',      title: 'Final Project: AI-Enhanced Service',      type: 'project',  duration: '60 min', description: 'Redesign your service offering to incorporate AI at every stage.',                status: 'coming-soon' },
+        ],
+      },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────
+  // 9. AI for Students
+  // ──────────────────────────────────────────────────────────
+  {
+    id:            'ai-for-students',
+    title:         'AI for Students',
+    tagline:       'Learn faster, research smarter, build a career — AI as a real tool, not a shortcut.',
+    description:   'A practical track for students in any discipline who want to use AI to accelerate learning, improve research, produce better work, and build career capital. Focused on legitimate AI use — not shortcuts that produce shallow work, but systems that produce genuinely better results.',
+    level:         'beginner',
+    estimatedHours: 25,
+    accent:        'purple',
+    status:        'available',
+    outcomes: [
+      'Build a personal AI-assisted learning system for your discipline',
+      'Conduct research faster and more thoroughly with AI tools',
+      'Write and document better with AI as a thinking partner, not a ghostwriter',
+      'Build a portfolio of real work demonstrating AI-native capability',
+      'Develop career positioning that uses AI capability as a differentiator',
+    ],
+    prerequisites: [
+      'Basic computer literacy',
+      'Enrolled in study or actively learning a discipline',
+    ],
+    tools: ['Claude AI', 'Notion', 'Google Scholar', 'Zotero', 'VS Code (optional for technical tracks)'],
+    modules: [
+      {
+        id: 'learning-acceleration',
+        title: 'Learning Acceleration Systems',
+        description: 'Use AI to genuinely understand material faster — not to skip the understanding.',
+        lessons: [
+          { id: 'ai-learning-reality',          title: 'AI for Learning: What It Accelerates and What It Harms', type: 'lesson', duration: '20 min', description: 'Honest assessment of where AI helps learning and where it produces fake understanding.', status: 'coming-soon' },
+          { id: 'personal-learning-stack',      title: 'Building Your Personal AI Learning Stack', type: 'lesson',   duration: '25 min', description: 'The tools and workflows for AI-assisted learning in any discipline.',                status: 'coming-soon' },
+          { id: 'concept-mastery-ai',           title: 'Using AI to Test Your Own Understanding', type: 'playbook', duration: '20 min', description: 'The Socratic AI method: use Claude to challenge your understanding of what you just learned.', status: 'coming-soon' },
+          { id: 'note-taking-ai',               title: 'AI-Enhanced Note-Taking System',          type: 'playbook', duration: '20 min', description: 'Capture, organize, and synthesize learning with AI at each stage.',                  status: 'coming-soon' },
+        ],
+      },
+      {
+        id: 'research-writing',
+        title: 'Research + Writing',
+        description: 'Conduct better research and produce better academic work — with AI as a thinking tool.',
+        lessons: [
+          { id: 'research-workflow-student',    title: 'AI-Assisted Research Workflow for Students', type: 'playbook', duration: '30 min', description: 'Use Perplexity and Claude to accelerate literature discovery and synthesis.',       status: 'coming-soon' },
+          { id: 'ai-writing-partner',           title: 'Writing with AI as a Partner (Not a Ghost)', type: 'lesson', duration: '25 min', description: 'How to use AI to improve your writing without undermining your authorship.',         status: 'coming-soon' },
+          { id: 'citation-integrity',           title: 'Maintaining Citation Integrity with AI',   type: 'lesson',   duration: '15 min', description: 'Practical guidance on citing AI use, verifying AI-generated references, and academic honesty.', status: 'coming-soon' },
+        ],
+      },
+      {
+        id: 'career-building-student',
+        title: 'Career Building',
+        description: 'Use AI capability as career capital — not just a productivity hack.',
+        lessons: [
+          { id: 'career-positioning-ai',        title: 'Career Positioning in an AI World',       type: 'lesson',   duration: '25 min', description: 'Which careers benefit from AI skills and how to demonstrate those skills credibly.',  status: 'coming-soon' },
+          { id: 'portfolio-with-ai',            title: 'Building a Portfolio That Shows AI Capability', type: 'playbook', duration: '30 min', description: 'What to build, document, and publish to demonstrate real AI-native skills.',   status: 'coming-soon' },
+          { id: 'student-final-project',        title: 'Final Project: AI-Integrated Study System', type: 'project', duration: '90 min', description: 'Design and implement a complete AI learning and research workflow for your field.', status: 'coming-soon' },
+        ],
+      },
+    ],
+  },
 ]
 
 // ─────────────────────────────────────────────────────────────

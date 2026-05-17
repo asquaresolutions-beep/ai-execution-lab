@@ -1,0 +1,437 @@
+---
+title: "Knowledge Graph Architecture — Internal Entity + Topic Map"
+description: "Internal entity and topic relationship map for AI Execution Lab. Covers track-to-lesson relationships, cross-section bridges, authority pathways, recommendation logic, and GEO optimization strategy."
+date: "2026-05-18"
+tags: ["ops", "architecture", "knowledge-graph", "geo", "entity", "recommendation"]
+status: "published"
+---
+
+This document defines the internal knowledge graph for AI Execution Lab — the entity and topic relationships that drive recommendation logic, GEO citation probability, and the platform's authority architecture.
+
+The knowledge graph is not a database schema. It is the conceptual map that governs: how content links to other content, which topics cluster into authority zones, how AI search engines should perceive topical depth, and what recommendation logic looks like as the platform scales.
+
+---
+
+## Core Entity Types
+
+The platform has 9 content entity types. Each has different relationship properties:
+
+| Entity Type | Primary Role | Relationship Density | GEO Priority |
+|---|---|---|---|
+| **Lesson** | Primary learning unit | High — links to failures, playbooks, related lessons | Medium |
+| **Failure** | Production incident record | High — links to causative tools, preventive lessons | Very High |
+| **Playbook** | Operational procedure | High — links to lessons (context), failures (what happens without it) | High |
+| **Lab** | Interactive execution environment | Medium — links to lessons (context), case studies (outcome) | Medium |
+| **Case Study** | Specific problem + solution | High — links to failures, tools, systems, playbooks | High |
+| **Log** | Dated work record | Medium — links to lessons and systems built during session | Low |
+| **System Doc** | Reference architecture | Medium — links to lessons, playbooks, case studies | Medium |
+| **Doc** | Reference + operational resource | Low-Medium — supporting documentation | Medium |
+| **Track** | Structured learning pathway | High — aggregates lessons, defines progression | High |
+
+---
+
+## Primary Topic Clusters
+
+The platform's content organizes into 8 authority clusters. Each cluster contains content from multiple sections — lessons, failures, playbooks, case studies — that collectively build topical authority.
+
+### Cluster 1: Claude Code + AI Engineering Operations
+
+**Center entity:** Claude Code Operator track  
+**Authority target:** Become the definitive operational reference for Claude Code in production
+
+**Core content:**
+- Claude Code Operator track (all 8 modules)
+- Failure Archive entries related to deployment, build errors, edge runtime
+- Playbooks: Git operations, deployment pipeline, debugging procedures
+- System docs: CLAUDE.md architecture, project settings reference
+- Case studies: specific complex builds using Claude Code
+- Logs: sessions documenting Claude Code-driven development work
+
+**Key entity relationships:**
+- CLAUDE.md → every Claude Code session → every lesson in Foundations module
+- Claude Code + Git → branch-strategy + bad-commit-recovery → deployment-pipeline
+- Deployment failures → build-failure-diagnosis playbook → reading-build-errors lesson
+- Multi-agent orchestration → task-decomposition → production-prompt-anatomy
+
+**GEO target queries:**
+- "Claude Code CLAUDE.md examples"
+- "Claude Code production prompt engineering"
+- "Claude Code multi-agent orchestration tutorial"
+- "how to configure Claude Code for production"
+- "Claude Code vs Cursor comparison"
+
+---
+
+### Cluster 2: WordPress Operational Systems
+
+**Center entity:** WordPress REST API module (Claude Code Operator) + WP REST API Playbook  
+**Authority target:** Most detailed operational reference for WordPress + AI automation
+
+**Core content:**
+- WordPress REST API module (Claude Code Operator)
+- WordPress REST API Automation playbook
+- Claude + WordPress Operational Workflow lesson
+- Failures: authentication errors, content corruption, bulk operation timeouts
+- Case studies: GEO typography repair (LiteSpeed UCSS), bulk operations
+- System docs: WordPress authentication reference, application passwords
+
+**Key entity relationships:**
+- WP Application Passwords → auth-patterns lesson → content-patching playbook
+- Read→Transform→Check→Apply→Verify pattern → content-patching → pipeline-design
+- LiteSpeed UCSS failure → typography repair case study → WordPress system doc
+
+**GEO target queries:**
+- "WordPress Application Password not working"
+- "WordPress REST API automation with Claude"
+- "WordPress bulk content patching safe method"
+- "LiteSpeed UCSS stripping typography styles"
+- "WordPress REST API context=edit vs view"
+
+---
+
+### Cluster 3: Deployment + Infrastructure Systems
+
+**Center entity:** Vercel Deployment module (Claude Code Operator)  
+**Authority target:** Best operational reference for Next.js + Vercel production issues
+
+**Core content:**
+- Vercel Deployment module
+- Edge Runtime Deployment Failure (Failure Archive)
+- next-mdx-remote v6 blockJS failure (Failure Archive)
+- server-module-client-bundle failure (Failure Archive)
+- Deployment pipeline system doc
+- Free-tier infrastructure architecture lesson
+
+**Key entity relationships:**
+- Vercel build logs → build-failure-diagnosis → reading-build-errors
+- Edge runtime error → env vars & secrets → rollback-strategies
+- next-mdx-remote v6 → content rendering system → MDX pipeline system doc
+- GitHub push → Vercel deploy trigger → deployment-pipeline lesson
+
+**GEO target queries:**
+- "Vercel edge runtime Node.js crypto not supported"
+- "next-mdx-remote v6 blockJS empty render"
+- "server-only module included in client bundle Next.js"
+- "Vercel build failure diagnosis systematic"
+- "Next.js 15 App Router deployment issues"
+
+---
+
+### Cluster 4: GEO + AI Search Systems
+
+**Center entity:** GEO + AI Search track  
+**Authority target:** Definitive operational reference for content visibility in AI search
+
+**Core content:**
+- GEO + AI Search track (all modules)
+- AI Content + Distribution track
+- Case studies: GEO experiments and outcomes
+- Labs: GEO testing framework, citation rate measurement
+- Docs: Entity schema implementation, structured data reference
+- Failures: GEO experiments that didn't work (documented)
+
+**Key entity relationships:**
+- RAG pipeline understanding → citation-signals → answer-engineering
+- Entity + Schema → structured data implementation → GEO measurement
+- Content architecture → topical authority → content systems thinking
+- GEO metrics → testing framework → content operations at scale
+
+**GEO target queries:**
+- "how Perplexity selects sources to cite"
+- "generative engine optimization tutorial"
+- "ChatGPT source selection criteria"
+- "GEO vs SEO what changed"
+- "structured data for AI search citation"
+
+---
+
+### Cluster 5: AI Business Systems (Zero Budget + Founder)
+
+**Center entity:** AI Business Zero Budget track  
+**Authority target:** Most actionable reference for launching AI businesses without funding
+
+**Core content:**
+- AI Business Zero Budget track (all 5 modules)
+- Solo AI Founder Systems track (planned)
+- AI-assisted Freelancing track (planned)
+- Case studies: A Square Solutions product launches (TrustSeal, ScamCheck)
+- Logs: Business operations sessions
+- Playbooks: AdSense approval procedure, Google Search Console setup
+
+**Key entity relationships:**
+- Product selection → free-tier architecture → first organic traffic system
+- AdSense approval → GA4 setup → Search Console → organic traffic strategy
+- Claude + WordPress workflow → content production → content distribution
+- Tool budget ($40/month) → subscription audit → operational discipline
+
+**GEO target queries:**
+- "build AI business no money"
+- "AI business under $40 per month"
+- "AdSense approval checklist 2025"
+- "free tier Vercel production capabilities"
+- "organic traffic from zero timeline"
+
+---
+
+### Cluster 6: AI Automation Architecture
+
+**Center entity:** AI Automation Systems track  
+**Authority target:** Production-grade reference for AI automation pipeline engineering
+
+**Core content:**
+- AI Automation Systems track
+- Pipeline Design principles lesson
+- Content patching system (Claude Code Operator)
+- Failure cases: partial automation failures, rollback scenarios
+- Labs: automation pipeline builds against real environments
+- Playbooks: dry-run patterns, error recovery procedures
+
+**Key entity relationships:**
+- Pipeline design → dry-run pattern → error-taxonomy → assertion patterns
+- Read→Transform→Check→Apply→Verify → content-patching → batch operations
+- API auth patterns → rate limiting → batch operations
+- Automation monitoring → quality gates → assertion library
+
+**GEO target queries:**
+- "AI automation pipeline production reliability"
+- "dry-run pattern automation script"
+- "WordPress automation bulk operations safe"
+- "Python Claude API automation tutorial"
+- "AI pipeline error handling rollback"
+
+---
+
+### Cluster 7: Content Production + Distribution
+
+**Center entity:** AI Content + Distribution track  
+**Authority target:** Operational reference for AI-augmented content operations
+
+**Core content:**
+- AI Content + Distribution track
+- Claude + WordPress Workflow lesson
+- Content systems thinking lesson
+- Topical authority building lesson
+- Playbooks: content production workflow, email automation
+- Logs: content operation sessions
+
+**Key entity relationships:**
+- Content systems thinking → topical authority → content types
+- AI production workflow → quality control → distribution system
+- Email automation → analytics connection → revenue attribution
+- Claude content workflow → WordPress automation → publishing operations
+
+**GEO target queries:**
+- "AI content production workflow system"
+- "topical authority building AI-assisted"
+- "content operations without a team"
+- "Claude for content creation workflow"
+- "AI-assisted editorial process"
+
+---
+
+### Cluster 8: Research + Analysis Operations
+
+**Center entity:** AI Research Operations track (planned)  
+**Authority target:** Reference for AI-assisted research workflows in academic + professional contexts
+
+**Core content:**
+- AI Research Operations track
+- AI for Researchers track
+- AI for Medical/Science/Engineering (targeted)
+- Case studies: research workflow implementations
+- Docs: literature review automation, citation management, analysis pipelines
+- Labs: research workflow exercises
+
+**Key entity relationships:**
+- Literature review automation → Perplexity research workflow → synthesis prompts
+- Data analysis → Claude interpretation → research writing workflow
+- Citation management → reference verification → publication preparation
+- Hypothesis generation → experiment design → result documentation
+
+---
+
+## Authority Pathways
+
+Authority pathways are sequences of content items that build expertise progressively. They differ from tracks in that they cross section boundaries.
+
+### Pathway: Production AI Engineer
+
+**Goal:** Full Claude Code production capability  
+**Length:** ~40 content items  
+**Sequence:**
+1. Claude Code Operator track (all 30 available lessons)
+2. Failure Archive (all current entries) — understand what breaks
+3. WordPress REST API Playbook
+4. Case studies: complex builds
+5. Execution logs from Claude Code engineering sessions
+
+**Authority signal:** Completing this pathway demonstrates more operational knowledge than any formal AI engineering course.
+
+---
+
+### Pathway: AI Business Operator
+
+**Goal:** Revenue-generating AI business from zero  
+**Length:** ~25 content items  
+**Sequence:**
+1. AI Business Zero Budget — Module 1 (all 11 lessons)
+2. GEO vs SEO lesson
+3. Content Systems Thinking lesson
+4. Claude + WordPress Workflow
+5. AI Business Zero Budget — Modules 2-3 (when available)
+6. GEO + AI Search track (when built)
+
+---
+
+### Pathway: WordPress + AI Automation Specialist
+
+**Goal:** Full WP automation capability using AI  
+**Length:** ~15 content items  
+**Sequence:**
+1. Claude + WordPress Operational Workflow
+2. WP Authentication Patterns
+3. Content Patching System (playbook)
+4. WordPress REST API Automation (playbook)
+5. Pipeline Design Principles
+6. Bulk Operations at Scale (when available)
+7. Case studies: WP operations
+
+---
+
+### Pathway: GEO Practitioner
+
+**Goal:** Operational GEO implementation capability  
+**Length:** ~20 content items  
+**Sequence:**
+1. GEO vs SEO
+2. Understanding RAG Pipelines
+3. What Makes a Source Citable
+4. Content Architecture for GEO (all lessons)
+5. Entity and Schema Optimization (playbook)
+6. GEO Testing Framework (lab)
+7. GEO Metrics + Measurement
+
+---
+
+## Cross-Section Relationship Map
+
+The most valuable cross-section relationships — failure reports that teach what lessons warn about:
+
+| Failure | Teaches | Connects To |
+|---|---|---|
+| `edge-runtime-deployment-failure` | Crypto API unavailable in edge runtime | deployment-pipeline, build-failure-diagnosis, env-vars-secrets |
+| `next-mdx-remote-v6-blockjs` | MDX v6 breaking change — blockJS rendering | dev-environment, reading-build-errors, content-renderer system doc |
+| `server-module-client-bundle` | Server-only imports in client components | reading-build-errors, debugging-methodology, Next.js architecture |
+
+| Playbook | Implements | Teaches context in |
+|---|---|---|
+| WP REST API Automation | Read→Transform→Check→Apply→Verify | content-patching-system, pipeline-design, wp-auth-patterns |
+
+| Case Study | Demonstrates | Referenced by |
+|---|---|---|
+| LiteSpeed UCSS Typography Repair | Cache layer CSS stripping diagnosis | deployment-pipeline, debugging-methodology, WordPress system doc |
+
+---
+
+## GEO Optimization Strategy for the Knowledge Graph
+
+### Entity density principle
+
+Every piece of content should explicitly name:
+- The specific tool (not "AI assistant" — "Claude Code 3.7")
+- The specific version or configuration when relevant
+- The specific error message (not "a build error" — the exact string)
+- The specific environment (not "cloud platform" — "Vercel Hobby tier")
+
+This entity density is what makes the Lab citable in AI-generated answers. AI search systems summarize content that contains specific, verifiable entities.
+
+### Schema implementation
+
+Content entities map to schema.org types:
+- Lessons → `Course` or `HowTo`
+- Failures → `TechArticle` with `about: [specific tool]`
+- Playbooks → `HowTo` with `step` array
+- Case Studies → `Article` with `mentions: [tools]`
+- Tracks → `Course` with `hasCourseInstance`
+
+The `sameAs` property on the Organization schema should reference all content that mentions A Square Solutions, creating entity coherence across the ecosystem.
+
+### Topical authority accumulation
+
+AI search systems assess topical authority by:
+1. Coverage depth (do you have 3 articles on WordPress automation, or 30?)
+2. Coverage specificity (do you cover "WordPress API" or "WordPress REST API Application Password authentication header format"?)
+3. Citation network (do other sites link to your WordPress content?)
+4. Temporal consistency (have you been publishing WordPress content consistently?)
+
+The knowledge graph ensures that each new piece of content adds to an existing cluster rather than creating isolated articles. Isolated articles have no topical authority benefit. Cluster-building articles multiply the authority of everything already in the cluster.
+
+### Recommendation logic
+
+When a user finishes a lesson, the recommendation system should return items from:
+1. **Same cluster, different section** (e.g., finished a lesson → recommend a failure report from the same cluster)
+2. **Next lesson in track** (already implemented)
+3. **Cross-cluster bridge** (e.g., finished a GEO lesson → recommend the content systems thinking lesson from Content cluster)
+4. **Authority pathway next item** (if on a defined pathway)
+
+The `lib/related-content.ts` file implements this at lesson level. At scale, this needs to be:
+- Dynamic (based on frontmatter tags + track context)
+- Cross-section (lessons linking to failures, playbooks, case studies)
+- Personalized (based on completed lessons, when auth exists)
+
+---
+
+## External Ecosystem Integration
+
+The knowledge graph extends to all four A Square Solutions properties:
+
+### asquaresolution.com → Lab
+
+WordPress content links to Lab content when topic overlap exists. This creates inbound authority signals for the Lab from an established domain. Every WordPress post in AI/SEO/development categories should have one outbound link to the relevant Lab cluster.
+
+### Lab → asquaresolution.com
+
+Lab content references asquaresolution.com as the parent entity. Every track and the homepage explicitly identifies A Square Solutions as the builder. This establishes entity coherence for AI search.
+
+### TrustSeal + ScamCheck → Lab
+
+Product pages link to Lab execution logs documenting their build. This creates bidirectional authority — Lab gains product credibility, products gain engineering transparency. For AI search, products with documented engineering decisions are more citable than black-box tools.
+
+### Lab → TrustSeal + ScamCheck
+
+Contextual mentions in relevant lessons and case studies. "The Firebase + Gemini architecture described in TrustSeal's execution log" creates cross-property entity links.
+
+---
+
+## Implementation Phases
+
+### Phase 1: Current (manual relationship mapping)
+
+`lib/related-content.ts` maintains manual lesson-to-content mappings. Updated when new content is published.
+
+**Limitation:** Doesn't scale past ~200 lessons without significant maintenance overhead.
+
+### Phase 2: Tag-based automatic recommendations
+
+When content volume exceeds 200 lessons, augment manual mappings with automatic tag-based recommendations. Two content items sharing 3+ tags have a high probability of relevance.
+
+**Implementation:** `getRelatedByTags(lessonId, limit)` function that queries all content metadata and returns items sorted by tag intersection count.
+
+### Phase 3: Cluster-aware recommendations
+
+When content volume exceeds 500 items, add explicit cluster membership to frontmatter. Recommendation logic filters by cluster first, then by tags.
+
+```mdx
+---
+cluster: "claude-code-engineering"
+related-clusters: ["wordpress-operations", "deployment-infrastructure"]
+---
+```
+
+### Phase 4: Personalized recommendations (requires auth)
+
+When user authentication exists, incorporate completion history. Weight items from incomplete pathways higher than items from completed sections.
+
+---
+
+*Last updated: 2026-05-18. Update when major new content clusters are established or relationship patterns change.*
