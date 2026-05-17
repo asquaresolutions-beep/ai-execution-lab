@@ -6,6 +6,7 @@ import { TopBar } from '@/components/layout/top-bar'
 import { SearchModal } from '@/components/search/search-modal'
 import { Analytics } from '@/components/analytics'
 import { WebVitals } from '@/components/analytics/web-vitals'
+import { Analytics as VercelAnalytics } from '@vercel/analytics/react'
 
 // ─── Fonts ───────────────────────────────────────────────────
 const fontSans = Inter({
@@ -135,10 +136,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Global search modal — registers Cmd+K globally */}
         <SearchModal />
 
-        {/* Analytics — production only, env-gated */}
+        {/* Plausible + GA4 — production only, env-gated via NEXT_PUBLIC_* vars */}
         <Analytics />
 
-        {/* Web Vitals reporter — logs in dev, beacons in prod */}
+        {/* Vercel Analytics — single script, all routes, minimal overhead */}
+        <VercelAnalytics />
+
+        {/* Web Vitals reporter — logs in dev, beacons to /api/vitals in prod */}
         <WebVitals />
       </body>
     </html>

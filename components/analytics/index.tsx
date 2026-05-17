@@ -1,22 +1,15 @@
 /**
- * Analytics component — environment-gated, zero-config in dev.
+ * Analytics component — Plausible + GA4, environment-gated, zero-config in dev.
  *
- * Supported integrations (all driven by env vars, no code changes needed):
+ * Activate by setting env vars in Vercel dashboard (no code changes needed):
+ *   NEXT_PUBLIC_PLAUSIBLE_DOMAIN=lab.asquaresolution.com
+ *   NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
  *
- *   Plausible:        set NEXT_PUBLIC_PLAUSIBLE_DOMAIN=yourdomain.com
- *   Google Analytics: set NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
- *   Vercel Analytics: install @vercel/analytics, then uncomment the import below
+ * Vercel Analytics is handled separately in app/layout.tsx via
+ * @vercel/analytics/react — do NOT add it here to avoid duplicate mounts.
  *
- * None of these fire in NODE_ENV=development.
+ * Neither Plausible nor GA4 fires in NODE_ENV=development.
  */
-
-// ── Vercel Analytics ─────────────────────────────────────────
-// To enable: npm install @vercel/analytics  (or equivalent node install)
-// Then uncomment the two lines below:
-//
-// import { Analytics as VercelAnalytics } from '@vercel/analytics/react'
-// const VERCEL_ANALYTICS = true
-const VERCEL_ANALYTICS = false
 
 // ── Runtime env vars ─────────────────────────────────────────
 const PLAUSIBLE_DOMAIN = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN
@@ -62,8 +55,6 @@ export function Analytics() {
         </>
       )}
 
-      {/* Vercel Analytics — uncomment VERCEL_ANALYTICS=true above after installing package */}
-      {/* {VERCEL_ANALYTICS && <VercelAnalytics />} */}
     </>
   )
 }
