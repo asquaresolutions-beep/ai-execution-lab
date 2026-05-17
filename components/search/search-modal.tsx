@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import type { SearchItem } from '@/lib/search-index'
-import { SECTION_META } from '@/lib/utils'
+import { SECTION_META, ACCENT_CLASSES } from '@/lib/utils'
 import type { ContentSection } from '@/lib/content'
 
 // ─────────────────────────────────────────────────────────────
@@ -15,23 +15,72 @@ let cachedItems: SearchItem[] | null = null
 let fuseInstance: any = null
 
 // ─────────────────────────────────────────────────────────────
+// Highlight matched terms in text
+// ─────────────────────────────────────────────────────────────
+
+function Highlighted({ text, query }: { text: string; query: string }) {
+  if (!query.trim()) return <>{text}</>
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'))
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === query.toLowerCase() ? (
+          <mark key={i} className="bg-brand-500/25 text-brand-300 rounded-[2px] px-[1px] not-italic">
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// Group results by section
+// ─────────────────────────────────────────────────────────────
+
+interface ResultGroup {
+  section: ContentSection
+  label:   string
+  items:   Array<{ item: SearchItem; globalIdx: number }>
+}
+
+function groupResults(results: SearchItem[]): ResultGroup[] {
+  const map = new Map<ContentSection, ResultGroup>()
+  results.forEach((item, globalIdx) => {
+    const s = item.section as ContentSection
+    if (!map.has(s)) {
+      map.set(s, {
+        section: s,
+        label:   SECTION_META[s]?.label ?? item.label,
+        items:   [],
+      })
+    }
+    map.get(s)!.items.push({ item, globalIdx })
+  })
+  return Array.from(map.values())
+}
+
+// ─────────────────────────────────────────────────────────────
 // Search modal
 // ─────────────────────────────────────────────────────────────
 
 export function SearchModal() {
-  const [open,    setOpen]    = useState(false)
-  const [query,   setQuery]   = useState('')
-  const [results, setResults] = useState<SearchItem[]>([])
-  const [loading, setLoading] = useState(false)
+  const [open,      setOpen]      = useState(false)
+  const [query,     setQuery]     = useState('')
+  const [results,   setResults]   = useState<SearchItem[]>([])
+  const [loading,   setLoading]   = useState(false)
   const [activeIdx, setActiveIdx] = useState(0)
 
-  const inputRef  = useRef<HTMLInputElement>(null)
-  const listRef   = useRef<HTMLDivElement>(null)
-  const router    = useRouter()
+  const inputRef = useRef<HTMLInputElement>(null)
+  const listRef  = useRef<HTMLDivElement>(null)
+  const router   = useRouter()
 
   // ── Open / close ──────────────────────────────────────────
 
-  const openModal  = useCallback(() => setOpen(true),  [])
+  const openModal  = useCallback(() => setOpen(true), [])
   const closeModal = useCallback(() => {
     setOpen(false)
     setQuery('')
@@ -66,7 +115,7 @@ export function SearchModal() {
     setTimeout(() => inputRef.current?.focus(), 30)
 
     if (cachedItems) {
-      setResults(cachedItems.slice(0, 8))
+      setResults(cachedItems.slice(0, 10))
       return
     }
 
@@ -87,7 +136,7 @@ export function SearchModal() {
           includeScore: true,
         })
 
-        setResults(data.slice(0, 8))
+        setResults(data.slice(0, 10))
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -98,17 +147,25 @@ export function SearchModal() {
   useEffect(() => {
     if (!cachedItems) return
     if (!query.trim()) {
-      setResults(cachedItems.slice(0, 8))
+      setResults(cachedItems.slice(0, 10))
       setActiveIdx(0)
       return
     }
     if (fuseInstance) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = fuseInstance.search(query).slice(0, 8).map((r: any) => r.item)
+      const res = fuseInstance.search(query).slice(0, 12).map((r: any) => r.item)
       setResults(res)
       setActiveIdx(0)
     }
   }, [query])
+
+  // ── Scroll active item into view ──────────────────────────
+
+  useEffect(() => {
+    if (!listRef.current) return
+    const active = listRef.current.querySelector<HTMLElement>('[data-active="true"]')
+    active?.scrollIntoView({ block: 'nearest' })
+  }, [activeIdx])
 
   // ── Keyboard navigation in results ────────────────────────
 
@@ -129,13 +186,16 @@ export function SearchModal() {
     closeModal()
   }
 
+  const groups      = groupResults(results)
+  const isSearching = query.trim().length > 0
+
   // ── Render ─────────────────────────────────────────────────
 
   if (!open) return null
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] px-4"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] px-4"
       onClick={closeModal}
     >
       {/* Backdrop */}
@@ -143,7 +203,7 @@ export function SearchModal() {
 
       {/* Modal */}
       <div
-        className="relative z-10 w-full max-w-lg rounded-xl border border-white/[0.10] bg-surface-900 shadow-2xl animate-fade-up overflow-hidden"
+        className="relative z-10 w-full max-w-lg rounded-xl border border-white/[0.10] bg-[rgb(9,14,26)] shadow-2xl shadow-black/60 animate-fade-up overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Input row */}
@@ -157,7 +217,7 @@ export function SearchModal() {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search docs, labs, playbooks..."
+            placeholder="Search docs, labs, playbooks…"
             className="flex-1 bg-transparent text-sm text-surface-100 placeholder-surface-600 outline-none"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -166,47 +226,88 @@ export function SearchModal() {
           {loading && (
             <span className="text-xs text-surface-600 animate-pulse">Loading…</span>
           )}
-          <kbd className="text-[10px] text-surface-700 font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1.5 py-0.5">
+          <kbd className="text-[10px] text-surface-700 font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1.5 py-0.5 shrink-0">
             Esc
           </kbd>
         </div>
 
         {/* Results */}
-        <div ref={listRef} className="max-h-[360px] overflow-y-auto">
-          {!loading && results.length === 0 && query.trim() && (
-            <p className="text-center text-sm text-surface-600 py-10">
-              No results for &ldquo;{query}&rdquo;
-            </p>
+        <div ref={listRef} className="max-h-[400px] overflow-y-auto">
+
+          {/* No results */}
+          {!loading && results.length === 0 && isSearching && (
+            <div className="py-12 text-center">
+              <p className="text-sm text-surface-600">No results for</p>
+              <p className="mt-1 text-sm font-medium text-surface-400">&ldquo;{query}&rdquo;</p>
+            </div>
           )}
-          {results.map((item, i) => {
-            const sectionMeta = SECTION_META[item.section as ContentSection]
+
+          {/* Section header when not searching */}
+          {!isSearching && results.length > 0 && (
+            <div className="px-4 pt-3 pb-1">
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-widest text-surface-700">
+                Recent entries
+              </span>
+            </div>
+          )}
+
+          {/* Grouped results */}
+          {groups.map((group) => {
+            const sectionMeta = SECTION_META[group.section]
+            const ac = ACCENT_CLASSES[sectionMeta?.accent ?? 'blue']
+
             return (
-              <button
-                key={item.id}
-                className={`w-full text-left px-4 py-3 transition-colors border-l-2 ${
-                  i === activeIdx
-                    ? 'border-brand-500 bg-brand-500/5'
-                    : 'border-transparent hover:bg-white/[0.03]'
-                }`}
-                onClick={() => navigate(item.href)}
-                onMouseEnter={() => setActiveIdx(i)}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono font-semibold text-surface-600 uppercase w-16 shrink-0">
-                    {item.label}
-                  </span>
-                  <span className="text-sm font-medium text-surface-100 truncate">
-                    {item.title}
-                  </span>
-                </div>
-                {item.description && (
-                  <p className="mt-0.5 text-xs text-surface-500 line-clamp-1 ml-18 pl-[72px]">
-                    {item.description}
-                  </p>
+              <div key={group.section}>
+                {/* Section group header — only shown when searching */}
+                {isSearching && (
+                  <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">
+                    <span className={`text-[10px] font-mono font-bold uppercase tracking-widest ${ac.text}`}>
+                      {group.label}
+                    </span>
+                    <div className="flex-1 h-px bg-white/[0.05]" />
+                    <span className="text-[10px] font-mono text-surface-700">
+                      {group.items.length}
+                    </span>
+                  </div>
                 )}
-              </button>
+
+                {/* Result items */}
+                {group.items.map(({ item, globalIdx }) => (
+                  <button
+                    key={item.id}
+                    data-active={globalIdx === activeIdx ? 'true' : 'false'}
+                    className={`w-full text-left px-4 py-2.5 transition-colors border-l-2 ${
+                      globalIdx === activeIdx
+                        ? 'border-brand-500 bg-brand-500/[0.06]'
+                        : 'border-transparent hover:bg-white/[0.025]'
+                    }`}
+                    onClick={() => navigate(item.href)}
+                    onMouseEnter={() => setActiveIdx(globalIdx)}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {/* Section tag — only in non-searching mode since groups provide context */}
+                      {!isSearching && (
+                        <span className={`text-[10px] font-mono font-semibold uppercase shrink-0 w-14 ${ac.text} opacity-70`}>
+                          {item.label}
+                        </span>
+                      )}
+                      <span className="text-sm font-medium text-surface-100 truncate">
+                        <Highlighted text={item.title} query={query} />
+                      </span>
+                    </div>
+                    {item.description && (
+                      <p className={`mt-0.5 text-xs text-surface-500 line-clamp-1 ${!isSearching ? 'pl-[72px]' : 'pl-0'}`}>
+                        <Highlighted text={item.description} query={query} />
+                      </p>
+                    )}
+                  </button>
+                ))}
+              </div>
             )
           })}
+
+          {/* Bottom padding */}
+          {results.length > 0 && <div className="h-2" />}
         </div>
 
         {/* Footer hints */}
@@ -214,7 +315,12 @@ export function SearchModal() {
           <span>↑↓ navigate</span>
           <span>↵ select</span>
           <span>Esc close</span>
-          <span className="ml-auto">⌘K toggle</span>
+          {results.length > 0 && (
+            <span className="text-surface-800 ml-auto">
+              {results.length} result{results.length !== 1 ? 's' : ''}
+            </span>
+          )}
+          <span className={results.length > 0 ? '' : 'ml-auto'}>⌘K toggle</span>
         </div>
       </div>
     </div>
