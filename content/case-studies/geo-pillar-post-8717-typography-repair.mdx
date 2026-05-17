@@ -1,0 +1,140 @@
+---
+title: GEO Pillar Typography Repair — Post 8717
+description: Full case study of diagnosing and fixing the typography cascade failure on the GEO pillar article at asquaresolution.com. Three failed approaches, one confirmed root cause, permanent inline-style fix.
+date: "2026-05-17"
+tags: [WordPress, LiteSpeed, Astra, Elementor, CSS, typography, REST API, GEO]
+status: published
+stack: [WordPress, Astra, Elementor, LiteSpeed Cache, Python, REST API]
+impact: Resolved h2 rendering from Astra's global 90px → correct 28px editorial scale. 12 section H2s, 9 H3s. Zero regressions to other pages.
+---
+
+## Context
+
+**Post:** Generative Engine Optimization (GEO) — the primary editorial pillar for asquaresolution.com's AI search cluster.
+
+**URL:** `asquaresolution.com/blog/generative-engine-optimization-geo-end-of-traditional-seo/`
+
+**Post ID:** 8717
+
+**Problem:** All section H2 headings rendered at Astra's global font-size of **90px**. On a 1140px content container, 90px headings cause extreme visual weight, excessive line wrapping, and landing-page aesthetics in what should be an editorial article.
+
+<StatsGrid>
+  <Stat value="90px" label="Before: H2 size" note="Astra Customizer global" />
+  <Stat value="28px" label="After: H2 size" note="Inline style per element" />
+  <Stat value="12" label="H2s patched" note="Section headings" />
+  <Stat value="9" label="H3s patched" note="Sub-section headings" />
+</StatsGrid>
+
+## What The Post Contains
+
+Post 8717 is not a standard Elementor page (`data-elementor-type` absent). It is a classic editor post where content is raw HTML inside `.entry-content`. Elementor provides some infrastructure (Kit CSS, widget classes on headings) but the post content itself is classic HTML.
+
+Key elements:
+- **14 H2 elements** total: 1 hero (inline style, 42px white), 12 bare section headings, 1 FAQ (inline style, 26px)
+- **14 H3 elements** total: 9 bare section sub-headings, 5 FAQ H3s (inline styles, 16px, blue)
+- **1 dark container block:** `background:black; padding:45px; font-family:sans-serif`
+- Body class `.postid-8717` on `<html>` element
+
+## Failed Approaches
+
+### Attempt 1: `<style>` block in post content
+
+Injected a `<style type="text/css">` block directly into the post content using the REST API. All checks passed. CSS was confirmed in the raw content.
+
+**Result:** Failed. WordPress `wpautop()` injected 7 `<p>` and 7 `</p>` tags inside the style block, producing malformed CSS. The style element appeared in the rendered DOM but was syntactically broken and ignored by the browser.
+
+### Attempt 2: Elementor Kit custom_css
+
+Moved the scoped CSS to Elementor Kit 5004's `_elementor_page_settings.custom_css` field via REST API. This bypasses `wpautop`. Specificity `(0,2,1)` should beat Astra's `(0,1,0)`. CSS saved correctly — verified by re-fetching the Kit and checking `saved_css length: 1744`.
+
+**Result:** Failed silently. Kit CSS was correctly saved but never delivered to the browser.
+
+### Diagnosis: LiteSpeed UCSS audit
+
+Fetched the live UCSS file with no-cache headers and searched for our selectors:
+
+```python
+ucss.count("postid-8717")   # → 0
+ucss.count("font-size:30px")  # → 0
+ucss length: 32,689 chars
+```
+
+**Confirmed:** LiteSpeed UCSS stripped all `.postid-8717` scoped rules. The Kit CSS approach was dead from the start. See [lab research](/labs/litespeed-ucss-scoped-css-stripping) for full analysis.
+
+## Working Solution
+
+Applied inline `style=` attributes directly to each bare section H2 and H3 in post content.
+
+### Why this works
+
+Inline styles exist in the HTML document, not in CSS files. LiteSpeed UCSS operates on stylesheets only. The browser reads inline styles directly from the DOM — no CSS pipeline involved. Specificity is `(1,0,0)` — highest possible, beats everything.
+
+The hero H2 (`font-size:42px`) had been working correctly throughout because it already had an inline style. That was the clue.
+
+### Implementation
+
+```python
+H2_STYLE = "font-size:28px;line-height:1.28;font-weight:600;letter-spacing:-0.2px;margin:36px 0 12px;"
+H3_STYLE = "font-size:19px;line-height:1.32;font-weight:600;margin:24px 0 10px;"
+
+BARE_H2 = '<h2 class="elementor-heading-title elementor-size-default">'
+STYLED_H2 = f'<h2 class="elementor-heading-title elementor-size-default" style="{H2_STYLE}">'
+
+BARE_H3 = '<h3 class="elementor-heading-title elementor-size-default">'
+STYLED_H3 = f'<h3 class="elementor-heading-title elementor-size-default" style="{H3_STYLE}">'
+
+# Replace all bare H2s and H3s
+new_content = content.replace(BARE_H2, STYLED_H2)
+new_content = new_content.replace(BARE_H3, STYLED_H3)
+
+# Also fix the dark container
+OLD_CONTAINER = 'background:black; color:#e2e8f0; padding:45px; font-family:sans-serif; line-height:1.8;'
+NEW_CONTAINER = "background:black; color:#e2e8f0; padding:clamp(20px,4vw,45px); font-family:'DM Sans',sans-serif; line-height:1.8;"
+new_content = new_content.replace(OLD_CONTAINER, NEW_CONTAINER)
+```
+
+Additional changes in the same operation:
+- **Cleared Elementor Kit custom_css** (it was being stripped; dead weight)
+- **Fixed container:** `font-family:sans-serif` → `DM Sans` (matches Astra body font), `padding:45px` → `clamp(20px,4vw,45px)` (responsive without CSS)
+
+### Checks before applying (29 total, all passed)
+
+- 12 bare H2s detected and patched
+- 9 bare H3s detected and patched
+- Hero H2 (42px) untouched
+- FAQ H2 (26px) untouched
+- FAQ H3s (color:#2563eb) untouched
+- Container style updated
+- No `<style>` block remaining in post content
+- Article schema intact
+- FAQPage schema intact
+- Internal links intact
+
+## Verification
+
+Re-fetched live page with no-cache headers. Checked all H2 tags:
+
+```
+[1]  style="font-size:42px..." (hero — unchanged)
+[2]  style="font-size:28px;line-height:1.28;font-weight:600;..."
+[3]  style="font-size:28px;..." (×12 section headings)
+...
+[14] style="font-size:26px;..." (FAQ — unchanged)
+```
+
+All 12 section H2s: `28px`. Zero bare H2s remaining. Zero dark section regressions. Kit CSS cleared.
+
+## Scope Impact
+
+- **Pages affected:** 1 (post 8717 only)
+- **Pages NOT affected:** All other posts (inline styles are element-level, not global)
+- **Kit CSS clearing:** Kit CSS was empty — clearing it changed nothing for other pages
+- **LiteSpeed cache:** Elementor cache flushed; LiteSpeed page cache regenerated automatically on next visit
+
+## Learnings
+
+1. **Confirm the delivery chain before debugging specificity.** We spent effort on specificity when the CSS was never reaching the browser at all.
+2. **LiteSpeed UCSS is aggressive.** Assume any scoped CSS (body class selectors, `:not()`, attribute selectors that depend on runtime state) will be stripped.
+3. **Inline styles are a first-class tool**, not a hack. For per-post typography on LiteSpeed sites, they are the correct solution.
+4. **wpautop is a content filter, not just a paragraph formatter.** Any HTML structure with blank lines inside it is at risk.
+5. **The simplest diagnostic is often the most revealing.** Fetching the UCSS file and grepping for our selectors took 30 seconds and resolved 2 hours of specificity debugging.

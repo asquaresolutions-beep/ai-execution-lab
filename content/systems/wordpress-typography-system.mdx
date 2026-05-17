@@ -1,0 +1,172 @@
+---
+title: WordPress Typography System — Astra + Elementor + LiteSpeed
+description: How to build a reliable per-article typography system on WordPress when Astra sets global heading sizes, Elementor manages CSS output, and LiteSpeed UCSS strips scoped stylesheet rules.
+date: "2026-05-17"
+tags: [WordPress, Astra, Elementor, LiteSpeed, typography, CSS]
+status: published
+stack: [WordPress, Astra, Elementor, LiteSpeed Cache, REST API]
+---
+
+## Problem Statement
+
+Most WordPress setups using Astra + Elementor + LiteSpeed Cache have this invisible conflict:
+
+1. **Astra Customizer** sets global heading sizes (often landing-page sizes like `h2 = 90px`)
+2. **Elementor Kit CSS** is designed to handle per-post overrides via scoped selectors
+3. **LiteSpeed UCSS** strips any CSS rule it considers unused — which includes all body-class-scoped rules
+
+The result: your override CSS is correctly saved, passes every check, and is invisible to the browser.
+
+<Callout type="lab" title="Lab confirmation">
+This behaviour is confirmed in the [LiteSpeed UCSS stripping research](/labs/litespeed-ucss-scoped-css-stripping). The UCSS file for asquaresolution.com showed 0 occurrences of `.postid-8717` despite the Kit CSS being correctly saved.
+</Callout>
+
+## Architecture Decision
+
+**Inline styles on heading elements are the only reliable approach** on a LiteSpeed + Astra + Elementor stack.
+
+| Approach | Works? | Why |
+|---|---|---|
+| Astra Customizer global size | ✓ | Applied globally, not scoped |
+| Elementor Kit `custom_css` | ✗ | UCSS strips scoped rules |
+| `<style>` block in post content | ✗ | `wpautop` corrupts it |
+| Inline `style=` on element | ✓ | In HTML, immune to UCSS |
+| `!important` in Kit CSS | ✗ | Rule isn't in UCSS — irrelevant |
+
+The second failure mode — wpautop — is important to understand separately.
+
+## wpautop CSS Corruption
+
+WordPress's `the_content` filter runs `wpautop()` on post content before rendering. This function:
+
+1. Splits content on double newlines
+2. Wraps each block in `<p>` tags
+3. Has no awareness of `<style>` elements
+
+CSS written with blank lines between rules looks, to `wpautop`, like separate paragraphs. It injects `<p>` and `</p>` inside the style block. Confirmed: 7 `<p>` injections in post 8717's corrupted style block.
+
+```html
+<!-- What you wrote -->
+<style type="text/css">
+.postid-8717 h2 { font-size: 30px; }
+
+.postid-8717 h3 { font-size: 20px; }
+</style>
+
+<!-- What WordPress rendered -->
+<style type="text/css">
+<p>.postid-8717 h2 { font-size: 30px; }</p>
+<p>.postid-8717 h3 { font-size: 20px; }</p>
+</style>
+```
+
+The CSS is broken. Compact CSS (no blank lines) reduces but does not eliminate this problem on some configurations.
+
+## The Inline Style System
+
+### Heading scale
+
+Applied directly to HTML elements via `style=` attribute in post content:
+
+```html
+<!-- Section H2 -->
+<h2 style="font-size:28px;line-height:1.28;font-weight:600;letter-spacing:-0.2px;margin:36px 0 12px;">
+  Heading Text
+</h2>
+
+<!-- Section H3 -->
+<h3 style="font-size:19px;line-height:1.32;font-weight:600;margin:24px 0 10px;">
+  Sub-heading
+</h3>
+
+<!-- Hero H2 on dark background -->
+<h2 style="font-size:42px;line-height:1.15;font-weight:800;letter-spacing:-1px;margin:0 0 10px;color:#ffffff;">
+  Hero
+</h2>
+```
+
+### Why these values
+
+| Property | Value | Reasoning |
+|---|---|---|
+| `font-size` H2 | 28px | Editorial scale; readable at 1140px container; doesn't wrap excessively |
+| `font-size` H3 | 19px | Clear tier below H2 without too much compression |
+| `line-height` H2 | 1.28 | Tighter than body (1.65em) for headings; consistent with modern editorial |
+| `font-weight` | 600 | Lexend at 600 reads as bold without appearing heavy at 28px |
+| `letter-spacing` | -0.2px | Negative tracking at larger sizes matches editorial convention |
+| `margin` | `36px 0 12px` | Generous top space establishes section break; tight bottom keeps heading close to content |
+
+### Responsive padding without media queries
+
+LiteSpeed UCSS also strips `@media` rules that it considers unused. Use `clamp()` in inline styles for responsive values without CSS:
+
+```html
+<!-- Responsive padding on a dark container block -->
+<div style="padding:clamp(20px,4vw,45px);">
+```
+
+This eliminates the need for a media query while providing responsive behaviour:
+- 375px viewport: `4vw = 15px` → clamped to `20px`
+- 768px viewport: `4vw = 30.7px` → uses calculated value
+- 1200px viewport: `4vw = 48px` → clamped to `45px`
+
+## Implementation via REST API
+
+For batch application to existing posts:
+
+```python
+import urllib.request, base64, json
+
+WP_BASE = "https://your-site.com/wp-json/wp/v2"
+AUTH = "Basic " + base64.b64encode(b"user:app_password").decode()
+
+H2_STYLE = "font-size:28px;line-height:1.28;font-weight:600;letter-spacing:-0.2px;margin:36px 0 12px;"
+
+BARE_H2 = '<h2 class="elementor-heading-title elementor-size-default">'
+STYLED_H2 = f'<h2 class="elementor-heading-title elementor-size-default" style="{H2_STYLE}">'
+
+def get_post(post_id):
+    req = urllib.request.Request(
+        f"{WP_BASE}/posts/{post_id}?context=edit",
+        headers={"Authorization": AUTH}
+    )
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read())
+
+def patch_post(post_id, content):
+    body = json.dumps({"content": content}).encode()
+    req = urllib.request.Request(
+        f"{WP_BASE}/posts/{post_id}",
+        data=body, method="POST",
+        headers={"Authorization": AUTH, "Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return json.loads(r.read())
+
+post = get_post(8717)
+content = post["content"]["raw"]
+new_content = content.replace(BARE_H2, STYLED_H2)
+
+# Verify before applying
+assert STYLED_H2 in new_content
+assert BARE_H2 not in new_content
+
+patch_post(8717, new_content)
+```
+
+## The Global Fix (Recommended)
+
+All of the above is necessary only because Astra's Customizer has landing-page heading sizes set globally. The correct long-term fix:
+
+**Appearance → Customize → Typography → Headings → H2 → set to 28–32px**
+
+This changes the global default. Every article benefits automatically. The inline style work becomes unnecessary for new articles, and the 442+ existing articles with rendering issues are fixed in one action.
+
+The inline style system documented here is the **correct workaround** for sites where the Customizer setting cannot be changed immediately.
+
+## Maintenance Notes
+
+- When adding new articles, add inline styles to H2/H3 elements at authoring time
+- The WP REST API approach above can be extended to bulk-process existing posts
+- If LiteSpeed UCSS is disabled in the future, Kit CSS will start working — review and consolidate at that point
+- Monitor after LiteSpeed plugin updates; UCSS behaviour can change between versions

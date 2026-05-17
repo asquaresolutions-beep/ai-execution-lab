@@ -1,0 +1,103 @@
+---
+title: LiteSpeed UCSS Strips Scoped CSS — Confirmed
+description: LiteSpeed's UCSS optimizer removes all CSS rules scoped to post-specific body classes (.postid-XXXX) because it crawls pages without those classes active. Any stylesheet-based per-post typography fix is silently neutralised.
+date: "2026-05-17"
+tags: [LiteSpeed, UCSS, WordPress, CSS, typography]
+status: published
+hypothesis: LiteSpeed UCSS strips .postid-XXXX scoped CSS rules, making Kit CSS and any scoped stylesheet fix invisible to browsers.
+result: confirmed
+---
+
+## Background
+
+A Square Solutions runs a WordPress blog on Astra + LiteSpeed Cache. The Astra Customizer sets a global heading size of **90px for all `h2` elements** — a landing-page setting that bleeds into every editorial article.
+
+The expected fix: write scoped CSS to Elementor Kit 5004's `custom_css` field using `.postid-8717 h2.elementor-heading-title { font-size: 30px }`. Specificity `(0,2,1)` should beat Astra's `(0,1,0)`. The CSS was correctly saved to the Kit. All pre-apply checks passed.
+
+**The headings still rendered at 90px.**
+
+## Experiment
+
+Fetched the live UCSS file with no-cache headers and grepped for our selectors.
+
+```python
+import urllib.request, re
+
+req = urllib.request.Request(
+    "https://asquaresolution.com/blog/generative-engine-optimization-geo-end-of-traditional-seo/",
+    headers={"User-Agent": "Mozilla/5.0", "Cache-Control": "no-cache"}
+)
+with urllib.request.urlopen(req, timeout=30) as r:
+    html = r.read().decode("utf-8")
+
+ucss_url = re.findall(r'href="(https://[^"]+litespeed[^"]+\.css[^"]*)"', html)[0]
+
+req2 = urllib.request.Request(ucss_url, headers={"User-Agent": "Mozilla/5.0"})
+with urllib.request.urlopen(req2, timeout=30) as r2:
+    ucss = r2.read().decode("utf-8")
+
+print("postid-8717 occurrences:", ucss.count("postid-8717"))
+print("font-size:30px occurrences:", ucss.count("font-size:30px"))
+print("UCSS length:", len(ucss))
+```
+
+**Output:**
+```
+postid-8717 occurrences: 0
+font-size:30px occurrences: 0
+UCSS length: 32689
+```
+
+The UCSS file (32,689 chars) contained **zero occurrences** of our scoped selectors despite them being correctly saved in the Elementor Kit.
+
+## Root Cause
+
+LiteSpeed UCSS works by:
+
+1. Crawling the page URL as an anonymous visitor
+2. Collecting all CSS rules that match elements visible in the rendered DOM
+3. Writing a combined "used CSS" file
+4. Serving that combined file instead of the original stylesheets
+
+The problem: **the UCSS crawler has no body class**. It doesn't know it's on a `.postid-8717` page. CSS rules that depend on that body class to match appear unused. LiteSpeed strips them.
+
+This affects **any CSS scoped to a WordPress body class**: `.postid-XXXX`, `.category-XXXX`, `.page-id-XXXX`, etc.
+
+It also explains why Astra's global `h2 { font-size: 90px }` survives — it's not scoped to any body class.
+
+## The Cascade After UCSS
+
+| Source | Rule | Specificity | In UCSS? | Browser sees |
+|---|---|---|---|---|
+| Astra (async) | `h2 { font-size: 90px }` | (0,0,1) | Yes | 90px ✓ |
+| Our Kit CSS | `.postid-8717 h2.elementor-heading-title { font-size: 30px }` | (0,2,1) | **No** | Invisible |
+| Inline style | `style="font-size:28px"` | Highest | In HTML | 28px ✓ |
+
+## Fix
+
+Apply font-size directly as an inline `style` attribute on each heading element. Inline styles live in the HTML — they are immune to CSS optimisation.
+
+```python
+BARE_H2 = '<h2 class="elementor-heading-title elementor-size-default">'
+STYLED_H2 = '<h2 class="elementor-heading-title elementor-size-default" style="font-size:28px;line-height:1.28;font-weight:600;letter-spacing:-0.2px;margin:36px 0 12px;">'
+
+content = content.replace(BARE_H2, STYLED_H2)
+```
+
+This is the same mechanism that made the hero H2 (`style="font-size:42px"`) work correctly throughout — it was never touched by UCSS because it's not CSS.
+
+## Implications
+
+- **Elementor Kit `custom_css`** is unreliable for post-specific typography when LiteSpeed UCSS is active
+- **`!important`** in Kit CSS does not help — the rule isn't in the UCSS file at all, so specificity is irrelevant
+- **Disabling UCSS** for specific URLs is possible but introduces performance regressions and requires manual maintenance
+- **Inline styles** on heading elements are the correct, durable solution for per-post typography control on LiteSpeed sites
+
+<Callout type="warn" title="If you use CSS custom properties">
+CSS variables defined in `:root {}` or `body {}` are also subject to UCSS stripping if the variable is only referenced inside a scoped rule LiteSpeed considers unused. Define variables globally, not inside body-class-scoped blocks.
+</Callout>
+
+## Related
+
+- [WordPress Typography System — Astra + Elementor + LiteSpeed](/systems/wordpress-typography-system)
+- [GEO Pillar Typography Repair — Case Study](/case-studies/geo-pillar-post-8717-typography-repair)

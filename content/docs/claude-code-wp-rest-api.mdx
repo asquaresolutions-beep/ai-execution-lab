@@ -1,0 +1,252 @@
+---
+title: Claude Code + WordPress REST API — Production Patterns
+description: Patterns for using Claude Code to write, validate, and apply WordPress REST API operations safely in production. Dry-run architecture, pre-apply checks, and schema-safe content patching.
+date: "2026-05-17"
+tags: [Claude Code, WordPress, REST API, Python, automation]
+status: published
+difficulty: intermediate
+section: Claude Code
+---
+
+## Overview
+
+Claude Code is well-suited to WordPress REST API operations because it can:
+- Read existing post content before modifying it
+- Write Python scripts with built-in dry-run logic and pre-apply checks
+- Verify the post-apply state by re-fetching live content
+- Maintain a running output log for review
+
+This document covers patterns we use at A Square Solutions for production WordPress operations via the REST API.
+
+## Authentication
+
+WordPress Application Passwords (WordPress 5.6+) are the correct auth method. Never use your main account password in scripts.
+
+```python
+import urllib.request, base64, json
+
+WP_BASE = "https://your-site.com/wp-json/wp/v2"
+AUTH    = "Basic " + base64.b64encode(b"username:xxxx xxxx xxxx xxxx xxxx xxxx").decode()
+
+def req_get(url: str) -> dict:
+    r = urllib.request.Request(url, headers={"Authorization": AUTH})
+    with urllib.request.urlopen(r, timeout=30) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+def req_post(url: str, payload: dict) -> dict:
+    body = json.dumps(payload).encode("utf-8")
+    r = urllib.request.Request(
+        url, data=body, method="POST",
+        headers={"Authorization": AUTH, "Content-Type": "application/json; charset=utf-8"}
+    )
+    with urllib.request.urlopen(r, timeout=60) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+```
+
+## Dry-Run Architecture
+
+Every production script uses `--live` as an explicit flag. Without it, the script plans and checks but writes nothing.
+
+```python
+import sys
+
+DRY_RUN = "--live" not in sys.argv
+
+# ... build new_content ...
+
+if DRY_RUN:
+    print("DRY RUN — pass --live to apply")
+    sys.exit(0)
+
+# Apply only reaches here when --live is passed
+result = req_post(WP_BASE + f"/posts/{POST_ID}", {"content": new_content})
+```
+
+**Why this matters:** Claude Code runs scripts directly. Without an explicit live flag, a hallucinated check pass could apply destructive changes. The dry-run pattern means the worst case for a reasoning error is a false "checks passed" message, not a production write.
+
+## Pre-Apply Check Pattern
+
+Before any write, define what must be true in the new content. Run all checks and abort if any fail.
+
+```python
+checks = [
+    # (string_to_find, should_be_present, label)
+    ('style="font-size:28px', True,  "H2 inline styles applied"),
+    ('<h2 class="elementor-heading-title elementor-size-default">', False, "no bare H2s remaining"),
+    ('"@type":"Article"',     True,  "Article schema intact"),
+    ('"@type":"FAQPage"',     True,  "FAQPage schema intact"),
+    ('<style type="text/css">', False, "no style block in content"),
+    ('generative-engine-optimization', True, "internal link intact"),
+]
+
+all_ok = True
+for check_str, should_present, label in checks:
+    present = check_str in new_content
+    ok = present == should_present
+    all_ok = all_ok and ok
+    print(f"  [{'OK' if ok else 'FAIL'}] {label}")
+
+if not all_ok:
+    print("ABORTING — checks failed")
+    sys.exit(1)
+```
+
+Typical check categories:
+- **Positive**: new content present (inline styles, new sections, links)
+- **Negative**: old content absent (dark sections, CSS blocks, duplicate images)
+- **Invariant**: content that must never change (schemas, internal links, core content)
+
+## Reading Post Content for Editing
+
+Always fetch with `context=edit` to get the raw (pre-rendering) content:
+
+```python
+post = req_get(WP_BASE + f"/posts/{POST_ID}?context=edit")
+content = post["content"]["raw"]  # raw HTML, as stored in DB
+```
+
+Without `context=edit`, WordPress returns the rendered HTML — including wpautop transforms, shortcode output, and Elementor rendering. You cannot safely manipulate rendered HTML and push it back.
+
+## Schema Preservation
+
+WordPress REST API stores JSON-LD schemas as plain text inside `<script>` tags in post content. Always verify schema integrity in checks:
+
+```python
+import json, re
+
+# Extract and validate schemas before patching
+schemas = re.findall(
+    r'<script type="application/ld\+json">(.*?)</script>',
+    content, re.DOTALL
+)
+for s in schemas:
+    parsed = json.loads(s)  # will raise if malformed
+    assert '"@context"' in s
+    assert '"@type"' in s
+```
+
+A common failure mode: schema description fields get contaminated with CSS code during content generation. Always check that `description` fields contain plain text, not CSS or HTML.
+
+## Output Logging Pattern
+
+Write all output to a log file instead of (or in addition to) stdout. This gives Claude Code a readable artifact to inspect without polluting the terminal:
+
+```python
+OUT = r"C:\path\to\operation_out.txt"
+open(OUT, "w", encoding="utf-8").close()
+
+def P(msg: str) -> None:
+    with open(OUT, "a", encoding="utf-8") as f:
+        f.write(msg + "\n")
+
+P("=== Operation Name ===")
+P("Dry run: " + str(DRY_RUN))
+```
+
+Claude Code can then read the log file to verify the operation completed correctly.
+
+## Elementor Kit Operations
+
+Elementor Kit settings are stored in post meta on the `elementor_library` post type:
+
+```python
+KIT_ID = 5004  # find via /wp-json/wp/v2/elementor_library?search=Default+Kit
+
+# Read
+kit = req_get(WP_BASE + f"/elementor_library/{KIT_ID}?context=edit")
+settings = kit["meta"]["_elementor_page_settings"]
+custom_css = settings.get("custom_css", "")
+
+# Write (merge — don't overwrite all settings)
+new_settings = dict(settings)
+new_settings["custom_css"] = "/* new CSS */"
+
+req_post(
+    WP_BASE + f"/elementor_library/{KIT_ID}",
+    {"meta": {"_elementor_page_settings": new_settings}}
+)
+```
+
+After Kit changes, flush Elementor's CSS cache:
+
+```python
+def req_delete(url: str) -> str:
+    r = urllib.request.Request(url, method="DELETE", headers={"Authorization": AUTH})
+    with urllib.request.urlopen(r, timeout=30) as resp:
+        return resp.read().decode("utf-8")
+
+req_delete("https://your-site.com/wp-json/elementor/v1/cache")
+```
+
+<Callout type="warn" title="LiteSpeed UCSS and Kit CSS">
+Kit CSS scoped to WordPress body classes (`.postid-XXXX`) is stripped by LiteSpeed UCSS. Writing Kit CSS for post-specific typography appears to work but has no effect in the browser. Use inline styles on elements instead. See [the lab research](/labs/litespeed-ucss-scoped-css-stripping).
+</Callout>
+
+## Complete Script Template
+
+```python
+"""
+Operation: [describe what this does]
+Post: [post ID] — [post URL]
+"""
+import urllib.request, base64, json, sys, re
+
+WP_BASE  = "https://your-site.com/wp-json/wp/v2"
+EL_BASE  = "https://your-site.com/wp-json/elementor/v1"
+AUTH     = "Basic " + base64.b64encode(b"user:app_password").decode()
+OUT      = r"output.txt"
+DRY_RUN  = "--live" not in sys.argv
+POST_ID  = 0  # set this
+
+open(OUT, "w", encoding="utf-8").close()
+def P(msg): 
+    with open(OUT, "a", encoding="utf-8") as f: f.write(msg + "\n")
+
+def req_get(url):
+    r = urllib.request.Request(url, headers={"Authorization": AUTH})
+    with urllib.request.urlopen(r, timeout=30) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+def req_post(url, payload):
+    body = json.dumps(payload).encode("utf-8")
+    r = urllib.request.Request(url, data=body, method="POST",
+        headers={"Authorization": AUTH, "Content-Type": "application/json; charset=utf-8"})
+    with urllib.request.urlopen(r, timeout=60) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+P("=== [Operation Name] ===")
+P("Dry run: " + str(DRY_RUN))
+
+# 1. Read
+post = req_get(WP_BASE + f"/posts/{POST_ID}?context=edit")
+content = post["content"]["raw"]
+P("Content length: " + str(len(content)))
+
+# 2. Transform
+new_content = content  # ... your transformations ...
+
+# 3. Check
+checks = [
+    ("expected_string", True,  "description"),
+    ("removed_string",  False, "description"),
+]
+all_ok = True
+for s, should, label in checks:
+    ok = (s in new_content) == should
+    all_ok = all_ok and ok
+    P(f"  [{'OK' if ok else 'FAIL'}] {label}")
+P("All checks passed: " + str(all_ok))
+
+if not all_ok:
+    P("ABORTING")
+    sys.exit(1)
+
+if DRY_RUN:
+    P("DRY RUN — pass --live to apply")
+    sys.exit(0)
+
+# 4. Apply
+result = req_post(WP_BASE + f"/posts/{POST_ID}", {"content": new_content})
+P("PATCHED: modified=" + str(result.get("modified")))
+P("\nDone.")
+```

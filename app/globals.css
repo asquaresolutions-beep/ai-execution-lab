@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────
+   Base — dark-first design
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --background: 15 23 42;        /* surface-900 */
+  --foreground: 241 245 249;     /* surface-100 */
+  --muted: 51 65 85;             /* surface-700 */
+  --muted-foreground: 148 163 184; /* surface-400 */
+  --border: 51 65 85;            /* surface-700 */
+  --brand: 249 115 22;           /* brand-500 */
+}
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Selection */
+  ::selection {
+    background-color: rgba(249, 115, 22, 0.25);
+    color: inherit;
+  }
+
+  /* Focus rings */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-surface-900;
+  }
+
+  /* Scrollbar — subtle */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgb(var(--muted)); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgb(var(--muted-foreground)); }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Typography overrides for MDX prose
+   ───────────────────────────────────────────────────────────── */
+
+@layer components {
+  .prose-lab {
+    @apply prose prose-invert prose-sm sm:prose-base max-w-none;
+    @apply prose-headings:font-semibold prose-headings:tracking-tight;
+    @apply prose-a:text-brand-400 prose-a:no-underline hover:prose-a:underline;
+    @apply prose-code:text-brand-300 prose-code:bg-surface-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none;
+    @apply prose-pre:bg-surface-900 prose-pre:border prose-pre:border-surface-700;
+    @apply prose-blockquote:border-l-brand-500 prose-blockquote:text-surface-300;
+    @apply prose-th:text-surface-200 prose-th:bg-surface-800;
+    @apply prose-td:border-surface-700 prose-th:border-surface-700;
+    @apply prose-hr:border-surface-700;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Utility classes
+   ───────────────────────────────────────────────────────────── */
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty  { text-wrap: pretty; }
+
+  /* Subtle gradient border  */
+  .border-gradient {
+    background: linear-gradient(rgb(var(--background)), rgb(var(--background))) padding-box,
+                linear-gradient(135deg, rgb(var(--brand)), transparent) border-box;
+    border: 1px solid transparent;
+  }
+
+  /* Glow on brand elements */
+  .glow-brand {
+    box-shadow: 0 0 24px rgba(249, 115, 22, 0.15);
+  }
+}
