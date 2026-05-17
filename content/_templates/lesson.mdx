@@ -1,0 +1,113 @@
+---
+# TEMPLATE: Lesson
+# Copy to: content/lessons/[track-id]/[module-id]/[lesson-id].mdx
+# After creating, update lib/tracks.ts: change lesson status from 'coming-soon' to 'available'
+# Remove all comment lines before publishing
+#
+# difficulty: beginner | intermediate | advanced | operator
+# All tags should include the track topic area as the first tag
+
+title: "[Lesson Title — Action Phrase: 'Building X', 'Understanding Y', 'Configuring Z']"
+description: "[What this lesson teaches + what the reader can do after. 100-160 chars.]"
+date: "YYYY-MM-DD"
+tags: ["TRACK-TOPIC", "SECONDARY-TOPIC", "TOOL-OR-CONCEPT"]
+status: "published"
+---
+
+<LessonMeta difficulty="beginner" updated="YYYY-MM-DD" />
+
+<LessonObjectives items={[
+  "First specific, measurable skill the reader gains",
+  "Second skill — start each with an action verb (Build, Configure, Understand, Identify, Apply)",
+  "Third skill",
+  "Fourth skill",
+  "Fifth skill — 4-6 objectives is the right range",
+]} />
+
+<!-- OPENING PARAGRAPH (no heading): 2-3 sentences. What problem does this lesson solve?
+     Who specifically benefits? What will they be able to do?
+     Do NOT start with "In this lesson, we will learn..." -->
+
+[Opening: Direct statement of the problem and the solution this lesson provides. "Running a WordPress content operation manually is a bottleneck at scale. This lesson covers the exact five-stage workflow — from topic selection to published post — using Claude as the primary drafting and research tool, with you as the quality control layer."]
+
+---
+
+## [First Major Section — Named After the Core Concept]
+
+<!-- First section should establish the framework, principle, or foundational concept.
+     The FIRST SENTENCE of this section answers the question the heading implies.
+     No preamble. -->
+
+[Opening sentence of section 1 — direct answer to the heading.]
+
+[2-4 paragraphs of body content. Short paragraphs (3-4 sentences max). Be specific: include tool names, exact values, real examples. No filler.]
+
+---
+
+## [Second Section — Usually the Main Procedure or How-To]
+
+<!-- Step-by-step procedures go here if applicable. Use numbered lists for sequential
+     steps, bullet lists only for genuinely non-sequential items. -->
+
+### Step 1: [Specific Action Name]
+
+[What to do and why. Include the exact values to use.]
+
+```bash
+# Exact commands if applicable
+command --flag value
+```
+
+### Step 2: [Next Action]
+
+[...]
+
+---
+
+## [Third Section — Depth, Edge Cases, or Decision Framework]
+
+<!-- This section adds depth beyond the basic procedure. Common patterns:
+     - When to use X vs Y
+     - What can go wrong and how to handle it
+     - How to adapt this for different situations
+     - The decision criteria behind the approach -->
+
+[...]
+
+---
+
+## [Fourth Section — Optional, for complex topics requiring additional coverage]
+
+[...]
+
+---
+
+## Common Mistakes
+
+<!-- Name the specific mistakes — not generic warnings. -->
+
+**[Specific mistake 1].** [Why it happens and why it's a problem. What the correct approach is.]
+
+**[Specific mistake 2].** [Same format.]
+
+---
+
+<Callout type="warn" title="[Short title for the most important warning]">
+[One to four sentences. The most critical thing not to do, or the most common
+failure mode. Be specific — not "be careful" but "if you do X without Y, Z happens."]
+</Callout>
+
+<Callout type="info" title="[Optional: additional context or related information]">
+[Additional context that doesn't fit in the main flow but is valuable. Delete if not needed.]
+</Callout>
+
+---
+
+<Checkpoint items={[
+  "Specific verifiable action the reader should have completed",
+  "Another concrete state they should be in",
+  "Tool or system configured correctly",
+  "Skill applied at least once",
+  "Understanding demonstrated by completing the task",
+  "5-8 items — specific enough to confirm completion, not vague",
+]} />

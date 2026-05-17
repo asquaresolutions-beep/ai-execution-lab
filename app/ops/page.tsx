@@ -60,6 +60,26 @@ export default function OpsPage() {
   // Total published
   const totalPublished = allSectionData.reduce((n, { items }) => n + items.length, 0)
 
+  // Publishing velocity — items in last 30 days
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+  const recentItems = allSectionData.flatMap(({ section, items }) =>
+    items
+      .filter(i => {
+        const d = i.frontmatter.date ? new Date(i.frontmatter.date) : null
+        return d && d >= thirtyDaysAgo
+      })
+      .map(i => ({ ...i, section }))
+  )
+
+  // Staleness — sections with no new content in 30+ days
+  const staleSections = allSectionData.filter(({ items }) => {
+    if (items.length === 0) return false
+    const latest = items[0]?.frontmatter.date
+    if (!latest) return false
+    return new Date(latest) < thirtyDaysAgo
+  })
+
   return (
     <div className="px-6 lg:px-8 py-8 max-w-5xl">
 
@@ -263,6 +283,40 @@ export default function OpsPage() {
         {/* ── Right column: section health ── */}
         <div className="space-y-6">
 
+          {/* Publishing velocity */}
+          <div>
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
+              Publishing Velocity
+            </h2>
+            <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2.5">
+                <p className="text-xs text-surface-400">Items last 30 days</p>
+                <span className={`text-sm font-bold font-mono ${recentItems.length >= 8 ? 'text-green-400' : recentItems.length >= 4 ? 'text-yellow-400' : 'text-red-400'}`}>
+                  {recentItems.length}
+                </span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-2.5">
+                <p className="text-xs text-surface-400">Target (weekly × 4)</p>
+                <span className="text-[10px] font-mono text-surface-600">≥ 12 / month</span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-2.5">
+                <p className="text-xs text-surface-400">Stale sections</p>
+                <span className={`text-[10px] font-mono ${staleSections.length > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                  {staleSections.length > 0
+                    ? staleSections.map(s => SECTION_META[s.section as ContentSection]?.label ?? s.section).join(', ')
+                    : '✓ none'
+                  }
+                </span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-2.5">
+                <p className="text-xs text-surface-400">Open failures</p>
+                <span className={`text-[10px] font-mono ${openFailures.length > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                  {openFailures.length > 0 ? `${openFailures.length} open` : '✓ all resolved'}
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* Section counts */}
           <div>
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
@@ -307,6 +361,10 @@ export default function OpsPage() {
               {[
                 { label: 'Syndication tool',      href: '/syndicate' },
                 { label: 'Topics overview',       href: '/tags' },
+                { label: 'Publishing operations',  href: '/docs/publishing-operations' },
+                { label: 'Content queue system',  href: '/docs/content-queue-system' },
+                { label: 'Research workflow',     href: '/docs/ai-research-workflow' },
+                { label: 'Content templates',     href: '/docs/content-templates' },
                 { label: 'Publishing workflow',   href: '/docs/publishing-workflow' },
                 { label: 'Publishing cadence',    href: '/docs/publishing-cadence' },
                 { label: 'Frontmatter reference', href: '/docs/frontmatter-reference' },

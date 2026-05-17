@@ -1,0 +1,325 @@
+---
+title: "AI-Assisted Research + Verification Workflow"
+description: "The exact workflow for researching, verifying, and optimizing Lab content using Claude — including screenshot evidence, factual consistency checks, and GEO optimization passes."
+date: "2026-05-18"
+tags: ["ops", "workflow", "research", "geo", "verification", "claude"]
+status: "published"
+---
+
+This document defines the research, verification, and GEO optimization workflows used for all content published on AI Execution Lab. The system is designed for a single operator using Claude Pro as the primary research and drafting assistant.
+
+---
+
+## The Three-Pass System
+
+Every piece of content passes through three distinct phases:
+
+```
+RESEARCH PASS → DRAFT PASS → VERIFICATION PASS → GEO PASS
+```
+
+Each pass has a specific Claude prompt pattern and a specific human task. The phases are sequential — do not combine them.
+
+---
+
+## Pass 1: Research
+
+### When to run this pass
+
+Before drafting any content that involves:
+- Specific tool behaviors you haven't personally verified recently
+- Pricing or plan details that may have changed
+- Technical procedures where version matters
+- Statistics or comparative claims
+
+For execution logs and failure reports documenting your own recent work: skip or abbreviate the research pass. You already have the primary source.
+
+### Research Prompt Pattern
+
+```
+I'm writing [content type] about [topic]. I'm going to include specific claims
+about [specific aspects]. Before I draft, help me:
+
+1. Identify which specific claims will be most time-sensitive or version-dependent
+2. List what I should verify against primary sources before publishing
+3. Flag any areas where your training data may be significantly outdated
+   (tool versions, pricing, feature sets)
+
+The content will be published at a technical AI operations platform. The audience
+is professional operators — not beginners. Claims must be accurate to be useful.
+```
+
+Claude's response gives you a verification checklist specific to your topic. Work through that checklist against primary sources before drafting.
+
+### Primary Source Hierarchy
+
+For verification, use sources in this order:
+
+1. **Official documentation** — the tool's own docs, changelogs, pricing pages
+2. **Your own recent experience** — terminal output, screenshots, personal testing
+3. **Recent dated articles** (within 6 months) from well-known technical outlets
+4. **Claude's knowledge** — use only for stable concepts, not for version-specific or pricing claims
+
+**Never use:** Claude's knowledge as the primary source for tool pricing, feature availability, or version-specific behavior. It may be outdated.
+
+---
+
+## Pass 2: Drafting
+
+### Claude Draft Prompt Pattern
+
+After research, draft with:
+
+```
+Write a [content type] about [specific topic] for AI Execution Lab.
+
+Context:
+- Platform: lab.asquaresolution.com — public AI operations journal by A Square Solutions
+- Audience: technical operators, developers, AI-business builders
+- Tone: direct, specific, zero fluff — written by someone who does this work,
+  not someone explaining it theoretically
+- Format: MDX with ## and ### headings, short paragraphs, code blocks where relevant
+
+Verified facts to include:
+[paste your verified research notes]
+
+Structure requirements:
+- Open with the most important sentence — not context-setting
+- Each section heading states or implies a specific answer
+- Include exact commands, configurations, or steps (not vague descriptions)
+- Document what can go wrong (failure modes) for any procedure
+- Close with concrete next actions or a Checkpoint
+
+Do NOT:
+- Use phrases like "in today's landscape", "it's important to", "in conclusion"
+- Hedge every claim with "may" and "might" when the fact is known
+- Add filler sections to hit a word count
+- Write marketing copy about anything
+```
+
+### Draft Quality Gates
+
+Before proceeding to the verification pass, the draft must pass:
+
+**Gate 1: Specificity check**
+Read the first paragraph of each section. Does it contain at least one specific: tool name, version, command, price, date, or measured outcome? If a section is entirely abstract — rewrite before continuing.
+
+**Gate 2: Actionability check**
+Could a reader execute this content? For procedural content: can they follow it step by step? For conceptual content: can they apply the framework to their specific situation?
+
+**Gate 3: Originality check**
+Does this content say something that isn't already said identically by the first three Google results for the topic? If not: add your specific experience, your actual numbers, your real-world context.
+
+---
+
+## Pass 3: Verification
+
+### The Verification Checklist
+
+Run this on the completed draft before publishing:
+
+#### Claims Requiring Active Verification
+
+**Prices and costs:**
+- [ ] Every price mentioned verified against source URL (note source URL in draft comments if needed)
+- [ ] Date of verification recorded if price is central to the content
+
+**Tool versions:**
+- [ ] Version numbers match current stable release (check tool's GitHub releases or changelog)
+- [ ] Any "latest" or "current" references replaced with specific version numbers
+
+**Procedures and commands:**
+- [ ] Every bash command, API call, or configuration block has been tested or is directly from official docs
+- [ ] No commands that include placeholder text (`<YOUR_VALUE>`) without clear annotation that it's a placeholder
+
+**Statistics and comparative claims:**
+- [ ] Every percentage, ratio, or "X times better" claim has a named source
+- [ ] If source is personal measurement: state explicitly ("in our testing" / "on this deployment")
+- [ ] If source is general knowledge or estimate: state explicitly
+
+**Tool feature availability:**
+- [ ] Features described actually exist in the current version of the tool
+- [ ] Free/paid tier distinctions are accurate (especially for tools that change pricing frequently)
+
+#### Claude Verification Prompt
+
+After completing the checklist:
+
+```
+Review this draft for factual accuracy issues. I've already verified prices
+and versions — focus on:
+
+1. Any technical claims that sound plausible but may be incorrect
+2. Any procedures or configurations that have common gotchas I haven't mentioned
+3. Any statements where my framing might mislead someone into making a mistake
+4. Anything that conflicts with standard practice in [relevant domain]
+
+Draft:
+[paste full draft]
+```
+
+This catches logical errors and omissions that human verification misses.
+
+---
+
+## Screenshot Evidence Workflow
+
+Screenshots are evidence. They serve two functions: credibility (proving the result was real) and reference (showing the reader exactly what to look for).
+
+### When to Use Screenshots
+
+**Required:**
+- Before/after results with visual changes (typography, layout, performance scores)
+- Error screens showing the exact error state
+- Dashboard readings showing specific metrics at a specific time
+- Success states showing exactly what "it worked" looks like
+
+**Recommended:**
+- Step-by-step UI procedures where navigation is non-obvious
+- Settings screens for complex tool configurations
+- Search Console or Analytics data backing a claim
+
+**Not needed:**
+- Obvious UI (e.g., "click the Save button" — no screenshot required)
+- Code output that's already in a code block
+- Generic tool screenshots that don't add information
+
+### Screenshot Specifications
+
+| Type | Dimensions | Format | Notes |
+|---|---|---|---|
+| Full page / wide | 1280×720 minimum | PNG | For architecture screenshots |
+| UI section | Crop tightly to relevant area | PNG | Remove unrelated UI chrome |
+| Error screen | Full terminal / console | PNG | Show full error, not truncated |
+| Before/after | Matching dimensions | PNG | Same viewport, same zoom |
+| Analytics / metrics | Show date range visible | PNG | Date context is required |
+
+### Screenshot Storage
+
+Store screenshots in: `public/evidence/[content-slug]/`
+
+Reference in MDX:
+```mdx
+![Error screen: next-mdx-remote v6 components rendering empty](
+  /evidence/next-mdx-remote-v6-blockjs/error-screen.png
+)
+```
+
+Alt text must describe what the screenshot shows specifically — not "screenshot" or "image."
+
+### Screenshot Compression
+
+Compress all screenshots before committing:
+- Target: under 200KB per image
+- Tool: use [Squoosh](https://squoosh.app/) or `sharp` in a script
+- Do not commit uncompressed PNG screenshots — they bloat the repository
+
+---
+
+## Factual Consistency Workflow
+
+### The Entity Consistency Check
+
+Before publishing any content that mentions A Square Solutions properties:
+
+```
+Entity names to use exactly:
+- "A Square Solutions" (not "asquare" or "A-Square")
+- "AI Execution Lab" (not "the lab" in structured text — OK in casual prose)
+- "TrustSeal" (not "Trust Seal" or "trustseal")
+- "ScamCheck" (not "Scam Check" or "scamcheck")
+- "Claude Code" (not "ClaudeCode" or "claude code")
+- "Claude Pro" (not "Claude pro" or "Claude Pro plan")
+- "Next.js" (not "NextJS" or "nextjs")
+- "Vercel" (not "vercel" in body text)
+```
+
+Run a find-and-replace pass on every piece for entity names before publishing. These inconsistencies break entity clustering in structured data and look unprofessional.
+
+### Internal Consistency Check
+
+When publishing related content (multiple lessons in a sequence, failure + playbook covering the same system):
+
+1. Pull the related existing content
+2. Verify: are the same tools described the same way?
+3. Verify: are the same procedures consistent in step order and naming?
+4. Verify: are version numbers consistent across related pieces?
+
+Inconsistency between related pieces is a credibility signal to readers and a quality signal to search crawlers.
+
+---
+
+## GEO Optimization Pass
+
+Run this as the final pass before publishing. The goal: make the content maximally extractable by AI search systems (ChatGPT, Perplexity, Claude, Gemini) that will cite it in answer generation.
+
+### GEO Checklist
+
+**Entity density:**
+- [ ] The primary entity (the topic this is about) is named in full in the first 100 words
+- [ ] Specific product names, tool names, and company names appear multiple times — not replaced with pronouns
+- [ ] Author/publisher entity ("A Square Solutions" or "AI Execution Lab") appears at least once
+
+**Answer-first structure:**
+- [ ] The first `<h2>` section answers the most important question a reader has
+- [ ] The first sentence after each `<h2>` is a direct answer to what the heading implies
+- [ ] The conclusion or final section states what was accomplished or decided — not meta-commentary
+
+**Declarative specificity:**
+- [ ] At least 3 specific facts (numbers, names, versions, dates) appear in the first 400 words
+- [ ] Claims are stated as facts when they are facts — not "approximately" or "around" when the exact value is known
+- [ ] Before/after comparisons are quantified where possible
+
+**Structural clarity:**
+- [ ] Each `<h2>` section is self-contained — could be extracted and make sense independently
+- [ ] Code blocks are preceded by a sentence explaining what they do
+- [ ] Tables are used for comparisons (better than prose for AI extraction)
+
+**GEO Optimization Prompt (for final pass):**
+
+```
+I'm about to publish this content on AI Execution Lab. Review it for
+GEO (generative engine optimization) — specifically:
+
+1. Which sections, if extracted verbatim by an AI search system, would
+   make complete, useful answers to someone's query?
+2. Which sections are too context-dependent to be extractable?
+3. What specific entities (tool names, company names, version numbers)
+   should appear earlier or more frequently?
+4. Is there a single "best answer" paragraph that should be moved
+   earlier to maximize citation probability?
+
+Content:
+[paste]
+```
+
+Apply the suggestions that improve clarity without degrading the operator voice.
+
+---
+
+## The Total Workflow Time Budget
+
+Benchmarks per content type:
+
+| Content Type | Research | Draft | Verify | GEO Pass | Total |
+|---|---|---|---|---|---|
+| Execution log | 0 min | 20 min | 5 min | 5 min | 30 min |
+| Failure report | 10 min | 30 min | 15 min | 10 min | 65 min |
+| Lesson | 20 min | 45 min | 20 min | 15 min | 100 min |
+| Playbook | 15 min | 60 min | 30 min | 15 min | 120 min |
+| Case study | 30 min | 60 min | 30 min | 15 min | 135 min |
+| System doc | 20 min | 60 min | 30 min | 15 min | 125 min |
+
+If any piece is taking significantly longer: it either needs more research done first, or it's trying to cover too much scope in one piece. Scope it down.
+
+---
+
+## Workflow Anti-Patterns
+
+**Drafting before researching.** Produces content that needs heavy revision after verification. Do the research pass first — it takes 10–15 minutes and saves 30+ in editing.
+
+**Skipping the verification pass on "simple" content.** The most common factual errors appear in the content that feels most familiar. Familiarity bias makes you less likely to check. Always run the verification checklist.
+
+**Over-optimizing for GEO at the expense of depth.** Answer-first writing is genuinely better for readers AND better for GEO — these goals align. But if you find yourself writing short, flat content that "sounds like a good AI answer" — you've gone wrong. Depth and specificity are what make something worth citing.
+
+**Treating Claude's draft as final.** Claude's draft is a structured starting point. Your editing pass is where operator voice, verified specifics, and real experience make the content worth publishing.

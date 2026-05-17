@@ -1,0 +1,185 @@
+---
+# TEMPLATE: Playbook
+# Copy to: content/playbooks/[descriptive-slug].mdx
+# Slug should name the specific procedure: "wp-rest-api-bulk-patch"
+# A playbook is a proven, repeatable procedure — do not publish until tested in production
+# Remove all comment lines before publishing
+
+title: "[Procedure Name: 'The X System' or 'X Playbook' or '[Tool]: How to Y']"
+description: "[What this playbook does + what state it produces. 100-160 chars. Include tool names.]"
+date: "YYYY-MM-DD"
+tags: ["playbooks", "TOOL-OR-PLATFORM", "TASK-CATEGORY"]
+status: "published"
+---
+
+<!-- OPENING: What this playbook does, in two sentences. Who needs it. What problem it solves.
+     This is the "executive summary" — someone scanning should know in 15 seconds whether this
+     is what they need. -->
+
+[Opening: "The content patching system is a five-stage procedure for making bulk updates to WordPress posts via the REST API without data corruption or partial failures. It uses the Read→Transform→Check→Apply→Verify pattern and is safe to run on production databases."]
+
+---
+
+## When to Use This Playbook
+
+<!-- Be explicit about the exact use case. When is this playbook the right tool?
+     When is it NOT the right tool? -->
+
+**Use this when:**
+- [Specific situation 1]
+- [Specific situation 2]
+
+**Do not use this when:**
+- [Situation where a different approach is correct]
+- [Scale or context where this playbook breaks]
+
+---
+
+## Prerequisites
+
+Before running this playbook, you need:
+
+| Requirement | Details |
+|---|---|
+| [Tool/access 1] | [Specific version or configuration required] |
+| [Tool/access 2] | [What permissions or credentials are needed] |
+| [Environment] | [Any environment-specific requirements] |
+
+---
+
+## Overview
+
+<!-- One-paragraph or diagram-level description of the overall procedure before diving
+     into steps. Optional for simple playbooks, required for multi-phase procedures. -->
+
+```
+Phase 1: [Name]
+  └── [What happens]
+
+Phase 2: [Name]
+  └── [What happens]
+
+Phase 3: [Name] (verification gate)
+  └── [What happens — do not proceed to Phase 4 without this]
+```
+
+---
+
+## Phase 1: [First Phase Name]
+
+<!-- Phase headings make the playbook scannable and allow someone to jump in at the
+     right point if they're resuming. Use phases for multi-step procedures.
+     Use Steps (###) within each phase. -->
+
+### Step 1.1: [Specific Action]
+
+[What to do.]
+
+```[language]
+[Exact command or code — no placeholders without annotation]
+```
+
+**Expected output:**
+```
+[What success looks like — the exact output you should see]
+```
+
+**If this fails:** [What to check and what the failure looks like]
+
+### Step 1.2: [Next Action]
+
+[...]
+
+---
+
+## Phase 2: [Second Phase Name]
+
+### Step 2.1: [Action]
+
+[...]
+
+```[language]
+[...]
+```
+
+---
+
+## Phase 3: Verification Gate
+
+<!-- This section is required in every playbook. Before proceeding to any
+     write/apply/deploy operations, verify that the read/transform phases
+     produced correct output. -->
+
+Before proceeding to the write phase, confirm:
+
+- [ ] [Specific check 1 — something you can verify in output or state]
+- [ ] [Specific check 2]
+- [ ] [Specific check 3]
+
+**Dry run:** Run with `--dry-run` flag (or equivalent) and confirm output matches expectations before live execution:
+
+```bash
+[dry run command]
+```
+
+---
+
+## Phase 4: Apply
+
+<!-- The actual write/deploy/apply operation. This section should be the most
+     conservative — explicit warnings about what this does and cannot be undone. -->
+
+<Callout type="warn" title="Before applying">
+[State clearly what this operation does and any irreversible aspects. "This patches live WordPress posts via the REST API. There is no undo. Verify Phase 3 outputs before proceeding."]
+</Callout>
+
+```[language]
+[Apply command]
+```
+
+---
+
+## Phase 5: Verify
+
+<!-- After the apply operation, verify the expected outcome. Do not consider the
+     playbook "done" until verification passes. -->
+
+Verify the operation succeeded:
+
+```bash
+[Verification command or procedure]
+```
+
+**Success state:** [Exactly what correct output looks like]
+**Failure state:** [What incorrect output looks like and what to do]
+
+---
+
+## Failure Modes
+
+<!-- Document the specific ways this playbook can fail and what to do. -->
+
+| Failure | Cause | Recovery |
+|---|---|---|
+| [Specific failure 1] | [Why it happens] | [What to do] |
+| [Specific failure 2] | [Why it happens] | [What to do] |
+
+---
+
+## Rollback
+
+<!-- How to undo or recover from a failed or incorrect run. If there is no rollback,
+     state that explicitly. -->
+
+[Rollback procedure, or: "This operation is not reversible. Recovery requires [specific procedure]."]
+
+---
+
+## Maintenance Notes
+
+<!-- How to keep this playbook current. What changes in the environment would require
+     updating this playbook. How often it should be reviewed. -->
+
+- Review if [tool name] upgrades past version [X.X]
+- Verify API endpoints are still current quarterly
+- [Any other maintenance triggers]

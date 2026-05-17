@@ -1,0 +1,292 @@
+---
+title: "Content Queue System"
+description: "Priority scoring model, backlog framework, staleness detection, and the operational logic for deciding what to publish next on AI Execution Lab."
+date: "2026-05-18"
+tags: ["ops", "publishing", "queue", "priority", "freshness", "content"]
+status: "published"
+---
+
+The content queue system answers one question: **what should I publish next?**
+
+It does this through a priority scoring model, a structured backlog, and a staleness detection system that flags content needing updates. The system is designed to be reviewed in 10 minutes at the start of each week.
+
+---
+
+## Priority Scoring Model
+
+Every potential piece of content gets scored across four dimensions. Scores are 1–3. Highest total score publishes first.
+
+### Dimension 1: GEO/Search Value (1–3)
+
+Will AI search systems or Google rank this content for queries that have real volume?
+
+| Score | Criteria |
+|---|---|
+| **3** | Targets a specific, searchable problem with exact tool names and error messages. Query exists; competition is low. |
+| **2** | Covers a real topic with search demand but moderate competition. Adds new angle or depth. |
+| **1** | Topically relevant but low search demand. Valuable for ecosystem completeness, not discovery. |
+
+**Signals for a 3:** The content title contains a specific error message, a named tool + specific version, or a very precise question that someone would search verbatim.
+
+---
+
+### Dimension 2: Authority Value (1–3)
+
+Does this content strengthen topical authority in the Lab's primary domains?
+
+| Score | Criteria |
+|---|---|
+| **3** | Directly deepens one of the Lab's core topic pillars (Claude Code, GEO, AI automation, WordPress engineering, AI business operations). Contains specific, verifiable, unique insights. |
+| **2** | Related to a core pillar but peripheral. General guidance with some specificity. |
+| **1** | Adjacent topic. Relevant but not core. |
+
+**The five core authority pillars:**
+1. Claude Code + AI-assisted engineering
+2. GEO / AI-search optimization
+3. WordPress + REST API automation
+4. AI business operations (zero-budget stack, content systems)
+5. Failure documentation (production AI + web systems)
+
+---
+
+### Dimension 3: Effort-to-Impact Ratio (1–3)
+
+How much effort does this piece require relative to its expected impact?
+
+| Score | Criteria |
+|---|---|
+| **3** | Low effort (execution log, failure report from notes already taken), high or medium impact. Under 2 hours to write and publish. |
+| **2** | Medium effort (lesson, playbook draft), medium-high impact. 2–5 hours total. |
+| **1** | High effort (case study, systems doc, long playbook), high impact but slow to produce. 5+ hours. |
+
+**Note:** High-effort content isn't deprioritized — it's scheduled separately. Score 1 items need dedicated blocks, not queue slots.
+
+---
+
+### Dimension 4: Timeliness (1–3)
+
+Does this content have a time dimension that makes now the right moment to publish?
+
+| Score | Criteria |
+|---|---|
+| **3** | Content is immediately relevant to work happening now, or documents a recent event (last 7 days). |
+| **2** | Content is relevant to ongoing work. Becomes less specific with time. |
+| **1** | Evergreen. No urgency. Will be equally relevant in 3 months. |
+
+---
+
+### Priority Score Table
+
+Total scores and routing:
+
+| Total Score | Action |
+|---|---|
+| 10–12 | **Publish this week.** Top of queue. Block time on Tuesday/Wednesday. |
+| 7–9 | **Queue for next week.** In the active backlog. |
+| 4–6 | **Backlog.** Don't lose it — add to the backlog doc with notes. |
+| ≤3 | **Defer or drop.** Reconsider when context changes. |
+
+---
+
+## The Backlog Framework
+
+### Structure
+
+The backlog is a flat list. Not a project management system. Not a kanban board. A flat list with enough context to make priority decisions quickly.
+
+**Backlog entry format:**
+
+```
+[SCORE] TITLE
+Type: lesson / log / failure / playbook / system / case-study
+Trigger: what event or need prompted this
+Notes: any research already done, context needed
+Status: queued / in-draft / blocked
+```
+
+**Example entries:**
+
+```
+[11] Failure: next build cache exhaustion on Vercel Hobby
+Type: failure
+Trigger: hit the limit during Monday's deploy batch
+Notes: error message saved in notes.txt - has exact log output
+Status: queued
+
+[9] Lesson: CLAUDE.md for WordPress REST API projects
+Type: lesson — claude-code-operator / foundations
+Trigger: wrote three different CLAUDE.md files this week; pattern is clear
+Notes: have the template working; need to document the decision logic
+Status: in-draft
+
+[7] Playbook: Rank Math schema customization for content sections
+Type: playbook
+Trigger: did this manually on asquaresolution.com — worth documenting
+Notes: process is stable; no notes taken yet
+Status: queued
+
+[4] System: GA4 cross-domain configuration
+Type: system
+Trigger: ecosystem integration strategy mentions this needs verification
+Notes: need to check the actual GA4 settings first
+Status: blocked
+```
+
+### Backlog Review (Monday — 10 minutes)
+
+1. Open backlog list
+2. Score any new items added since last Monday
+3. Identify top 3–4 by score
+4. Assign each to a day this week (Tuesday–Thursday publishing, Friday QA/publish)
+5. Update any status changes
+
+The backlog review is time-boxed to 10 minutes. If it takes longer, the backlog is too large or items aren't scored. Keep entries lean.
+
+---
+
+## Staleness Detection System
+
+Content ages. Some content ages fast (tool versions change, prices update, features disappear). Some content ages slowly (principles, methodology, pattern documentation).
+
+### Staleness Classification
+
+**Class A — Expires Fast (review every 3 months):**
+- Content mentioning specific pricing (Vercel plans, Claude Pro cost, Hostinger rates)
+- Content about specific tool versions (`next-mdx-remote v6`, `Next.js 15`, etc.)
+- Content about platform features that change frequently
+- AdSense RPM estimates
+
+**Class B — Ages Moderately (review every 6 months):**
+- Workflow documentation that depends on specific UIs
+- Stack recommendations that may become outdated
+- Deployment procedures for specific platform versions
+
+**Class C — Evergreen (review annually):**
+- Principles, frameworks, and methodology content
+- Failure reports (root cause doesn't change; fix may need version update)
+- Execution logs (historical record — no update needed unless factually incorrect)
+
+### Staleness Detection Checklist (run quarterly)
+
+For all published Class A content:
+
+1. Open Google Search Console → Performance
+2. Filter by the page URL
+3. Look for: was position trending up but recently dropped? (Possible freshness signal)
+4. Open the page and check every specific claim:
+   - Current price for every tool mentioned → verify against source
+   - Current feature availability → check tool's changelog/docs
+   - Tool version numbers → check if newer major version exists with breaking changes
+
+If a claim is outdated: update the content, update the `date` in frontmatter to today's date, commit, push. The updated date signals freshness to search crawlers.
+
+### Staleness Tags
+
+Tag content that contains Class A claims at publication time:
+
+```yaml
+tags: ["pricing-sensitive", "version-specific"]
+```
+
+This enables a filtered view of staleness-risk content during quarterly audits.
+
+---
+
+## "What to Publish Next" — Decision Logic
+
+When the backlog is empty or the queue isn't clear, use this decision tree:
+
+```
+Did something break or need more than one attempt to fix in the past 7 days?
+  YES → Write the failure report first. Always.
+  NO  ↓
+
+Did you complete a significant work session this week (>1 hour of real work)?
+  YES → Write the execution log before it's cold.
+  NO  ↓
+
+Is there a track module with lessons in coming-soon status?
+  YES → Pick the next lesson in sequence. Write it.
+  NO  ↓
+
+Is there a procedure you've run more than twice that isn't documented?
+  YES → Write the playbook.
+  NO  ↓
+
+Check backlog. Sort by score. Publish the top item.
+```
+
+**The anti-pattern to avoid:** Waiting for the "perfect" piece while simpler, high-value content sits unwritten. A failure report published today is worth more than a case study that takes three weeks to perfect.
+
+---
+
+## Freshness Tracking System
+
+Track publication velocity and section health in the monthly ops review:
+
+### Velocity Metrics (check monthly)
+
+| Metric | Target | How to Check |
+|---|---|---|
+| Logs published this month | ≥ 6 | `/ops` → Execution Logs count |
+| Failures published this month | ≥ 2 | `/ops` → Failure Archive count |
+| Lessons published this month | ≥ 4 | Track module progress |
+| Most recent publish date | ≤ 7 days ago | `/ops` → Content Health section |
+
+### Section Health
+
+A section is "healthy" if its most recent published item is less than 30 days old. Check the Content Health panel on `/ops`.
+
+If any core section hasn't been updated in 30+ days: add a backlog item for that section immediately. Stale sections lose topical freshness signals.
+
+### The "Last Updated" Signal in GEO
+
+AI search systems factor content recency when selecting sources for recently-changed topics. For the Lab's primary topics (Claude Code, Next.js, WordPress automation), new releases happen frequently. Publishing updates when major tool versions drop keeps the Lab's content in the freshness window.
+
+**Watch for major updates in:**
+- Claude / Anthropic releases (model updates, Claude Code features)
+- Next.js releases (especially major versions with breaking changes)
+- WordPress core + WooCommerce releases
+- Vercel platform changes
+- Google algorithm updates affecting GEO/SEO guidance
+
+When any of these drop: assess which existing Lab content references that tool, update those pieces, and consider a new execution log or system update documenting the change.
+
+---
+
+## Monthly Authority Audit
+
+Run this at the start of each month (30 minutes):
+
+### 1. Search Console Review
+- Which Lab pages have the most impressions?
+- Which have impressions but poor CTR? (→ update title/description)
+- Which have good position (top 10) but moderate impressions? (→ internal linking opportunity)
+
+### 2. Content Gap Analysis
+- Open the active track modules
+- List every `coming-soon` lesson
+- Score the top 5 by priority
+- Schedule at least 2 for this month
+
+### 3. Failure Archive Review
+- Any recent failures not yet documented?
+- Any documented failures with open status that are now resolved?
+- Any failures where the fix needs a version update?
+
+### 4. Backlog Health Check
+- Any items in backlog older than 60 days?
+- Either score them higher (publish this month) or drop them
+- A backlog that grows indefinitely is a backlog that isn't real
+
+---
+
+## The Single Most Important Rule
+
+**Content that documents real work is always better than content created for publishing targets.**
+
+If nothing happened this week that's worth documenting: don't invent content. Add to the backlog, keep the draft open, wait for something real.
+
+If three significant things happened: document all three. Don't filter to "one per week." Publish when the event is fresh.
+
+The cadence target is a floor, not a ceiling. The quality floor — specificity, accuracy, verifiability — has no ceiling.

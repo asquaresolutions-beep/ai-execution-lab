@@ -1,0 +1,500 @@
+---
+title: "Content Templates"
+description: "Copy-ready MDX templates for every content type on AI Execution Lab — execution logs, failure reports, lessons, playbooks, case studies, GEO experiments, and system docs."
+date: "2026-05-18"
+tags: ["ops", "publishing", "templates", "workflow"]
+status: "published"
+---
+
+All templates below are copy-ready. Remove the comment lines (starting with `#`) before publishing. Templates also exist as physical files in `content/_templates/` for direct file-system copying.
+
+---
+
+## Execution Log Template
+
+File: `content/_templates/execution-log.mdx`
+Destination: `content/logs/YYYY-MM-DD-[short-slug].mdx`
+
+```mdx
+---
+title: "YYYY-MM-DD: [What Was Done — Be Specific]"
+description: "[One sentence: what happened and what was the result. 100-160 chars.]"
+date: "YYYY-MM-DD"
+tags: ["logs", "TOOL-OR-TOPIC", "SECOND-TOPIC"]
+status: "published"
+log_type: "build"
+duration: "Xh Ym"
+outcome: "[One sentence stating the concrete outcome]"
+---
+
+[Summary paragraph. Start with the outcome. "Deployed the new analytics component
+to production after resolving a type error in the WebVitals hook." Not:
+"Today I was working on the analytics system when..."]
+
+---
+
+## What Was Done
+
+1. [Specific action taken]
+2. [Next action]
+3. [Configuration or decision made — include the actual values/choices]
+
+```bash
+command --flag value
+```
+
+---
+
+## What Was Decided
+
+**Decision:** [What was decided]
+**Rationale:** [Why]
+
+---
+
+## Outcome
+
+- [Concrete state change 1]
+- [Concrete state change 2]
+
+---
+
+## Next Steps
+
+- [ ] [What still needs to happen]
+```
+
+---
+
+## Failure Report Template
+
+File: `content/_templates/failure-report.mdx`
+Destination: `content/failures/[descriptive-slug].mdx`
+
+```mdx
+---
+title: "[Tool/System]: [Exact Error or Failure Description]"
+description: "[Specific failure + root cause in one sentence. Include tool name and version.]"
+date: "YYYY-MM-DD"
+tags: ["failures", "TOOL", "PLATFORM"]
+status: "published"
+failure_status: "resolved"
+severity: "medium"
+failure_type: "build"
+resolution_time: "Xh Ym"
+affected_systems: "[What was broken]"
+---
+
+[Opening paragraph: state what broke and what the immediate impact was.
+Start with the failure, not with "I was working on..."]
+
+---
+
+## Error
+
+```
+[Paste exact error message here — copy from source, never retype]
+```
+
+**Environment:**
+- Tool: `[name]` version `[exact version]`
+- Platform: `[Vercel / Next.js / WordPress / etc.]`
+- Date: YYYY-MM-DD
+
+---
+
+## Root Cause
+
+[Technical explanation of WHY this happened. The specific mechanism. This is
+the most important section.]
+
+---
+
+## Investigation Path
+
+1. [First thing checked and what it showed]
+2. [Second step]
+3. [When root cause became clear]
+
+---
+
+## Fix
+
+[Explanation of the fix.]
+
+```[language]
+// Before:
+[incorrect configuration]
+
+// After:
+[fixed configuration]
+```
+
+**Verification:** [How to confirm the fix worked]
+
+---
+
+## Prevention
+
+- [Check to add to workflow]
+- [Configuration to verify during upgrades]
+```
+
+---
+
+## Lesson Template
+
+File: `content/_templates/lesson.mdx`
+Destination: `content/lessons/[track-id]/[module-id]/[lesson-id].mdx`
+
+After creating: update `lib/tracks.ts` → change lesson status from `'coming-soon'` to `'available'`.
+
+```mdx
+---
+title: "[Lesson Title — Action Phrase]"
+description: "[What this teaches + what reader can do after. 100-160 chars.]"
+date: "YYYY-MM-DD"
+tags: ["TRACK-TOPIC", "SECONDARY-TOPIC"]
+status: "published"
+---
+
+<LessonMeta difficulty="beginner" updated="YYYY-MM-DD" />
+
+<LessonObjectives items={[
+  "First specific, measurable skill — start with action verb",
+  "Second skill",
+  "Third skill",
+  "Fourth skill",
+  "Fifth skill",
+]} />
+
+[Opening paragraph: Direct statement of the problem this lesson solves.
+Do NOT start with "In this lesson, we will learn..."]
+
+---
+
+## [First Major Section]
+
+[First sentence directly answers the heading. No preamble.]
+
+[Body content — specific, actionable, real examples]
+
+---
+
+## [Second Section — Main Procedure]
+
+### Step 1: [Specific Action]
+
+[What to do and why.]
+
+```bash
+command --flag value
+```
+
+### Step 2: [Next Action]
+
+[...]
+
+---
+
+## Common Mistakes
+
+**[Specific mistake].** [Why it happens. What the correct approach is.]
+
+---
+
+<Callout type="warn" title="[Most important warning]">
+[Specific failure mode or critical requirement.]
+</Callout>
+
+---
+
+<Checkpoint items={[
+  "Specific verifiable action completed",
+  "System or tool configured correctly",
+  "Skill applied at least once",
+  "Understanding demonstrated by completing the task",
+]} />
+```
+
+---
+
+## Playbook Template
+
+File: `content/_templates/playbook.mdx`
+Destination: `content/playbooks/[descriptive-slug].mdx`
+
+```mdx
+---
+title: "[Procedure Name: 'The X System' or 'X Playbook']"
+description: "[What this does + what state it produces. 100-160 chars.]"
+date: "YYYY-MM-DD"
+tags: ["playbooks", "TOOL-OR-PLATFORM", "TASK-CATEGORY"]
+status: "published"
+---
+
+[Opening: 2 sentences. What this playbook does. Who needs it.]
+
+---
+
+## When to Use This Playbook
+
+**Use this when:**
+- [Specific situation]
+
+**Do not use this when:**
+- [When a different approach is correct]
+
+---
+
+## Prerequisites
+
+| Requirement | Details |
+|---|---|
+| [Tool/access] | [Specific version or configuration] |
+
+---
+
+## Phase 1: [Name]
+
+### Step 1.1: [Action]
+
+[What to do.]
+
+```bash
+[Exact command]
+```
+
+**Expected output:**
+```
+[What success looks like]
+```
+
+**If this fails:** [What to check]
+
+---
+
+## Phase 3: Verification Gate
+
+Before the write/apply phase, confirm:
+
+- [ ] [Verifiable check]
+- [ ] [Second check]
+
+**Dry run:**
+```bash
+[dry run command]
+```
+
+---
+
+## Phase 4: Apply
+
+<Callout type="warn" title="Before applying">
+[What this operation does. What cannot be undone.]
+</Callout>
+
+```bash
+[Apply command]
+```
+
+---
+
+## Phase 5: Verify
+
+```bash
+[Verification command]
+```
+
+**Success state:** [Exactly what correct output looks like]
+
+---
+
+## Failure Modes
+
+| Failure | Cause | Recovery |
+|---|---|---|
+| [Failure] | [Why] | [Recovery] |
+```
+
+---
+
+## Case Study Template
+
+File: `content/_templates/case-study.mdx`
+Destination: `content/case-studies/[descriptive-slug].mdx`
+
+**Rule:** Only publish with real before/after numbers. No estimates.
+
+```mdx
+---
+title: "[Specific Outcome]: [What Was Done to Achieve It]"
+description: "[Before → after with real numbers. 100-160 chars.]"
+date: "YYYY-MM-DD"
+tags: ["case-studies", "DOMAIN", "TECHNIQUE"]
+status: "published"
+---
+
+[Opening: State the result in the first sentence. Include the real numbers.]
+
+---
+
+## Context
+
+**Property:** [Site/system]
+**Timeline:** [When]
+**Starting state:** [Quantified before state]
+
+---
+
+## The Problem
+
+[Specific problem with measurements.]
+
+---
+
+## What Was Done
+
+1. [Specific change with exact parameters]
+
+---
+
+## Results
+
+| Metric | Before | After | Change |
+|---|---|---|---|
+| [Metric] | [Before] | [After] | [+/- %] |
+
+**Measurement window:** [How long after the change]
+
+---
+
+## What This Demonstrates
+
+[Connect the result to a broader principle. One paragraph.]
+
+---
+
+## Repeatable Elements
+
+- [ ] [Specific actionable check or step from this case study]
+```
+
+---
+
+## GEO Experiment Template
+
+File: `content/_templates/geo-experiment.mdx`
+Destination: `content/labs/geo-[slug].mdx`
+
+**Rule:** State the hypothesis before running the experiment.
+
+```mdx
+---
+title: "GEO Experiment: [Specific Change Tested]"
+description: "[Hypothesis + outcome. 100-160 chars.]"
+date: "YYYY-MM-DD"
+tags: ["labs", "geo", "experiment", "TECHNIQUE"]
+status: "published"
+---
+
+[Opening: state the research question. Then lead with the result.]
+
+---
+
+## Hypothesis
+
+**Hypothesis:** [Specific, testable claim]
+**Rationale:** [Why this should work based on how GEO functions]
+
+---
+
+## Method
+
+| Variable | Control | Test |
+|---|---|---|
+| [Variable] | [Control] | [Test] |
+
+**Measurement window:** [Date range]
+
+---
+
+## Results
+
+| AI System | Before (test pages) | After | Change |
+|---|---|---|---|
+| Perplexity | X / 10 | X / 10 | +X% |
+| ChatGPT | X / 10 | X / 10 | +X% |
+
+---
+
+## Conclusions
+
+[Generalize the result. What should someone do based on this?]
+```
+
+---
+
+## System Documentation Template
+
+File: `content/_templates/system-doc.mdx`
+Destination: `content/systems/[descriptive-slug].mdx`
+
+**Rule:** Only document systems currently running in production.
+
+```mdx
+---
+title: "[System Name]: [What It Does]"
+description: "[System purpose + key components + status. 100-160 chars.]"
+date: "YYYY-MM-DD"
+tags: ["systems", "PLATFORM", "COMPONENT-TYPE"]
+status: "published"
+---
+
+[Opening: What this system does in production, right now. No future tense.]
+
+---
+
+## System Overview
+
+**Status:** Live in production
+**Depends on:** [Services/tools]
+**Depended on by:** [What uses this]
+
+---
+
+## Architecture
+
+| Component | Technology | Role |
+|---|---|---|
+| [Component] | [Tool] | [What it does] |
+
+---
+
+## How It Works
+
+[Step-by-step or narrative. Inputs, processing, outputs, expected state.]
+
+---
+
+## Failure Modes
+
+| Failure | Symptom | Root Cause | Recovery |
+|---|---|---|---|
+| [Failure] | [Symptom] | [Cause] | [Fix] |
+
+---
+
+## Operational Procedures
+
+**Health check:**
+```bash
+[verification command]
+```
+
+---
+
+## Known Limitations
+
+- [Limitation with scale threshold or specific condition]
+```

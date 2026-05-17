@@ -1,0 +1,149 @@
+---
+# TEMPLATE: System Documentation
+# Copy to: content/systems/[descriptive-slug].mdx
+# A system doc documents a stable, live production system — not a planned one.
+# Rule: only document systems that are currently running in production.
+# Remove all comment lines before publishing
+
+title: "[System Name]: [What It Does in 5 Words]"
+description: "[System purpose + key components + current status. 100-160 chars.]"
+date: "YYYY-MM-DD"
+tags: ["systems", "PLATFORM", "COMPONENT-TYPE"]
+status: "published"
+---
+
+<!-- OPENING: What this system does, in production, right now. Who depends on it.
+     What breaks if it stops working. No future tense — this system exists. -->
+
+[Opening: "The WordPress typography system handles all custom CSS for asquaresolution.com's content pages. It manages three components independently: LiteSpeed's UCSS critical CSS extraction, Gutenberg block typography classes, and a custom post-type variable stack. A failure in any component produces different visible symptoms."]
+
+---
+
+## System Overview
+
+**Status:** Live in production
+**Last updated:** YYYY-MM-DD
+**Depends on:** [List of services, tools, or systems this depends on]
+**Depended on by:** [What uses this system]
+
+---
+
+## Architecture
+
+<!-- Describe the structure of the system. For simple systems: a paragraph.
+     For complex systems: a diagram or numbered component list. -->
+
+```
+[ASCII diagram or structured description of the system's components and how they connect]
+
+Component A (role)
+  → Output → Component B (role)
+              → Output → Component C (role)
+```
+
+| Component | Technology | Role |
+|---|---|---|
+| [Component 1] | [Tool/library/service] | [What it does] |
+| [Component 2] | [Tool/library/service] | [What it does] |
+
+---
+
+## How It Works
+
+### [Primary Process / Main Flow]
+
+[Step-by-step or narrative description of how the system operates under normal conditions. Include: inputs, processing, outputs, and the expected state after completion.]
+
+```[language]
+[Key configuration or code if relevant]
+```
+
+### [Secondary Process or Edge Case]
+
+[...]
+
+---
+
+## Configuration
+
+<!-- All configuration that makes this system work. Include actual values where
+     not sensitive. For sensitive values, describe the format without the value itself. -->
+
+**[Configuration Category 1]:**
+
+```[language or yaml or env]
+KEY=value
+OTHER_KEY=value
+```
+
+**[Configuration Category 2]:**
+
+[Location of config file, what it contains, how to modify it]
+
+---
+
+## Failure Modes
+
+<!-- Document known failure modes, their symptoms, and recovery procedures.
+     This is the highest-value section for operational documentation. -->
+
+| Failure Mode | Symptom | Root Cause | Recovery |
+|---|---|---|---|
+| [Failure 1] | [What it looks like] | [Why it happens] | [How to fix] |
+| [Failure 2] | [What it looks like] | [Why it happens] | [How to fix] |
+
+**Related failures documented:**
+- [Link to failure report if one exists]
+
+---
+
+## Operational Procedures
+
+### Routine Maintenance
+
+[What needs to be done regularly to keep this system healthy — and how often]
+
+### Monitoring
+
+[How to verify the system is healthy. What to check. How often.]
+
+**Health check:**
+```bash
+[Command or procedure to verify system health]
+```
+
+**Expected output:**
+```
+[What healthy output looks like]
+```
+
+---
+
+## Changes and Decisions Log
+
+<!-- Brief history of significant changes and the decisions behind them.
+     Most recent first. Helps understand why it's configured this way. -->
+
+| Date | Change | Reason |
+|---|---|---|
+| YYYY-MM-DD | [What changed] | [Why — the decision that drove it] |
+| YYYY-MM-DD | [What changed] | [Why] |
+
+---
+
+## Known Limitations
+
+<!-- What this system doesn't handle. What it can't scale to. What would require
+     a redesign. Be honest — this prevents future operators from hitting edge cases
+     without warning. -->
+
+- [Limitation 1 — with scale threshold or specific condition where it breaks]
+- [Limitation 2]
+
+---
+
+## Related Documentation
+
+- [Playbook link if there's an operational procedure for this system]
+- [Failure report link if there's a documented failure for this system]
+- [External documentation for the core tools]

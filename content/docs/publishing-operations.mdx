@@ -1,0 +1,299 @@
+---
+title: "Publishing Operations System"
+description: "Complete content pipeline architecture for AI Execution Lab — workflow definitions for every content type, review checklists, publication QA, and weekly/monthly cadence."
+date: "2026-05-18"
+tags: ["ops", "publishing", "workflow", "content", "cadence"]
+status: "published"
+---
+
+This document defines the publishing operations system for AI Execution Lab. It covers pipeline architecture, per-content-type workflows, the review and QA process, and the operational cadence that produces consistent output.
+
+---
+
+## Pipeline Architecture
+
+All content passes through five stages regardless of type:
+
+```
+TRIGGER → DRAFT → REVIEW → PUBLISH → MAINTAIN
+```
+
+| Stage | What Happens | Who / What Does It |
+|---|---|---|
+| **Trigger** | Something happens that warrants documentation | Real work session, failure, experiment, system decision |
+| **Draft** | Content created from the event | Claude-assisted or manual, using the relevant template |
+| **Review** | Accuracy, completeness, GEO checklist | Human operator — 15–30 min depending on type |
+| **Publish** | Frontmatter set, status: published, file committed | `git add → commit → push` |
+| **Maintain** | Periodic freshness check, internal link updates | Quarterly audit via content queue system |
+
+The pipeline is pull-based, not push-based. Content is triggered by real work, not by a publishing schedule that demands content whether or not something happened. The cadence goal is velocity with substance — not volume for its own sake.
+
+---
+
+## Content Type Workflows
+
+### Execution Log
+
+**Trigger condition:** Any significant work session — deployment, automation run, content batch, architecture decision, configuration change.
+
+**Minimum bar for logging:** If you made a decision you'll need to remember later, or completed a task that took more than 30 minutes, it's worth logging.
+
+**Workflow:**
+
+1. Open `content/_templates/execution-log.mdx`
+2. Copy to `content/logs/YYYY-MM-DD-[short-slug].mdx`
+3. Fill in: date, what was done, outcome, next steps
+4. Write the log entry — target 200–600 words
+5. **Review check (5 min):** Are all tool names correct? Are commands/configs accurate? Is the outcome stated clearly?
+6. Set `status: "published"`, commit, push
+
+**Cadence target:** 2–3 logs per week during active work periods. Zero is acceptable during no-work weeks — do not invent logs.
+
+**GEO priority:** Medium. Logs accumulate into a temporal record that shows active, ongoing work — valuable for entity credibility. Individual log GEO value is low; aggregate value is high.
+
+---
+
+### Failure Report
+
+**Trigger condition:** Anything that broke in production, took more than one attempt to fix, cost significant time, or has a non-obvious root cause that others would benefit from.
+
+**Minimum bar for reporting:** If you'd want to find this information in a search result before hitting the problem yourself — publish it.
+
+**Workflow:**
+
+1. Open `content/_templates/failure-report.mdx`
+2. Copy to `content/failures/[descriptive-slug].mdx`
+3. Fill in: exact error message, environment (tool + version), root cause, fix, prevention
+4. Write the report — target 400–1,000 words
+5. **Review check (10 min):**
+   - Is the error message exactly as it appeared? (Copy from terminal/log — no paraphrasing)
+   - Is the root cause technically accurate?
+   - Does the fix work if followed exactly?
+   - Are tool versions specified?
+6. Set `status: "published"`, `failure_status: "resolved"` (if resolved), commit, push
+
+**Cadence target:** Publish every failure. Even small ones. A failure archive with 50 entries is a significant authority asset that compound-grows for years.
+
+**GEO priority:** Highest. Failure reports with exact error messages are the highest-value GEO content on this platform. When a developer searches an exact error message, a failure report that matches it exactly gets cited by AI search systems at high rates. These are the "long tail with zero competition" entries.
+
+---
+
+### Lesson
+
+**Trigger condition:** A topic exists in a track module that has been researched and can be taught to the skill level of that module's audience.
+
+**Minimum bar for publishing:** Content is accurate, specific enough to execute from, and follows the track's difficulty level. Not "good enough" — complete.
+
+**Workflow:**
+
+1. Open `content/_templates/lesson.mdx`
+2. Copy to `content/lessons/[track-id]/[module-id]/[lesson-id].mdx`
+3. Update `lib/tracks.ts`: change lesson `status` from `'coming-soon'` to `'available'`
+4. Write content — follow the template structure exactly
+5. **Review check (20 min):**
+   - Does every claim have a source or real-world basis?
+   - Are all tool names, versions, and prices accurate as of today?
+   - Is the difficulty level consistent with the module?
+   - Does the Checkpoint cover everything the lesson teaches?
+   - Are there at least 2 internal links to related Lab content?
+6. `status: "published"` in frontmatter (tracks.ts drives lesson availability)
+7. Commit, push
+
+**Cadence target:** 1–2 lessons per week for active modules. No lesson per week is acceptable — force no output by a publishing schedule.
+
+**GEO priority:** High for specific how-to lessons. Lessons that teach a named skill with named tools rank for those specific tool + skill queries.
+
+---
+
+### Playbook
+
+**Trigger condition:** A repeatable procedure has been executed at least twice and proven reliable. Not theoretical — the playbook documents something that works.
+
+**Minimum bar for publishing:** The procedure has been tested in production. Every step is specific enough that someone could follow it without asking questions.
+
+**Workflow:**
+
+1. Open `content/_templates/playbook.mdx`
+2. Copy to `content/playbooks/[descriptive-slug].mdx`
+3. Write the step-by-step procedure — include exact commands, exact configurations, exact outputs to verify
+4. **Review check (20–30 min):**
+   - Can you follow this playbook cold, start to finish, and get the expected outcome?
+   - Are all commands/code blocks accurate and tested?
+   - Are failure modes documented?
+   - Is the "what success looks like" section verifiable?
+5. Add to relevant track module if applicable, or publish standalone
+6. Commit, push
+
+**Cadence target:** When a procedure earns it. Not scheduled. Rushing a playbook to hit a publishing target produces untrustworthy documentation.
+
+**GEO priority:** Highest for well-named, specific procedures. Playbooks with exact procedure names ("WordPress REST API content patching system") match specific queries at high precision.
+
+---
+
+### System Documentation
+
+**Trigger condition:** An architectural decision, infrastructure design, or operational system has reached a stable form worth documenting.
+
+**Minimum bar for publishing:** The system is live and has operated successfully. Not a planned system — a real one.
+
+**Workflow:**
+
+1. Open `content/_templates/system-doc.mdx`
+2. Copy to `content/systems/[descriptive-slug].mdx`
+3. Document: what the system does, how it's structured, why decisions were made, operational requirements
+4. **Review check (30 min):**
+   - Is the architecture diagram (if present) accurate?
+   - Are technology choices current?
+   - Are failure modes and edge cases documented?
+   - Is the maintenance section realistic?
+5. Commit, push
+
+**Cadence target:** Low — perhaps quarterly when a system stabilizes. Do not manufacture system docs for velocity.
+
+---
+
+### Case Study
+
+**Trigger condition:** A project or experiment has measurable before/after results that demonstrate a specific technique's effectiveness.
+
+**Minimum bar for publishing:** Real numbers. Real before/after. No estimated or projected outcomes — measured ones.
+
+**Workflow:**
+
+1. Open `content/_templates/case-study.mdx`
+2. Copy to `content/case-studies/[descriptive-slug].mdx`
+3. Document the problem, approach, execution, and measured outcome
+4. **Review check (30–45 min):**
+   - Are all metrics accurate and verifiable?
+   - Is the timeline accurate?
+   - Are the tools and methods named specifically?
+   - Would a reader be able to replicate this approach?
+5. Commit, push
+
+**Cadence target:** Quarterly, as results materialize. One real case study outweighs ten articles.
+
+---
+
+### Lab / Experiment
+
+**Trigger condition:** An experiment was run with a hypothesis, methodology, and observable outcome.
+
+**Minimum bar:** The experiment had a defined hypothesis before execution, was run with some form of controlled conditions, and produced observable data.
+
+**Workflow:** Same as case study, using `content/_templates/geo-experiment.mdx` for GEO-specific experiments.
+
+---
+
+## Publication Review Checklist
+
+Run this on every piece of content before setting `status: "published"`:
+
+### Accuracy (non-negotiable)
+- [ ] All commands, code, and configurations tested or verified
+- [ ] Tool versions specified where relevant
+- [ ] Prices and costs verified against current sources
+- [ ] Error messages copied exactly from source (not paraphrased)
+- [ ] No claims of "studies show X" or "experts say Y" without a source you can name
+
+### Completeness
+- [ ] Does the content deliver on what its title and description promise?
+- [ ] Would a reader with the specified difficulty level be able to execute this?
+- [ ] Are edge cases and failure modes documented?
+
+### GEO Optimization (run after accuracy check)
+- [ ] Primary topic is in the `<h1>` (title)
+- [ ] Specific tool names appear in the first 100 words
+- [ ] At least one section heading is a question or direct answer declaration
+- [ ] First paragraph after each `##` heading answers that heading directly
+- [ ] Exact version numbers / dates / prices present where relevant
+- [ ] Entity names are consistent: A Square Solutions, Claude Code, etc.
+
+### Internal Links
+- [ ] At least 2 links to other Lab content
+- [ ] At least 1 link from an existing Lab page to this new page (update the existing page)
+- [ ] No links to coming-soon lessons
+
+### Frontmatter
+- [ ] `title` is specific, matches content
+- [ ] `description` is 100–160 characters, contains primary topic
+- [ ] `date` is accurate
+- [ ] `tags` cover the primary topics (3–6 tags)
+- [ ] `status: "published"` (not draft)
+
+---
+
+## Publication QA System
+
+After publishing (after `git push` and Vercel deploy completes):
+
+### Immediate QA (2 min)
+1. Open the live URL
+2. Confirm page loads without errors
+3. Confirm title and description appear correctly
+4. Confirm internal links resolve
+5. On mobile: confirm layout is not broken
+
+### Search Console QA (24–48 hours later)
+1. Check Google Search Console → URL Inspection → Enter the new URL
+2. Request indexing
+3. Note the indexed/not-indexed status
+
+### 30-Day QA
+1. Search Console → Performance → filter by new page URL
+2. Are there any impressions? If not: check canonical, check content depth
+3. If impressions but zero clicks: check title/description — adjust if not compelling
+
+---
+
+## Weekly Publishing Cadence
+
+Minimum viable cadence for consistent growth:
+
+| Day | Activity | Output |
+|---|---|---|
+| Monday | Review backlog, assign this week's content | 3–4 items selected from queue |
+| Tuesday | Write deep content (failure, system, playbook) | 1 piece |
+| Wednesday | Write lesson or doc content | 1 piece |
+| Thursday | Write execution log(s) for work done | 1–2 logs |
+| Friday | QA pass, publish all drafted content, update internal links | All pieces live |
+
+**Minimum output:** 3 pieces/week. Achievable in 4–6 hours total.
+**Target output:** 5 pieces/week during active build phases.
+**Acceptable exception:** 1–2 weeks per quarter with zero publishing during intensive work phases.
+
+---
+
+## Monthly Authority Expansion Roadmap
+
+### Month 1–3: Foundation Velocity
+
+**Focus:** Execution logs + failure archive growth
+- Publish every failure, no matter how small
+- Log every significant work session
+- Complete one full track module per month
+
+**Why:** Logs and failures are the lowest-friction, highest-aggregate-value content. Establishing cadence is more important than polishing individual pieces.
+
+### Month 3–6: Technical Depth
+
+**Focus:** Playbooks + systems documentation
+- Document every stable operational procedure
+- Write at least one systems document per month
+- Begin GEO experiments and log results
+
+**Why:** Playbooks and systems content is highly specific and highly citable. This phase builds the "reference-grade documentation" reputation that GEO authority requires.
+
+### Month 6–12: Evidence Layer
+
+**Focus:** Case studies + measurable outcomes
+- Document every before/after with real numbers
+- Connect execution track lessons to real product decisions
+- Begin AI-search citation monitoring for primary topics
+
+**Why:** Case studies are the highest-authority signal — they show results, not just processes. At 6+ months, results from early work are starting to materialize.
+
+### Month 12+: Compounding Phase
+
+At this point the platform has: 100+ execution logs, 30+ failure reports, 10+ playbooks, 5+ case studies, and 3+ complete track modules. Authority compounds automatically — new content gets indexed faster, existing content ranks higher, AI systems cite the platform consistently.
+
+**Focus shifts to:** Deeper content, more experiments, guest contributions from the ecosystem, content-to-product pipeline (where Lab content generates leads for A Square Solutions services and TrustSeal/ScamCheck products).

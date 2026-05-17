@@ -1,0 +1,113 @@
+---
+# TEMPLATE: Failure Report
+# Copy to: content/failures/[descriptive-slug].mdx
+# Slug should describe the specific failure: "next-mdx-remote-v6-blockjs"
+# NOT: "deployment-issue" or "bug-fix" — be precise
+# Remove all comment lines before publishing
+#
+# REQUIRED: title, description, date, tags, status, failure_status, severity
+# OPTIONAL: failure_type, resolution_time, affected_systems
+#
+# failure_status: open | investigating | resolved
+# severity: low | medium | high | critical
+# failure_type: build | runtime | data | auth | deployment | config | integration
+# resolution_time: how long it took to resolve ("2h 15m", "3 days")
+
+title: "[Tool/System]: [Exact Error or Failure Description]"
+description: "[Specific failure + root cause in one sentence. 100-160 chars. Include tool name and version if relevant.]"
+date: "YYYY-MM-DD"
+tags: ["failures", "TOOL", "PLATFORM-OR-FRAMEWORK"]
+status: "published"
+failure_status: "resolved"
+severity: "medium"
+failure_type: "build"
+resolution_time: "Xh Ym"
+affected_systems: "[What was broken — 'Vercel production deployment', 'WordPress content automation script']"
+---
+
+<!-- OPENING: One paragraph. Describe the failure, when it appeared, and what the
+     immediate impact was. Do NOT start with "I was working on..." — start with
+     what broke. -->
+
+[Opening paragraph: "The Vercel production build failed after upgrading next-mdx-remote from v5 to v6. All MDX pages rendered with empty component output — no error message, no warning. Pages loaded but all React components embedded in MDX were invisible."]
+
+---
+
+## Error
+
+<!-- Paste the exact error message. Copy from the terminal, log, or error screen.
+     Do not paraphrase. If there was no error message (silent failure), describe
+     exactly what the incorrect output looked like. -->
+
+```
+[Paste exact error message here — copy from source, never retype from memory]
+```
+
+**Environment:**
+- Tool/library: `[name]` version `[exact version]`
+- Platform: `[Vercel / Next.js / WordPress / etc.]`
+- Date encountered: YYYY-MM-DD
+
+---
+
+## Root Cause
+
+<!-- This is the most important section for GEO value. Explain WHY the failure
+     happened — not just what happened. The root cause is what a developer
+     searching this error needs to understand. -->
+
+[Explain the root cause in technical terms. Be specific about the mechanism. "The `blockJS` option in compileMDX defaults to `true` in next-mdx-remote v6, which strips all array and object props before the JSX is evaluated. Components that receive arrays or objects as props (like `LessonObjectives items={[...]}`) are rendered without their props, producing empty output."]
+
+---
+
+## Investigation Path
+
+<!-- How did you find the root cause? This section is useful for others facing
+     the same failure who may not have the same symptoms. -->
+
+1. [First thing checked and what it showed]
+2. [Second debugging step]
+3. [When/how the root cause became clear]
+
+```bash
+# Include any diagnostic commands run
+```
+
+---
+
+## Fix
+
+<!-- Exact fix. Copy-pasteable where possible. -->
+
+[Explain the fix clearly.]
+
+```[language]
+// Before:
+[incorrect code or configuration]
+
+// After:
+[fixed code or configuration]
+```
+
+**Verification:** [How to confirm the fix worked — what output or state indicates success]
+
+---
+
+## Prevention
+
+<!-- How to avoid this in the future. What to check before doing the thing that
+     caused this failure. What documentation or warning would have helped. -->
+
+- [Specific check to add to pre-deploy workflow]
+- [Configuration to verify during upgrades]
+- [Documentation that should have been read first]
+
+---
+
+## References
+
+<!-- Links to relevant docs, GitHub issues, Stack Overflow threads — only include
+     if they were actually useful in the resolution. -->
+
+- [Link to relevant documentation]
+- [GitHub issue or PR if applicable]

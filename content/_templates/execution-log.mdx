@@ -1,0 +1,80 @@
+---
+# TEMPLATE: Execution Log
+# Copy to: content/logs/YYYY-MM-DD-[short-slug].mdx
+# Rename slug to: date + 3-5 word description of what was done
+# Remove all comment lines (lines starting with #) before publishing
+#
+# REQUIRED fields: title, description, date, tags, status, log_type
+# OPTIONAL fields: duration, outcome, tools_used
+#
+# log_type options: build | deploy | content | automation | research | debug | ops
+# duration: how long the session took ("2h 30m", "45 min")
+# outcome: one-sentence result ("Deployment pipeline fixed, site live on custom domain")
+
+title: "YYYY-MM-DD: [What Was Done — Be Specific]"
+description: "[One sentence: what happened and what was the result. 100-160 chars.]"
+date: "YYYY-MM-DD"
+tags: ["logs", "TOOL-OR-TOPIC", "SECOND-TOPIC"]
+status: "published"
+log_type: "build"
+duration: "Xh Ym"
+outcome: "[One sentence stating the concrete outcome]"
+---
+
+<!-- SUMMARY: One clear paragraph. What was the goal? What happened? What was the result?
+     Be direct — the first sentence should state the most important thing. -->
+
+[Summary paragraph. Start with the outcome, not the setup. "Deployed the new analytics component to production after resolving a type error in the WebVitals hook." Not: "Today I was working on the analytics system when I decided to try deploying..."]
+
+---
+
+## What Was Done
+
+<!-- List the actual steps/decisions made. Be specific enough that you could
+     reconstruct this work from these notes six months from now. -->
+
+1. [Specific action taken]
+2. [Next action]
+3. [Configuration or decision made — include the actual values/choices]
+4. [Result observed]
+
+```bash
+# Include exact commands run, especially if non-obvious
+command --flag value
+```
+
+---
+
+## What Was Decided
+
+<!-- Decisions made during this session. Why X instead of Y. -->
+
+**Decision:** [What was decided]
+**Rationale:** [Why — include the alternatives considered if relevant]
+
+---
+
+## Outcome
+
+<!-- State what is now true that wasn't true before this session. -->
+
+- [Concrete state change 1]
+- [Concrete state change 2]
+
+---
+
+## Next Steps
+
+<!-- What this session leaves open or queued. -->
+
+- [ ] [What still needs to happen]
+- [ ] [Follow-up task]
+
+---
+
+## Notes / Observations
+
+<!-- Anything that didn't fit above but is worth recording. Observations about
+     tool behavior, unexpected results, things to investigate later. -->
+
+[Optional — delete section if nothing to add]

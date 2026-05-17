@@ -1,0 +1,132 @@
+---
+# TEMPLATE: GEO Experiment
+# Copy to: content/labs/geo-[experiment-slug].mdx
+# A GEO experiment tests whether a specific content or structural change
+# affects AI-search citation probability or traditional search performance.
+# RULE: Define hypothesis BEFORE running. Document results AFTER measuring.
+# Remove all comment lines before publishing
+
+title: "GEO Experiment: [Specific Change Tested]"
+description: "[Hypothesis + outcome in one sentence. 100-160 chars. Include the technique name.]"
+date: "YYYY-MM-DD"
+tags: ["labs", "geo", "experiment", "TECHNIQUE-TESTED"]
+status: "published"
+---
+
+<!-- OPENING: State the question this experiment answers. What were you trying to learn?
+     "Does adding FAQ schema to technical documentation pages increase their citation
+     rate in Perplexity and ChatGPT responses for related queries?" -->
+
+[Opening: State the research question clearly. Then state what was found (lead with the result).]
+
+---
+
+## Hypothesis
+
+<!-- What did you expect to happen, and why? The hypothesis must be stated before the
+     experiment — if you're writing it after seeing results, note that explicitly. -->
+
+**Hypothesis:** [Specific, testable claim. "Adding FAQ schema to three documentation pages will increase their citation rate in Perplexity by at least 20% over 30 days."]
+
+**Rationale:** [Why this change should produce the expected result, based on how GEO/AI retrieval systems work]
+
+---
+
+## Method
+
+### Test Conditions
+
+| Variable | Control | Test |
+|---|---|---|
+| [Variable 1] | [Control state] | [Test state] |
+| [Variable 2] | [Control state] | [Test state] |
+
+**Pages tested:**
+- [Specific URL 1] — [what change was made]
+- [Specific URL 2]
+
+**Pages as control (no change):**
+- [Specific URL 1]
+- [Specific URL 2]
+
+**Measurement window:** [Start date] to [End date] ([X days])
+
+### How Measurement Was Done
+
+<!-- How specifically were AI citations measured? Manual testing with specific queries?
+     Search Console data? Some other method? Be honest about limitations. -->
+
+[Describe the measurement methodology. "Every 7 days, I ran 10 specific queries through Perplexity, ChatGPT-4, and Claude Sonnet. I recorded whether each test page was cited, and noted the position in the cited source list if cited."]
+
+**Limitation note:** [What this method can't measure or where it might be biased]
+
+---
+
+## Execution Log
+
+| Date | Action |
+|---|---|
+| YYYY-MM-DD | Baseline measurement taken — no changes yet |
+| YYYY-MM-DD | [Change implemented on test pages] |
+| YYYY-MM-DD | First post-change measurement |
+| YYYY-MM-DD | Final measurement |
+
+---
+
+## Results
+
+### AI Citation Results
+
+| AI System | Control Pages (citations / queries) | Test Pages (before) | Test Pages (after) | Change |
+|---|---|---|---|---|
+| Perplexity | X / 10 | X / 10 | X / 10 | +X% |
+| ChatGPT | X / 10 | X / 10 | X / 10 | +X% |
+| Claude | X / 10 | X / 10 | X / 10 | +X% |
+
+### Search Console Results (if applicable)
+
+| Metric | Before | After | Change |
+|---|---|---|---|
+| Impressions (test pages) | X | X | +X% |
+| Average position | X.X | X.X | ±X |
+| CTR | X% | X% | ±X% |
+
+---
+
+## Analysis
+
+<!-- What do the results actually mean? Was the hypothesis supported?
+     What confounding factors exist? How confident are you in the result? -->
+
+**Hypothesis result:** [Supported / Partially supported / Not supported]
+
+[Analysis: interpret the numbers. What does the change tell you about how AI retrieval works? What would explain the result if it was unexpected?]
+
+**Confidence level:** [High / Medium / Low — and why]
+
+---
+
+## Conclusions
+
+<!-- What can be generalized from this? What would you do differently?
+     What follow-up experiments does this suggest? -->
+
+[1-2 paragraphs. Connect this result to a broader pattern or principle. What should someone do (or not do) based on this experiment?]
+
+---
+
+## Replication Instructions
+
+<!-- How someone else could run this experiment on their own site. -->
+
+1. [What to change]
+2. [How to set up measurement]
+3. [How long to run]
+4. [What to record]
+
+---
+
+## Follow-up Experiments
+
+- [What this experiment suggests testing next]
+- [A related variable that was not tested here]
