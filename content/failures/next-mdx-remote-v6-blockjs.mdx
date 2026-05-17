@@ -1,0 +1,87 @@
+---
+title: "next-mdx-remote v6 blockJS Default Broke MDX Components"
+description: "Upgrading to next-mdx-remote v6 silently stripped all array and object literal props from JSX components in MDX. StepList, Checklist, and LessonObjectives rendered empty."
+date: "2026-05-12"
+tags: ["next-mdx-remote", "mdx", "jsx", "upgrade"]
+status: published
+severity: medium
+failure_status: resolved
+failure_type: dependency
+project: ai-execution-lab
+resolution_time: 41 minutes
+---
+
+<IncidentReport
+  severity="medium"
+  status="resolved"
+  impact="All MDX components using array or object literal props rendered empty after upgrading next-mdx-remote from v5 to v6. StepList, Checklist, and LessonObjectives showed headers but no content. No build error — the failure was silent."
+  rootCause="next-mdx-remote v6 introduced blockJS: true as the default option. This runs a remark plugin (removeJavaScriptExpressions) that strips all JavaScript expressions from MDX, including array and object literals used as JSX props. Components using items={['a', 'b']} received undefined instead of the array."
+  resolution="Added blockJS: false to the MDXRemote options in content-renderer.tsx. Our MDX is author-controlled content (not user-submitted), so the JavaScript expression restriction provides no security value and breaks legitimate component usage."
+  prevention="When upgrading MDX-related packages, always test component rendering with real MDX content before deploying. Check the changelog for new default behavior, especially security-related restrictions that ship as opt-out rather than opt-in."
+/>
+
+<ExecutionEvidence
+  commitRef="fix: set blockJS false in MDXRemote options for v6 compat"
+  date="2026-05-12"
+  repo="ai-execution-lab"
+/>
+
+## What Happened
+
+Upgraded `next-mdx-remote` from v5 to v6 as part of a routine dependency update pass. The build succeeded. TypeScript showed no errors. Deployed to production.
+
+Then I opened a lesson page and saw that every `<StepList>` and `<Checklist>` component was rendering its wrapper shell but had no items. `<LessonObjectives>` showed the "What you'll build" header but an empty list.
+
+## The v6 Change
+
+next-mdx-remote v6 added a `blockJS` option that defaults to `true`. When enabled, it runs the `removeJavaScriptExpressions` remark plugin before serializing MDX. This plugin strips:
+
+- Array literals: `items={['step one', 'step two']}`
+- Object literals: `config={{ key: 'value' }}`
+- Any JavaScript expression: `count={items.length}`
+
+The intent is safety for platforms that process user-submitted MDX and don't want arbitrary JS executing. That's a reasonable security boundary for those cases.
+
+For author-controlled MDX in a static site build, it breaks all components that accept structured props.
+
+## Debugging Path
+
+The silent failure made this harder than a build error would have been. The components rendered — they just rendered empty.
+
+Traced through the component code. The `items` prop inside `StepList` was `undefined`. Added a console log to the MDX serialization step. The serialized output had the JSX component tags but the array prop was missing entirely.
+
+Checked the next-mdx-remote v6 changelog. Found `blockJS` listed with: *"Defaults to true for security."*
+
+<Callout type="info" title="The option">
+The fix is one line in content-renderer.tsx:
+
+```typescript
+// next-mdx-remote v6 defaults blockJS:true which strips JS expressions
+// (array/object literals in JSX props) via removeJavaScriptExpressions.
+// Our MDX is author-controlled content — not user-submitted — so we
+// opt out of this restriction.
+blockJS: false,
+```
+</Callout>
+
+## Why Silent Failures Are Worse
+
+A build error would have caught this at deploy time. Instead:
+
+1. Build succeeded
+2. Deployment completed
+3. Pages rendered without errors
+4. Component content was simply missing
+
+This class of failure — where a default behavioral change produces valid output that's subtly wrong — requires visual inspection to catch. Automated tests that only check for build success or HTTP 200 miss it entirely.
+
+## Prevention Pattern
+
+After any MDX package upgrade:
+
+1. Render a test page with every custom component type
+2. Verify components with array/object props show real content
+3. Read the full changelog, not just the headline version
+4. Look for new boolean options that default to restrictive behavior
+
+For next-mdx-remote specifically: if your MDX is author-controlled, always set `blockJS: false` explicitly so the behavior is documented at the call site rather than inherited from a default that might change again.

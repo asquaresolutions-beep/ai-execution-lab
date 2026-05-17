@@ -1,0 +1,72 @@
+---
+title: "Edge Runtime Deployment Failure"
+description: "export const runtime = 'edge' in app/opengraph-image.tsx blocked the entire Vercel deployment. Took 23 minutes to identify and revert."
+date: "2026-05-10"
+tags: ["vercel", "edge-runtime", "deployment", "next.js"]
+status: published
+severity: high
+failure_status: resolved
+failure_type: deployment
+project: ai-execution-lab
+resolution_time: 23 minutes
+---
+
+<IncidentReport
+  severity="high"
+  status="resolved"
+  impact="Full deployment blocked. Every push to main failed during Vercel build. Site was not updated for 23 minutes while root cause was identified."
+  rootCause="app/opengraph-image.tsx had export const runtime = 'edge' added during a refactor. The Edge Runtime does not support the Node.js crypto module, which next/og uses internally for image generation. Vercel's build succeeded locally (Node.js runtime) but failed on the edge worker."
+  resolution="Removed the runtime export from opengraph-image.tsx. Next.js defaults OG image routes to the Node.js runtime, which is correct for next/og. The edge export was unnecessary and incorrect."
+  prevention="Never add export const runtime = 'edge' to opengraph-image.tsx or route.ts files that use next/og or any Node.js built-ins. The edge runtime supports a restricted API surface — check the Vercel edge compatibility table before adding this export to any file."
+/>
+
+<ExecutionEvidence
+  commitRef="fix: remove edge runtime from opengraph-image"
+  date="2026-05-10"
+  repo="ai-execution-lab"
+/>
+
+## What Happened
+
+During a refactor pass on the app directory, I added `export const runtime = 'edge'` to `app/opengraph-image.tsx` to match the runtime declaration style I was using in some API route handlers.
+
+The next push to main triggered a Vercel deployment that failed with:
+
+```
+Error: The Edge Runtime does not support Node.js 'crypto' module.
+Learn More: https://nextjs.org/docs/messages/node-module-in-edge-runtime
+```
+
+The build had passed locally because `next dev` and `next build` both run in the Node.js runtime by default. The edge runtime restriction only fires on Vercel's actual edge workers.
+
+## Timeline
+
+| Time | Event |
+|------|-------|
+| T+0  | Push to main, Vercel deployment triggered |
+| T+2  | Build fails with Edge Runtime crypto error |
+| T+5  | First look at build logs — error points to opengraph-image.tsx |
+| T+12 | Confirmed root cause: runtime export added in recent refactor |
+| T+18 | Reverted the runtime export, pushed fix |
+| T+23 | Deployment succeeded |
+
+## Why This Is Easy to Miss
+
+The `export const runtime = 'edge'` pattern is valid and useful in API route handlers and middleware where you want the performance benefits of edge execution. Copying it into an OG image handler looks superficially correct.
+
+The deceptive part: `next build` passes locally. The incompatibility only surfaces when Vercel actually runs the edge worker, which doesn't happen in local builds.
+
+<Callout type="warn" title="Edge runtime compatibility surface">
+The Edge Runtime does NOT support: `fs`, `path`, `crypto`, `buffer`, `stream`, or most Node.js built-ins. It supports Web APIs only. Check the Next.js edge runtime docs before adding this export to any file.
+</Callout>
+
+## Prevention Pattern
+
+Before adding `export const runtime = 'edge'` to any file:
+
+1. Check whether the file imports any Node.js built-ins (directly or transitively)
+2. Check whether the file uses `next/og`, `sharp`, or any image processing
+3. Check whether the file uses any npm packages that internally use Node.js APIs
+4. Run `next build` with `NODE_OPTIONS=--experimental-vm-modules` to surface edge errors locally
+
+For OG image routes specifically: **never add the edge runtime export**. The Node.js runtime is correct and required.

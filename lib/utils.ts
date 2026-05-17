@@ -71,6 +71,14 @@ export const SECTION_META = {
     href: '/playbooks',
     accent: 'brand' as const,
   },
+  failures: {
+    title: 'Failure Archive',
+    description: 'Documented production failures — root cause analysis, resolution timelines, and prevention patterns.',
+    emoji: '✕',
+    label: 'FAILURE',
+    href: '/failures',
+    accent: 'red' as const,
+  },
 } as const
 
 export type SectionKey = keyof typeof SECTION_META

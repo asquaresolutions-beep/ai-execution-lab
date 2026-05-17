@@ -5,7 +5,7 @@ import { TRACKS, getAllLessonPaths } from '@/lib/tracks'
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-execution-lab.vercel.app'
 
-const SECTIONS: ContentSection[] = ['docs', 'systems', 'labs', 'case-studies', 'playbooks']
+const SECTIONS: ContentSection[] = ['docs', 'systems', 'labs', 'case-studies', 'playbooks', 'failures']
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes: MetadataRoute.Sitemap = [

@@ -1,0 +1,99 @@
+---
+title: "Node.js fs Module Pulled into Client Bundle"
+description: "lib/tracks.ts imported fs and path at the top level. track-roadmap.tsx (a 'use client' component) imported from lib/tracks.ts, pulling Node.js modules into the browser bundle. Build failed with Module not found: Can't resolve 'fs'."
+date: "2026-05-14"
+tags: ["next.js", "client-bundle", "fs", "module-boundary"]
+status: published
+severity: high
+failure_status: resolved
+failure_type: build
+project: ai-execution-lab
+resolution_time: 18 minutes
+---
+
+<IncidentReport
+  severity="high"
+  status="resolved"
+  impact="Production build failed. next build threw Module not found: Can't resolve 'fs' and could not complete. The Tracks feature was blocked from deployment until the server/client module boundary was fixed."
+  rootCause="lib/tracks.ts had import fs from 'fs' and import path from 'path' at the top level. components/tracks/track-roadmap.tsx is a 'use client' component that imported from lib/tracks.ts. Next.js includes all imports of client components in the browser bundle, which cannot contain Node.js built-ins."
+  resolution="Moved getLessonContent() — the only function in lib/tracks.ts that used fs and path — to a new server-only file: lib/lesson-content.ts. Removed the fs and path imports from lib/tracks.ts. Updated the lesson page (a Server Component) to import getLessonContent from the new location."
+  prevention="Any file that imports Node.js built-ins (fs, path, crypto, os, etc.) must never be imported by a 'use client' component, directly or transitively. Pattern: split server-only functions into dedicated files and name them *.server.ts to make the boundary explicit."
+/>
+
+<ExecutionEvidence
+  commitRef="fix: split getLessonContent into server-only lib/lesson-content.ts"
+  date="2026-05-14"
+  repo="ai-execution-lab"
+/>
+
+## What Happened
+
+During Phase 4 of the Execution Tracks build, I added `getLessonContent()` to `lib/tracks.ts`. This function reads MDX files from the filesystem using `fs.readFileSync`. It required `import fs from 'fs'` and `import path from 'path'` at the top of the file.
+
+`lib/tracks.ts` was already being imported by `components/tracks/track-roadmap.tsx`, which is marked `'use client'`. When Next.js bundles client components, it follows all imports — including `lib/tracks.ts` — and tries to include them in the browser bundle.
+
+The build failed immediately:
+
+```
+Module not found: Can't resolve 'fs'
+Import trace for requested module:
+  ./lib/tracks.ts
+  ./components/tracks/track-roadmap.tsx
+```
+
+## The Module Boundary Rule
+
+Next.js maintains a strict server/client boundary:
+
+- **Server Components** and server-only files can use any Node.js API
+- **Client Components** (files with `'use client'`) and their entire import tree must be browser-compatible
+- The boundary is transitive — if `track-roadmap.tsx` imports `lib/tracks.ts`, then everything `lib/tracks.ts` imports must also be browser-safe
+
+The mistake: adding a server-side function (`getLessonContent`) to a file that was already in a client component's import chain.
+
+## The Fix
+
+Split the file along the server/client boundary:
+
+**`lib/lesson-content.ts`** (new — server only):
+```typescript
+import fs from 'fs'
+import path from 'path'
+
+const LESSONS_ROOT = path.join(process.cwd(), 'content', 'lessons')
+
+export function getLessonContent(
+  trackId: string, moduleId: string, lessonId: string
+): string | null {
+  const mdxPath = path.join(LESSONS_ROOT, trackId, moduleId, `${lessonId}.mdx`)
+  if (!fs.existsSync(mdxPath)) return null
+  return fs.readFileSync(mdxPath, 'utf-8')
+}
+```
+
+**`lib/tracks.ts`** (updated — fs/path removed):
+```typescript
+// Removed:
+// import fs from 'fs'
+// import path from 'path'
+// export function getLessonContent(...) { ... }
+```
+
+The lesson detail page (`app/tracks/[track]/[module]/[lesson]/page.tsx`) is a Server Component, so it safely imports from `lib/lesson-content.ts`.
+
+## Why This Is Hard to Catch Before Build
+
+Local `next dev` sometimes tolerates this error — the dev server can be more lenient about module resolution. The failure surfaces during `next build` when Next.js constructs the full client bundle.
+
+The import chain also obscures the root cause. The error message points to `track-roadmap.tsx`, but the actual problem is in `lib/tracks.ts`, one level up the import chain.
+
+<Callout type="warn" title="The transitive import rule">
+If file A uses 'use client' and imports file B, then everything file B imports must also be browser-compatible — even if file B itself has no 'use client' directive. Node.js modules anywhere in the import tree of a client component will fail at build time.
+</Callout>
+
+## Prevention Pattern
+
+1. Never add Node.js built-in imports to a file that any client component imports
+2. If a file is used by both server and client code, split it: keep shared types/config in the original, move server-only functions to a new `*.server.ts` file
+3. Name server-only files with a `.server.ts` suffix — this is a convention that makes the boundary explicit at a glance
+4. After adding any new import to a shared lib file, check whether that file is in any client component's import chain

@@ -13,6 +13,13 @@ import {
   TerminalBlock,
   FailureAnalysis,
   CommandRef, CommandRefTable,
+  TroubleshootingSection,
+  WorkflowTimeline, TimelineStep,
+  IncidentReport,
+  ExecutionEvidence,
+  DeploymentLog,
+  ValidationGate, ValidationPipeline,
+  LessonMeta,
 } from './mdx-components'
 import remarkGfm from 'remark-gfm'
 import rehypeSlug from 'rehype-slug'
@@ -42,6 +49,16 @@ const allComponents = {
   FailureAnalysis,
   CommandRef,
   CommandRefTable,
+  // Execution evidence + failure archive components
+  TroubleshootingSection,
+  WorkflowTimeline,
+  TimelineStep,
+  IncidentReport,
+  ExecutionEvidence,
+  DeploymentLog,
+  ValidationGate,
+  ValidationPipeline,
+  LessonMeta,
 }
 
 interface ContentRendererProps {

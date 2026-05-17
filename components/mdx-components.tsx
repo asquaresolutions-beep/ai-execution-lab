@@ -86,6 +86,15 @@ export { TerminalBlock }                     from './mdx/terminal-block'
 export { FailureAnalysis }                   from './mdx/failure-analysis'
 export { CommandRef, CommandRefTable }       from './mdx/command-ref'
 
+// Execution evidence + failure archive components
+export { TroubleshootingSection }                      from './mdx/troubleshooting-section'
+export { WorkflowTimeline, TimelineStep }              from './mdx/workflow-timeline'
+export { IncidentReport }                              from './mdx/incident-report'
+export { ExecutionEvidence }                           from './mdx/execution-evidence'
+export { DeploymentLog }                               from './mdx/deployment-log'
+export { ValidationGate, ValidationPipeline }          from './mdx/validation-gate'
+export { LessonMeta }                                  from './mdx/lesson-meta'
+
 // Media
 export { YouTube }     from './media/youtube-embed'
 export { VideoEmbed }  from './media/video-embed'

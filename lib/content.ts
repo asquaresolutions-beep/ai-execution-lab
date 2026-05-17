@@ -7,7 +7,7 @@ import readingTime from 'reading-time'
 // Types
 // ─────────────────────────────────────────────────────────────
 
-export type ContentSection = 'docs' | 'systems' | 'labs' | 'case-studies' | 'playbooks'
+export type ContentSection = 'docs' | 'systems' | 'labs' | 'case-studies' | 'playbooks' | 'failures'
 
 export interface ContentFrontmatter {
   title: string
@@ -30,6 +30,12 @@ export interface ContentFrontmatter {
   goal?: string         // what this playbook achieves
   prerequisites?: string[]
   estimated_time?: string
+  // Failures-specific
+  severity?: 'low' | 'medium' | 'high' | 'critical'
+  failure_status?: 'open' | 'investigating' | 'resolved'
+  failure_type?: 'build' | 'runtime' | 'deployment' | 'data' | 'performance' | 'dependency'
+  project?: string
+  resolution_time?: string
 }
 
 export interface ContentItem {
@@ -129,7 +135,7 @@ export function getAllSlugs(section: ContentSection): string[] {
 
 /** Recent items across ALL sections, sorted by date desc. */
 export function getRecentItems(limit = 6): ContentMeta[] {
-  const sections: ContentSection[] = ['playbooks', 'systems', 'labs', 'case-studies', 'docs']
+  const sections: ContentSection[] = ['playbooks', 'systems', 'labs', 'case-studies', 'docs', 'failures']
   return sections
     .flatMap((s) => getAllMeta(s))
     .sort((a, b) =>
@@ -153,7 +159,7 @@ export function getNeighbors(
 
 /** Count of items per section — for dashboard stats. */
 export function getSectionCounts(): Record<ContentSection, number> {
-  const sections: ContentSection[] = ['docs', 'systems', 'labs', 'case-studies', 'playbooks']
+  const sections: ContentSection[] = ['docs', 'systems', 'labs', 'case-studies', 'playbooks', 'failures']
   const result = {} as Record<ContentSection, number>
   for (const s of sections) {
     result[s] = getAllMeta(s).length

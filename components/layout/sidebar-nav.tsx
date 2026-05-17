@@ -23,8 +23,9 @@ const NAV = [
   {
     group: 'Research',
     items: [
-      { href: '/labs',         label: 'Labs'         },
-      { href: '/case-studies', label: 'Case Studies' },
+      { href: '/labs',         label: 'Labs'            },
+      { href: '/case-studies', label: 'Case Studies'    },
+      { href: '/failures',     label: 'Failure Archive' },
     ],
   },
   {
