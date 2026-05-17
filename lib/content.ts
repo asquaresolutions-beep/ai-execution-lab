@@ -157,6 +157,28 @@ export function getNeighbors(
   }
 }
 
+/** Related items within a section — matched by tag overlap, sorted by overlap count then date. */
+export function getRelatedItems(
+  section: ContentSection,
+  slug: string,
+  limit = 3,
+): ContentMeta[] {
+  const items = getAllMeta(section).filter((i) => i.slug !== slug)
+  const source = getAllMeta(section).find((i) => i.slug === slug)
+  const sourceTags = new Set(source?.frontmatter.tags ?? [])
+
+  if (sourceTags.size === 0) return items.slice(0, limit)
+
+  return items
+    .map((item) => {
+      const overlap = (item.frontmatter.tags ?? []).filter((t) => sourceTags.has(t)).length
+      return { item, overlap }
+    })
+    .sort((a, b) => b.overlap - a.overlap || 0)
+    .map(({ item }) => item)
+    .slice(0, limit)
+}
+
 /** Count of items per section — for dashboard stats. */
 export function getSectionCounts(): Record<ContentSection, number> {
   const sections: ContentSection[] = ['docs', 'systems', 'labs', 'case-studies', 'playbooks', 'failures']

@@ -62,9 +62,58 @@ export const metadata: Metadata = {
   alternates: { canonical: SITE_URL },
 }
 
+// ─── JSON-LD structured data ─────────────────────────────────
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'AI Execution Lab',
+  url: SITE_URL,
+  description:
+    'A practical AI systems lab by A Square Solutions. Real workflows, real tools, real results — built while shipping production AI systems, SEO engineering pipelines, and GEO strategies.',
+  publisher: {
+    '@type': 'Organization',
+    name: 'A Square Solutions',
+    url: 'https://asquaresolution.com',
+    sameAs: ['https://twitter.com/asquaresolution'],
+  },
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/search?q={search_term_string}` },
+    'query-input': 'required name=search_term_string',
+  },
+}
+
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'A Square Solutions',
+  url: 'https://asquaresolution.com',
+  description: 'AI execution, GEO/AI-search strategy, and production WordPress engineering.',
+  sameAs: ['https://twitter.com/asquaresolution'],
+  knowsAbout: [
+    'Artificial Intelligence',
+    'Claude Code',
+    'Generative Engine Optimization',
+    'AI Workflows',
+    'SEO Engineering',
+    'WordPress Development',
+    'Production Systems',
+  ],
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`dark ${fontSans.variable} ${fontMono.variable}`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+      </head>
       <body className="text-surface-200 antialiased">
         <div className="flex min-h-screen">
           {/* Desktop sidebar */}

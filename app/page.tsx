@@ -1,8 +1,29 @@
 import Link from 'next/link'
 import { getAllMeta, getRecentItems } from '@/lib/content'
 import { SECTION_META, ACCENT_CLASSES, formatDateMono } from '@/lib/utils'
-import { StatsBar }      from '@/components/homepage/stats-bar'
-import { SectionTracks } from '@/components/homepage/section-tracks'
+import { StatsBar }          from '@/components/homepage/stats-bar'
+import { SectionTracks }     from '@/components/homepage/section-tracks'
+import { FeaturedFailures }  from '@/components/homepage/featured-failures'
+
+// ─────────────────────────────────────────────────────────────
+// Environment badge
+// ─────────────────────────────────────────────────────────────
+
+function EnvBadge() {
+  const isProd = process.env.NODE_ENV === 'production'
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-widest ${
+      isProd ? 'text-green-500/80' : 'text-yellow-500/80'
+    }`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${isProd ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`} />
+      {isProd ? 'Production' : 'Local dev'}
+    </span>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// Page
+// ─────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const docs        = getAllMeta('docs')
@@ -10,6 +31,7 @@ export default function HomePage() {
   const labs        = getAllMeta('labs')
   const caseStudies = getAllMeta('case-studies')
   const playbooks   = getAllMeta('playbooks')
+  const failures    = getAllMeta('failures')
   const recent      = getRecentItems(8)
 
   const stats = [
@@ -18,6 +40,7 @@ export default function HomePage() {
     { key: 'labs'         as const, count: labs.length        },
     { key: 'case-studies' as const, count: caseStudies.length },
     { key: 'playbooks'    as const, count: playbooks.length   },
+    { key: 'failures'     as const, count: failures.length    },
   ]
 
   const sections = [
@@ -26,26 +49,24 @@ export default function HomePage() {
     { key: 'labs'         as const, count: labs.length,        items: labs.slice(0, 2)        },
     { key: 'case-studies' as const, count: caseStudies.length, items: caseStudies.slice(0, 2) },
     { key: 'playbooks'    as const, count: playbooks.length,   items: playbooks.slice(0, 2)   },
+    { key: 'failures'     as const, count: failures.length,    items: failures.slice(0, 2)    },
   ]
 
   return (
     <div className="px-6 lg:px-8 py-8 max-w-5xl">
 
-      {/* ── Hero header ─────────────────────────────────────── */}
+      {/* ── Hero ────────────────────────────────────────────── */}
       <div className="mb-10 pb-10 border-b border-white/[0.05]">
         <div className="flex items-center gap-2 mb-4">
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-semibold text-brand-500/80 uppercase tracking-widest">
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-            Local development
-          </span>
+          <EnvBadge />
         </div>
 
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-surface-50 leading-[1.15] text-balance mb-4">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-surface-50 leading-[1.15] text-balance mb-3">
           AI Execution Lab
         </h1>
 
         <p className="text-base text-surface-400 max-w-2xl leading-relaxed">
-          Operational knowledge base by{' '}
+          Public AI execution engineering by{' '}
           <a
             href="https://asquaresolution.com"
             target="_blank"
@@ -54,41 +75,54 @@ export default function HomePage() {
           >
             A Square Solutions
           </a>
-          . Real workflows, real systems, real results — documented while building
-          production AI tools, SEO engineering pipelines, and GEO/AI-search strategies.
+          . Real deployments, real failures, real measurements — documented in production
+          while building AI tools, GEO/AI-search pipelines, and execution systems.
         </p>
 
-        <p className="mt-2 text-sm text-surface-600 italic">
-          Not a tutorial site. Every document here comes from something we actually built, broke, fixed, or measured.
-        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono text-surface-600">
+          <span>Not a tutorial site</span>
+          <span>·</span>
+          <span>Every document traces back to an actual execution</span>
+          <span>·</span>
+          <span>Failures are documented as they happen</span>
+        </div>
 
         <div className="mt-6 flex flex-wrap gap-2">
           <Link
-            href="/playbooks"
+            href="/tracks"
             className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600 transition-colors shadow-sm"
           >
-            Browse Playbooks
+            Execution Tracks
           </Link>
           <Link
-            href="/case-studies"
+            href="/failures"
+            className="inline-flex items-center gap-2 rounded-lg border border-red-500/25 bg-red-500/[0.06] px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/[0.12] hover:border-red-500/40 transition-colors"
+          >
+            Failure Archive
+          </Link>
+          <Link
+            href="/playbooks"
             className="inline-flex items-center gap-2 rounded-lg border border-white/[0.10] px-4 py-2 text-sm font-medium text-surface-300 hover:text-surface-100 hover:border-white/[0.18] transition-colors"
           >
-            Case Studies
+            Playbooks
           </Link>
         </div>
       </div>
 
-      {/* ── Animated stats bar ──────────────────────────────── */}
+      {/* ── Stats bar ────────────────────────────────────────── */}
       <StatsBar stats={stats} />
 
-      {/* ── Animated section tracks ─────────────────────────── */}
+      {/* ── Featured failures ────────────────────────────────── */}
+      <FeaturedFailures />
+
+      {/* ── Section grid ─────────────────────────────────────── */}
       <SectionTracks sections={sections} />
 
-      {/* ── Recent feed ────────────────────────────────────── */}
+      {/* ── Recent activity feed ─────────────────────────────── */}
       {recent.length > 0 && (
         <div className="mb-10">
           <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-4">
-            Recently added
+            Recent activity
           </h2>
           <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
             {recent.map((item) => {
@@ -116,6 +150,9 @@ export default function HomePage() {
                       </span>
                     )}
                   </div>
+                  <span className="text-[11px] font-mono text-surface-700 shrink-0 hidden sm:block">
+                    {item.readingTime}
+                  </span>
                 </Link>
               )
             })}
@@ -123,21 +160,36 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* ── Stack callout ──────────────────────────────────── */}
-      <div className="rounded-xl border border-white/[0.05] bg-white/[0.01] px-5 py-4">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-surface-700 mb-3">
-          Built from real execution
+      {/* ── Platform clarity ─────────────────────────────────── */}
+      <div className="rounded-xl border border-white/[0.05] bg-white/[0.01] px-5 py-5">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-surface-700 mb-4">
+          How this platform works
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[
-            { label: 'Claude Code',           desc: 'AI-assisted development & automation' },
-            { label: 'GEO / AI Search',       desc: 'Generative engine optimization' },
-            { label: 'WordPress + LiteSpeed', desc: 'Production CMS systems' },
-            { label: 'Python / REST API',     desc: 'Automation scripts' },
-          ].map(({ label, desc }) => (
-            <div key={label}>
-              <p className="text-xs font-medium text-surface-300">{label}</p>
-              <p className="text-[11px] text-surface-600">{desc}</p>
+            {
+              title: 'Execution-first',
+              desc:  'Content is written during or immediately after an actual execution — deployment, debug session, experiment, or build. Not drafted in advance.',
+            },
+            {
+              title: 'Failures are first-class',
+              desc:  'Every production incident is documented with root cause, timeline, and prevention pattern. The Failure Archive is core content, not a footnote.',
+            },
+            {
+              title: 'GEO/AI-search native',
+              desc:  'All content is structured for AI retrieval — entity-rich, schema-marked, and written with specificity that AI summarizers can extract accurately.',
+            },
+            {
+              title: 'Public by design',
+              desc:  'This is a public engineering journal. Distribution is part of the system. Every article has share actions, canonical URLs, and syndication templates.',
+            },
+          ].map(({ title, desc }) => (
+            <div key={title} className="flex gap-3">
+              <span className="text-brand-500 text-xs mt-0.5 shrink-0">▶</span>
+              <div>
+                <p className="text-xs font-medium text-surface-300">{title}</p>
+                <p className="text-[11px] text-surface-600 mt-0.5 leading-relaxed">{desc}</p>
+              </div>
             </div>
           ))}
         </div>

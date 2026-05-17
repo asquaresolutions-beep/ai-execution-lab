@@ -1,11 +1,13 @@
 import Link from 'next/link'
 import type { ContentItem, ContentMeta } from '@/lib/content'
-import { SECTION_META, ACCENT_CLASSES, formatDate, cn } from '@/lib/utils'
+import { getRelatedItems } from '@/lib/content'
+import { SECTION_META, ACCENT_CLASSES, formatDate, formatDateMono, cn } from '@/lib/utils'
 import { extractHeadings } from '@/lib/toc'
 import { Badge } from '@/components/ui/badge'
 import { ContentRenderer } from './content-renderer'
 import { TableOfContents } from './layout/toc'
 import { ReadingProgress } from './layout/reading-progress'
+import { ArticleShare } from './article-share'
 
 interface ContentPageProps {
   item: ContentItem
@@ -13,14 +15,50 @@ interface ContentPageProps {
   next?: ContentMeta | null
 }
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-execution-lab.vercel.app'
+
 export async function ContentPage({ item, prev, next }: ContentPageProps) {
   const sectionMeta = SECTION_META[item.section]
   const ac          = ACCENT_CLASSES[sectionMeta.accent]
   const fm          = item.frontmatter
   const headings    = extractHeadings(item.content)
+  const related     = getRelatedItems(item.section, item.slug, 3)
+  const canonicalUrl = `${SITE_URL}${sectionMeta.href}/${item.slug}`
+
+  // ── Article JSON-LD ───────────────────────────────────────
+  const articleType = item.section === 'docs' || item.section === 'systems' ? 'TechArticle' : 'Article'
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@type': articleType,
+    headline: fm.title,
+    description: fm.description,
+    url: canonicalUrl,
+    datePublished: fm.date,
+    dateModified: fm.updated ?? fm.date,
+    author: {
+      '@type': 'Organization',
+      name: 'A Square Solutions',
+      url: 'https://asquaresolution.com',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'A Square Solutions',
+      url: 'https://asquaresolution.com',
+    },
+    keywords: fm.tags?.join(', '),
+    articleSection: sectionMeta.title,
+    ...(fm.impact   ? { abstract: fm.impact }   : {}),
+    ...(fm.goal     ? { description: `${fm.description} Goal: ${fm.goal}` } : {}),
+  }
 
   return (
     <>
+      {/* Article JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
+
       {/* Reading progress bar (client, fixed to viewport top) */}
       <ReadingProgress />
 
@@ -157,10 +195,61 @@ export async function ContentPage({ item, prev, next }: ContentPageProps) {
                   ))}
                 </div>
               )}
+
+              {/* Share actions */}
+              <div className="mt-5 pt-4 border-t border-white/[0.05] flex items-center justify-between flex-wrap gap-3">
+                <ArticleShare
+                  title={fm.title}
+                  description={fm.description}
+                  url={canonicalUrl}
+                  tags={fm.tags}
+                />
+                <Link
+                  href="/syndicate"
+                  className="text-[10px] font-mono text-surface-700 hover:text-brand-400 transition-colors"
+                >
+                  Generate post copy →
+                </Link>
+              </div>
             </header>
 
             {/* MDX content */}
             <ContentRenderer source={item.content} />
+
+            {/* Related content */}
+            {related.length > 0 && (
+              <div className="mt-12 pt-8 border-t border-white/[0.06]">
+                <h3 className="text-[10px] font-semibold uppercase tracking-widest text-surface-600 mb-4">
+                  Related in {sectionMeta.title}
+                </h3>
+                <div className="space-y-2">
+                  {related.map((r) => (
+                    <Link
+                      key={r.slug}
+                      href={`${sectionMeta.href}/${r.slug}`}
+                      className="group flex items-center gap-3 rounded-lg border border-white/[0.05] bg-white/[0.015] px-4 py-3 hover:border-white/[0.10] hover:bg-white/[0.035] transition-all"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-surface-300 group-hover:text-surface-100 transition-colors truncate">
+                          {r.frontmatter.title}
+                        </p>
+                        {r.frontmatter.description && (
+                          <p className="text-xs text-surface-600 truncate mt-0.5 hidden sm:block">
+                            {r.frontmatter.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <time className="text-[10px] font-mono text-surface-700">
+                          {formatDateMono(r.frontmatter.date)}
+                        </time>
+                        <span className="text-surface-700 text-xs group-hover:text-surface-400 transition-colors">→</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Prev / next navigation */}
             {(prev || next) && (

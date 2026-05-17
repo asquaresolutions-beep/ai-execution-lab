@@ -35,6 +35,12 @@ const NAV = [
       { href: '/tracks',    label: 'Tracks'    },
     ],
   },
+  {
+    group: 'Publish',
+    items: [
+      { href: '/syndicate', label: 'Syndication' },
+    ],
+  },
 ]
 
 // ─────────────────────────────────────────────────────────────
