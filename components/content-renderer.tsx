@@ -30,6 +30,11 @@ export async function ContentRenderer({ source }: ContentRendererProps) {
         source={source}
         components={allComponents}
         options={{
+          // next-mdx-remote v6 defaults blockJS:true which strips JS expressions
+          // (array/object literals in JSX props) via removeJavaScriptExpressions.
+          // Our MDX is author-controlled content — not user-submitted — so we
+          // opt out of this restriction to allow prop values like items={[...]}
+          blockJS: false,
           mdxOptions: {
             remarkPlugins: [remarkGfm],
             rehypePlugins: [
