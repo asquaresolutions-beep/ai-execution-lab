@@ -67,7 +67,7 @@ export const TRACKS: Track[] = [
     tagline:       'From zero infrastructure to revenue — using AI as your unfair advantage.',
     description:   'A complete execution track for building a profitable AI-powered business without large upfront investment. Covers product selection, distribution, conversion, and systemization using modern AI tools.',
     level:         'beginner',
-    estimatedHours: 35,
+    estimatedHours: 45,
     accent:        'amber',
     status:        'available',
     outcomes: [
@@ -86,11 +86,19 @@ export const TRACKS: Track[] = [
       {
         id: 'zero-budget-stack',
         title: 'Zero-Budget AI Stack',
-        description: 'Select and configure the right tools before spending anything.',
+        description: 'Build a complete AI business infrastructure for under ₹3000/month — tools, hosting, analytics, and your first organic traffic system.',
         lessons: [
-          { id: 'choosing-your-product', title: 'Choosing Your First AI Product', type: 'lesson', duration: '20 min', description: 'How to evaluate product-market fit for AI tools without running ads.', status: 'available' },
-          { id: 'free-tier-architecture', title: 'Free-Tier Infrastructure Architecture', type: 'lesson', duration: '25 min', description: 'Building your entire stack on free tiers until you hit real revenue.', status: 'coming-soon' },
-          { id: 'llm-cost-control', title: 'LLM Cost Control from Day One', type: 'lesson', duration: '15 min', description: 'Prompt caching, input compression, and batching to keep API costs near zero.', status: 'coming-soon' },
+          { id: 'choosing-your-product',          title: 'Choosing Your First AI Product',           type: 'lesson',  duration: '20 min', description: 'How to evaluate product-market fit for AI tools without running ads.',                               status: 'available' },
+          { id: 'ai-tool-stack-budget',            title: 'AI Tool Stack Under ₹3000/Month',          type: 'lesson',  duration: '25 min', description: 'The exact tools to pay for, what to use free, and the rule for when to add anything new.',          status: 'available' },
+          { id: 'free-tier-architecture',          title: 'Free-Tier Infrastructure Architecture',    type: 'lesson',  duration: '25 min', description: 'Build a production-capable stack on GitHub, Vercel, and Cloudflare free tiers.',                    status: 'available' },
+          { id: 'claude-wordpress-workflow',       title: 'Claude + WordPress Operational Workflow',  type: 'playbook', duration: '30 min', description: 'The exact research-to-publish workflow using Claude — without writing a word manually.',            status: 'available' },
+          { id: 'github-for-non-developers',       title: 'GitHub for Non-Developers',                type: 'lesson',  duration: '20 min', description: 'Git and GitHub in plain terms — the five commands you need and nothing more.',                      status: 'available' },
+          { id: 'vercel-for-beginners',            title: 'Vercel Deployment for Beginners',          type: 'lesson',  duration: '20 min', description: 'Deploy your first Next.js site, add a custom domain, and use preview deployments.',                 status: 'available' },
+          { id: 'google-search-console-setup',     title: 'Google Search Console Setup',              type: 'playbook', duration: '20 min', description: 'Verify your site, submit your sitemap, and use Search Console as a content strategy tool.',        status: 'available' },
+          { id: 'google-analytics-data-thinking',  title: 'Google Analytics + Data Thinking',         type: 'lesson',  duration: '25 min', description: 'Set up GA4, identify the 5 metrics that matter, and build a weekly data review habit.',            status: 'available' },
+          { id: 'adsense-approval-reality',        title: 'AdSense Approval Reality',                 type: 'lesson',  duration: '20 min', description: 'What AdSense actually requires, why applications fail, and realistic RPM expectations.',            status: 'available' },
+          { id: 'avoid-tool-subscription-traps',   title: 'How to Avoid Tool Subscription Traps',     type: 'lesson',  duration: '20 min', description: 'The psychology of subscription creep and a three-question framework for every new tool.',          status: 'available' },
+          { id: 'first-organic-traffic-system',    title: 'Your First Organic Traffic System',        type: 'lesson',  duration: '30 min', description: 'The topic cluster model, content cadence, and realistic timeline from zero to first results.',     status: 'available' },
         ],
       },
       {

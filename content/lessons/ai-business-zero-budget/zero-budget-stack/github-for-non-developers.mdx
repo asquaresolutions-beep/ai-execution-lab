@@ -1,0 +1,257 @@
+---
+title: "GitHub for Non-Developers"
+description: "Git and GitHub are not developer tools — they're version control and backup. Here's what you actually need to know to use GitHub without a programming background."
+date: "2026-05-18"
+tags: ["ai-business", "github", "git", "version-control", "beginner", "tools"]
+status: "published"
+---
+
+<LessonMeta difficulty="beginner" updated="2026-05-18" />
+
+<LessonObjectives items={[
+  "Understand what Git and GitHub actually do — in plain terms",
+  "Learn the five git commands you need for everything",
+  "Connect a project folder on your computer to GitHub",
+  "Use GitHub as the source of truth for your business's code and configuration",
+  "Understand how GitHub connects to Vercel for automatic deployments",
+]} />
+
+GitHub has a reputation as a tool for professional software developers. That reputation makes people who don't write code avoid it entirely.
+
+This is a mistake. GitHub is fundamentally a version-controlled backup system. It saves every version of every file you've ever had, lets you restore anything, and enables deployment automation. You don't need to understand how it works internally — you need to know five commands.
+
+---
+
+## What Git Actually Does
+
+Imagine a folder on your computer with your website's files. Without Git, if you accidentally delete something or a change breaks something, you have no way to go back.
+
+With Git, every time you say "save this checkpoint," Git takes a snapshot of the entire folder. You can always go back to any checkpoint. The folder's entire history is preserved.
+
+**Git** is the software that does this. It runs on your computer.
+
+**GitHub** is a website that stores your Git checkpoints in the cloud. Your folder's history lives on your computer AND on GitHub. This means:
+- It's backed up (GitHub is the backup)
+- Anyone with access can download the current version
+- Vercel can watch GitHub and automatically deploy whenever you push new checkpoints
+
+---
+
+## The Five Commands
+
+This is everything you need:
+
+```bash
+git init
+```
+Turns a regular folder into a Git-tracked folder. Run once, at the beginning.
+
+```bash
+git add .
+```
+Tells Git "include all changed files in the next checkpoint." The `.` means "everything."
+
+```bash
+git commit -m "describe what you changed"
+```
+Creates the checkpoint (called a "commit"). The message in quotes is your description of what changed.
+
+```bash
+git push
+```
+Sends your local checkpoints to GitHub. This is what triggers Vercel to redeploy.
+
+```bash
+git pull
+```
+Downloads the latest checkpoints from GitHub to your local computer. Use this when you've made changes on GitHub directly or you're working across multiple computers.
+
+---
+
+## The 80% Workflow
+
+For most content and configuration changes, you will run exactly this sequence:
+
+```bash
+git add .
+git commit -m "add post about [topic]"
+git push
+```
+
+Three commands. That's it.
+
+---
+
+## Setting Up Git: One-Time Steps
+
+### Install Git
+
+**Windows:** Download from git-scm.com. Use all default settings during installation.
+
+**Mac:** Open Terminal and type `git --version`. If Git isn't installed, macOS will prompt you to install developer tools. Click Install. It takes 5 minutes.
+
+### Configure your identity
+
+Open Terminal (Mac) or Command Prompt/PowerShell (Windows):
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@yourdomain.com"
+```
+
+This runs once. It's just metadata that appears in your commit history.
+
+### Create a GitHub account
+
+Go to github.com. Create a free account. Use your real name or business name — this account is permanent.
+
+---
+
+## Connecting Your Project to GitHub
+
+### If starting fresh (no code yet)
+
+1. On GitHub, click **New repository**
+2. Give it a name (your project name, lowercase, hyphens for spaces)
+3. Keep it Private (you can change later)
+4. Check "Add a README file"
+5. Click **Create repository**
+6. Click the green **Code** button → copy the HTTPS URL
+
+Then in your terminal:
+
+```bash
+git clone https://github.com/yourusername/your-repo.git
+cd your-repo
+```
+
+Your repository is now on your computer. Start adding files.
+
+### If you have files already
+
+If you have a project folder with files:
+
+```bash
+cd /path/to/your/project
+git init
+git add .
+git commit -m "initial commit"
+```
+
+Then go to GitHub, create a new empty repository (no README), and connect:
+
+```bash
+git remote add origin https://github.com/yourusername/your-repo.git
+git branch -M main
+git push -u origin main
+```
+
+Your files are now on GitHub.
+
+---
+
+## Authenticating with GitHub
+
+When you push for the first time, GitHub will ask for your credentials. The modern way to authenticate is with a Personal Access Token:
+
+1. GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Click **Generate new token (classic)**
+3. Give it a name (e.g., "my laptop")
+4. Set expiration (90 days is fine; you can regenerate)
+5. Check **repo** scope
+6. Click Generate — copy the token immediately (you won't see it again)
+
+When prompted for password during `git push`, paste this token instead of your GitHub password.
+
+On Mac, this token gets stored in Keychain after the first use — you won't be asked again. On Windows, it gets stored in the Windows Credential Manager.
+
+---
+
+## What You Should (and Shouldn't) Put in GitHub
+
+### Should be in GitHub:
+- All code files (`.js`, `.ts`, `.tsx`, `.html`, `.css`, `.py`, etc.)
+- Configuration files (`package.json`, `next.config.mjs`, etc.)
+- Content files (`.mdx`, `.md`, `.json`)
+- Documentation
+
+### Should NOT be in GitHub:
+- Secret keys, API keys, passwords — put these in a `.env.local` file and add that file to `.gitignore`
+- Large media files (videos, large images) — use external storage
+- The `node_modules` folder — this is automatically excluded by `.gitignore` in most projects
+- Database files
+
+The `.gitignore` file in your project tells Git which files to skip. Most project templates include a sensible `.gitignore` by default. Check that `.env` and `.env.local` are in yours.
+
+---
+
+## How GitHub Connects to Vercel
+
+When you import a repository into Vercel:
+
+1. Vercel watches your GitHub repository
+2. Every time you push a commit to the `main` branch, Vercel automatically rebuilds and deploys your site
+3. Every push to any other branch creates a preview deployment at a temporary URL
+
+This means the deployment workflow is:
+
+```
+Edit files → git add . → git commit → git push → site updates automatically
+```
+
+No manual deployment steps. No FTP. No server management.
+
+---
+
+## Reading GitHub as a Record
+
+Your commit history is a running record of what changed and when. Get into the habit of writing commit messages that describe the business action, not the technical change:
+
+**Good commit messages:**
+- `add guide on keyword research for beginners`
+- `update pricing table — Hostinger raised Business plan price`
+- `fix broken internal link on homepage`
+- `add featured image to 5 unpublished posts`
+
+**Useless commit messages:**
+- `update`
+- `fix`
+- `changes`
+- `asdfgh`
+
+You will search your commit history eventually. Make it searchable.
+
+---
+
+## Using GitHub for Non-Code Files
+
+GitHub isn't just for code. You can use it to version-control:
+- Content files (exactly as this site does with `.mdx` files)
+- Configuration files for tools (WordPress export XMLs, theme settings)
+- Documentation and operations notes (`.md` files)
+- Prompt templates for Claude
+
+If you're running a WordPress site and not using version control: at minimum, keep your content templates, Claude prompt files, and any custom configurations in a GitHub repository. You don't need your WordPress theme in Git — but your workflows and templates should be.
+
+---
+
+<Callout type="info" title="GitHub Desktop if you prefer visual tools">
+GitHub Desktop (desktop.github.com) is a free GUI application that wraps the git commands in a visual interface. It's legitimate and reliable. However, learning the five commands above is worth the investment — they work everywhere (remote servers, cloud environments, Claude Code terminal) while GitHub Desktop only works on your local machine.
+</Callout>
+
+<Callout type="warn" title="Don't commit secrets">
+The most common mistake beginners make with GitHub is accidentally pushing API keys, passwords, or `.env` files to a public (or even private) repository. If you do this, consider those credentials compromised and rotate them immediately. Git history preserves deleted files — you cannot simply delete the file and push again. The secret is still in the history. The fix is key rotation, not deletion.
+</Callout>
+
+---
+
+<Checkpoint items={[
+  "Git installed on your computer",
+  "Git configured with your name and email",
+  "GitHub account created",
+  "At least one repository created and connected to your project folder",
+  "Personal Access Token created for authentication",
+  "First push completed — project visible on github.com",
+  ".gitignore checked — .env.local is listed",
+  "Vercel connected to GitHub — automatic deployments working",
+]} />

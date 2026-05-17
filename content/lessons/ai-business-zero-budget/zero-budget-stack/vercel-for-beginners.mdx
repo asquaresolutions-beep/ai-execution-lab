@@ -1,0 +1,247 @@
+---
+title: "Vercel Deployment for Beginners"
+description: "How Vercel works, how to deploy your first Next.js site, and how to configure environment variables, custom domains, and preview deployments without server management."
+date: "2026-05-18"
+tags: ["ai-business", "vercel", "deployment", "nextjs", "hosting", "beginner"]
+status: "published"
+---
+
+<LessonMeta difficulty="beginner" updated="2026-05-18" />
+
+<LessonObjectives items={[
+  "Understand what Vercel does and why it exists",
+  "Deploy a Next.js project from GitHub to a live URL",
+  "Configure environment variables securely in the Vercel dashboard",
+  "Add a custom domain and understand how DNS connects to Vercel",
+  "Use preview deployments for testing before going live",
+]} />
+
+Vercel solves a specific problem: deploying web applications was hard. You needed to manage servers, configure nginx, handle SSL certificates, set up CDNs, and monitor everything manually. Vercel removes all of that.
+
+You push code to GitHub. Vercel builds it and serves it from a global network. That's the entire product.
+
+---
+
+## What Vercel Does
+
+Vercel is a deployment platform. When you connect your GitHub repository to Vercel:
+
+1. Every commit you push triggers an automatic build
+2. Vercel runs `npm run build` (or whatever build command your project uses)
+3. The output gets deployed to Vercel's CDN — servers in 30+ regions worldwide
+4. Your site is live, globally, within 1–3 minutes of your `git push`
+
+No servers to manage. No SSL configuration. No CDN setup. It's automatic.
+
+---
+
+## Vercel vs Traditional Hosting
+
+| Task | Traditional Hosting | Vercel |
+|---|---|---|
+| Deploy code | Manual FTP or SSH | Automatic on `git push` |
+| SSL certificate | Manual setup, manual renewal | Automatic, auto-renews |
+| CDN | Pay extra, complex config | Included, automatic |
+| Environment variables | SSH into server, edit files | Dashboard UI |
+| Preview environments | Manual | Automatic per branch |
+| Rollback | Manual, risky | One click to any previous deploy |
+
+For a one-person business, the productivity difference is significant. You focus on building, not on operations.
+
+---
+
+## What Vercel Doesn't Do
+
+Vercel is not a general-purpose server. It's specifically built for frontend frameworks and serverless functions.
+
+**Vercel doesn't handle:**
+- WordPress (WordPress needs PHP + MySQL — use Hostinger for this)
+- Traditional databases (use PlanetScale, Supabase, or Neon — all have free tiers)
+- Long-running background processes
+- Custom server software
+
+If you're building with Next.js, Vercel is the right choice. If you're building with WordPress, Vercel is the wrong tool — use Hostinger instead.
+
+---
+
+## Deploying Your First Project
+
+### Step 1: Import from GitHub
+
+1. Go to vercel.com and sign up with your GitHub account
+2. Click **Add New → Project**
+3. Under "Import Git Repository," find your repository and click **Import**
+
+### Step 2: Configure build settings
+
+For Next.js, Vercel auto-detects everything:
+- **Framework:** Next.js (auto-detected)
+- **Build command:** `next build` (default)
+- **Output directory:** `.next` (default)
+- **Install command:** `npm install` (default)
+
+You don't need to change any of these unless your project has unusual configuration.
+
+### Step 3: Add environment variables (if needed)
+
+If your project uses environment variables (API keys, database URLs, etc.):
+
+1. Click **Environment Variables** in the project settings panel
+2. Add each variable as a Key-Value pair
+3. Choose which environments to apply to: Production, Preview, Development
+
+Common variables for an AI business project:
+- `NEXT_PUBLIC_SITE_URL` — your domain (e.g., `https://yourdomain.com`)
+- `NEXT_PUBLIC_GA_ID` — Google Analytics 4 measurement ID
+- `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` — Plausible analytics domain
+- Any API keys for services your app uses
+
+### Step 4: Deploy
+
+Click **Deploy**. Vercel builds your project. In 1–3 minutes, it's live at a `*.vercel.app` URL.
+
+---
+
+## Adding a Custom Domain
+
+Your site starts at `your-project-name.vercel.app`. You want it at `yourdomain.com`.
+
+### In Vercel:
+
+1. Go to your project → **Settings** → **Domains**
+2. Type your domain (e.g., `yourdomain.com`) and click **Add**
+3. Vercel shows you DNS records to configure
+
+You'll see one of two options:
+
+**Option A — Use Vercel nameservers (recommended for simplicity):**
+Vercel gives you nameservers (e.g., `ns1.vercel-dns.com`, `ns2.vercel-dns.com`). In your domain registrar, change the nameservers to these. Vercel manages DNS entirely.
+
+**Option B — Add CNAME record (if you manage DNS yourself):**
+Add a CNAME record: `www` → `cname.vercel-dns.com`
+For the root domain (`@`): add an A record pointing to `76.76.21.21`
+
+### DNS Propagation
+
+After you update DNS records, it takes 15 minutes to 48 hours for the change to propagate worldwide. During this time:
+- Some users will see the old site
+- Some users will see the new site
+- This is normal — don't change anything
+
+When propagation is complete, Vercel automatically provisions an SSL certificate. Your site will be accessible at `https://yourdomain.com`.
+
+### Verify It's Working
+
+Test from a different network (mobile data instead of WiFi) or use a tool like `whatsmydns.net` to see propagation status across different global regions.
+
+---
+
+## Preview Deployments
+
+Every branch in your GitHub repository gets its own deployment URL when you push to it.
+
+**Example workflow:**
+1. You're adding a new feature to your site
+2. You create a branch: `git checkout -b new-homepage`
+3. Make your changes, commit, push
+4. Vercel deploys the branch to: `your-project-new-homepage.vercel.app`
+5. You review the preview URL — it looks correct
+6. You merge the branch into `main`
+7. The production site updates
+
+This means you can test changes before they go live on your main domain. For a content site, this is useful for design changes. For an app, it's essential.
+
+---
+
+## Environment Variables: Production vs Preview
+
+When you add environment variables, you choose which environments they apply to:
+
+- **Production:** Only the `main` branch deployment
+- **Preview:** All branch deployments (useful for testing with real API keys in staging)
+- **Development:** Only used locally with `vercel env pull`
+
+For most simple setups: set all variables to "All Environments" unless you have a specific reason not to. This ensures preview deployments behave the same as production.
+
+---
+
+## Reading Vercel Logs
+
+When a deployment fails or a serverless function throws an error, you need logs.
+
+**Build logs:** Vercel → Project → Deployments → Click on a deployment → Build logs
+This shows you what happened during the build. TypeScript errors, missing packages, and configuration problems appear here.
+
+**Function logs:** Vercel → Project → Logs (tab at the top)
+This shows runtime logs from serverless functions. If your API routes throw errors, they appear here.
+
+**Runtime errors in production are silent without logs.** Check the Logs tab if users report something broken that you can't reproduce locally.
+
+---
+
+## Rollbacks
+
+If a deployment breaks something:
+
+1. Vercel → Project → Deployments
+2. Find the last working deployment
+3. Click the three-dot menu → **Promote to Production**
+
+Your site immediately goes back to the previous version. Zero downtime. This is one of the main reasons to use Vercel over manual hosting.
+
+---
+
+## Vercel Hobby Usage Limits — What to Monitor
+
+Check these monthly in the Vercel dashboard:
+
+| Metric | Hobby Limit | What Triggers It |
+|---|---|---|
+| Bandwidth | 100 GB | High traffic, large pages |
+| Serverless function invocations | 100K/month | API routes, server-side rendering |
+| Build minutes | 6,000 min/month | Frequent deployments on large projects |
+| Edge requests | 1M/month | Cached page requests |
+
+For a new site: you will not hit any of these limits. A site with 10,000 monthly visitors uses roughly 1–5GB bandwidth and well under 100K function invocations.
+
+Monitor the Usage section in your Vercel dashboard. You'll see it coming before you hit any limit.
+
+---
+
+<Callout type="info" title="Vercel vs Netlify">
+Netlify is Vercel's main competitor with a similar free tier. Both work well for Next.js. Vercel is built by the creators of Next.js — edge cases and new Next.js features work on Vercel first. For this reason, Vercel is the default recommendation for Next.js projects. If you're using a different framework (Astro, SvelteKit, Remix), Netlify is equally viable.
+</Callout>
+
+<Callout type="warn" title="Don't put secrets in code">
+Environment variables exist specifically to keep secrets out of your codebase. Never put API keys, database passwords, or access tokens directly in your JavaScript/TypeScript files. Always use environment variables. If you accidentally commit a secret to GitHub, treat it as compromised and rotate it immediately.
+</Callout>
+
+---
+
+## The Deployment Loop in Practice
+
+Once everything is set up, your deployment workflow is:
+
+```
+1. Make changes to files on your computer
+2. Test locally with: npm run dev (or next dev)
+3. When satisfied: git add . && git commit -m "describe changes" && git push
+4. Vercel builds automatically (1–3 min)
+5. Check the production URL — changes are live
+```
+
+Total active time: under 2 minutes. The build happens in the background while you do something else.
+
+---
+
+<Checkpoint items={[
+  "Vercel account created via GitHub SSO",
+  "Project imported from GitHub to Vercel",
+  "First deployment successful — site accessible on vercel.app URL",
+  "Environment variables added (if needed) — NOT hardcoded in source files",
+  "Custom domain added to Vercel project",
+  "DNS records updated at domain registrar",
+  "SSL active — site accessible at https://yourdomain.com",
+  "Deployment log checked — zero build errors",
+  "Usage dashboard bookmarked to monitor limits",
+]} />

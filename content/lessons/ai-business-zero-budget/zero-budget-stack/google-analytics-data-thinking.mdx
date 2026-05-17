@@ -1,0 +1,238 @@
+---
+title: "Google Analytics + Data Thinking"
+description: "How to set up GA4, what metrics actually matter for a content business at launch, and how to develop the habit of making decisions from data rather than instinct."
+date: "2026-05-18"
+tags: ["ai-business", "analytics", "google-analytics", "data", "metrics", "beginner"]
+status: "published"
+---
+
+<LessonMeta difficulty="beginner" updated="2026-05-18" />
+
+<LessonObjectives items={[
+  "Set up Google Analytics 4 on your site in under 30 minutes",
+  "Identify the 5 metrics that matter at launch versus the ones that don't",
+  "Build a weekly data review habit that takes 10 minutes",
+  "Understand what your data can and cannot tell you at low traffic volumes",
+  "Connect Analytics data to content and business decisions",
+]} />
+
+Analytics exists to answer one question: what's working, and what isn't?
+
+Most people set up analytics and then check it compulsively without changing anything based on what they see. The data becomes noise. This lesson is about building a minimal, decision-grade data practice — not obsessive dashboard monitoring.
+
+---
+
+## GA4 vs The Alternatives
+
+**Google Analytics 4 (GA4):** Free, powerful, complicated. The industry standard. Required for AdSense optimization and advanced reporting. Has a learning curve.
+
+**Plausible Analytics:** Paid (~₹850/month), simple, privacy-first. No cookie consent banner needed. Shows the data you actually need. Good choice once you have revenue.
+
+**Vercel Analytics:** Free (bundled with Vercel), minimal — page views and Web Vitals. Good for a quick sanity check but not sufficient for business decisions.
+
+**The default choice at zero budget:** GA4. It's free, it integrates with Search Console, and AdSense uses it for revenue attribution.
+
+---
+
+## Setting Up GA4
+
+### Step 1: Create a Google Analytics account
+
+1. Go to analytics.google.com
+2. Sign in with your Google account
+3. Click **Start measuring**
+4. Account name: your business name
+5. Property name: your website name
+6. Reporting time zone: your local time zone
+7. Currency: Indian Rupee (or your local currency)
+
+### Step 2: Set up a data stream
+
+After creating the property:
+1. Choose **Web**
+2. Enter your website URL: `https://yourdomain.com`
+3. Stream name: your site name
+4. Click **Create stream**
+
+Google gives you a **Measurement ID** that looks like `G-XXXXXXXXXX`. Copy this.
+
+### Step 3: Add the tracking code
+
+**For Next.js:** Add the Measurement ID to your environment variables:
+```
+NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+```
+
+Your Analytics component (if it checks for `NEXT_PUBLIC_GA_ID`) will automatically activate.
+
+**For WordPress:**
+1. Install the **Site Kit by Google** plugin (official, free)
+2. Connect it to your Google account
+3. Select your Analytics property
+4. Site Kit adds the tracking code automatically — no manual code editing
+
+### Step 4: Verify it's working
+
+1. Open your website in a browser tab
+2. Open GA4 → Reports → Realtime
+3. You should see yourself as "1 user in last 30 minutes"
+
+If you see yourself, tracking is working.
+
+---
+
+## The Five Metrics That Matter at Launch
+
+Most GA4 reports show 20+ metrics. At launch, with low traffic, most of them are statistical noise. These five tell you what you need to know:
+
+### 1. Sessions (weekly)
+
+A session is one visit to your site. Track this weekly to see if traffic is growing, flat, or declining.
+
+At launch: 50–200 sessions/week is normal for a brand-new site. Focus on growth rate (is it going up over 3 months?) not absolute number.
+
+### 2. Engaged sessions rate
+
+An engaged session is one where the user spent at least 10 seconds on your site, viewed at least 2 pages, or triggered a conversion event.
+
+For a content site: aim for 40–60% engaged session rate. If it's below 30%, either your content isn't matching search intent, or the page experience has a problem.
+
+### 3. Pages per session
+
+On average, how many pages do users view per visit?
+
+A content site with internal links and related articles should get 1.5–2.5 pages per session. Less than 1.2 suggests content isn't keeping people interested enough to explore further.
+
+### 4. Traffic by source
+
+Where does your traffic come from?
+
+| Source | What it means |
+|---|---|
+| Organic Search | Google/Bing — free, SEO-driven |
+| Direct | User typed your URL directly |
+| Referral | Another site linked to you |
+| Social | Traffic from social media platforms |
+
+At launch: most traffic will be Direct (your own visits and shares). Organic Search growing over 3–6 months means SEO is working.
+
+### 5. Top landing pages by sessions
+
+Which pages are actually attracting visitors?
+
+Sort your Pages report by Sessions. The top 3–5 pages are where your traffic comes from. These pages deserve the most attention — improve them, link to related content from them, monitor their performance.
+
+---
+
+## Metrics That Don't Matter at Low Traffic
+
+At under 1,000 monthly sessions, these metrics are unreliable and shouldn't drive decisions:
+
+**Bounce rate / Engagement rate on individual pages:** With 5–20 visits per page, any metric is statistically meaningless. Small sample sizes produce wildly variable numbers.
+
+**Average session duration:** One person who left their tab open inflates this for the whole week. Unreliable at low volume.
+
+**Demographics data:** GA4 requires enough users to show age/gender data — below a threshold, it shows nothing.
+
+**Conversion rates (if you set up goals):** With 3–4 conversions per week, rate percentages are misleading.
+
+Use these metrics once you're at 5,000+ monthly sessions. Before that: look at totals and trends, not rates.
+
+---
+
+## The Weekly Data Review (10 Minutes)
+
+Build a weekly habit: every Monday morning, review last week's data. The entire review takes 10 minutes.
+
+**The checklist:**
+
+1. **Sessions this week vs last week:** Up, down, or flat?
+2. **Top 3 landing pages:** What content is driving traffic?
+3. **Traffic sources:** Is Organic Search growing?
+4. **Any new referrals?** Did someone link to you?
+
+Write one sentence for each. Over time, this becomes a meaningful record of your site's growth.
+
+**What to do with the data:**
+
+| Finding | Action |
+|---|---|
+| One page drives 60%+ of traffic | Add internal links from it to other content; improve it |
+| Traffic from a specific referral | Reach out to that site; build the relationship |
+| Organic search growing steadily | Keep publishing, don't change anything |
+| Organic flat for 3+ months | Review content quality and keyword targeting |
+
+---
+
+## Setting Up Basic Events
+
+GA4 tracks some events automatically:
+- Page views
+- Scroll depth (90% scroll = engaged)
+- Outbound link clicks
+- File downloads
+- Video engagement (YouTube embeds)
+
+For a content business, automatic tracking covers most of what you need. If you're building a tool or app with specific user actions (button clicks, form submissions, search usage), you can add custom events. This requires code changes — use Claude to write the tracking code when you need it.
+
+---
+
+## Privacy, Cookies, and GA4
+
+GA4 uses cookies and collects data that requires GDPR consent in the EU and similar laws in other regions.
+
+**Your practical options:**
+
+**Option 1: Add a cookie consent banner**
+There are free WordPress plugins for this. For Next.js, there are lightweight consent management libraries. This is the compliant approach but adds friction for users.
+
+**Option 2: Switch to Plausible Analytics**
+Plausible is GDPR-compliant without a cookie banner. Data is anonymized. No consent needed. The cost (~₹850/month) is justified once you have revenue.
+
+**For launch:** GA4 without a banner is technically non-compliant in the EU. The enforcement risk for a small new site is low. The practical decision is: if you're primarily targeting Indian or US audiences, proceed with GA4. If you're targeting EU audiences, add a consent banner or switch to Plausible.
+
+---
+
+## Connecting Data to Decisions
+
+The purpose of analytics is not to watch numbers. It's to make better decisions.
+
+**Content decisions:**
+- Posts with high traffic get internal link optimization first
+- Posts with low traffic despite good rankings get improved meta descriptions first
+- Topics generating unexpected organic traffic get dedicated new content
+
+**Business decisions:**
+- Traffic growing but revenue flat → monetization problem, not traffic problem
+- Revenue growing but traffic flat → current content is high-converting; publish more like it
+- High bounce on specific pages → content doesn't match what the visitor expected
+
+**What analytics cannot tell you:**
+- Why users bounce (for that: read your own content critically)
+- What content to write next (for that: Search Console + keyword research)
+- Whether your writing is good (for that: peer review)
+
+Analytics is rearview mirror data. It tells you what happened. Your judgment about what to do next is the irreplaceable part.
+
+---
+
+<Callout type="warn" title="Checking analytics obsessively is a displacement activity">
+The most common analytics mistake is checking data multiple times per day when you have 50 sessions per week. You're watching noise and not building content. Set a once-weekly review cadence and stick to it for the first 6 months. The pattern will not change meaningfully on a daily basis at low traffic volumes. Time spent refreshing the dashboard is time not spent publishing.
+</Callout>
+
+<Callout type="info" title="GA4 learning curve">
+GA4 has a complicated interface. If you can't find something, search for "GA4 [what you want]" on Google — there are clear tutorials for every report. The three reports you'll use most are: Reports → Acquisition → Traffic acquisition (where visitors come from), Reports → Engagement → Pages and screens (which content gets visited), and Realtime (verify tracking works).
+</Callout>
+
+---
+
+<Checkpoint items={[
+  "GA4 account and property created with correct time zone and currency",
+  "Data stream configured for your domain",
+  "Measurement ID added to your site (via env var or Site Kit plugin)",
+  "Realtime report shows at least one active user (your own test visit)",
+  "Weekly review cadence scheduled — specific day and time",
+  "GA4 linked to Google Search Console (for combined reporting)",
+  "Understand the 5 metrics to watch at launch",
+  "Cookie/privacy approach decided for your target audience",
+]} />

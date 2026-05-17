@@ -1,0 +1,216 @@
+---
+title: "AI Tool Stack Under ₹3000/Month"
+description: "The exact tools you need to run a real AI business under ₹3000/month (~$36). What to pay for, what to use free, and what to skip entirely."
+date: "2026-05-18"
+tags: ["ai-business", "tools", "cost", "stack", "beginner"]
+status: "published"
+---
+
+<LessonMeta difficulty="beginner" updated="2026-05-18" />
+
+<LessonObjectives items={[
+  "Identify the exact tools needed to start an AI business — and nothing more",
+  "Build a complete working stack for under ₹3000/month",
+  "Understand which free tiers are production-safe and which are traps",
+  "Create a rule for when to pay for a tool vs when to wait",
+  "Audit your current tool spending and cut what doesn't contribute to revenue",
+]} />
+
+Most people starting an AI business make the same mistake: they spend money on tools before they have a product, users, or revenue.
+
+They buy a landing page builder, an email tool, a CRM, an analytics platform, a design subscription, a scheduling tool, and a "AI writer" that they think will do the work for them. Two months later they're paying ₹12,000/month with zero revenue and nothing to show for it.
+
+This lesson maps the exact minimum viable tool stack — what to use, what to pay, and the decision rule for adding anything new.
+
+---
+
+## The Principle First
+
+**You should be paying for tools that directly generate or protect revenue. Everything else should be free until revenue proves otherwise.**
+
+A tool that "might be useful someday" is a subscription trap. A tool that handles payment processing, keeps your site online, or directly enables the work that generates income — that's justified spend.
+
+At zero revenue: keep total tool cost under ₹1500/month.  
+At ₹10,000/month revenue: you can justify up to ₹3000/month in tools.  
+At ₹50,000/month revenue: a full professional stack at ₹8,000–15,000/month is reasonable.
+
+This lesson covers the zero-to-first-revenue stack.
+
+---
+
+## The Minimum Viable Stack
+
+### 1. AI Assistant — Claude Pro: ~₹1700/month
+
+Claude Pro (~$20/month) is the single most justified paid tool in this stack. It gives you:
+
+- Claude for writing, research, planning, and analysis
+- Claude Code access for building software with AI
+- Higher rate limits for heavy usage
+- Access to Claude's best model (Sonnet / Opus)
+
+**Why Claude specifically:** The combination of writing quality, coding ability, and the Claude Code CLI makes it useful for both content work and software work. If you're building something, you need both.
+
+**Free alternative:** Claude Free tier exists but rate-limits aggressively. Gemini and ChatGPT free tiers are workable for early exploration. But if you're building a real business, pay for Claude Pro.
+
+**Cost discipline:** ₹1700/month. Use it for everything — writing, research, strategy, code. Do not add additional AI tools on top of this. One AI subscription, not five.
+
+### 2. Hosting — Hostinger Business: ~₹400–600/month (billed annually)
+
+For WordPress-based businesses (most beginner AI businesses should start here):
+
+- Hostinger Business plan: ~₹400–600/month when billed annually (~₹5000–7000/year)
+- Includes WordPress install, LiteSpeed server, SSL, free domain for 1 year
+- Handles 50,000+ monthly visitors on a well-optimised WordPress site
+
+**Why not Bluehost/GoDaddy:** They charge similar prices but are significantly slower. LiteSpeed cache on Hostinger measurably improves page speed, which affects both rankings and AdSense RPM.
+
+**Why not "cloud hosting" (AWS/DigitalOcean):** Too much configuration overhead when you're starting. Managed WordPress hosting is faster to get online and maintain.
+
+**If you're building a Next.js app instead of WordPress:**  
+Vercel Hobby is free. Your hosting cost becomes ₹0 for the application layer.
+
+### 3. Version Control + Deployment — GitHub + Vercel: Free
+
+- **GitHub Free:** Unlimited public and private repositories, GitHub Actions (2,000 minutes/month), Issues, Projects
+- **Vercel Hobby:** Unlimited SSG/SSR deployments, 100GB bandwidth/month, custom domains, SSL, preview deployments
+
+For a content site, app, or tool — this combination handles everything for free. Vercel's Hobby plan is genuinely production-capable for sites up to ~500,000 monthly requests.
+
+**When Vercel Hobby breaks:** If your app needs long-running serverless functions (>10s), or you exceed 100GB bandwidth. At that traffic level, you have revenue to pay for Vercel Pro (~$20/month).
+
+### 4. Domain — ~₹700–1500/year
+
+Buy once, renew annually. A `.com` from Namecheap or the domain included with Hostinger.
+
+- `.com` is still the default for credibility
+- Country code domains (`.in`, `.co.uk`) work for local-market businesses
+- Don't buy multiple domains "just in case" — one domain, commit to it
+
+**Cost:** ~₹60–125/month (amortized annually). This is non-negotiable spend.
+
+### 5. Email — Google Workspace Starter: ₹125/month per user
+
+A `you@yourdomain.com` email address is a basic credibility signal. You cannot run a real business from a Gmail or Outlook personal account.
+
+Google Workspace Starter at ₹125/month per user gives you:
+- Professional email on your domain
+- 30GB storage
+- Google Meet (basic)
+
+This is the only email cost at launch. One account. You don't need multiple users until you hire.
+
+**Free alternative:** Zoho Mail has a free tier for up to 5 users. Works fine. Slightly less reliable than Google. Acceptable for first 6 months.
+
+---
+
+## Full Cost Breakdown
+
+| Tool | Monthly Cost | Notes |
+|---|---|---|
+| Claude Pro | ₹1,700 | Non-negotiable — your AI capability |
+| Hostinger Business | ₹500 | WordPress-based businesses |
+| OR Vercel Hobby | ₹0 | Next.js / app-based businesses |
+| Domain | ₹90 | Amortized annual cost |
+| Google Workspace | ₹125 | Professional email |
+| GitHub | ₹0 | Version control, CI |
+| Plausible Analytics | ₹0 | Free tier (10k pageviews/month) |
+| **Total (WordPress route)** | **~₹2,415/month** | |
+| **Total (Next.js/Vercel route)** | **~₹1,915/month** | |
+
+Both under ₹3000/month. Both production-capable.
+
+---
+
+## Tools You Don't Need at Launch
+
+This is as important as knowing what to buy.
+
+**Landing page builders (Webflow, Framer, Leadpages):** If you have WordPress or a Next.js app, you don't need a separate landing page tool. Build it where your site lives.
+
+**CRM (HubSpot, Pipedrive, Salesforce):** At zero to 100 customers, a spreadsheet is a better CRM than any SaaS CRM. The overhead of setting up a CRM at launch delays shipping.
+
+**Email marketing platform (Mailchimp, ConvertKit, Beehiiv):** Mailchimp free tier (up to 500 contacts, 1000 emails/month) is enough until you have a real list. Don't pay for email tools until your list is actively converting to revenue.
+
+**Social media schedulers (Buffer, Hootsuite):** Manual posting is fine at launch. Automation of distribution comes after you know what content is working.
+
+**"AI writing tools" (Jasper, Copy.ai, etc.):** Claude Pro does everything these tools do, usually better. You already have it.
+
+**Project management (Notion, ClickUp, Asana):** A single Notion free account is fine. Don't pay for project management tools with a team of one.
+
+**Design tools (Canva Pro):** Canva Free is enough for 90% of what a one-person business needs. Pay for Canva Pro only when you're producing design work at high volume and the free limitations are actually costing you time.
+
+---
+
+## The Tool Addition Rule
+
+Before adding any new subscription, answer these three questions:
+
+1. **What specific problem does this tool solve that I cannot solve with my current stack?**
+2. **What is the free or lower-cost alternative?**
+3. **What is the minimum revenue at which this tool cost justifies itself?**
+
+If you can't answer all three clearly, don't add the tool.
+
+The most common trap: adding tools because you read about them, because they seem professional, or because a competitor uses them. None of those are reasons to spend money.
+
+---
+
+## Practical: Audit Your Current Spending
+
+If you already have tool subscriptions, do this now:
+
+1. List every SaaS subscription you pay for
+2. For each: what was the last time you used it in the past 30 days?
+3. For each: does it directly contribute to revenue or content output?
+4. Cancel everything you haven't used in 30 days or can't connect to a revenue outcome
+
+Most people who do this audit find ₹2,000–5,000/month of subscriptions they're paying for but not actively using.
+
+---
+
+## What Changes When Revenue Arrives
+
+Once you're generating ₹10,000+/month consistently:
+
+- **Plausible Analytics paid:** ₹850/month for full analytics without cookie banners
+- **Better email tool:** ConvertKit Creator plan for more powerful sequences
+- **Vercel Pro:** If your Next.js app is hitting Hobby limits
+- **Domain + hosting upgrade:** Hostinger VPS if traffic grows beyond shared hosting limits
+
+The discipline is not about being cheap — it's about not paying for capacity before you need it.
+
+---
+
+<Callout type="warn" title="The subscription creep problem">
+Every new tool subscription requires ongoing maintenance: reading changelogs, handling billing issues, managing credentials, migrating data if you switch. The operational overhead of 10 subscriptions is real even if none of them are expensive. Start with the minimum. Add only when the pain of not having it is concrete and specific.
+</Callout>
+
+<Callout type="info" title="Currency note">
+This lesson uses ₹ (Indian Rupees) as the primary currency because that's the market context for this track. At the time of writing: ₹3000 ≈ $36 ≈ €33. The tool choices and logic apply in any currency — the principle is the same. Spend on capability, not on infrastructure you haven't earned yet.
+</Callout>
+
+---
+
+## Failure Patterns
+
+**Paying for tools before validating the business.** The business idea needs to be tested before the tool stack is built. Don't buy hosting for a product idea that hasn't been shown to anyone.
+
+**Adding tools to solve operational problems instead of fixing the real problem.** If content isn't converting, adding a better email tool won't fix it. If traffic isn't growing, adding a scheduler won't fix it. Tools amplify execution — they don't replace it.
+
+**"Annual plan" traps on unproven tools.** Annual plans are cheaper per month but lock you in. Don't take an annual plan on any tool you haven't used for at least 3 months on a monthly plan.
+
+**Buying "professional" tools to feel like a professional.** A ₹5000/month CRM does not make your business more real. Revenue makes your business more real.
+
+---
+
+<Checkpoint items={[
+  "Listed every current tool subscription with monthly cost",
+  "Cancelled any subscription unused in the past 30 days",
+  "Confirmed total tool spend is under ₹3000/month",
+  "Claude Pro (or free equivalent) is your primary AI tool — not multiple AI subscriptions",
+  "Hosting decision made: Hostinger (WordPress) or Vercel free (Next.js/app)",
+  "Domain purchased and pointing to hosting",
+  "Professional email address active on your domain",
+  "GitHub account created and linked to deployment",
+]} />

@@ -1,0 +1,260 @@
+---
+title: "Claude + WordPress Operational Workflow"
+description: "The exact workflow for using Claude to run a WordPress content business — from research to published post, without writing a word manually."
+date: "2026-05-18"
+tags: ["ai-business", "claude", "wordpress", "content", "workflow", "operations"]
+status: "published"
+---
+
+<LessonMeta difficulty="beginner" updated="2026-05-18" />
+
+<LessonObjectives items={[
+  "Build a repeatable research-to-publish workflow using Claude",
+  "Understand what Claude does well in content work versus where it fails",
+  "Set up WordPress for AI-assisted publishing without extra plugins",
+  "Create a content brief template that produces consistent quality output",
+  "Establish quality control steps that catch AI errors before they go live",
+]} />
+
+The highest-leverage way to run a content business with one person is to use Claude for every stage of the content pipeline — from topic research to final editing — while you operate as the quality control layer, not the writer.
+
+This lesson maps the operational workflow. Not the theory. The actual step-by-step sequence you run for every piece of content.
+
+---
+
+## What This Workflow Produces
+
+A content business needs, at minimum:
+- A consistent publishing cadence (weekly or more)
+- Content that answers real search queries
+- Posts that are accurate, specific, and non-generic
+- A site that grows in authority over time
+
+This workflow produces that using Claude Pro + WordPress. No additional tools. No content teams. One person, one AI subscription.
+
+---
+
+## The Content Pipeline: 5 Stages
+
+Every piece of content follows the same five stages:
+
+```
+1. Topic Research → What to write
+2. Brief Creation → What the post covers
+3. Content Generation → Draft with Claude
+4. Editing Pass → Quality control
+5. Publishing → WordPress + SEO basics
+```
+
+Each stage has a specific Claude prompt pattern and a specific human task.
+
+---
+
+## Stage 1: Topic Research
+
+### Your Task
+Find topics that have real search demand, aren't dominated by huge sites, and match your niche.
+
+### Claude's Role
+Analyze and expand a topic list you bring in. Claude is not a keyword research tool — it cannot tell you real search volume. But it can:
+- Help you understand search intent behind a topic
+- Generate related subtopics and question variations
+- Identify which angles are more or less competitive
+- Tell you what aspects of a topic have not been well-covered
+
+### Tools You Actually Need for Research
+- **Google Search itself:** Type your topic and look at autocomplete, People Also Ask, and Related Searches. These are real queries from real users.
+- **Ubersuggest free tier:** Basic keyword volume data, free, no credit card
+- **Google Search Console (once you have traffic):** Shows you what queries already bring people to your site
+
+### How to Use Claude for Research
+
+After you have a list of potential topics from actual search research, bring them to Claude:
+
+> "I'm writing a content site about [niche]. Here are 10 topics I'm considering: [list]. For each one, tell me: what specific question is the searcher asking, what they already know before they search, and what answer would fully satisfy them. Then rank these from most to least specific."
+
+Claude's output tells you which topics have a clear, answerable question (good) versus which are vague interest areas (harder to rank for).
+
+---
+
+## Stage 2: Brief Creation
+
+This is the most important stage. A good brief produces good content. A vague brief produces generic content that ranks for nothing.
+
+### What a Brief Contains
+
+```
+Topic: [exact topic]
+Primary keyword: [the search phrase you're targeting]
+Search intent: [what does someone searching this want to accomplish?]
+Target reader: [who specifically — their knowledge level, their situation]
+Competing content gaps: [what existing posts miss or get wrong]
+Required sections: [specific H2s the post must cover]
+Required specifics: [exact tools, versions, prices, examples that must appear]
+Word count target: [minimum to fully answer the topic]
+What NOT to include: [generic advice, filler sections, obvious statements]
+```
+
+### Brief Template Prompt for Claude
+
+> "Help me create a content brief for a post targeting the keyword '[keyword]'. The reader is [describe reader]. Create a brief with: (1) clear search intent statement, (2) 5-7 required H2 sections that address sub-questions in depth, (3) list of specific facts, tools, prices, or examples that MUST be included for the post to be useful, (4) list of generic points this post should NOT include. Format as a structured brief I can use as input to write the post."
+
+Review the brief. Add anything you know from personal experience. Remove anything that doesn't fit your actual niche.
+
+---
+
+## Stage 3: Content Generation
+
+With a solid brief, content generation with Claude is systematic.
+
+### The Generation Prompt
+
+> "Write a [word count] word article for this brief: [paste brief]. 
+>
+> Writing rules:
+> - Every section must give specific, actionable information — no filler
+> - Use real numbers, real tool names, real price ranges
+> - Write for someone who wants to actually do this, not someone who wants a summary
+> - No phrases like 'in today's digital landscape', 'in conclusion', 'it's important to note'
+> - Start each section with the most important sentence, not context-setting
+> - Do not hedge every statement — make clear claims
+>
+> Format: Markdown with H2 and H3 headings, short paragraphs (3-4 sentences max), bullet lists only when listing genuinely discrete items."
+
+### What Claude Gets Right in Content
+
+- Logical structure and flow
+- Comprehensive coverage of a topic it knows well
+- Consistent formatting
+- Avoiding obvious factual errors on well-documented topics
+- Matching a specific voice if you give examples
+
+### What Claude Gets Wrong in Content
+
+**This is critical. You must check every piece for these.**
+
+1. **Outdated information.** Claude's training data has a cutoff. Prices change. Tools get updated. Features disappear. Any specific number or product detail needs manual verification.
+
+2. **Fake specificity.** Claude sometimes generates plausible-sounding but incorrect specific claims: "Studies show 73% of users..." — if you didn't provide that statistic, Claude may have generated it. Remove any statistic you didn't verify.
+
+3. **Generic phrasing in technical content.** Even with strict instructions, some generic sentences slip through. Edit them out.
+
+4. **Wrong SEO targeting.** Claude doesn't know your actual keyword strategy. It will write naturally but may optimize for the wrong phrase variation. Adjust headings and opening paragraphs to match your target keyword.
+
+---
+
+## Stage 4: Editing Pass
+
+This is your main job. Not writing. Editing.
+
+### The Editing Checklist
+
+**Accuracy pass:**
+- [ ] Every specific price/cost is verified against the current source
+- [ ] Every tool mentioned still exists and works as described
+- [ ] No statistics or percentages appear unless you added them
+- [ ] Any claims about "best practices" or "most" or "typically" are defensible
+
+**Quality pass:**
+- [ ] The first paragraph earns the reader's attention — no preamble
+- [ ] Every H2 section delivers on its heading's promise
+- [ ] No section is padding — each adds something not covered elsewhere
+- [ ] Remove any sentence that doesn't add information
+
+**SEO pass:**
+- [ ] Primary keyword appears in the title, first paragraph, and at least one H2
+- [ ] Title is specific and click-worthy (not generic)
+- [ ] Meta description is written (100–150 characters, includes keyword)
+- [ ] Internal links added to 2–3 related posts on your site
+
+**Length check:**
+- For informational posts: 1,200–2,500 words is usually right
+- For comprehensive guides: 2,500–5,000 words
+- More words is not better — every word should earn its place
+
+---
+
+## Stage 5: WordPress Publishing
+
+### Required Setup in WordPress
+
+Before you publish anything, these should be configured:
+
+1. **Yoast SEO or Rank Math** (free tier of either) — handles meta descriptions, XML sitemap, structured data
+2. **WP Rocket or LiteSpeed Cache** — page caching for speed. Hostinger Business includes LiteSpeed, so LiteSpeed Cache plugin is free and integrated.
+3. **Short Pixel or Imagify** (free tier) — compress images before they slow your pages
+
+### The Publishing Checklist
+
+- [ ] Title set — matches what you wrote the brief for
+- [ ] Meta description written in Yoast/Rank Math
+- [ ] Featured image added (1200×630px, relevant, compressed)
+- [ ] Category assigned
+- [ ] Tags added (3–5, specific to the topic)
+- [ ] URL slug checked — should be clean, keyword-containing (e.g., `/how-to-use-claude-for-seo`)
+- [ ] All internal links working
+- [ ] Preview checked on mobile and desktop
+- [ ] Published, not draft
+
+---
+
+## Your Weekly Operating Rhythm
+
+Running this workflow weekly:
+
+| Day | Task | Time |
+|---|---|---|
+| Monday | Topic selection for the week | 30 min |
+| Tuesday | Brief creation (1–2 posts) | 45 min |
+| Wednesday | Generate drafts in Claude | 30 min |
+| Thursday | Editing pass | 60 min |
+| Friday | Publish + update internal links | 30 min |
+
+Total: ~3–3.5 hours per week for 1–2 published posts. This is achievable alongside a full-time job.
+
+---
+
+## Scaling the Volume
+
+Once the workflow is running smoothly, you can increase output without increasing time proportionally:
+
+**Batching:** Create 5 briefs in one session, generate all 5 drafts back-to-back, edit them over two days.
+
+**Template refinement:** As you edit, note what errors Claude makes repeatedly in your niche. Update your generation prompt to prevent them. Over time, the editing pass gets faster.
+
+**Reuse structure:** Long guides can be built by generating sections separately with targeted prompts, then assembling them.
+
+---
+
+<Callout type="warn" title="The most common mistake">
+Using Claude output directly without an editing pass. This produces content that reads fine but fails in two specific ways: (1) outdated or invented specific claims that damage your credibility when readers notice, (2) generic quality that doesn't differentiate your site from the dozens of other AI-generated content farms covering the same topic. Your editing pass is what makes your content worth reading.
+</Callout>
+
+<Callout type="lab" title="Practical exercise">
+Run this workflow once end-to-end before optimizing anything. Pick one topic you know reasonably well, create the brief, generate the draft, do the editing pass, and publish it. The first run will take 3x longer than the rhythm above — that's expected. The second run will be faster. By the fifth run, the rhythm will feel natural.
+</Callout>
+
+---
+
+## What About Images?
+
+For a content business at zero budget:
+
+- **Unsplash, Pexels, Pixabay:** Free stock photography, no attribution required
+- **Canva Free:** For simple featured images, infographics, or annotated screenshots
+- **Your own screenshots:** For how-to content, your own screenshots are more credible than stock photos
+
+Do not spend money on stock photo subscriptions until you're generating revenue.
+
+---
+
+<Checkpoint items={[
+  "WordPress installed on Hostinger with LiteSpeed Cache active",
+  "Yoast SEO or Rank Math installed and configured",
+  "Content brief template saved and ready to use",
+  "Claude generation prompt tested on one piece of content",
+  "Editing checklist saved — running it on every post before publishing",
+  "First post published following the full 5-stage workflow",
+  "Weekly rhythm scheduled — specific days/times blocked",
+  "Category and tag structure set up in WordPress",
+]} />

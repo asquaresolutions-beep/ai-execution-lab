@@ -1,0 +1,297 @@
+---
+title: "Free-Tier Infrastructure Architecture"
+description: "How to build a production-capable infrastructure for ₹0/month using GitHub, Vercel, and Cloudflare free tiers — and exactly where each free tier breaks."
+date: "2026-05-18"
+tags: ["ai-business", "infrastructure", "free-tier", "vercel", "github", "cloudflare"]
+status: "published"
+---
+
+<LessonMeta difficulty="beginner" updated="2026-05-18" />
+
+<LessonObjectives items={[
+  "Understand exactly what GitHub, Vercel, and Cloudflare free tiers include",
+  "Build a complete production infrastructure at ₹0 in hosting costs",
+  "Know precisely where each free tier breaks — before you hit the limit",
+  "Choose between WordPress hosting and the free-tier Next.js stack",
+  "Set up your infrastructure in the right order to avoid rework",
+]} />
+
+Most beginners think free tiers are watered-down trial versions. For infrastructure, that's wrong. The free tiers of GitHub, Vercel, and Cloudflare are genuinely production-capable for early-stage businesses — they're not demos, they're the actual product with usage limits.
+
+This lesson maps what each free tier actually gives you, what breaks when, and how to build a complete infrastructure architecture that costs nothing in hosting until you're generating revenue.
+
+---
+
+## The Three-Layer Free Stack
+
+A complete web business needs three infrastructure layers:
+
+1. **Code storage and history** — where your files live and change over time
+2. **Build and deployment** — where your code becomes a live website
+3. **DNS and CDN** — how traffic reaches your site and how fast it loads
+
+The free stack covers all three:
+
+| Layer | Tool | Free Tier Limit |
+|---|---|---|
+| Code storage | GitHub Free | Unlimited repos, 2,000 CI minutes/month |
+| Deployment | Vercel Hobby | 100GB bandwidth, unlimited deployments |
+| DNS + CDN | Cloudflare Free | Unlimited bandwidth, global CDN |
+
+Each of these is a legitimate production tool used by funded startups. "Free" here doesn't mean "for learning" — it means the company is betting that once you scale, you'll pay.
+
+---
+
+## Layer 1: GitHub Free
+
+### What You Get
+
+- Unlimited public and private repositories
+- 2,000 GitHub Actions CI/CD minutes per month
+- GitHub Issues for bug tracking and task management
+- GitHub Projects for lightweight kanban boards
+- GitHub Pages for static site hosting (alternative to Vercel for pure static sites)
+
+### What This Means Practically
+
+For a one-person business: you will not exceed 2,000 CI minutes per month unless you're running very heavy automated testing on every commit. A typical Next.js build takes 2–4 minutes of Actions time. At 20 deployments per month, that's 40–80 minutes — well inside the limit.
+
+### Where GitHub Free Breaks
+
+- **Storage:** Large files (videos, high-res assets) should not be committed to Git. Use external storage. Git is for code, not media.
+- **Actions minutes:** If you add automated testing suites, you can approach the limit. Cross that bridge when you have tests to run.
+- **Team features:** Private repos have limited code review tooling on Free. Not relevant for solo work.
+
+### Setup Rule
+
+Create one GitHub account. Use it for everything. Do not create separate accounts for separate projects — use repositories within one account.
+
+---
+
+## Layer 2: Vercel Hobby
+
+### What You Get
+
+Vercel Hobby is the most generous free tier in web infrastructure. It includes:
+
+- **Unlimited deployments** — every `git push` triggers a deploy
+- **100GB bandwidth per month** — approximately 1 million page views for a typical content site
+- **Serverless functions** — up to 10 second execution time per request, 100GB-hours compute/month
+- **Preview deployments** — every branch gets a unique URL for testing
+- **Custom domains with SSL** — your domain, free SSL certificate, auto-renews
+- **Edge Network** — Vercel's CDN serves your site from ~100 global locations
+- **Analytics (basic)** — page view tracking without additional setup
+
+### What This Means Practically
+
+For a Next.js app or content site: 100GB bandwidth is approximately:
+- 1 million page views at 100KB average page weight
+- 500,000 page views at 200KB average page weight
+
+A content site generating ₹10,000/month in AdSense typically needs around 50,000–100,000 monthly visits. That's 5–20GB bandwidth — you're nowhere near the limit.
+
+### Where Vercel Hobby Breaks
+
+**1. Serverless function execution time (10 second limit)**
+
+If you're building an API that calls an AI model and waits for the response, you can hit 10 seconds. Solutions:
+- Stream the response instead of waiting for completion
+- Move long-running operations to background jobs
+- Use a different architecture (not Vercel functions) for heavy AI operations
+
+**2. 100GB bandwidth**
+
+At approximately 500,000+ monthly page views, you'll exceed this. At that traffic level, you have revenue to justify Vercel Pro (~$20/month). Don't pre-optimize for this.
+
+**3. Team collaboration**
+
+Vercel Hobby is for one person. For team deployments, Vercel Pro is required. Not relevant at launch.
+
+**4. Build cache**
+
+Hobby builds have less caching than Pro builds, meaning slightly slower build times. Irrelevant for most projects.
+
+### What Vercel Does Not Require
+
+- Credit card to start
+- Code changes to deploy
+- Manual SSL renewal
+- Server management
+
+---
+
+## Layer 3: Cloudflare Free
+
+### What You Get
+
+Cloudflare's free tier handles DNS and CDN:
+
+- **DNS hosting** — faster DNS resolution than most domain registrars' default nameservers
+- **CDN** — static assets cached at global edge locations
+- **DDoS protection** — automatic, always-on
+- **SSL** — automatic HTTPS between visitor and Cloudflare edge
+- **Unlimited bandwidth** — Cloudflare free tier has no bandwidth limit (unlike Vercel)
+- **Analytics** — basic visitor data without cookies
+
+### When to Use Cloudflare
+
+For a Vercel-hosted site: Cloudflare is optional but beneficial. Here's the architecture:
+
+```
+Visitor → Cloudflare DNS → Vercel Edge Network → Your App
+```
+
+Vercel already has its own CDN. Adding Cloudflare in front adds another caching layer and gives you Cloudflare's DDoS protection. For most early-stage sites, this is not necessary — Vercel's infrastructure alone handles it.
+
+**Use Cloudflare if:**
+- You're on Hostinger WordPress (Cloudflare significantly improves performance)
+- You want to add Page Rules or redirect rules without code changes
+- You're getting bot traffic and want filtering
+
+**Skip Cloudflare initially if:**
+- You're on Vercel (their CDN is already global)
+- You want to minimize configuration complexity at launch
+
+---
+
+## The Two Architecture Paths
+
+### Path A: WordPress + Hostinger (~₹500/month)
+
+```
+Domain (Namecheap or Hostinger) 
+  → Cloudflare DNS (optional but recommended)
+  → Hostinger LiteSpeed server
+  → WordPress
+```
+
+**Use this when:**
+- Your business is primarily content (blog, niche site, informational)
+- You don't need custom code or dynamic features
+- You want a CMS to manage content without touching files
+- You're familiar with WordPress
+
+**Cost:** ₹500/month hosting + ₹90/month amortized domain = ~₹590/month
+
+### Path B: Next.js + Vercel Hobby (₹0/month hosting)
+
+```
+Domain (Namecheap)
+  → Vercel DNS / custom domain
+  → Vercel Edge Network
+  → Next.js App
+```
+
+**Use this when:**
+- Your business needs custom functionality (tools, apps, dashboards)
+- You're using AI APIs to build interactive features
+- You want fine-grained control over performance and rendering
+- You're comfortable working with code or using Claude to write it
+
+**Cost:** ₹0 hosting + ₹90/month amortized domain = ~₹90/month
+
+---
+
+## Building the Free Stack: Step-by-Step
+
+### Step 1: GitHub account and repository
+
+1. Go to github.com — create account with your real name or business name
+2. Create a new repository: your project name, private, initialize with README
+3. This is your master copy of all code
+
+### Step 2: Connect to Vercel
+
+1. Go to vercel.com — sign up with your GitHub account (SSO)
+2. Click "Add New Project" → Import your GitHub repository
+3. Vercel auto-detects Next.js and configures build settings
+4. First deployment happens automatically
+
+### Step 3: Add custom domain
+
+1. In Vercel project settings → Domains → Add your domain
+2. Vercel gives you DNS records (usually a CNAME pointing to `cname.vercel-dns.com`)
+3. In your domain registrar, update the DNS record
+4. Propagation takes 0–48 hours (usually under 1 hour)
+
+### Step 4: Verify SSL
+
+After DNS propagates, Vercel auto-provisions an SSL certificate. Your site is now:
+- Live on your domain
+- HTTPS by default
+- Globally cached via Vercel's CDN
+
+---
+
+## The Deployment Workflow
+
+After initial setup, your workflow for every change is:
+
+```
+Edit code locally
+  → git commit -m "what you changed"
+  → git push
+  → Vercel auto-deploys (2–4 minutes)
+  → Changes live on your domain
+```
+
+Every push to your main branch triggers a production deployment. Every push to any other branch creates a preview URL at `your-project-branch.vercel.app`.
+
+This means you can test changes before they go live without any additional infrastructure.
+
+---
+
+## What "Production-Capable" Actually Means
+
+Free tiers are production-capable with specific constraints. To set accurate expectations:
+
+**What free infrastructure handles:**
+- Any amount of content pages
+- Standard web traffic up to ~500,000 page views/month
+- Form submissions, contact pages, basic API calls
+- SEO, sitemaps, structured data, metadata
+- Media served from external sources (YouTube embeds, CDN-hosted images)
+
+**What requires paid infrastructure:**
+- Very high traffic (1M+ monthly page views)
+- Long-running AI operations (video generation, large-scale processing)
+- Large file storage (media hosting, user uploads)
+- Complex real-time features (WebSockets, live dashboards)
+- Multi-region database requirements
+
+None of those constraints apply to a business in its first 6–12 months.
+
+---
+
+<Callout type="warn" title="The 'production' confusion">
+Many beginners assume that because something is free, it's not production-grade. This is wrong. The free tiers of GitHub, Vercel, and Cloudflare are what most small-to-medium businesses run on for years. "Production-grade" means reliable, secure, scalable enough for your current load — not expensive. A ₹50,000/month server is not more production-grade than Vercel Hobby if your traffic doesn't require it.
+</Callout>
+
+<Callout type="info" title="When to upgrade">
+Upgrade Vercel from Hobby to Pro (~$20/month) when: you're hitting bandwidth limits consistently, you need functions longer than 10 seconds, or you need team collaboration features. Do not upgrade before you hit actual limits. The Vercel dashboard shows your usage clearly — you'll see it coming.
+</Callout>
+
+---
+
+## Common Setup Mistakes
+
+**Buying hosting before deciding on the architecture.** Pick your path (WordPress or Next.js) before spending money. They have different cost profiles and different capability tradeoffs.
+
+**Using GitHub Desktop instead of learning basic git commands.** You only need five commands: `git init`, `git add .`, `git commit -m ""`, `git push`, `git pull`. Learn these before reaching for a GUI tool.
+
+**Not setting up a custom domain immediately.** Your site should live at your domain from day one. Never publish content on a Vercel `.vercel.app` subdomain or Hostinger's default domain — search engines count content at the subdomain as the primary location, and migrating later means losing whatever ranking you've built.
+
+**Connecting the wrong repository to Vercel.** If you have multiple GitHub repos, double-check that you're deploying the right one. This is a wasted-hour mistake that happens more than it should.
+
+---
+
+<Checkpoint items={[
+  "GitHub account created — one account, not multiple",
+  "Primary project repository created and code pushed",
+  "Vercel account created via GitHub SSO",
+  "Project imported to Vercel — first deployment successful",
+  "Custom domain purchased and pointed to Vercel",
+  "SSL active — site accessible at https://yourdomain.com",
+  "Architecture path chosen: WordPress/Hostinger OR Next.js/Vercel",
+  "Know your Vercel Hobby bandwidth usage (check Vercel dashboard)",
+]} />

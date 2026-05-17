@@ -1,0 +1,221 @@
+---
+title: "Google Search Console Setup"
+description: "How to set up Google Search Console, submit your sitemap, and use it as your primary signal for what content to write next — the right way to think about organic traffic."
+date: "2026-05-18"
+tags: ["ai-business", "seo", "google-search-console", "organic-traffic", "beginner"]
+status: "published"
+---
+
+<LessonMeta difficulty="beginner" updated="2026-05-18" />
+
+<LessonObjectives items={[
+  "Verify your site in Google Search Console within 24 hours of launch",
+  "Submit your sitemap so Google indexes your content actively",
+  "Understand the four key reports that matter at launch",
+  "Use the Search Results report to identify content opportunities",
+  "Recognize and respond to crawl errors before they affect rankings",
+]} />
+
+Google Search Console is a free tool that tells you exactly how Google sees your site: what pages it has indexed, what search queries bring visitors, what errors it found during crawling, and how your pages perform in results.
+
+It's the most direct feedback loop between your site and Google. Every content business needs it set up from day one.
+
+---
+
+## What Google Search Console Is Not
+
+Before covering what it does, clarify what it isn't:
+
+**It is not a live analytics tool.** It shows search performance data with a 2–3 day delay. For live traffic, use Plausible Analytics or Google Analytics.
+
+**It is not a ranking tracker.** It shows average position in search results over a date range, not your exact rank for a specific query on a specific day.
+
+**It is not a keyword research tool.** It shows what you're already ranking for, not what you should target. Keyword research happens before you write.
+
+What it *is*: the authoritative source for how Google sees and indexes your site.
+
+---
+
+## Step 1: Add Your Property
+
+1. Go to search.google.com/search-console
+2. Sign in with your Google account (the same one you'll use for all business tools)
+3. Click **Add Property**
+4. Choose **Domain** property type (not URL prefix)
+   - Domain: `yourdomain.com` (no www, no https)
+   - This covers all subdomains and protocols automatically
+
+---
+
+## Step 2: Verify Ownership
+
+Google needs proof you own the domain before showing you data.
+
+**Recommended method: DNS TXT record**
+
+1. After entering your domain, Google shows you a TXT record: something like `google-site-verification=xxxxxxxxxxx`
+2. Log in to your domain registrar (Namecheap, Hostinger, etc.)
+3. Add a new DNS record:
+   - **Type:** TXT
+   - **Host/Name:** `@` (root domain)
+   - **Value:** Paste the verification code Google gave you
+   - **TTL:** 3600 (or leave as default)
+4. Click Save
+5. Go back to Search Console and click **Verify**
+
+DNS TXT records propagate within minutes to a few hours. If verification fails immediately, wait 30 minutes and try again.
+
+**Why DNS over other methods?** DNS verification is persistent — it doesn't break if you change themes, frameworks, or hosting providers. HTML file and meta tag methods break when you change your site structure.
+
+---
+
+## Step 3: Submit Your Sitemap
+
+A sitemap is a file that lists all your pages so Google doesn't have to discover them by crawling links.
+
+### Finding your sitemap URL
+
+- **Next.js:** `https://yourdomain.com/sitemap.xml` (if you've implemented `app/sitemap.ts`)
+- **WordPress + Yoast SEO:** `https://yourdomain.com/sitemap_index.xml`
+- **WordPress + Rank Math:** `https://yourdomain.com/sitemap_index.xml`
+
+Verify the URL exists by opening it in a browser. You should see XML content listing your pages.
+
+### Submitting in Search Console
+
+1. In Search Console, click **Sitemaps** (left sidebar, under Indexing)
+2. Enter your sitemap URL in the field (just the path: `sitemap.xml`)
+3. Click **Submit**
+
+Google will show the sitemap status — how many URLs it found and whether any errors occurred.
+
+**Expected timeline:** Google starts crawling submitted pages within 24–72 hours. Full indexing of a new site typically takes 2–6 weeks. This is normal. New domains don't get indexed instantly.
+
+---
+
+## The Four Reports That Matter
+
+### 1. Performance → Search Results
+
+**What it shows:** Which queries bring impressions and clicks to your site, which pages rank, and what position they rank at.
+
+**How to use it:**
+
+Open this report after your site has been live for at least 4 weeks. Look for:
+
+- **High impressions, low clicks:** Your page appears in search results but users aren't clicking. Check the title and meta description — they may not be compelling enough.
+
+- **Low position (11–20):** Pages ranking on page 2. These are the best candidates for improvement — a small quality upgrade can push them to page 1.
+
+- **Unexpected queries:** Sometimes your content ranks for queries you didn't target. These are opportunities to write dedicated content for those topics.
+
+### 2. Indexing → Pages
+
+**What it shows:** How many pages are indexed vs. not indexed, and why non-indexed pages were excluded.
+
+**Why pages might not be indexed:**
+- `noindex` tag — intentional (e.g., admin pages). Check this is only on pages you meant to exclude.
+- Crawled, not indexed — Google visited the page but decided it wasn't worth indexing. Usually means thin content, duplicate content, or very new pages not yet deemed authoritative.
+- Discovered, not crawled — Google knows the page exists but hasn't visited it yet. Normal for new pages.
+
+If important pages show as "Crawled - currently not indexed," the content may need to be more substantive and specific.
+
+### 3. Indexing → Sitemaps
+
+**What it shows:** Status of submitted sitemaps — whether they were processed successfully and how many URLs were found.
+
+Check here after submission to confirm Google accepted your sitemap. A success state means Google is aware of your pages.
+
+### 4. Experience → Core Web Vitals
+
+**What it shows:** Whether your pages pass Google's performance thresholds (Largest Contentful Paint, Cumulative Layout Shift, Interaction to Next Paint).
+
+For a new site: check this after 4+ weeks when you have enough data. If pages fail, it's typically one of:
+- Unoptimized images (fix: compress images, use appropriate dimensions)
+- Layout shift from elements that move during load (fix: set explicit width/height on images and embeds)
+- Slow server response (fix: caching, CDN)
+
+For a Next.js site on Vercel: you'll typically pass LCP and CLS by default. For WordPress on Hostinger: LiteSpeed Cache resolves most issues.
+
+---
+
+## The Content Feedback Loop
+
+After 6–8 weeks of live content, the Search Results report becomes a content strategy tool.
+
+**The process:**
+
+1. Open Performance → Search Results
+2. Filter by date: last 28 days
+3. Sort by Impressions descending
+4. Look for queries in positions 5–20 with meaningful impressions but few clicks
+
+These are topics where Google thinks your content is relevant, but hasn't given it top placement yet. They're your existing footholds.
+
+For each:
+- Is the existing page actually good? Or thin/generic?
+- Does it directly answer the query, or is the query tangentially related?
+- Would a more targeted post serve the query better?
+
+This data is more reliable than keyword tool estimates because it shows actual Google behavior on your actual site.
+
+---
+
+## Setting Up Email Alerts
+
+Search Console can email you when it detects issues:
+
+1. Search Console → Settings → Email preferences
+2. Enable alerts for: indexing issues, manual actions, security issues
+
+A manual action (Google penalizing your site for policy violations) is rare but important to catch immediately. Security issues (malware detected) also need immediate attention. Enable these alerts.
+
+---
+
+## What to Expect — Realistic Timeline
+
+| Timeline | Expected State |
+|---|---|
+| Day 1 | Property verified, sitemap submitted |
+| Week 1 | Some pages discovered (not all indexed yet) |
+| Week 2–4 | Most pages indexed; zero to minimal traffic data |
+| Week 4–8 | First queries appearing in Performance report |
+| Month 3–6 | Pattern of which content is gaining traction |
+| Month 6–12 | Enough data to make confident content strategy decisions |
+
+New sites take time to earn trust in Google's index. This is not a bug in the system. A new domain with high-quality content will consistently gain traction over 6–12 months. The search data becomes actionable around month 4–6.
+
+---
+
+<Callout type="warn" title="The common mistake with Search Console data">
+Looking at the data too early and concluding "SEO doesn't work." If you publish content and check Search Console after 2 weeks, you'll see almost nothing — and that's correct. New domains don't rank quickly. Check back at 6 weeks, then 3 months. The compound effect of organic traffic is a medium-term outcome, not a 2-week outcome.
+</Callout>
+
+<Callout type="info" title="Search Console vs Google Analytics">
+They measure different things. Search Console shows data from Google's crawlers and search index: impressions, click-through rate, index status. Google Analytics shows what users do on your site after arriving: page views, session duration, bounce rate. You need both. Search Console tells you how people find you. Analytics tells you what they do when they arrive.
+</Callout>
+
+---
+
+## Connecting Search Console to Google Analytics
+
+If you set up Google Analytics 4, you can link it to Search Console for combined reporting:
+
+1. In Search Console → Settings → Associations → Add association
+2. Select your Google Analytics property
+3. Confirm
+
+After linking, Google Analytics shows Search Console data alongside behavior data — you can see which search queries lead to which on-site actions.
+
+---
+
+<Checkpoint items={[
+  "Google Search Console property added for your domain",
+  "Ownership verified via DNS TXT record",
+  "Sitemap URL confirmed working in browser",
+  "Sitemap submitted in Search Console",
+  "Email alerts enabled for manual actions and security issues",
+  "Performance, Indexing, and Core Web Vitals reports bookmarked",
+  "Calendar reminder set: check Search Console data at 6 weeks post-launch",
+  "Google Analytics linked to Search Console (if GA4 is active)",
+]} />
