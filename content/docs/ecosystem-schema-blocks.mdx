@@ -1,0 +1,312 @@
+---
+title: "Ecosystem Schema Blocks"
+description: "Ready-to-paste JSON-LD structured data blocks for WordPress, TrustSeal, and ScamCheck — Organization schema with full sameAs ecosystem array, SoftwareApplication schema for products."
+date: "2026-05-18"
+tags: ["ops", "seo", "geo", "schema", "structured-data", "ecosystem"]
+status: "published"
+---
+
+Copy-paste structured data blocks for each property. These establish entity relationships across the ecosystem for GEO/AI-search recognition.
+
+Implementation notes per platform are below each block.
+
+---
+
+## WordPress — asquaresolution.com
+
+### How to implement in WordPress + Rank Math
+
+1. Install Rank Math SEO (if not already active)
+2. Go to: **Rank Math → Titles & Meta → Global Meta**
+3. Under "Schema Markup" → Custom Schema → Add JSON-LD
+4. Paste the block below
+
+Or, for more control: add to `functions.php` as a `wp_head` action:
+
+```php
+function asquare_organization_schema() {
+    if ( is_front_page() ) { ?>
+    <script type="application/ld+json">
+    <?php echo json_encode( [
+        '@context' => 'https://schema.org',
+        '@type'    => 'Organization',
+        'name'     => 'A Square Solutions',
+        'url'      => 'https://asquaresolution.com',
+        'description' => 'AI execution, GEO/AI-search strategy, and production WordPress engineering.',
+        'sameAs'   => [
+            'https://asquaresolution.com',
+            'https://lab.asquaresolution.com',
+            'https://trustseal.asquaresolution.com',
+            'https://scamcheck.asquaresolution.com',
+            'https://twitter.com/asquaresolution',
+        ],
+        'knowsAbout' => [
+            'Artificial Intelligence',
+            'Claude Code',
+            'Generative Engine Optimization',
+            'AI Workflows',
+            'SEO Engineering',
+            'WordPress Development',
+            'Production Systems',
+            'AI Scam Detection',
+            'Website Trust Verification',
+        ],
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ); ?>
+    </script>
+    <?php }
+}
+add_action( 'wp_head', 'asquare_organization_schema' );
+```
+
+### Raw JSON-LD (for Rank Math custom schema or header injection):
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "A Square Solutions",
+  "url": "https://asquaresolution.com",
+  "description": "AI execution, GEO/AI-search strategy, and production WordPress engineering.",
+  "sameAs": [
+    "https://asquaresolution.com",
+    "https://lab.asquaresolution.com",
+    "https://trustseal.asquaresolution.com",
+    "https://scamcheck.asquaresolution.com",
+    "https://twitter.com/asquaresolution"
+  ],
+  "knowsAbout": [
+    "Artificial Intelligence",
+    "Claude Code",
+    "Generative Engine Optimization",
+    "AI Workflows",
+    "SEO Engineering",
+    "WordPress Development",
+    "Production Systems",
+    "AI Scam Detection",
+    "Website Trust Verification"
+  ]
+}
+```
+
+### WebSite schema for WordPress (add separately):
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "A Square Solutions",
+  "url": "https://asquaresolution.com",
+  "description": "AI execution, GEO/AI-search strategy, and production WordPress engineering. Builders of TrustSeal, ScamCheck, and AI Execution Lab.",
+  "publisher": {
+    "@type": "Organization",
+    "name": "A Square Solutions",
+    "url": "https://asquaresolution.com"
+  },
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://asquaresolution.com/?s={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
+}
+```
+
+---
+
+## TrustSeal — trustseal.asquaresolution.com
+
+### How to implement in React/Vite SPA
+
+Add to `index.html` `<head>` section, before `</head>`:
+
+```html
+<!-- Organization schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "A Square Solutions",
+  "url": "https://asquaresolution.com",
+  "description": "AI execution and production system engineering. Builders of TrustSeal, ScamCheck, and AI Execution Lab.",
+  "sameAs": [
+    "https://asquaresolution.com",
+    "https://lab.asquaresolution.com",
+    "https://trustseal.asquaresolution.com",
+    "https://scamcheck.asquaresolution.com",
+    "https://twitter.com/asquaresolution"
+  ]
+}
+</script>
+
+<!-- SoftwareApplication schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "TrustSeal",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "url": "https://trustseal.asquaresolution.com",
+  "description": "AI-powered website trust verification and fact-checking. Helps businesses demonstrate verified credibility with an AI-assessed trust signal.",
+  "featureList": [
+    "AI trust score assessment",
+    "Website fact-checking",
+    "Trust signal verification",
+    "Credibility analysis"
+  ],
+  "author": {
+    "@type": "Organization",
+    "name": "A Square Solutions",
+    "url": "https://asquaresolution.com"
+  },
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "INR",
+    "availability": "https://schema.org/InStock"
+  }
+}
+</script>
+```
+
+### Alternative: inject via React component
+
+If `index.html` is not directly editable, add to your root `App.jsx` or `main.jsx`:
+
+```jsx
+// In App.jsx or main entry — runs once on mount
+import { useEffect } from 'react'
+
+function SchemaInjector() {
+  useEffect(() => {
+    const orgSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      'name': 'A Square Solutions',
+      'url': 'https://asquaresolution.com',
+      'sameAs': [
+        'https://asquaresolution.com',
+        'https://lab.asquaresolution.com',
+        'https://trustseal.asquaresolution.com',
+        'https://scamcheck.asquaresolution.com',
+        'https://twitter.com/asquaresolution',
+      ],
+    }
+    const appSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      'name': 'TrustSeal',
+      'applicationCategory': 'SecurityApplication',
+      'operatingSystem': 'Web',
+      'url': 'https://trustseal.asquaresolution.com',
+      'description': 'AI-powered website trust verification and fact-checking.',
+      'author': { '@type': 'Organization', 'name': 'A Square Solutions', 'url': 'https://asquaresolution.com' },
+    }
+
+    const inject = (schema) => {
+      const script = document.createElement('script')
+      script.type = 'application/ld+json'
+      script.textContent = JSON.stringify(schema)
+      document.head.appendChild(script)
+    }
+
+    inject(orgSchema)
+    inject(appSchema)
+  }, [])
+
+  return null
+}
+
+// Add <SchemaInjector /> once in your App component tree
+```
+
+---
+
+## ScamCheck — scamcheck.asquaresolution.com
+
+### Add to `index.html` `<head>`:
+
+```html
+<!-- Organization schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "A Square Solutions",
+  "url": "https://asquaresolution.com",
+  "description": "AI execution and production system engineering. Builders of TrustSeal, ScamCheck, and AI Execution Lab.",
+  "sameAs": [
+    "https://asquaresolution.com",
+    "https://lab.asquaresolution.com",
+    "https://trustseal.asquaresolution.com",
+    "https://scamcheck.asquaresolution.com",
+    "https://twitter.com/asquaresolution"
+  ]
+}
+</script>
+
+<!-- SoftwareApplication schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ScamCheck",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "url": "https://scamcheck.asquaresolution.com",
+  "description": "AI-powered scam detection tool. Check any website or business for scam signals before you engage — powered by AI analysis of domain, content, and behavioral patterns.",
+  "featureList": [
+    "AI scam signal analysis",
+    "Domain reputation check",
+    "Website content analysis",
+    "Behavioral pattern detection"
+  ],
+  "author": {
+    "@type": "Organization",
+    "name": "A Square Solutions",
+    "url": "https://asquaresolution.com"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR",
+    "availability": "https://schema.org/InStock"
+  }
+}
+</script>
+```
+
+### ScamCheck React component variant
+
+Same pattern as TrustSeal — replace schema objects with ScamCheck data:
+
+```jsx
+// Replace schema name, url, description fields for ScamCheck
+'name': 'ScamCheck',
+'url': 'https://scamcheck.asquaresolution.com',
+'description': 'AI-powered scam detection tool.',
+```
+
+---
+
+## Verification Checklist
+
+After implementing on each property, verify using Google's Rich Results Test:
+`https://search.google.com/test/rich-results`
+
+**TrustSeal:** Enter `https://trustseal.asquaresolution.com` — should show Organization + SoftwareApplication
+**ScamCheck:** Enter `https://scamcheck.asquaresolution.com` — same
+**WordPress:** Enter `https://asquaresolution.com` — should show Organization + WebSite
+
+**AI Execution Lab:** Schema already implemented in `app/layout.tsx` — verified at launch.
+
+Also verify with Schema.org Validator: `https://validator.schema.org`
+
+---
+
+## GA4 Cross-Domain — No Action Required
+
+The GA4 property `G-MPQVF41ZYM` is already configured with `cookie_domain: 'asquaresolution.com'`. This handles cross-subdomain attribution automatically. All four properties report to the same GA4 property.
+
+**One check to verify:** In GA4 → Admin → Data Streams, confirm all four subdomains are either in one stream (if using the root domain pattern) or have separate streams that all feed the same property. Cross-domain attribution in GA4 Explorations should show user paths across the ecosystem correctly.

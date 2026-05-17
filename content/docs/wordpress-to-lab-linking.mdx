@@ -1,0 +1,249 @@
+---
+title: "WordPress → Lab Linking Map"
+description: "Which WordPress posts on asquaresolution.com should link to which Lab content — by category, anchor text patterns, and priority tier."
+date: "2026-05-18"
+tags: ["ops", "seo", "linking", "wordpress", "internal-links"]
+status: "published"
+---
+
+This document maps the link flow from `asquaresolution.com` WordPress posts to specific content on `lab.asquaresolution.com`. Links are categorized by post topic type, anchor text pattern, and priority tier.
+
+Execute high-priority links first — they pass the most authority and are the most topically relevant. Work through medium and low priority in subsequent passes.
+
+---
+
+## The Linking Principle
+
+Every link from WordPress to the Lab should be:
+
+1. **Contextually earned** — the linked content meaningfully extends what the WordPress post says
+2. **Editorially natural** — the anchor text reads as part of the sentence, not an SEO insertion
+3. **Non-reciprocal as the primary motive** — link because the content adds value to the reader, not because you want a backlink
+
+Maximum 2 outbound Lab links per WordPress post. If a post has multiple relevant Lab references, choose the two most relevant.
+
+---
+
+## Priority Tier 1 — Highest Value
+
+These topic areas on WordPress have the highest overlap with Lab content. Implement these first.
+
+### AI Tools / Claude / LLM Content
+
+**WordPress post types:** Reviews of Claude, ChatGPT, or other AI tools; "best AI tools for X" posts; Claude Code tutorials; AI workflow articles.
+
+**Lab targets:**
+| Lab Content | URL Pattern | Anchor Text Variants |
+|---|---|---|
+| Claude Code Operator track | `/tracks/claude-code-operator` | "Claude Code operator track", "how to use Claude Code in production", "full Claude Code guide" |
+| Production Prompt Engineering module | `/tracks/claude-code-operator/prompt-engineering/production-prompt-anatomy` | "production prompt engineering", "writing prompts for real codebases", "prompt anatomy guide" |
+| AI Execution Lab homepage | `/` | "AI Execution Lab", "A Square Solutions' public ops journal" |
+| Choosing Your AI Engineering Stack | `/tracks/claude-code-operator/foundations/choosing-your-ai-engineering-stack` | "choosing an AI engineering stack", "AI tool stack decisions" |
+
+**Example in-post usage:**
+```
+We've published a full breakdown of how we use Claude Code in production
+environments — including which settings matter and which don't — at
+AI Execution Lab. [link to track or specific lesson]
+```
+
+---
+
+### SEO / Content Operations Posts
+
+**WordPress post types:** SEO guides, content strategy articles, GEO/AI-search content, keyword research guides, content workflow posts.
+
+**Lab targets:**
+| Lab Content | URL Pattern | Anchor Text Variants |
+|---|---|---|
+| GEO + AI Search Systems track | `/tracks/geo-ai-search` | "GEO + AI search systems", "generative engine optimization guide", "how to rank in AI search" |
+| GEO vs SEO lesson | `/tracks/geo-ai-search/ai-search-mechanics/geo-vs-seo` | "how GEO differs from SEO", "what changed in AI search", "GEO vs SEO" |
+| AI Content + Distribution track | `/tracks/ai-content-distribution` | "AI content distribution systems", "content operations at scale" |
+| Content Systems Thinking | `/tracks/ai-content-distribution/content-architecture/content-systems-thinking` | "content systems thinking", "why standalone articles fail" |
+| First Organic Traffic System | `/tracks/ai-business-zero-budget/zero-budget-stack/first-organic-traffic-system` | "building an organic traffic system", "topic cluster strategy" |
+
+**Example in-post usage:**
+```
+The structural differences between traditional SEO and GEO are significant
+enough to warrant a dedicated breakdown — which we've published here.
+[link to GEO vs SEO lesson]
+```
+
+---
+
+### WordPress / Automation / REST API Posts
+
+**WordPress post types:** WordPress developer guides, REST API tutorials, automation workflows, plugin reviews, content migration guides.
+
+**Lab targets:**
+| Lab Content | URL Pattern | Anchor Text Variants |
+|---|---|---|
+| WordPress REST API Automation Playbook | `/playbooks/wp-rest-api-automation-playbook` | "WordPress REST API automation playbook", "bulk content patching via WP REST API", "WordPress automation guide" |
+| WP Auth Patterns lesson | `/tracks/claude-code-operator/wordpress-rest-api/wp-auth-patterns` | "WordPress Application Password authentication", "WP REST API authentication" |
+| Content Patching System | `/tracks/claude-code-operator/wordpress-rest-api/content-patching-system` | "safe content patching system", "Read→Transform→Check→Apply→Verify", "bulk post automation" |
+| Server Module Client Bundle failure | `/failures/server-module-client-bundle` | "server module in client bundle error", "Node.js module in browser error" |
+
+**Example in-post usage:**
+```
+The Read→Transform→Check→Apply→Verify pattern for WordPress automation
+is documented in detail — with real scripts and the failure modes to watch for.
+[link to playbook]
+```
+
+---
+
+### Next.js / Vercel / Deployment Posts
+
+**WordPress post types:** Next.js tutorials, Vercel guides, deployment workflows, hosting comparisons, performance optimization.
+
+**Lab targets:**
+| Lab Content | URL Pattern | Anchor Text Variants |
+|---|---|---|
+| Build Failure Diagnosis playbook | `/tracks/claude-code-operator/vercel-deployment/build-failure-diagnosis` | "diagnosing Vercel build failures", "reading Vercel build logs", "Next.js build error guide" |
+| next-mdx-remote v6 failure | `/failures/next-mdx-remote-v6-blockjs` | "next-mdx-remote v6 blockJS issue", "MDX components rendering empty in Next.js" |
+| Edge Runtime Deployment failure | `/failures/edge-runtime-deployment-failure` | "Next.js edge runtime crypto error", "edge runtime deployment failure" |
+| Deployment Pipeline Setup | `/tracks/claude-code-operator/vercel-deployment/deployment-pipeline` | "Vercel deployment pipeline", "local to production deployment loop" |
+| Vercel for Beginners | `/tracks/ai-business-zero-budget/zero-budget-stack/vercel-for-beginners` | "Vercel deployment guide for beginners", "how to deploy on Vercel" |
+
+**Example in-post usage:**
+```
+If you've hit the edge runtime crypto error during a Next.js deployment,
+the root cause and fix are documented here. [link to failure report]
+```
+
+---
+
+## Priority Tier 2 — Medium Value
+
+### AI Business / Entrepreneurship Posts
+
+**WordPress post types:** AI business guides, startup advice, product-building tutorials, monetization strategies.
+
+**Lab targets:**
+| Lab Content | URL Pattern | Anchor Text Variants |
+|---|---|---|
+| AI Business Zero Budget track | `/tracks/ai-business-zero-budget` | "building an AI business with minimal budget", "zero-budget AI business track" |
+| AI Tool Stack Budget | `/tracks/ai-business-zero-budget/zero-budget-stack/ai-tool-stack-budget` | "AI tool stack under ₹3000/month", "minimal AI business tool stack" |
+| AdSense Approval Reality | `/tracks/ai-business-zero-budget/zero-budget-stack/adsense-approval-reality` | "AdSense approval requirements", "how to get AdSense approved" |
+| Avoid Tool Subscription Traps | `/tracks/ai-business-zero-budget/zero-budget-stack/avoid-tool-subscription-traps` | "avoiding SaaS subscription creep", "tool subscription traps" |
+| Claude + WordPress Workflow | `/tracks/ai-business-zero-budget/zero-budget-stack/claude-wordpress-workflow` | "using Claude for content workflows", "AI-assisted content publishing" |
+
+---
+
+### Digital Marketing / Analytics Posts
+
+**WordPress post types:** Google Analytics guides, Search Console tutorials, digital marketing strategy posts.
+
+**Lab targets:**
+| Lab Content | URL Pattern | Anchor Text Variants |
+|---|---|---|
+| Google Analytics + Data Thinking | `/tracks/ai-business-zero-budget/zero-budget-stack/google-analytics-data-thinking` | "GA4 setup for content businesses", "analytics that connect to decisions" |
+| Google Search Console Setup | `/tracks/ai-business-zero-budget/zero-budget-stack/google-search-console-setup` | "Search Console setup guide", "submitting sitemap to Google" |
+
+---
+
+### Product Development / SaaS Posts
+
+**WordPress post types:** Product development guides, SaaS building tutorials, Firebase guides, payment integration.
+
+**Lab targets:**
+| Lab Content | URL Pattern | Anchor Text Variants |
+|---|---|---|
+| Building MVP With Claude Code | `/tracks/ai-business-zero-budget/first-product/mvp-with-claude` *(coming soon)* | — (link when available) |
+| Feature Planning With Claude | `/tracks/claude-code-operator/product-development/feature-planning-claude` | "AI-assisted feature planning", "breaking product specs into tasks with Claude" |
+| Multi-Agent Orchestration | `/tracks/claude-code-operator/scaling-systems/multi-agent-orchestration` | "multi-agent AI orchestration", "scaling AI beyond one context window" |
+
+---
+
+## Priority Tier 3 — Opportunistic
+
+### General Tech / Software Posts
+
+For posts that touch on software development, debugging, or production engineering:
+
+**Lab targets:**
+| Lab Content | URL Pattern | Anchor Text Variants |
+|---|---|---|
+| Debugging Methodology | `/tracks/claude-code-operator/debugging-recovery/debugging-methodology` | "systematic debugging methodology", "reproduce → isolate → fix → verify" |
+| Reading Build Errors | `/tracks/claude-code-operator/debugging-recovery/reading-build-errors` | "reading TypeScript build errors", "understanding build error messages" |
+| Git Operations | `/tracks/claude-code-operator/github-workflows/git-operations` | "Git operations with Claude Code", "Claude Code git workflow" |
+
+---
+
+## Contextual Anchor Text — Pattern Guide
+
+### What Makes a Good Anchor
+
+Good anchor text:
+- Reads naturally in the sentence
+- Describes what the linked page actually covers
+- Is specific (not "click here", "read more", "this article")
+- Varies between uses (don't use the same phrase for every Lab link)
+
+Bad anchor text:
+- "click here" / "learn more" / "read more"
+- The full URL as anchor text
+- Keyword-stuffed phrases that don't read naturally
+- Identical anchor text across multiple links to the same page
+
+### Phrase Patterns
+
+**Linking to a track:**
+> "...documented in the [Track Title] track at AI Execution Lab."
+> "...which we cover in full in the [Track Title] track."
+> "...the full execution guide is at lab.asquaresolution.com → [Track Title]."
+
+**Linking to a specific lesson:**
+> "...the exact workflow for this is published here."
+> "...we've documented this pattern in detail."
+> "...see the [Lesson Title] lesson for the implementation."
+
+**Linking to a failure report:**
+> "...we hit this exact failure — root cause and fix documented here."
+> "...if you see this error, the cause is documented in the failure archive."
+
+**Linking to a playbook:**
+> "...the full playbook for this is at AI Execution Lab."
+> "...we published the step-by-step system for this."
+
+---
+
+## Implementation Method: WordPress
+
+### Option A: Manual edit in WordPress editor (Gutenberg)
+
+1. Open the post
+2. Find the relevant paragraph
+3. Select the anchor text phrase
+4. Add link to the Lab URL
+5. Check "Open in new tab" for cross-domain links
+6. Update post
+
+### Option B: Bulk linking via WP REST API (for multiple posts)
+
+If you have 20+ posts to update, use the content patching system documented at:
+`/playbooks/wp-rest-api-automation-playbook`
+
+Pattern: Read → identify target sentence → insert anchor tag → PATCH via REST API → verify.
+
+---
+
+## Link Audit: Maintenance Schedule
+
+**Monthly:** Review Lab content additions (new lessons, docs, playbooks) against WordPress post categories. Add new links where relevant.
+
+**Quarterly:** Check that all existing Lab links still resolve (no 404s after content restructuring).
+
+**On new Lab publication:** Before publishing any new Lab piece, check if 2–3 existing WordPress posts should link to it. Add those links at publish time.
+
+---
+
+## What Not to Link From WordPress
+
+Avoid linking to:
+- `/ops` (internal ops dashboard — noindex, internal tool)
+- `/syndicate` (internal tool)
+- `coming-soon` lessons (they render a coming-soon state — no value to readers)
+- Any Lab page that is draft or thin
+
+Before linking to a specific Lab page, verify it loads and has complete content.

@@ -1,0 +1,256 @@
+---
+title: "Ecosystem Integration Strategy"
+description: "How the four A Square Solutions properties connect operationally — entity architecture, GEO relationship mapping, cross-domain authority, and canonical structure."
+date: "2026-05-18"
+tags: ["ops", "seo", "geo", "ecosystem", "strategy", "entity"]
+status: "published"
+---
+
+This document defines how the A Square Solutions ecosystem operates as a unified entity across four properties. It covers structural relationships, GEO/AI-search entity architecture, cross-domain authority strategy, and the canonical/sitemap framework that binds them.
+
+---
+
+## The Ecosystem Architecture
+
+Four properties. One entity.
+
+| Property | Domain | Platform | Role |
+|---|---|---|---|
+| Main site | `asquaresolution.com` | WordPress | Parent entity — agency presence, services, authority base |
+| AI Execution Lab | `lab.asquaresolution.com` | Next.js / Vercel | Operational transparency layer — systems, docs, public work journal |
+| TrustSeal | `trustseal.asquaresolution.com` | React / GitHub Pages | AI trust verification product — proves website credibility |
+| ScamCheck | `scamcheck.asquaresolution.com` | React / GitHub Pages | AI scam detection product — protects users from deceptive sites |
+
+All four are subdomains of `asquaresolution.com`. Google treats subdomains as separate properties for ranking purposes, but the shared domain root and cross-linking create entity coherence that AI search systems can parse.
+
+---
+
+## The Narrative Thread
+
+Each property has a different function, but one shared story:
+
+> A Square Solutions builds AI-native systems in public. The products (TrustSeal, ScamCheck) are real production software built and operated by the same team that documents the work in the Lab. The main site is the entity anchor.
+
+This is the story AI search systems should be able to extract. The narrative works because it's true — not because it's been engineered. The integration work makes it structurally legible.
+
+---
+
+## Entity Architecture for GEO/AI Search
+
+AI search engines (ChatGPT, Perplexity, Claude, Gemini) build entity graphs from:
+1. Consistent entity names across sources
+2. Cross-references between properties that use the same entity names
+3. Structured data with explicit `sameAs` and `publisher` declarations
+4. Content that names the entity in specific, factual contexts
+
+### Required Entity Consistency
+
+Every property must use these exact strings wherever the entity is named:
+
+| Field | Required Value |
+|---|---|
+| Organization name | `A Square Solutions` |
+| Main domain | `https://asquaresolution.com` |
+| Lab URL | `https://lab.asquaresolution.com` |
+| TrustSeal URL | `https://trustseal.asquaresolution.com` |
+| ScamCheck URL | `https://scamcheck.asquaresolution.com` |
+| Twitter handle | `@asquaresolution` |
+| Twitter URL | `https://twitter.com/asquaresolution` |
+
+Acceptable variants that don't break entity mapping:
+- "A Square Solutions" → full name always preferred in body text
+- "@asquaresolution" → social context
+
+Not acceptable (breaks entity mapping):
+- "ASquare Solutions" / "asquare" / "A-Square" in prose
+- Inconsistent subdomain references ("the lab" without the URL when in structured data)
+
+### Structured Data: Organization Schema
+
+The `Organization` schema must appear on all four properties. The `sameAs` array on each property should reference all ecosystem URLs:
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "A Square Solutions",
+  "url": "https://asquaresolution.com",
+  "description": "AI execution, GEO/AI-search strategy, and production WordPress engineering.",
+  "sameAs": [
+    "https://asquaresolution.com",
+    "https://lab.asquaresolution.com",
+    "https://trustseal.asquaresolution.com",
+    "https://scamcheck.asquaresolution.com",
+    "https://twitter.com/asquaresolution"
+  ]
+}
+```
+
+**Current status:**
+- AI Execution Lab: ✓ Organization + WebSite schema in `app/layout.tsx`
+- WordPress: Implement via Rank Math custom schema or a dedicated JSON-LD block
+- TrustSeal: Add to `index.html` `<head>` as inline `<script type="application/ld+json">`
+- ScamCheck: Same as TrustSeal
+
+### SoftwareApplication Schema for Products
+
+TrustSeal and ScamCheck should each have `SoftwareApplication` schema in addition to `Organization`:
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "TrustSeal",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "description": "AI-powered website trust verification and fact-checking tool.",
+  "url": "https://trustseal.asquaresolution.com",
+  "author": {
+    "@type": "Organization",
+    "name": "A Square Solutions",
+    "url": "https://asquaresolution.com"
+  }
+}
+```
+
+This signals to AI search systems that these are real products built by a named entity, not content pages.
+
+---
+
+## Cross-Domain Linking Architecture
+
+### The Flow Direction Principles
+
+Links flow both up and across the ecosystem:
+
+```
+asquaresolution.com  ←→  lab.asquaresolution.com
+       ↑                          ↕
+trustseal.asquaresolution.com  ←→  scamcheck.asquaresolution.com
+```
+
+**WordPress → Lab (high priority):** WordPress posts with AI, SEO, and automation topics link to relevant Lab content. This passes authority from the established domain to the newer Lab subdomain.
+
+**Lab → WordPress (consistent):** All Lab content credits A Square Solutions with a link to the main site. This reinforces the parent-entity relationship.
+
+**Lab → Products (contextual):** Lab content in relevant topic areas references TrustSeal and ScamCheck as real examples of AI products built by the same team.
+
+**Products → Lab (trust signal):** TrustSeal and ScamCheck footers link to the Lab as proof that the builder works publicly and transparently.
+
+**Products → WordPress (authority anchor):** All product footers and About sections link to `asquaresolution.com` as the parent.
+
+### What to Never Do
+
+- Do not create reciprocal link exchanges where A links to B only because B links to A (with no topical relevance)
+- Do not add sidebar link lists of "our products" on the Lab — cross-links should be contextual, in body text or specific UI sections
+- Do not use identical anchor text for every cross-domain link — vary naturally
+- Do not link from Lab to WordPress pages that are thin or low-quality — link quality passes signal in both directions
+
+---
+
+## Canonical and Sitemap Guidance
+
+### Canonical Tags
+
+Each property uses absolute canonical URLs pointing to its own domain. No cross-domain canonicals.
+
+| Property | Canonical pattern |
+|---|---|
+| WordPress | `https://asquaresolution.com/[slug]` |
+| Lab | `https://lab.asquaresolution.com/[section]/[slug]` |
+| TrustSeal | `https://trustseal.asquaresolution.com` (SPA — one canonical) |
+| ScamCheck | `https://scamcheck.asquaresolution.com` (SPA — one canonical) |
+
+Cross-domain canonical pointing (e.g., TrustSeal canonical pointing to WordPress) would signal to Google that one property is a duplicate of the other. Never do this.
+
+### Sitemap Structure
+
+Each property maintains its own sitemap:
+- WordPress: `https://asquaresolution.com/sitemap_index.xml` (Rank Math)
+- Lab: `https://lab.asquaresolution.com/sitemap.xml` (Next.js `app/sitemap.ts`)
+- TrustSeal: SPA — either static `sitemap.xml` or submit single URL
+- ScamCheck: Same as TrustSeal
+
+**Sitemap cross-references** are not standard practice and should not be used. Each sitemap covers its own property only.
+
+**Google Search Console:** Each subdomain should be a separate property in Search Console, verified independently. The shared GA4 property already handles cross-domain tracking.
+
+---
+
+## The Role of Each Property in the Ecosystem
+
+### asquaresolution.com — The Entity Anchor
+
+**Function:** Establishes A Square Solutions as a real organization with services, expertise, and history. This is where prospective clients, journalists, and AI crawlers go to understand what A Square Solutions is.
+
+**Integration requirements:**
+- Prominently reference AI Execution Lab as the public operations journal
+- Reference TrustSeal and ScamCheck as live products built by the team
+- Blog content links to relevant Lab playbooks and docs as proof of methodology
+- Footer includes Lab URL
+
+### lab.asquaresolution.com — Operational Transparency
+
+**Function:** Documents real production work publicly. This is the property that earns citations from AI search systems — because it contains specific, verifiable, entity-dense content about real systems.
+
+**Integration requirements:**
+- Every page credits A Square Solutions with a link to the main site
+- Failure archive, systems, and case studies reference real products (TrustSeal, ScamCheck) where applicable
+- Execution tracks reference building and operating real products as the business context
+- No vanity linking — only contextual references
+
+### trustseal.asquaresolution.com — Trust Product
+
+**Function:** Gives businesses a way to verify and display AI-assessed trust scores. Generates revenue via Razorpay. Credibility is its core value proposition.
+
+**Integration requirements:**
+- Footer links to asquaresolution.com ("Built by A Square Solutions")
+- Footer links to Lab ("See how we build →")
+- About/landing page references the Lab for transparency
+- Does NOT need heavy cross-linking — it's a product, not a content site
+
+### scamcheck.asquaresolution.com — Detection Product
+
+**Function:** Lets users check URLs and businesses for scam signals using AI. Free tool with virality potential.
+
+**Integration requirements:**
+- Footer links to asquaresolution.com
+- Footer links to Lab (can reference the AI systems behind it)
+- Can reference TrustSeal as the companion trust tool ("Check → Trust")
+- Same minimal cross-linking philosophy as TrustSeal
+
+---
+
+## GEO Authority Compound Strategy
+
+For AI search systems to consistently cite A Square Solutions content, the entity needs to appear in multiple independent contexts on authoritative topics.
+
+### The Compound Path
+
+**Stage 1 (current):** Lab is live. Organization schema present. Content is entity-dense.
+
+**Stage 2 (implement now):** WordPress adds Lab references. Products add Lab footer links. Organization schema updated on all four properties with full `sameAs` array.
+
+**Stage 3 (ongoing content):** Lab case studies explicitly document TrustSeal and ScamCheck build history. This creates real, citable content about real products — the highest-value GEO signal.
+
+**Stage 4 (eventual):** When AI systems search for information about AI scam detection, trust verification, or AI-powered content operations — A Square Solutions appears as the named entity behind real products with documented build histories.
+
+### What Makes This GEO-Effective
+
+The Lab's specific content (failure reports with exact error messages, systems with specific tool names and versions, playbooks with real workflow steps) is the type of content AI retrieval systems score highly. A generic business site rarely gets cited. A site with documented production failures, real build logs, and specific operational data does.
+
+The product references within Lab content (TrustSeal, ScamCheck) connect those entity names to specific, citable technical content — giving AI systems a reason to mention those products when relevant queries arise.
+
+---
+
+## Priority Implementation Order
+
+Execute in this sequence:
+
+1. **Organization schema on WordPress** — Rank Math custom schema block with full `sameAs` array
+2. **Organization + SoftwareApplication schema on TrustSeal** — inline JSON-LD in `<head>`
+3. **Organization + SoftwareApplication schema on ScamCheck** — inline JSON-LD in `<head>`
+4. **WordPress homepage section for the Lab** — see copy blocks doc
+5. **Footer links on TrustSeal and ScamCheck** — minimal, clean, no-spam
+6. **WordPress blog → Lab linking pass** — see linking map doc
+7. **Lab case studies referencing real products** — ongoing content priority
