@@ -1,0 +1,317 @@
+---
+title: WordPress REST API Content Patching Playbook
+description: Step-by-step playbook for safely patching WordPress post content via the REST API using Python. Covers auth setup, dry-run pattern, pre-apply assertions, apply, and live verification.
+date: "2026-05-17"
+tags: [WordPress, REST API, Python, automation, Claude Code]
+status: published
+goal: Safely read, transform, check, and apply changes to WordPress post content without risking data loss or regressions.
+prerequisites:
+  - WordPress 5.6+ (Application Passwords support)
+  - Python 3.9+ installed
+  - REST API enabled (default on standard installs)
+  - Application Password generated for your WP user
+  - Post ID(s) to patch identified
+estimated_time: 30–60 min per operation
+---
+
+## Overview
+
+This playbook documents the exact pattern we use at A Square Solutions for all production WordPress REST API content operations. Every step exists because something broke without it.
+
+The pattern: **Read → Transform → Check → Apply → Verify**. Never skip steps. Never skip the dry run.
+
+<WorkflowBlock title="Operation flow">
+  <WorkflowStep n={1} title="Read" desc="GET /wp-json/wp/v2/posts/{id}?context=edit" />
+  <WorkflowStep n={2} title="Transform" desc="Apply string replacements to raw HTML" />
+  <WorkflowStep n={3} title="Check" desc="Assert all expected changes present, no regressions" />
+  <WorkflowStep n={4} title="Dry run" desc="Log results — exit before write without --live" />
+  <WorkflowStep n={5} title="Apply" desc="POST updated content back via REST API" />
+  <WorkflowStep n={6} title="Verify" desc="Re-fetch live content, confirm changes" />
+</WorkflowBlock>
+
+---
+
+## Step 1 — Authentication setup
+
+WordPress Application Passwords (WP 5.6+) are the correct auth mechanism. Never use your main account password in scripts.
+
+**Generate an Application Password:**
+1. WordPress Admin → Users → Your Profile
+2. Scroll to "Application Passwords"
+3. Enter name: `REST API Automation`
+4. Click "Add New Application Password"
+5. Copy the password — it's shown only once
+
+<CodeBlock filename="constants.py" language="python">
+{`import urllib.request, base64, json
+
+WP_BASE = "https://your-site.com/wp-json/wp/v2"
+AUTH    = "Basic " + base64.b64encode(b"username:xxxx xxxx xxxx xxxx xxxx xxxx").decode()
+
+def req_get(url: str) -> dict:
+    r = urllib.request.Request(url, headers={"Authorization": AUTH})
+    with urllib.request.urlopen(r, timeout=30) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+def req_post(url: str, payload: dict) -> dict:
+    body = json.dumps(payload).encode("utf-8")
+    r = urllib.request.Request(
+        url, data=body, method="POST",
+        headers={"Authorization": AUTH, "Content-Type": "application/json; charset=utf-8"}
+    )
+    with urllib.request.urlopen(r, timeout=60) as resp:
+        return json.loads(resp.read().decode("utf-8"))`}
+</CodeBlock>
+
+<Callout type="warn" title="Application Password format">
+WordPress Application Passwords are space-separated 4-character groups (e.g. `xxxx xxxx xxxx xxxx xxxx xxxx`). Include the spaces when encoding to Base64.
+</Callout>
+
+---
+
+## Step 2 — Read post content
+
+Always fetch with `context=edit` to get raw content (pre-rendering). Without it, WordPress returns wpautop-rendered HTML that cannot be safely pushed back.
+
+<CodeBlock filename="read_post.py" language="python">
+{`POST_ID = 8717  # set to your target post
+
+post    = req_get(WP_BASE + f"/posts/{POST_ID}?context=edit")
+content = post["content"]["raw"]  # raw HTML as stored in DB
+
+print(f"Post: {post['title']['rendered']}")
+print(f"Content length: {len(content)} chars")
+print(f"Status: {post['status']}")`}
+</CodeBlock>
+
+<Callout type="danger" title="context=edit is mandatory">
+Without `context=edit`, the REST API returns rendered HTML. WordPress's `the_content` filter applies wpautop and shortcode rendering — pushing that back will corrupt the content permanently.
+</Callout>
+
+---
+
+## Step 3 — Transform content
+
+Apply your changes to the raw content string. Use `.replace()` for targeted changes. Avoid regex unless the structure genuinely requires it.
+
+<CodeBlock filename="transform.py" language="python">
+{`# Example: apply inline typography styles to bare Elementor heading elements
+H2_STYLE = "font-size:28px;line-height:1.28;font-weight:600;letter-spacing:-0.2px;margin:36px 0 12px;"
+H3_STYLE = "font-size:19px;line-height:1.32;font-weight:600;margin:24px 0 10px;"
+
+BARE_H2    = '<h2 class="elementor-heading-title elementor-size-default">'
+STYLED_H2  = f'<h2 class="elementor-heading-title elementor-size-default" style="{H2_STYLE}">'
+
+BARE_H3    = '<h3 class="elementor-heading-title elementor-size-default">'
+STYLED_H3  = f'<h3 class="elementor-heading-title elementor-size-default" style="{H3_STYLE}">'
+
+new_content = content.replace(BARE_H2, STYLED_H2)
+new_content = new_content.replace(BARE_H3, STYLED_H3)
+
+print(f"H2 replacements: {content.count(BARE_H2)}")
+print(f"H3 replacements: {content.count(BARE_H3)}")`}
+</CodeBlock>
+
+---
+
+## Step 4 — Pre-apply checks
+
+Define assertions about the new content **before** applying. Every check is: `(string_to_find, should_be_present, label)`.
+
+Run all checks. If any fail, abort. No partial applies.
+
+<CodeBlock filename="checks.py" language="python">
+{`checks = [
+    # Format: (string, should_present, label)
+    # POSITIVE — new content must be present
+    ('style="font-size:28px',      True,  "H2 inline styles applied"),
+    ('style="font-size:19px',      True,  "H3 inline styles applied"),
+
+    # NEGATIVE — old content must be absent
+    (BARE_H2,                      False, "no bare H2s remaining"),
+    (BARE_H3,                      False, "no bare H3s remaining"),
+    ('<style type="text/css">',    False, "no style block in content"),
+
+    # INVARIANT — must never change
+    ('"@type":"Article"',          True,  "Article schema intact"),
+    ('"@type":"FAQPage"',          True,  "FAQPage schema intact"),
+    ('generative-engine-optim',    True,  "internal cluster link intact"),
+]
+
+all_ok = True
+for check_str, should_present, label in checks:
+    present = check_str in new_content
+    ok      = present == should_present
+    all_ok  = all_ok and ok
+    status  = "OK" if ok else "FAIL"
+    print(f"  [{status}] {label}")
+
+if not all_ok:
+    print("\\nABORTING — checks failed")
+    sys.exit(1)
+
+print(f"\\nAll {len(checks)} checks passed")`}
+</CodeBlock>
+
+**Check categories:**
+
+| Category | Examples | Purpose |
+|---|---|---|
+| Positive | inline styles present | New content applied |
+| Negative | bare headings absent | Old content removed |
+| Invariant | schemas, internal links | Regressions prevented |
+
+---
+
+## Step 5 — Dry-run flag
+
+The script should exit before writing unless `--live` is explicitly passed.
+
+<CodeBlock filename="dry_run.py" language="python">
+{`import sys
+
+DRY_RUN = "--live" not in sys.argv
+
+if DRY_RUN:
+    print("DRY RUN — pass --live to apply changes")
+    print("Run: python script.py --live")
+    sys.exit(0)
+
+# Only reaches here when --live is passed
+result = req_post(WP_BASE + f"/posts/{POST_ID}", {"content": new_content})
+print(f"Applied. Modified: {result['modified']}")`}
+</CodeBlock>
+
+<Callout type="lab" title="Why dry-run matters with Claude Code">
+Claude Code runs scripts directly. Without an explicit live flag, a reasoning error in the check logic could silently apply destructive changes. The dry-run default means the worst case for any bug is a false "checks passed" message — not a production write.
+</Callout>
+
+---
+
+## Step 6 — Verify live content
+
+Re-fetch the post after applying. Confirm the live content matches expectations. Do not trust the API response alone — fetch and inspect.
+
+<CodeBlock filename="verify.py" language="python">
+{`import re
+
+# Re-fetch live content (NOT context=edit — we want the rendered version)
+live_url = f"https://your-site.com/blog/your-post-slug/"
+req      = urllib.request.Request(live_url, headers={"Cache-Control": "no-cache", "Pragma": "no-cache"})
+
+with urllib.request.urlopen(req, timeout=30) as resp:
+    live_html = resp.read().decode("utf-8")
+
+# Count inline-styled H2s
+h2_tags = re.findall(r'<h2[^>]*style="font-size:28px[^"]*"[^>]*>', live_html)
+print(f"H2s at 28px: {len(h2_tags)}")
+
+# Confirm no bare H2s
+bare_h2_count = live_html.count(BARE_H2)
+print(f"Bare H2s remaining: {bare_h2_count}")  # should be 0`}
+</CodeBlock>
+
+---
+
+## Complete script template
+
+<CodeBlock filename="wp_patch_template.py" language="python">
+{`"""
+Operation: [describe what this script does]
+Target:    Post {POST_ID} — {POST_URL}
+Author:    A Square Solutions
+"""
+import urllib.request, base64, json, sys, re
+
+# ── Config ───────────────────────────────────────────────────
+WP_BASE  = "https://your-site.com/wp-json/wp/v2"
+AUTH     = "Basic " + base64.b64encode(b"user:app_password").decode()
+OUT      = r"output.txt"
+DRY_RUN  = "--live" not in sys.argv
+POST_ID  = 0  # set this
+
+# ── Output log ───────────────────────────────────────────────
+open(OUT, "w", encoding="utf-8").close()
+def P(msg: str) -> None:
+    print(msg)
+    with open(OUT, "a", encoding="utf-8") as f:
+        f.write(msg + "\\n")
+
+# ── HTTP helpers ─────────────────────────────────────────────
+def req_get(url):
+    r = urllib.request.Request(url, headers={"Authorization": AUTH})
+    with urllib.request.urlopen(r, timeout=30) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+def req_post(url, payload):
+    body = json.dumps(payload).encode("utf-8")
+    r = urllib.request.Request(url, data=body, method="POST",
+        headers={"Authorization": AUTH, "Content-Type": "application/json; charset=utf-8"})
+    with urllib.request.urlopen(r, timeout=60) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+# ── Main ─────────────────────────────────────────────────────
+P(f"=== Operation Name === DRY_RUN={DRY_RUN}")
+
+# 1. Read
+post    = req_get(WP_BASE + f"/posts/{POST_ID}?context=edit")
+content = post["content"]["raw"]
+P(f"Content: {len(content)} chars")
+
+# 2. Transform
+new_content = content
+# ... apply your changes ...
+
+# 3. Check
+checks = [
+    ("expected_string", True,  "new content present"),
+    ("removed_string",  False, "old content absent"),
+    ('"@type":"Article"', True, "schema intact"),
+]
+all_ok = True
+for s, should, label in checks:
+    ok     = (s in new_content) == should
+    all_ok = all_ok and ok
+    P(f"  [{'OK' if ok else 'FAIL'}] {label}")
+
+if not all_ok:
+    P("ABORTING — checks failed"); sys.exit(1)
+
+P(f"All {len(checks)} checks passed")
+
+# 4. Dry-run gate
+if DRY_RUN:
+    P("DRY RUN — pass --live to apply"); sys.exit(0)
+
+# 5. Apply
+result = req_post(WP_BASE + f"/posts/{POST_ID}", {"content": new_content})
+P(f"PATCHED. Modified: {result.get('modified')}")
+P("Done.")`}
+</CodeBlock>
+
+---
+
+## Failure modes
+
+| Failure | Symptom | Fix |
+|---|---|---|
+| wpautop in style block | CSS broken in browser, `<p>` tags in style element | Never use `<style>` in post content — use inline styles |
+| UCSS strips scoped CSS | Kit CSS saved, nothing changes in browser | Use inline styles — immune to LiteSpeed UCSS |
+| context=edit missing | Pushed rendered HTML back, content broken | Always use `?context=edit` when fetching for edit |
+| Auth rejected (401) | `urllib.error.HTTPError: HTTP Error 401` | Check username + app password + Base64 encoding |
+| Schema corrupted | JSON-LD parse error, SEO schema missing | Extract and validate schemas before patching |
+| Checks too loose | False positive — bad content applied | Add invariant checks for all schemas and internal links |
+
+---
+
+## Reuse notes
+
+<StepList items={[
+  "Copy wp_patch_template.py for each new operation",
+  "Always run without --live first — read the output log",
+  "Add section-specific checks for every transformation",
+  "After applying: verify live with no-cache headers",
+  "Log everything to output.txt — Claude Code can inspect it"
+]} />
+
+See also: [Claude Code + WordPress REST API Docs](/docs/claude-code-wp-rest-api) for auth patterns and schema preservation details.

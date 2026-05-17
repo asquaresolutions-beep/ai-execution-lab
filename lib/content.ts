@@ -7,25 +7,29 @@ import readingTime from 'reading-time'
 // Types
 // ─────────────────────────────────────────────────────────────
 
-export type ContentSection = 'docs' | 'systems' | 'labs' | 'case-studies'
+export type ContentSection = 'docs' | 'systems' | 'labs' | 'case-studies' | 'playbooks'
 
 export interface ContentFrontmatter {
   title: string
   description: string
   date: string          // ISO 8601: "2026-05-17"
-  updated?: string      // ISO 8601, if different from date
+  updated?: string
   tags?: string[]
   status?: 'draft' | 'published' | 'archived'
-  difficulty?: 'beginner' | 'intermediate' | 'advanced'
   // Docs-specific
+  difficulty?: 'beginner' | 'intermediate' | 'advanced'
   section?: string      // sidebar grouping
   // Systems-specific
-  stack?: string[]      // ["WordPress", "LiteSpeed", "Elementor"]
+  stack?: string[]
   // Labs-specific
   hypothesis?: string
   result?: 'confirmed' | 'refuted' | 'inconclusive' | 'ongoing'
   // Case studies
-  impact?: string       // brief impact summary e.g. "Resolved 90px → 28px heading render"
+  impact?: string
+  // Playbooks-specific
+  goal?: string         // what this playbook achieves
+  prerequisites?: string[]
+  estimated_time?: string
 }
 
 export interface ContentItem {
@@ -33,7 +37,7 @@ export interface ContentItem {
   section: ContentSection
   frontmatter: ContentFrontmatter
   readingTime: string
-  content: string       // raw MDX string
+  content: string
 }
 
 export interface ContentMeta {
@@ -41,7 +45,6 @@ export interface ContentMeta {
   section: ContentSection
   frontmatter: ContentFrontmatter
   readingTime: string
-  // no content — for index/listing pages
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -55,54 +58,40 @@ function sectionDir(section: ContentSection): string {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Read helpers
+// Helpers
 // ─────────────────────────────────────────────────────────────
 
 function slugFromFilename(filename: string): string {
   return filename.replace(/\.mdx?$/, '')
 }
 
-function parseFrontmatter(raw: string, slug: string, section: ContentSection): ContentMeta {
+function parseMeta(raw: string, slug: string, section: ContentSection): ContentMeta {
   const { data, content } = matter(raw)
   const fm = data as ContentFrontmatter
   const stats = readingTime(content)
-
-  // Defaults
   fm.status = fm.status ?? 'published'
-
-  return {
-    slug,
-    section,
-    frontmatter: fm,
-    readingTime: stats.text,
-  }
+  return { slug, section, frontmatter: fm, readingTime: stats.text }
 }
 
 // ─────────────────────────────────────────────────────────────
 // Public API
 // ─────────────────────────────────────────────────────────────
 
-/**
- * Get metadata for all items in a section (no content body).
- * Used for index/listing pages.
- */
+/** Metadata for all published items in a section, sorted by date desc. */
 export function getAllMeta(section: ContentSection): ContentMeta[] {
   const dir = sectionDir(section)
-
   if (!fs.existsSync(dir)) return []
 
   const files = fs
     .readdirSync(dir)
     .filter((f) => f.endsWith('.mdx') || f.endsWith('.md'))
 
-  const items = files.map((file) => {
-    const slug = slugFromFilename(file)
-    const raw = fs.readFileSync(path.join(dir, file), 'utf-8')
-    return parseFrontmatter(raw, slug, section)
-  })
-
-  // Filter out drafts in production, sort by date desc
-  return items
+  return files
+    .map((file) => {
+      const slug = slugFromFilename(file)
+      const raw = fs.readFileSync(path.join(dir, file), 'utf-8')
+      return parseMeta(raw, slug, section)
+    })
     .filter((item) =>
       process.env.NODE_ENV === 'development' || item.frontmatter.status !== 'draft'
     )
@@ -111,36 +100,24 @@ export function getAllMeta(section: ContentSection): ContentMeta[] {
     )
 }
 
-/**
- * Get a single item with its full MDX content.
- */
+/** Single item with full MDX content. */
 export function getItem(section: ContentSection, slug: string): ContentItem | null {
   const dir = sectionDir(section)
   const mdxPath = path.join(dir, `${slug}.mdx`)
   const mdPath  = path.join(dir, `${slug}.md`)
   const filePath = fs.existsSync(mdxPath) ? mdxPath : fs.existsSync(mdPath) ? mdPath : null
-
   if (!filePath) return null
 
   const raw = fs.readFileSync(filePath, 'utf-8')
   const { data, content } = matter(raw)
   const fm = data as ContentFrontmatter
   const stats = readingTime(content)
-
   fm.status = fm.status ?? 'published'
 
-  return {
-    slug,
-    section,
-    frontmatter: fm,
-    readingTime: stats.text,
-    content,
-  }
+  return { slug, section, frontmatter: fm, readingTime: stats.text, content }
 }
 
-/**
- * Get all slugs in a section — used for generateStaticParams.
- */
+/** All slugs in a section — for generateStaticParams. */
 export function getAllSlugs(section: ContentSection): string[] {
   const dir = sectionDir(section)
   if (!fs.existsSync(dir)) return []
@@ -150,15 +127,23 @@ export function getAllSlugs(section: ContentSection): string[] {
     .map(slugFromFilename)
 }
 
-/**
- * Get a flat list of recent items across ALL sections.
- */
+/** Recent items across ALL sections, sorted by date desc. */
 export function getRecentItems(limit = 6): ContentMeta[] {
-  const sections: ContentSection[] = ['systems', 'labs', 'case-studies', 'docs']
+  const sections: ContentSection[] = ['playbooks', 'systems', 'labs', 'case-studies', 'docs']
   return sections
     .flatMap((s) => getAllMeta(s))
     .sort((a, b) =>
       new Date(b.frontmatter.date).getTime() - new Date(a.frontmatter.date).getTime()
     )
     .slice(0, limit)
+}
+
+/** Count of items per section — for dashboard stats. */
+export function getSectionCounts(): Record<ContentSection, number> {
+  const sections: ContentSection[] = ['docs', 'systems', 'labs', 'case-studies', 'playbooks']
+  const result = {} as Record<ContentSection, number>
+  for (const s of sections) {
+    result[s] = getAllMeta(s).length
+  }
+  return result
 }

@@ -3,17 +3,35 @@
 @tailwind utilities;
 
 /* ─────────────────────────────────────────────────────────────
-   Base — dark-first design
+   Design tokens — dark futuristic palette
    ───────────────────────────────────────────────────────────── */
 
 :root {
-  --background: 15 23 42;        /* surface-900 */
-  --foreground: 241 245 249;     /* surface-100 */
-  --muted: 51 65 85;             /* surface-700 */
-  --muted-foreground: 148 163 184; /* surface-400 */
-  --border: 51 65 85;            /* surface-700 */
-  --brand: 249 115 22;           /* brand-500 */
+  /* Base backgrounds (space-separated RGB for rgb() usage) */
+  --bg:             5   8  15;   /* #05080f — deep base */
+  --surface-1:      9  14  26;   /* #090e1a — sidebar / panels */
+  --surface-2:     13  20  37;   /* #0d1425 — cards */
+  --surface-3:     20  29  52;   /* #141d34 — hover / inputs */
+
+  /* Text */
+  --text-1:       226 232 240;   /* primary */
+  --text-2:       148 163 184;   /* secondary */
+  --text-3:        71  85 105;   /* muted */
+
+  /* Brand orange */
+  --brand:        249 115  22;   /* #f97316 */
+
+  /* Legacy aliases kept for backward compat */
+  --background:     5   8  15;
+  --foreground:   226 232 240;
+  --muted:         20  29  52;
+  --muted-foreground: 148 163 184;
+  --border:        20  29  52;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Base layer
+   ───────────────────────────────────────────────────────────── */
 
 @layer base {
   html {
@@ -21,66 +39,119 @@
   }
 
   body {
-    background-color: rgb(var(--background));
-    color: rgb(var(--foreground));
+    background-color: rgb(var(--bg));
+    color: rgb(var(--text-1));
+    /* Subtle dot grid texture */
+    background-image: radial-gradient(
+      rgba(255, 255, 255, 0.028) 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
+    background-attachment: fixed;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Selection */
   ::selection {
-    background-color: rgba(249, 115, 22, 0.25);
+    background-color: rgba(249, 115, 22, 0.22);
     color: inherit;
   }
 
-  /* Focus rings */
   :focus-visible {
-    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-surface-900;
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-surface-950;
   }
 
-  /* Scrollbar — subtle */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgb(var(--muted)); border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgb(var(--muted-foreground)); }
+  /* Thin, dark-mode scrollbar */
+  ::-webkit-scrollbar          { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track    { background: transparent; }
+  ::-webkit-scrollbar-thumb    { background: rgba(255,255,255,0.1); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Typography overrides for MDX prose
+   MDX prose overrides
    ───────────────────────────────────────────────────────────── */
 
 @layer components {
   .prose-lab {
     @apply prose prose-invert prose-sm sm:prose-base max-w-none;
-    @apply prose-headings:font-semibold prose-headings:tracking-tight;
-    @apply prose-a:text-brand-400 prose-a:no-underline hover:prose-a:underline;
-    @apply prose-code:text-brand-300 prose-code:bg-surface-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none;
-    @apply prose-pre:bg-surface-900 prose-pre:border prose-pre:border-surface-700;
-    @apply prose-blockquote:border-l-brand-500 prose-blockquote:text-surface-300;
-    @apply prose-th:text-surface-200 prose-th:bg-surface-800;
-    @apply prose-td:border-surface-700 prose-th:border-surface-700;
-    @apply prose-hr:border-surface-700;
+    @apply prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-surface-50;
+    @apply prose-a:text-brand-400 prose-a:no-underline prose-a:font-medium hover:prose-a:underline;
+    @apply prose-strong:text-surface-100 prose-strong:font-semibold;
+    @apply prose-code:text-brand-300 prose-code:bg-surface-800/70 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-[0.85em] prose-code:before:content-none prose-code:after:content-none;
+    @apply prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-0;
+    @apply prose-blockquote:border-l-brand-500/60 prose-blockquote:text-surface-400 prose-blockquote:not-italic;
+    @apply prose-th:text-surface-200 prose-th:bg-surface-800/60;
+    @apply prose-td:border-surface-700/60 prose-th:border-surface-700/60;
+    @apply prose-hr:border-surface-800;
+    @apply prose-li:text-surface-300 prose-p:text-surface-300;
   }
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Utility classes
+   Utilities
    ───────────────────────────────────────────────────────────── */
 
 @layer utilities {
   .text-balance { text-wrap: balance; }
   .text-pretty  { text-wrap: pretty; }
 
-  /* Subtle gradient border  */
+  /* Gradient border on a dark background */
   .border-gradient {
-    background: linear-gradient(rgb(var(--background)), rgb(var(--background))) padding-box,
-                linear-gradient(135deg, rgb(var(--brand)), transparent) border-box;
+    background:
+      linear-gradient(rgb(var(--bg)), rgb(var(--bg))) padding-box,
+      linear-gradient(135deg, rgba(249,115,22,0.5), transparent 60%) border-box;
     border: 1px solid transparent;
   }
 
-  /* Glow on brand elements */
-  .glow-brand {
-    box-shadow: 0 0 24px rgba(249, 115, 22, 0.15);
+  /* Subtle brand glow */
+  .glow-brand  { box-shadow: 0 0 28px rgba(249, 115, 22, 0.12); }
+  .glow-brand-sm { box-shadow: 0 0 14px rgba(249, 115, 22, 0.10); }
+
+  /* Card background shorthands */
+  .bg-panel    { background-color: rgb(var(--surface-1)); }
+  .bg-card     { background-color: rgb(var(--surface-2)); }
+  .bg-elevated { background-color: rgb(var(--surface-3)); }
+
+  /* Sidebar active indicator */
+  .nav-active {
+    background-color: rgba(249, 115, 22, 0.10);
+    color: rgb(var(--brand));
+    position: relative;
+  }
+  .nav-active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    border-radius: 0 2px 2px 0;
+    background-color: rgb(var(--brand));
+  }
+
+  /* Code block wrapper used in CodeBlock component */
+  .code-block-pre {
+    @apply overflow-x-auto bg-surface-900 p-4 text-sm leading-relaxed font-mono;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Syntax highlight (rehype-highlight) — minimal dark theme
+   ───────────────────────────────────────────────────────────── */
+
+.hljs              { background: transparent; color: #e2e8f0; }
+.hljs-keyword      { color: #fb923c; }        /* brand-adjacent orange */
+.hljs-string       { color: #86efac; }        /* soft green */
+.hljs-comment      { color: #475569; font-style: italic; }
+.hljs-function     { color: #93c5fd; }        /* soft blue */
+.hljs-number       { color: #f9a8d4; }        /* soft pink */
+.hljs-built_in     { color: #c4b5fd; }        /* soft purple */
+.hljs-type         { color: #67e8f9; }        /* cyan */
+.hljs-variable     { color: #e2e8f0; }
+.hljs-title        { color: #93c5fd; font-weight: 600; }
+.hljs-params       { color: #e2e8f0; }
+.hljs-attr         { color: #fb923c; }
+.hljs-literal      { color: #f9a8d4; }
+.hljs-punctuation  { color: #64748b; }

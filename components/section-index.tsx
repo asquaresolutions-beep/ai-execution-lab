@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { ContentMeta, ContentSection } from '@/lib/content'
-import { SECTION_META, formatDateShort, cn } from '@/lib/utils'
+import { SECTION_META, ACCENT_CLASSES, formatDateMono, cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 
 interface SectionIndexProps {
@@ -15,50 +15,66 @@ const DIFFICULTY_BADGE = {
 }
 
 const RESULT_BADGE = {
-  confirmed:    { label: 'Confirmed',    variant: 'green'   as const },
-  refuted:      { label: 'Refuted',      variant: 'red'     as const },
-  inconclusive: { label: 'Inconclusive', variant: 'yellow'  as const },
-  ongoing:      { label: 'Ongoing',      variant: 'blue'    as const },
+  confirmed:    { label: 'Confirmed',    variant: 'green'  as const },
+  refuted:      { label: 'Refuted',      variant: 'red'    as const },
+  inconclusive: { label: 'Inconclusive', variant: 'yellow' as const },
+  ongoing:      { label: 'Ongoing',      variant: 'blue'   as const },
 }
 
 export function SectionIndex({ section, items }: SectionIndexProps) {
   const meta = SECTION_META[section]
+  const ac   = ACCENT_CLASSES[meta.accent]
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14">
-      {/* Header */}
-      <div className="max-w-2xl mb-12">
-        <p className="text-2xl mb-3" aria-hidden>{meta.emoji}</p>
-        <h1 className="text-3xl font-bold tracking-tight text-surface-50">
+    <div className="px-6 lg:px-8 py-8 max-w-4xl">
+
+      {/* ── Header ───────────────────────────────────────────── */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-3">
+          <span className={cn(
+            'text-[10px] font-mono font-bold uppercase tracking-widest rounded px-2 py-1 border',
+            ac.text, ac.bg, ac.border
+          )}>
+            {meta.label}
+          </span>
+        </div>
+        <h1 className="text-2xl font-bold tracking-tight text-surface-50">
           {meta.title}
         </h1>
-        <p className="mt-3 text-surface-400 leading-relaxed">
+        <p className="mt-2 text-sm text-surface-400 leading-relaxed max-w-lg">
           {meta.description}
         </p>
       </div>
 
-      {/* Items */}
+      {/* ── Item count ─────────────────────────────────────────── */}
+      {items.length > 0 && (
+        <p className="text-[11px] font-mono text-surface-700 mb-4 uppercase tracking-widest">
+          {items.length} {items.length === 1 ? 'entry' : 'entries'}
+        </p>
+      )}
+
+      {/* ── Items ────────────────────────────────────────────── */}
       {items.length === 0 ? (
-        <div className="rounded-xl border border-surface-800 border-dashed p-12 text-center">
-          <p className="text-surface-500 text-sm">Nothing here yet. Work in progress.</p>
+        <div className="rounded-xl border border-white/[0.06] border-dashed p-12 text-center">
+          <p className="text-surface-600 text-sm">Nothing here yet. Work in progress.</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {items.map((item) => (
             <Link
               key={item.slug}
               href={`${meta.href}/${item.slug}`}
-              className="group flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-6 rounded-xl border border-surface-800 bg-surface-900/30 px-5 py-4 hover:border-surface-700 hover:bg-surface-900 transition-all"
+              className="group flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-5 rounded-xl border border-white/[0.05] bg-white/[0.02] px-5 py-4 hover:border-white/[0.10] hover:bg-white/[0.04] transition-all"
             >
               {/* Date */}
-              <div className="shrink-0 text-xs text-surface-600 font-mono sm:w-24 sm:text-right sm:pt-0.5">
-                {formatDateShort(item.frontmatter.date)}
+              <div className="shrink-0 text-[11px] text-surface-700 font-mono sm:w-24 sm:pt-0.5">
+                {formatDateMono(item.frontmatter.date)}
               </div>
 
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className="text-sm font-semibold text-surface-100 group-hover:text-white transition-colors">
+                  <span className="text-sm font-semibold text-surface-200 group-hover:text-surface-50 transition-colors">
                     {item.frontmatter.title}
                   </span>
                   {item.frontmatter.status === 'draft' && (
@@ -75,18 +91,19 @@ export function SectionIndex({ section, items }: SectionIndexProps) {
                     </Badge>
                   )}
                 </div>
+
                 {item.frontmatter.description && (
-                  <p className="text-sm text-surface-400 line-clamp-2">
+                  <p className="text-sm text-surface-500 line-clamp-2 leading-snug">
                     {item.frontmatter.description}
                   </p>
                 )}
-                {/* Tags */}
+
                 {item.frontmatter.tags && item.frontmatter.tags.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {item.frontmatter.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="text-xs text-surface-600 bg-surface-800/60 rounded px-1.5 py-0.5 border border-surface-700/50"
+                        className="text-[11px] text-surface-700 bg-white/[0.03] rounded px-1.5 py-0.5 border border-white/[0.05]"
                       >
                         {tag}
                       </span>
@@ -96,7 +113,7 @@ export function SectionIndex({ section, items }: SectionIndexProps) {
               </div>
 
               {/* Reading time */}
-              <div className="shrink-0 text-xs text-surface-600 sm:pt-0.5">
+              <div className="shrink-0 text-[11px] text-surface-700 font-mono sm:pt-0.5 sm:text-right">
                 {item.readingTime}
               </div>
             </Link>

@@ -1,188 +1,177 @@
 import Link from 'next/link'
-import { getRecentItems } from '@/lib/content'
-import { SECTION_META, formatDateShort } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
+import { getAllMeta, getRecentItems } from '@/lib/content'
+import { SECTION_META, ACCENT_CLASSES, formatDateMono } from '@/lib/utils'
 
-const SECTIONS = [
-  {
-    key: 'docs' as const,
-    title: 'Docs',
-    description: 'Reference documentation for Claude Code, GEO, LiteSpeed, WordPress production systems, and AI workflow primitives.',
-    emoji: '📖',
-    href: '/docs',
-    examples: ['Claude Code hook patterns', 'LiteSpeed UCSS behaviour', 'GEO entity targeting'],
-  },
-  {
-    key: 'systems' as const,
-    title: 'Systems',
-    description: 'Documented production systems built and actively running. Architecture decisions, failure modes, and maintenance notes included.',
-    emoji: '⚙️',
-    href: '/systems',
-    examples: ['WordPress typography system', 'SEO engineering pipeline', 'AI content workflow'],
-  },
-  {
-    key: 'labs' as const,
-    title: 'Labs',
-    description: 'Active experiments and research. Hypothesis, method, findings. Some ongoing, some closed. All real.',
-    emoji: '🔬',
-    href: '/labs',
-    examples: ['LiteSpeed UCSS stripping research', 'GEO citation tracking', 'Astra specificity cascade'],
-  },
-  {
-    key: 'case-studies' as const,
-    title: 'Case Studies',
-    description: 'Real results from asquaresolution.com, TrustSeal, and ScamCheck. What we built, what broke, what we measured.',
-    emoji: '📊',
-    href: '/case-studies',
-    examples: ['GEO pillar typography repair', 'ChatGPT Search visibility', 'Post 8717 UCSS fix'],
-  },
-]
+// ─────────────────────────────────────────────────────────────
+// Dashboard homepage
+// ─────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const recent = getRecentItems(4)
+  const docs        = getAllMeta('docs')
+  const systems     = getAllMeta('systems')
+  const labs        = getAllMeta('labs')
+  const caseStudies = getAllMeta('case-studies')
+  const playbooks   = getAllMeta('playbooks')
+  const recent      = getRecentItems(8)
+
+  const totalDocs = docs.length + systems.length + labs.length + caseStudies.length + playbooks.length
+
+  // Section cards config
+  const sections = [
+    { key: 'docs'         as const, count: docs.length,        items: docs.slice(0, 2)        },
+    { key: 'systems'      as const, count: systems.length,     items: systems.slice(0, 2)     },
+    { key: 'labs'         as const, count: labs.length,        items: labs.slice(0, 2)        },
+    { key: 'case-studies' as const, count: caseStudies.length, items: caseStudies.slice(0, 2) },
+    { key: 'playbooks'    as const, count: playbooks.length,   items: playbooks.slice(0, 2)   },
+  ]
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div className="px-6 lg:px-8 py-8 max-w-5xl">
 
-      {/* Hero */}
-      <section className="pt-20 pb-16 sm:pt-28 sm:pb-20">
-        <div className="max-w-3xl">
-          <div className="mb-5">
-            <Badge variant="brand">Local — in active development</Badge>
-          </div>
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-surface-50 text-balance leading-[1.1]">
+      {/* ── Header ─────────────────────────────────────────── */}
+      <div className="mb-10">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[10px] font-mono text-surface-600 uppercase tracking-widest">
             AI Execution Lab
-          </h1>
-          <p className="mt-5 text-lg text-surface-400 max-w-2xl text-pretty leading-relaxed">
-            A practical AI systems lab by{' '}
-            <a
-              href="https://asquaresolution.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-brand-400 hover:text-brand-300 transition-colors"
-            >
-              A Square Solutions
-            </a>
-            . Real workflows, real systems, real results — from the team building
-            production AI tools, SEO engineering pipelines, and GEO/AI-search strategies.
-          </p>
-          <p className="mt-3 text-sm text-surface-500">
-            This is not a tutorial site. Every document here comes from something
-            we actually built, broke, fixed, or measured.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href="/systems"
-              className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600 transition-colors"
-            >
-              Browse Systems
-            </Link>
-            <Link
-              href="/case-studies"
-              className="inline-flex items-center gap-2 rounded-lg border border-surface-700 px-4 py-2 text-sm font-medium text-surface-300 hover:text-surface-100 hover:border-surface-600 transition-colors"
-            >
-              Case Studies
-            </Link>
-          </div>
+          </span>
+          <span className="text-surface-800">·</span>
+          <span className="text-[10px] font-mono text-surface-700 uppercase tracking-widest">
+            A Square Solutions
+          </span>
         </div>
-      </section>
+        <h1 className="text-2xl font-bold tracking-tight text-surface-50">
+          Operational Knowledge Base
+        </h1>
+        <p className="mt-2 text-sm text-surface-400 max-w-xl leading-relaxed">
+          Real workflows, real systems, real results — built while shipping{' '}
+          <a href="https://asquaresolution.com" target="_blank" rel="noopener noreferrer"
+            className="text-surface-300 hover:text-brand-400 transition-colors">
+            asquaresolution.com
+          </a>
+          , TrustSeal, and ScamCheck.
+        </p>
+      </div>
 
-      {/* What's in the lab */}
-      <section className="pb-16">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-surface-500 mb-8">
-          What&apos;s in the lab
+      {/* ── Stats bar ──────────────────────────────────────── */}
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-10">
+        {sections.map(({ key, count }) => {
+          const meta = SECTION_META[key]
+          const ac   = ACCENT_CLASSES[meta.accent]
+          return (
+            <Link
+              key={key}
+              href={meta.href}
+              className={`rounded-lg border px-3 py-2.5 text-center hover:opacity-90 transition-opacity ${ac.border} ${ac.bg}`}
+            >
+              <p className={`text-lg font-bold font-mono leading-none ${ac.text}`}>{count}</p>
+              <p className="mt-1 text-[10px] text-surface-500 uppercase tracking-wide">{meta.title}</p>
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* ── Section tracks ─────────────────────────────────── */}
+      <div className="mb-12">
+        <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-4">
+          Sections
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {SECTIONS.map((section) => (
-            <Link
-              key={section.key}
-              href={section.href}
-              className="group rounded-xl border border-surface-800 bg-surface-900/50 p-6 hover:border-surface-700 hover:bg-surface-900 transition-all"
-            >
-              <div className="flex items-start gap-4">
-                <span className="text-2xl" aria-hidden>{section.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-surface-100 group-hover:text-white transition-colors">
-                    {section.title}
-                  </h3>
-                  <p className="mt-1.5 text-sm text-surface-400 leading-relaxed">
-                    {section.description}
-                  </p>
-                  <ul className="mt-3 flex flex-wrap gap-1.5">
-                    {section.examples.map((ex) => (
-                      <li
-                        key={ex}
-                        className="text-xs text-surface-500 bg-surface-800 rounded px-2 py-0.5 border border-surface-700"
-                      >
-                        {ex}
-                      </li>
-                    ))}
-                  </ul>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {sections.map(({ key, count, items }) => {
+            const meta = SECTION_META[key]
+            const ac   = ACCENT_CLASSES[meta.accent]
+            return (
+              <Link
+                key={key}
+                href={meta.href}
+                className="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 hover:border-white/[0.10] hover:bg-white/[0.04] transition-all"
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-semibold text-surface-100 group-hover:text-white transition-colors">
+                      {meta.title}
+                    </p>
+                    <p className="mt-0.5 text-xs text-surface-500 leading-snug max-w-[18ch]">
+                      {meta.description.split('.')[0]}.
+                    </p>
+                  </div>
+                  <span className={`text-lg font-bold font-mono ${ac.text}`}>{count}</span>
                 </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
 
-      {/* Recent additions */}
+                {/* Recent items in this section */}
+                {items.length > 0 && (
+                  <div className="space-y-1.5 border-t border-white/[0.05] pt-3">
+                    {items.map((item) => (
+                      <p key={item.slug} className="text-xs text-surface-500 truncate">
+                        <span className="text-surface-600">→ </span>
+                        {item.frontmatter.title}
+                      </p>
+                    ))}
+                  </div>
+                )}
+
+                {items.length === 0 && (
+                  <div className="border-t border-white/[0.05] pt-3">
+                    <p className="text-xs text-surface-700 italic">No entries yet</p>
+                  </div>
+                )}
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Recent feed ────────────────────────────────────── */}
       {recent.length > 0 && (
-        <section className="pb-20 border-t border-surface-800 pt-12">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-surface-500 mb-8">
+        <div className="mb-10">
+          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-4">
             Recently added
           </h2>
-          <div className="space-y-4">
+          <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
             {recent.map((item) => {
-              const sectionMeta = SECTION_META[item.section]
+              const meta = SECTION_META[item.section]
+              const ac   = ACCENT_CLASSES[meta.accent]
               return (
                 <Link
                   key={`${item.section}/${item.slug}`}
-                  href={`${sectionMeta.href}/${item.slug}`}
-                  className="group flex items-start gap-4 rounded-lg p-4 hover:bg-surface-900 transition-colors"
+                  href={`${meta.href}/${item.slug}`}
+                  className="flex items-center gap-4 px-4 py-3 hover:bg-white/[0.03] transition-colors group"
                 >
-                  <span className="mt-0.5 text-sm text-surface-500 w-20 shrink-0 text-right font-mono">
-                    {formatDateShort(item.frontmatter.date)}
+                  <time className="text-[11px] font-mono text-surface-700 shrink-0 w-20">
+                    {formatDateMono(item.frontmatter.date)}
+                  </time>
+                  <span className={`text-[10px] font-mono font-semibold uppercase shrink-0 w-14 ${ac.text}`}>
+                    {meta.label}
                   </span>
-                  <div>
-                    <span className="text-xs text-surface-600 mr-2">{sectionMeta.emoji} {sectionMeta.title}</span>
-                    <span className="text-sm font-medium text-surface-200 group-hover:text-white transition-colors">
-                      {item.frontmatter.title}
-                    </span>
-                    {item.frontmatter.description && (
-                      <p className="mt-0.5 text-xs text-surface-500 line-clamp-1">
-                        {item.frontmatter.description}
-                      </p>
-                    )}
-                  </div>
+                  <span className="text-sm text-surface-300 group-hover:text-surface-100 transition-colors truncate">
+                    {item.frontmatter.title}
+                  </span>
                 </Link>
               )
             })}
           </div>
-        </section>
+        </div>
       )}
 
-      {/* Stack callout */}
-      <section className="pb-20 border-t border-surface-800 pt-12">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-surface-500 mb-6">
+      {/* ── Stack callout ──────────────────────────────────── */}
+      <div className="rounded-xl border border-white/[0.05] bg-white/[0.01] px-5 py-4">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-surface-700 mb-3">
           Built from real execution
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2">
           {[
-            { label: 'Claude Code', desc: 'AI-assisted development' },
-            { label: 'GEO / AI Search', desc: 'Generative engine optimization' },
-            { label: 'WordPress / LiteSpeed', desc: 'Production CMS systems' },
-            { label: 'Vercel / GitHub', desc: 'Deployment & CI workflows' },
+            { label: 'Claude Code',           desc: 'AI-assisted development' },
+            { label: 'GEO / AI Search',       desc: 'Generative engine optimization' },
+            { label: 'WordPress + LiteSpeed', desc: 'Production CMS systems' },
+            { label: 'Python / REST API',     desc: 'Automation scripts' },
           ].map(({ label, desc }) => (
-            <div
-              key={label}
-              className="rounded-lg border border-surface-800 bg-surface-900/30 p-4"
-            >
-              <p className="text-sm font-medium text-surface-200">{label}</p>
-              <p className="mt-1 text-xs text-surface-500">{desc}</p>
+            <div key={label}>
+              <p className="text-xs font-medium text-surface-300">{label}</p>
+              <p className="text-[11px] text-surface-600">{desc}</p>
             </div>
           ))}
         </div>
-      </section>
+      </div>
 
     </div>
   )
