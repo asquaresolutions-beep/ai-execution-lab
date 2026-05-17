@@ -1,0 +1,103 @@
+---
+title: "Tracks Phase 4 + Failure Archive Build"
+description: "Built Phase 4 Execution Tracks architecture, rebuilt the Claude Code Operator track with 8 modules, created the Failure Archive content section, and wrote 3 real failure reports."
+date: "2026-05-14"
+tags: ["next.js", "claude-code", "execution-tracks", "failure-archive", "build-session"]
+status: published
+log_type: daily
+duration: "~6h"
+outcome: "99 → 103 pages shipped. Failure Archive live with 3 real incident reports."
+project: ai-execution-lab
+---
+
+## Session Overview
+
+Long build session covering Phase 4 of the AI Execution Lab platform. Three distinct phases of work with one critical build failure in the middle.
+
+**What shipped:**
+- Phase 4 Execution Tracks architecture (server/client module split)
+- Claude Code Operator track rebuilt: 8 modules, 17 published lessons
+- 7 new MDX components (TroubleshootingSection, WorkflowTimeline, IncidentReport, ExecutionEvidence, DeploymentLog, ValidationGate, LessonMeta)
+- Failure Archive section (routes, list page, slug page)
+- 3 real failure reports written from incidents that occurred during this build
+
+---
+
+## Phase 1: Tracks Architecture Fix
+
+**Problem:** `next build` failing with `Module not found: Can't resolve 'fs'`
+
+The `lib/tracks.ts` file had `import fs from 'fs'` at the top level. `components/tracks/track-roadmap.tsx` is a `'use client'` component. When Next.js bundles it, the entire `lib/tracks.ts` import tree goes into the browser bundle — including the `fs` import.
+
+**Fix:** Split `getLessonContent()` into `lib/lesson-content.ts` (server-only). Removed `fs` and `path` imports from `lib/tracks.ts`. Updated the lesson page (Server Component) to import from the new location.
+
+**Time spent:** ~18 minutes from error to green build.
+
+This failure became `server-module-client-bundle.mdx` in the Failure Archive.
+
+---
+
+## Phase 2: Claude Code Operator Track Rebuild
+
+Rebuilt the track from 5 to 8 modules with 17 published lessons. The full scope:
+
+| Module | Lessons |
+|--------|---------|
+| foundations | claude-md-architecture, project-settings, first-agentic-task |
+| prompt-engineering | production-prompt-anatomy, context-loading-strategies, task-decomposition |
+| github-workflows | git-operations, branch-strategy, bad-commit-recovery |
+| vercel-deployment | deployment-pipeline, build-failure-diagnosis |
+| wordpress-rest-api | wp-auth-patterns, content-patching-system |
+| product-development | feature-planning-claude |
+| debugging-recovery | debugging-methodology, reading-build-errors |
+| scaling-systems | multi-agent-orchestration |
+
+**MDX parse failure** encountered during `reading-build-errors.mdx`:
+
+```
+Unexpected character '@' (U+0040) before attribute name
+```
+
+Root cause: `description="The @/ alias..."` in a JSX prop. The `@` character combined with `{` in a JSX string prop confuses the MDX parser. Fixed by rewriting the CommandRef to avoid `@` in inline string props.
+
+**Time to resolve:** ~8 minutes.
+
+---
+
+## Phase 3: Failure Archive + 7 MDX Components
+
+Built the 7 new execution evidence components before creating the content section — infrastructure first, then content.
+
+**Component build order:**
+1. `TroubleshootingSection` — expandable, client, `useState` for collapse
+2. `WorkflowTimeline` + `TimelineStep` — server, visual numbered steps
+3. `IncidentReport` — server, structured incident docs
+4. `ExecutionEvidence` — server, commit ref trust signal
+5. `DeploymentLog` — server, level-colored log viewer
+6. `ValidationGate` + `ValidationPipeline` — server, pass/fail gates
+7. `LessonMeta` — server, difficulty/time badges
+
+**Failure encountered:** `next-mdx-remote v6` default `blockJS: true` had previously stripped array props from StepList and LessonObjectives. The fix was already in place (`blockJS: false`), so no issue this build. But writing the failure report required reconstructing the debugging path from memory.
+
+**Key decision:** The `IncidentReport` component renders from props, not MDX children — which means each incident frontmatter isn't duplicated in prose. The component handles all structural rendering; the MDX provides only the narrative.
+
+---
+
+## Build Output
+
+```
+✓ Compiled successfully in 8.4s
+✓ Generating static pages (103/103)
+0 TypeScript errors
+0 build errors
+```
+
+Final commit: `feat: Failure Archive + execution evidence layer`
+
+---
+
+## What I'd Do Differently
+
+The 7 MDX components were built before the Failure Archive routes existed. That meant I couldn't test them in actual content pages until late in the session. Better order: build one component, wire it into a test MDX file, verify render, then build the next.
+
+The `blockJS: false` option should be documented more prominently — it's not in the next-mdx-remote migration guide and cost 41 minutes when it was first hit.

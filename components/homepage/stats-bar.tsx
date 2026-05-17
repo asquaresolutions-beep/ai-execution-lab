@@ -24,7 +24,7 @@ function AnimatedCount({ value }: { value: number }) {
 
 export function StatsBar({ stats }: { stats: StatItem[] }) {
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-10">
+    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-10">
       {stats.map(({ key, count }, i) => {
         const meta = SECTION_META[key]
         const ac   = ACCENT_CLASSES[meta.accent]

@@ -29,25 +29,43 @@ const SECTION_LABELS: Record<string, string> = {
 
 function generateLinkedIn(item: ContentMeta, url: string): string {
   const fm      = item.frontmatter
-  const section = SECTION_LABELS[item.section] ?? item.section
   const tags    = (fm.tags ?? []).slice(0, 5).map(t => `#${t.replace(/-/g, '')}`).join(' ')
-  const impact  = fm.impact ? `\n📊 ${fm.impact}` : ''
-  const goal    = fm.goal   ? `\n🎯 ${fm.goal}`   : ''
-  const resTime = fm.resolution_time ? `\nResolution time: ${fm.resolution_time}` : ''
-  const sev     = fm.severity ? `\nSeverity: ${fm.severity.toUpperCase()}` : ''
 
-  return `${fm.title}
+  // Build a strong opening hook based on section
+  let hook = ''
+  if (item.section === 'failures' && fm.resolution_time) {
+    hook = `It took ${fm.resolution_time} to find the root cause. Here's what happened — and the pattern that prevents it.`
+  } else if (item.section === 'failures') {
+    hook = `Production failure documented. Root cause, timeline, and prevention pattern below.`
+  } else if (item.section === 'case-studies' && fm.impact) {
+    hook = `Measured result: ${fm.impact}`
+  } else if (item.section === 'labs') {
+    hook = fm.hypothesis ? `We tested a hypothesis: ${fm.hypothesis}` : `New experiment published.`
+  } else if (item.section === 'playbooks') {
+    hook = fm.goal ? `Goal: ${fm.goal}` : `Step-by-step execution guide published.`
+  } else if (item.section === 'logs') {
+    hook = fm.outcome ? `Session outcome: ${fm.outcome}` : `Execution session documented.`
+  } else {
+    hook = fm.description
+  }
 
-${fm.description}${impact}${goal}${sev}${resTime}
+  const body = fm.description !== hook ? `\n\n${fm.description}` : ''
+  const impact  = fm.impact          ? `\n\n📊 ${fm.impact}`           : ''
+  const resTime = fm.resolution_time ? `\n⏱ Resolved in: ${fm.resolution_time}` : ''
+  const sev     = fm.severity        ? `\n🔴 Severity: ${fm.severity.toUpperCase()}` : ''
+  const duration = fm.duration       ? `\n⏱ Session: ${fm.duration}` : ''
 
-This is part of the AI Execution Lab — a public engineering knowledge base documenting real production work: systems built, deployments shipped, failures recovered.
+  return `${hook}${body}${impact}${sev}${resTime}${duration}
 
-Every entry is sourced from actual execution. No fabricated incidents, no synthetic case studies.
+---
 
-🔗 ${url}
+Published on the AI Execution Lab — a public engineering knowledge base by A Square Solutions. Every entry documents real production work: systems built, failures recovered, experiments measured.
 
-${tags}
-#AIExecution #ClaudeCode #ProductionEngineering`
+No fabricated incidents. No synthetic case studies.
+
+Read the full write-up → ${url}
+
+${tags} #AIExecution #ClaudeCode #ProductionEngineering`
 }
 
 function generateTwitter(item: ContentMeta, url: string): string {
@@ -55,22 +73,35 @@ function generateTwitter(item: ContentMeta, url: string): string {
   const section = SECTION_LABELS[item.section] ?? item.section
   const tags    = (fm.tags ?? []).slice(0, 3).map(t => `#${t.replace(/-/g, '')}`).join(' ')
 
-  const lines: string[] = [
-    `🧵 ${section}: ${fm.title}`,
-    ``,
-    fm.description,
-  ]
+  const tweets: string[] = []
 
-  if (fm.impact)          lines.push(``, `Result: ${fm.impact}`)
-  if (fm.goal)            lines.push(``, `Goal: ${fm.goal}`)
-  if (fm.resolution_time) lines.push(``, `Resolved in: ${fm.resolution_time}`)
-  if (fm.hypothesis)      lines.push(``, `Hypothesis: ${fm.hypothesis}`)
+  // Tweet 1: Hook
+  if (item.section === 'failures' && fm.resolution_time) {
+    tweets.push(`🧵 Production failure — ${fm.title}\n\nResolved in ${fm.resolution_time}. Root cause, timeline, and prevention pattern. Thread 👇`)
+  } else if (item.section === 'failures') {
+    tweets.push(`🧵 Production failure documented.\n\n${fm.title}\n\nRoot cause + prevention below 👇`)
+  } else if (item.section === 'case-studies' && fm.impact) {
+    tweets.push(`🧵 ${section}: ${fm.title}\n\nResult: ${fm.impact}\n\nFull breakdown 👇`)
+  } else if (item.section === 'labs') {
+    tweets.push(`🧵 ${section}: ${fm.title}\n\n${fm.hypothesis ?? fm.description}\n\nFindings 👇`)
+  } else {
+    tweets.push(`🧵 ${section}: ${fm.title}\n\n${fm.description}\n\nThread 👇`)
+  }
 
-  lines.push(``, `Full write-up 👇`)
-  lines.push(url)
-  lines.push(``, tags)
+  // Tweet 2: Core detail
+  if (fm.severity) tweets.push(`2/ Severity: ${fm.severity.toUpperCase()}\n\n${fm.description}`)
+  else if (fm.impact) tweets.push(`2/ ${fm.impact}`)
+  else if (fm.goal) tweets.push(`2/ Goal: ${fm.goal}\n\n${fm.description}`)
+  else tweets.push(`2/ ${fm.description}`)
 
-  return lines.join('\n')
+  // Tweet 3: Key insight
+  if (fm.outcome) tweets.push(`3/ Outcome: ${fm.outcome}`)
+  if (fm.resolution_time) tweets.push(`${tweets.length + 1}/ Resolution time: ${fm.resolution_time}`)
+
+  // Final tweet: link
+  tweets.push(`${tweets.length + 1}/ Full write-up with all technical details:\n\n${url}\n\n${tags}`)
+
+  return tweets.join('\n\n— — —\n\n')
 }
 
 function generateNewsletter(item: ContentMeta, url: string): string {

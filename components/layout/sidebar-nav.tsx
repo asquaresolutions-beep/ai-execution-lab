@@ -26,6 +26,7 @@ const NAV = [
       { href: '/labs',         label: 'Labs'            },
       { href: '/case-studies', label: 'Case Studies'    },
       { href: '/failures',     label: 'Failure Archive' },
+      { href: '/logs',         label: 'Execution Logs'  },
     ],
   },
   {

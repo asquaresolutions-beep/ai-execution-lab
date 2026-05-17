@@ -79,6 +79,14 @@ export const SECTION_META = {
     href: '/failures',
     accent: 'red' as const,
   },
+  logs: {
+    title: 'Execution Logs',
+    description: 'Daily build logs, deployment journals, and weekly execution summaries from active production work.',
+    emoji: '⬒',
+    label: 'LOG',
+    href: '/logs',
+    accent: 'purple' as const,
+  },
 } as const
 
 export type SectionKey = keyof typeof SECTION_META

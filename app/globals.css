@@ -82,16 +82,54 @@
 @layer components {
   .prose-lab {
     @apply prose prose-invert prose-sm sm:prose-base max-w-none;
+
+    /* Headings */
     @apply prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-surface-50;
-    @apply prose-a:text-brand-400 prose-a:no-underline prose-a:font-medium hover:prose-a:underline;
+    @apply prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg;
+    @apply prose-h2:mt-10 prose-h2:mb-4 prose-h3:mt-7 prose-h3:mb-3;
+
+    /* Links */
+    @apply prose-a:text-brand-400 prose-a:no-underline prose-a:font-medium;
+    @apply hover:prose-a:text-brand-300 hover:prose-a:underline hover:prose-a:underline-offset-2;
+
+    /* Body text */
+    @apply prose-p:text-surface-300 prose-p:leading-7;
     @apply prose-strong:text-surface-100 prose-strong:font-semibold;
-    @apply prose-code:text-brand-300 prose-code:bg-surface-800/70 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-[0.85em] prose-code:before:content-none prose-code:after:content-none;
-    @apply prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-0;
-    @apply prose-blockquote:border-l-brand-500/60 prose-blockquote:text-surface-400 prose-blockquote:not-italic;
-    @apply prose-th:text-surface-200 prose-th:bg-surface-800/60;
+    @apply prose-em:text-surface-300;
+
+    /* Lists */
+    @apply prose-li:text-surface-300 prose-li:leading-7;
+    @apply prose-ul:my-5 prose-ol:my-5;
+
+    /* Inline code */
+    @apply prose-code:text-brand-300 prose-code:bg-surface-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-[0.85em] prose-code:before:content-none prose-code:after:content-none;
+
+    /* Code blocks — handled by PreBlock, reset prose defaults */
+    @apply prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-0 prose-pre:shadow-none;
+
+    /* Blockquote */
+    @apply prose-blockquote:border-l-brand-500/50 prose-blockquote:text-surface-400 prose-blockquote:not-italic prose-blockquote:bg-white/[0.02] prose-blockquote:px-4 prose-blockquote:rounded-r-md;
+
+    /* Tables */
+    @apply prose-th:text-surface-200 prose-th:bg-surface-800/60 prose-th:font-semibold;
     @apply prose-td:border-surface-700/60 prose-th:border-surface-700/60;
-    @apply prose-hr:border-surface-800;
-    @apply prose-li:text-surface-300 prose-p:text-surface-300;
+    @apply prose-td:text-surface-300;
+    @apply prose-table:text-sm;
+
+    /* Dividers */
+    @apply prose-hr:border-surface-800/80 prose-hr:my-8;
+
+    /* Images */
+    @apply prose-img:rounded-xl prose-img:border prose-img:border-white/[0.08];
+  }
+
+  /* Heading anchor links — added by rehype-autolink-headings with behavior:'wrap' */
+  .prose-lab .anchor {
+    @apply text-inherit no-underline relative;
+  }
+  .prose-lab .anchor:hover::before {
+    content: '#';
+    @apply absolute -left-5 text-surface-700 text-sm font-mono;
   }
 }
 

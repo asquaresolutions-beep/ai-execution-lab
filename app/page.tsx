@@ -1,9 +1,18 @@
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { getAllMeta, getRecentItems } from '@/lib/content'
 import { SECTION_META, ACCENT_CLASSES, formatDateMono } from '@/lib/utils'
-import { StatsBar }          from '@/components/homepage/stats-bar'
-import { SectionTracks }     from '@/components/homepage/section-tracks'
 import { FeaturedFailures }  from '@/components/homepage/featured-failures'
+
+// Code-split framer-motion components — reduces initial JS parse work
+const StatsBar = dynamic(
+  () => import('@/components/homepage/stats-bar').then(m => m.StatsBar),
+  { loading: () => <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2 mb-10">{Array.from({length:7}).map((_,i) => <div key={i} className="h-[62px] rounded-xl border border-white/[0.05] bg-white/[0.01] animate-pulse" />)}</div> }
+)
+const SectionTracks = dynamic(
+  () => import('@/components/homepage/section-tracks').then(m => m.SectionTracks),
+  { loading: () => <div className="mb-12 grid grid-cols-1 sm:grid-cols-2 gap-3">{Array.from({length:6}).map((_,i) => <div key={i} className="h-28 rounded-xl border border-white/[0.05] bg-white/[0.01] animate-pulse" />)}</div> }
+)
 
 // ─────────────────────────────────────────────────────────────
 // Environment badge
@@ -32,6 +41,7 @@ export default function HomePage() {
   const caseStudies = getAllMeta('case-studies')
   const playbooks   = getAllMeta('playbooks')
   const failures    = getAllMeta('failures')
+  const logs        = getAllMeta('logs')
   const recent      = getRecentItems(8)
 
   const stats = [
@@ -50,6 +60,7 @@ export default function HomePage() {
     { key: 'case-studies' as const, count: caseStudies.length, items: caseStudies.slice(0, 2) },
     { key: 'playbooks'    as const, count: playbooks.length,   items: playbooks.slice(0, 2)   },
     { key: 'failures'     as const, count: failures.length,    items: failures.slice(0, 2)    },
+    { key: 'logs'         as const, count: logs.length,        items: logs.slice(0, 2)        },
   ]
 
   return (
