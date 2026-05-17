@@ -1,6 +1,6 @@
 ---
 title: "Free-Tier Infrastructure Architecture"
-description: "How to build a production-capable infrastructure for ₹0/month using GitHub, Vercel, and Cloudflare free tiers — and exactly where each free tier breaks."
+description: "How to build a production-capable infrastructure for $0/month using GitHub, Vercel, and Cloudflare free tiers — and exactly where each free tier breaks."
 date: "2026-05-18"
 tags: ["ai-business", "infrastructure", "free-tier", "vercel", "github", "cloudflare"]
 status: "published"
@@ -10,7 +10,7 @@ status: "published"
 
 <LessonObjectives items={[
   "Understand exactly what GitHub, Vercel, and Cloudflare free tiers include",
-  "Build a complete production infrastructure at ₹0 in hosting costs",
+  "Build a complete production infrastructure at $0 in hosting costs",
   "Know precisely where each free tier breaks — before you hit the limit",
   "Choose between WordPress hosting and the free-tier Next.js stack",
   "Set up your infrastructure in the right order to avoid rework",
@@ -88,7 +88,7 @@ For a Next.js app or content site: 100GB bandwidth is approximately:
 - 1 million page views at 100KB average page weight
 - 500,000 page views at 200KB average page weight
 
-A content site generating ₹10,000/month in AdSense typically needs around 50,000–100,000 monthly visits. That's 5–20GB bandwidth — you're nowhere near the limit.
+A content site generating $120/month in AdSense typically needs around 50,000–100,000 monthly visits. That's 5–20GB bandwidth — you're nowhere near the limit.
 
 ### Where Vercel Hobby Breaks
 
@@ -156,7 +156,7 @@ Vercel already has its own CDN. Adding Cloudflare in front adds another caching 
 
 ## The Two Architecture Paths
 
-### Path A: WordPress + Hostinger (~₹500/month)
+### Path A: WordPress + Hostinger (~$6/month)
 
 ```
 Domain (Namecheap or Hostinger) 
@@ -171,9 +171,9 @@ Domain (Namecheap or Hostinger)
 - You want a CMS to manage content without touching files
 - You're familiar with WordPress
 
-**Cost:** ₹500/month hosting + ₹90/month amortized domain = ~₹590/month
+**Cost:** ~$6/month hosting + $1/month amortized domain = ~$7/month
 
-### Path B: Next.js + Vercel Hobby (₹0/month hosting)
+### Path B: Next.js + Vercel Hobby ($0/month hosting)
 
 ```
 Domain (Namecheap)
@@ -188,7 +188,7 @@ Domain (Namecheap)
 - You want fine-grained control over performance and rendering
 - You're comfortable working with code or using Claude to write it
 
-**Cost:** ₹0 hosting + ₹90/month amortized domain = ~₹90/month
+**Cost:** $0 hosting + $1/month amortized domain = ~$1/month
 
 ---
 
@@ -264,7 +264,7 @@ None of those constraints apply to a business in its first 6–12 months.
 ---
 
 <Callout type="warn" title="The 'production' confusion">
-Many beginners assume that because something is free, it's not production-grade. This is wrong. The free tiers of GitHub, Vercel, and Cloudflare are what most small-to-medium businesses run on for years. "Production-grade" means reliable, secure, scalable enough for your current load — not expensive. A ₹50,000/month server is not more production-grade than Vercel Hobby if your traffic doesn't require it.
+Many beginners assume that because something is free, it's not production-grade. This is wrong. The free tiers of GitHub, Vercel, and Cloudflare are what most small-to-medium businesses run on for years. "Production-grade" means reliable, secure, scalable enough for your current load — not expensive. A $600/month server is not more production-grade than Vercel Hobby if your traffic doesn't require it.
 </Callout>
 
 <Callout type="info" title="When to upgrade">

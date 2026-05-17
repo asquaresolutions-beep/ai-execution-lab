@@ -1,0 +1,374 @@
+---
+title: "WordPress Ecosystem Integration — Rollout Assets"
+description: "Complete implementation assets for integrating AI Execution Lab, TrustSeal, and ScamCheck into asquaresolution.com — homepage, navigation, footer, case studies, and sidebar widgets."
+date: "2026-05-18"
+tags: ["ops", "wordpress", "ecosystem", "integration", "rollout"]
+status: "published"
+---
+
+This document contains every asset needed to implement the ecosystem integration on `asquaresolution.com` (WordPress). Copy-paste ready. No decisions left open.
+
+**Implementation order:**
+1. Navigation additions (5 minutes)
+2. Footer widget (10 minutes)
+3. Homepage section (20 minutes)
+4. Sidebar widget — global (5 minutes)
+5. Case studies page (30 minutes)
+6. Internal linking pass on existing posts (ongoing)
+
+---
+
+## 1. Navigation Additions
+
+### Primary navigation menu
+
+Add after the existing main navigation items. Go to **Appearance → Menus** in WordPress admin.
+
+**Menu item to add:**
+
+| Label | URL | Open in new tab |
+|---|---|---|
+| AI Lab | https://lab.asquaresolution.com | Yes |
+
+**Where to place it:** Last item in the primary nav, or as a dropdown under "Tools" if a Tools menu item exists.
+
+**If using a mega menu or dropdown:**
+
+```
+Tools ▾
+  ├── TrustSeal — AI Trust Verification
+  ├── ScamCheck — AI Scam Detection
+  └── AI Execution Lab — Engineering Journal
+```
+
+### Secondary / utility navigation (if present in header or footer)
+
+Add: **AI Lab** → `https://lab.asquaresolution.com`
+
+---
+
+## 2. Footer Widget
+
+### Footer column: "Our Work"
+
+Add a new footer column titled **"Our Work"** (or add to an existing links column).
+
+**Widget content — HTML:**
+
+```html
+<div class="footer-ecosystem-block">
+  <h4>Our Work</h4>
+  <ul>
+    <li><a href="https://lab.asquaresolution.com" target="_blank" rel="noopener">AI Execution Lab</a> — Engineering journal</li>
+    <li><a href="https://trustseal.asquaresolution.com" target="_blank" rel="noopener">TrustSeal</a> — AI trust verification</li>
+    <li><a href="https://scamcheck.asquaresolution.com" target="_blank" rel="noopener">ScamCheck</a> — AI scam detection</li>
+  </ul>
+</div>
+```
+
+### Footer bottom bar (if present)
+
+Below the main footer columns, add a single line:
+
+```html
+<p>
+  Our AI engineering work is documented publicly at 
+  <a href="https://lab.asquaresolution.com" target="_blank" rel="noopener">AI Execution Lab</a>.
+</p>
+```
+
+---
+
+## 3. Homepage Section
+
+### Section: "What We Build"
+
+Add this section to the homepage after the hero/intro section and before the services section (or testimonials if no services section exists).
+
+**Section heading:** What We Build
+
+**Section subheading:** Production AI tools and systems — documented in public
+
+**Three-column block (use Gutenberg Columns block, 3 columns):**
+
+---
+
+**Column 1: AI Execution Lab**
+
+**Heading:** AI Execution Lab
+
+**Body:**
+Our public engineering journal — production failures, proven playbooks, deployment workflows, and the full Claude Code operator track. Built from two years of daily AI engineering work.
+
+**Link:** [Read the Lab →](https://lab.asquaresolution.com)
+
+---
+
+**Column 2: TrustSeal**
+
+**Heading:** TrustSeal
+
+**Body:**
+AI-powered trust verification for websites and businesses. Assesses credibility signals, fact-checks claims, and issues verifiable trust badges for businesses that want to demonstrate legitimacy.
+
+**Link:** [Try TrustSeal →](https://trustseal.asquaresolution.com)
+
+---
+
+**Column 3: ScamCheck**
+
+**Heading:** ScamCheck
+
+**Body:**
+AI scam detection tool. Check any URL, business, or offer for scam signals before engaging — AI analysis of domain, content, and behavioral patterns.
+
+**Link:** [Try ScamCheck →](https://scamcheck.asquaresolution.com)
+
+---
+
+### Section: "How We Work" (optional, below "What We Build")
+
+Add this directly below the three-column product section.
+
+**Full-width text block:**
+
+> Everything we build is documented at [AI Execution Lab](https://lab.asquaresolution.com) — our public operations journal covering production AI engineering: system architectures, deployment workflows, failure diagnoses, and the actual cost-to-value equation of running AI tools in production. Not a marketing blog. An operational record.
+
+---
+
+## 4. Sidebar Widget — Global
+
+Add to the sidebar that appears on all blog posts. Go to **Appearance → Widgets**.
+
+**Widget type:** Custom HTML
+
+**Widget title:** Engineering Journal
+
+**Widget content:**
+
+```html
+<div class="sidebar-lab-widget">
+  <p>
+    We document our production AI engineering work — failures, playbooks, deployments — 
+    at <strong>AI Execution Lab</strong>.
+  </p>
+  <a href="https://lab.asquaresolution.com" target="_blank" rel="noopener" class="button">
+    Browse the Lab →
+  </a>
+</div>
+```
+
+**When to show:** On all posts. If your theme supports conditional widget display, prioritize showing it on posts in categories: AI, Technology, SEO, WordPress, Claude.
+
+---
+
+## 5. Case Studies Page
+
+### If a case studies page doesn't exist — create it
+
+**Page title:** Case Studies
+
+**Slug:** `/case-studies`
+
+**Page content:**
+
+---
+
+**Intro block:**
+
+A Square Solutions builds and runs production AI systems. These case studies document specific engineering work: what the problem was, what we built, and what the outcome was. Not success summaries — engineering records.
+
+Full technical documentation for each case study is published at [AI Execution Lab](https://lab.asquaresolution.com), our public engineering journal.
+
+---
+
+**Case Study 1: AI Execution Lab — Production Next.js Platform**
+
+**Type:** Platform build
+
+**What we built:** AI Execution Lab — a public AI engineering platform running on Next.js 15, MDX content pipeline, Vercel deployment, and structured documentation for production AI engineering workflows.
+
+**What it involved:** Next.js App Router architecture, MDX remote rendering pipeline, multi-track structured learning content, Vercel deployment configuration, and the complete publishing operations system that runs it.
+
+**Where it's documented:** [AI Execution Lab engineering logs](https://lab.asquaresolution.com/logs)
+
+---
+
+**Case Study 2: TrustSeal — AI Trust Verification Tool**
+
+**Type:** AI-powered SaaS tool
+
+**What we built:** TrustSeal — an AI trust verification platform that assesses websites against credibility indicators, performs AI-assisted fact-checking, and issues verifiable trust signals.
+
+**What it involved:** Firebase backend, Gemini AI integration, Razorpay payment flow, trust signal taxonomy, and the verification logic that evaluates domain, content, and business credibility signals.
+
+**Link:** [TrustSeal](https://trustseal.asquaresolution.com)
+
+---
+
+**Case Study 3: ScamCheck — AI Scam Detection**
+
+**Type:** AI-powered detection tool
+
+**What we built:** ScamCheck — an AI scam detection tool that analyzes URLs, businesses, and offers for scam indicators using AI analysis of domain history, content patterns, and behavioral signals.
+
+**What it involved:** AI analysis pipeline, scam signal taxonomy, URL analysis architecture, and the scoring model that classifies risk levels.
+
+**Link:** [ScamCheck](https://scamcheck.asquaresolution.com)
+
+---
+
+**Case Study 4: GEO Typography Repair**
+
+**Type:** Production debugging
+
+**What we fixed:** LiteSpeed UCSS (Unused CSS Stripping) was removing typography styles on the main site, causing visual degradation post-caching. Diagnosed the LiteSpeed cache pipeline, identified the exclusion rule required, and implemented a permanent fix without disabling UCSS globally.
+
+**Full documentation:** [LiteSpeed UCSS Typography Repair](https://lab.asquaresolution.com/case-studies/geo-pillar-post-8717-typography-repair)
+
+---
+
+### If a case studies page already exists
+
+Add this block at the top of the existing page, before the existing case studies:
+
+```
+We publish full engineering documentation for our production work at AI Execution Lab 
+(lab.asquaresolution.com). The case studies below summarize specific projects — 
+click the Lab links for complete technical records.
+```
+
+Then add the individual case study entries from above as needed.
+
+---
+
+## 6. Internal Linking Pass — Priority Post List
+
+Run this pass on existing WordPress posts. For each category, find your 2–3 highest-traffic posts and add one contextual internal link to the Lab.
+
+### Category: AI tools / Claude / AI assistants
+
+**Anchor text options:**
+- "our Claude Code production workflow is documented at AI Execution Lab"
+- "how we use Claude Code in production"
+- "the Claude Code Operator track"
+
+**Link destination:** `https://lab.asquaresolution.com/tracks/claude-code-operator`
+
+**Sample sentence to insert:**
+> We document the full Claude Code workflow we use for production engineering at [AI Execution Lab](https://lab.asquaresolution.com/tracks/claude-code-operator) — including environment setup, prompt engineering, GitHub integration, and deployment.
+
+---
+
+### Category: SEO / GEO / AI search
+
+**Anchor text options:**
+- "our GEO research and AI search systems track"
+- "how AI search systems select sources"
+- "Generative Engine Optimization"
+
+**Link destination:** `https://lab.asquaresolution.com/tracks/geo-ai-search`
+
+**Sample sentence to insert:**
+> We've published our full GEO research — how ChatGPT, Perplexity, Claude, and Gemini select and cite sources — in the [GEO + AI Search Systems track](https://lab.asquaresolution.com/tracks/geo-ai-search) at AI Execution Lab.
+
+---
+
+### Category: WordPress / automation
+
+**Anchor text options:**
+- "WordPress REST API automation playbook"
+- "how we automate bulk WordPress operations"
+- "Read→Transform→Check→Apply→Verify pattern"
+
+**Link destination:** `https://lab.asquaresolution.com/playbooks/wp-rest-api-automation-playbook`
+
+**Sample sentence to insert:**
+> The full operational procedure for WordPress REST API bulk automation is published as a [playbook at AI Execution Lab](https://lab.asquaresolution.com/playbooks/wp-rest-api-automation-playbook).
+
+---
+
+### Category: AI for business / content monetization
+
+**Anchor text options:**
+- "zero-budget AI business stack"
+- "how to build an AI content business without funding"
+- "AI Business Zero Budget track"
+
+**Link destination:** `https://lab.asquaresolution.com/tracks/ai-business-zero-budget`
+
+**Sample sentence to insert:**
+> We've documented the complete zero-budget stack for launching an AI content business — tool selection, infrastructure, content workflow, AdSense setup — in the [AI Business Zero Budget track](https://lab.asquaresolution.com/tracks/ai-business-zero-budget) at AI Execution Lab.
+
+---
+
+### Category: Next.js / Vercel / deployment
+
+**Anchor text options:**
+- "Next.js edge runtime deployment failure"
+- "next-mdx-remote v6 blockJS error"
+- "production deployment failures we've documented"
+
+**Link destination:** `https://lab.asquaresolution.com/failures`
+
+**Sample sentence to insert:**
+> Production failures from our Next.js deployments — including edge runtime incompatibilities and MDX rendering issues — are documented in the [Failure Archive](https://lab.asquaresolution.com/failures) at AI Execution Lab.
+
+---
+
+## 7. About Page Addition
+
+Add to the existing About page, after the company description:
+
+**Section heading:** Our Engineering Work
+
+**Content:**
+A Square Solutions builds AI-native tools and documents the engineering work publicly at [AI Execution Lab](https://lab.asquaresolution.com) — a production operations journal covering real system builds, failures, playbooks, and deployment workflows.
+
+Current products: [TrustSeal](https://trustseal.asquaresolution.com) (AI trust verification) and [ScamCheck](https://scamcheck.asquaresolution.com) (AI scam detection).
+
+---
+
+## 8. Blog Post Launch Announcement
+
+After publishing the WordPress launch article ("Why We Built AI Execution Lab"), add this sticky notice to the blog index page for 30 days.
+
+**Notice content:**
+
+> **New: AI Execution Lab is live.** Our public AI engineering journal — production failures, Claude Code workflow, GEO research, and the zero-budget AI business track — is now at [lab.asquaresolution.com](https://lab.asquaresolution.com).
+
+**Implementation:** Use a notice/banner plugin, or add a Gutenberg Full Width Group block at the top of your Posts page template with a light background color.
+
+---
+
+## Implementation Checklist
+
+```
+[ ] Navigation: "AI Lab" added to primary menu → lab.asquaresolution.com
+[ ] Footer: "Our Work" column with Lab, TrustSeal, ScamCheck links
+[ ] Footer bottom: one-line Lab reference
+[ ] Homepage: "What We Build" three-column section added
+[ ] Homepage: "How We Work" text block added
+[ ] Sidebar: "Engineering Journal" widget active on all posts
+[ ] Case studies page: created or updated with Lab reference and case study entries
+[ ] Internal links: Claude/AI category posts → Claude Code Operator track
+[ ] Internal links: SEO/GEO category posts → GEO + AI Search track
+[ ] Internal links: WordPress category posts → WP REST API Playbook
+[ ] Internal links: Business/content posts → AI Business Zero Budget track
+[ ] About page: "Our Engineering Work" section added
+[ ] Launch article: published on WordPress (see wordpress-launch-article.mdx)
+[ ] Blog notice: 30-day sticky notice pointing to lab.asquaresolution.com
+```
+
+---
+
+## Verification After Implementation
+
+After completing all items above:
+
+1. **Navigation:** Click "AI Lab" in the nav — confirm it opens lab.asquaresolution.com in a new tab
+2. **Footer:** Verify all three product links open correctly
+3. **Homepage:** Confirm three-column section renders correctly on mobile
+4. **Sidebar:** Load a blog post — confirm widget appears with correct link
+5. **Internal links:** Load one post from each linked category — confirm Lab links are present and functional
+6. **Search Console:** Within 2 weeks, check that Lab pages appear as linked pages in your WordPress property
