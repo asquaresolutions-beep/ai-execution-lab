@@ -33,3 +33,18 @@ next-env.d.ts
 
 # Test output
 coverage/
+
+# Temp / scratch artifacts
+*-test.json
+*-test.txt
+*.output
+*.tmp
+
+# OS extras
+.AppleDouble
+.LSOverride
+desktop.ini
+Thumbs.db
+
+# Build cache
+build/
