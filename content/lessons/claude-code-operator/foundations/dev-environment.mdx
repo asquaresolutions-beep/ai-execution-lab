@@ -1,0 +1,207 @@
+## What this lesson covers
+
+By the end, your Claude Code environment will be configured for production use — not just installed and running. There's a difference between "Claude Code works" and "Claude Code works correctly for your codebase."
+
+<Callout type="info" title="This is the foundation">
+Every other lesson in this track builds on the environment you configure here. Spend the extra 10 minutes doing it properly.
+</Callout>
+
+---
+
+## Prerequisites check
+
+<Checkpoint title="Starting requirements">
+  <CheckItem>Claude Pro or Team subscription active at claude.ai</CheckItem>
+  <CheckItem>Node.js 18+ installed (`node --version` shows 18.x or higher)</CheckItem>
+  <CheckItem>Git installed and configured with your identity</CheckItem>
+  <CheckItem>A real project directory ready — not a temp folder</CheckItem>
+</Checkpoint>
+
+---
+
+## Step 1 — Install Claude Code
+
+Claude Code is a CLI tool. Install it globally:
+
+<CodeBlock filename="terminal" language="bash">
+{`npm install -g @anthropic-ai/claude-code
+claude --version`}
+</CodeBlock>
+
+If you see `command not found` after installation, your npm global bin isn't in PATH:
+
+<CodeBlock filename="terminal" language="bash">
+{`npm config get prefix
+# Add the output + /bin to PATH in ~/.bashrc or ~/.zshrc
+# Example: export PATH="$PATH:/Users/you/.npm-global/bin"`}
+</CodeBlock>
+
+<Callout type="warn" title="Install globally, not per-project">
+Claude Code is an operator tool, not a project dependency. Install with `-g`, not as a dev dependency.
+</Callout>
+
+---
+
+## Step 2 — Authentication
+
+Navigate to your project directory and launch Claude Code:
+
+<CodeBlock filename="terminal" language="bash">
+{`cd /path/to/your/project
+claude`}
+</CodeBlock>
+
+On first launch, a browser tab opens for OAuth authentication against your Claude account. After completing it, credentials are stored in `~/.config/anthropic` — you won't re-authenticate per project.
+
+You'll land in the Claude Code REPL. Run `/status` to confirm:
+
+<CodeBlock filename="terminal" language="bash">
+{`> /status
+API Status: Connected
+Model: claude-opus-4-5 (or your account default)
+Context: 200k tokens`}
+</CodeBlock>
+
+---
+
+## Step 3 — Understand the tool-use loop
+
+Claude Code operates in a loop: **prompt → plan → use tools → respond → repeat**. The key tools it uses on your filesystem:
+
+| Tool | What it does | Risk level |
+|---|---|---|
+| `Read` | Read any file | Safe |
+| `Write` | Overwrite files | Moderate |
+| `Edit` | Make targeted edits | Moderate |
+| `Bash` | Run shell commands | High |
+| `Glob` | Find files by pattern | Safe |
+| `Grep` | Search file contents | Safe |
+
+<Callout type="danger" title="Bash tool runs real commands">
+When Claude uses the Bash tool, it runs actual shell commands on your machine. Claude Code will ask for confirmation before running commands that look destructive, but you should always read what it's about to do before approving.
+</Callout>
+
+---
+
+## Step 4 — Configure your project settings
+
+Claude Code reads a `.claude/` directory at your project root for configuration. Create it:
+
+<CodeBlock filename="terminal" language="bash">
+{`mkdir -p .claude`}
+</CodeBlock>
+
+Create a minimal `settings.json` to control permissions:
+
+<CodeBlock filename=".claude/settings.json" language="json">
+{`{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(npm run *)",
+      "Bash(node *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)"
+    ]
+  }
+}`}
+</CodeBlock>
+
+This allowlist approach is the right pattern for production codebases. Be explicit about what Claude can run rather than relying on its judgment alone.
+
+---
+
+## Step 5 — Write your CLAUDE.md
+
+`CLAUDE.md` is the most important file in your Claude Code setup. It's injected into context at the start of every session. Think of it as a briefing document for an expert contractor who just walked in.
+
+<CodeBlock filename="CLAUDE.md" language="markdown">
+{`# Project: [Your Project Name]
+
+## What this is
+[2-3 sentences on what the project does and who uses it]
+
+## Tech stack
+- Runtime: Node.js 20 / TypeScript 5
+- Framework: Next.js 15 App Router
+- Styling: Tailwind CSS
+- Database: [your db]
+- Deploy: Vercel
+
+## Critical rules
+- Never run \`npm install\` — use \`node node_modules/.bin/...\` directly
+- Always run TypeScript check before committing: \`tsc --noEmit\`
+- Never modify files in \`/generated/\` — they are auto-generated
+
+## Common commands
+\`\`\`bash
+# Dev server
+node node_modules/next/dist/bin/next dev
+
+# Build
+node node_modules/next/dist/bin/next build
+
+# Type check
+node node_modules/typescript/bin/tsc --noEmit
+\`\`\`
+
+## Directory structure
+\`\`\`
+app/           Next.js App Router pages and API routes
+components/    React components
+lib/           Utility functions and data access
+content/       MDX content files
+\`\`\``}
+</CodeBlock>
+
+<Callout type="lab" title="CLAUDE.md is an investment">
+Every minute you spend writing a good CLAUDE.md saves 5 minutes of context re-establishment per session. Projects with a detailed CLAUDE.md consistently produce better results than projects without one.
+</Callout>
+
+---
+
+## Step 6 — Verify your first agentic task
+
+Test the complete environment with a real task. In the Claude Code REPL:
+
+```
+> List all TypeScript files in this project and show me which ones are client components
+```
+
+Claude should use `Glob` to find `.tsx` files, then `Grep` to find `'use client'` directives, and return a structured list. If this works correctly, your environment is ready.
+
+<Checkpoint title="Environment complete — verify before continuing">
+  <CheckItem>claude --version returns a version number</CheckItem>
+  <CheckItem>/status shows "API Status: Connected"</CheckItem>
+  <CheckItem>.claude/settings.json exists with your permission rules</CheckItem>
+  <CheckItem>CLAUDE.md exists at project root with real project context</CheckItem>
+  <CheckItem>First agentic task ran without errors and used file tools correctly</CheckItem>
+</Checkpoint>
+
+---
+
+## What you built
+
+<Milestone n={1} title="Production-ready Claude Code environment">
+Your Claude Code installation is authenticated, configured with explicit permissions, and briefed via CLAUDE.md. Every session from here starts with full project context rather than re-establishing basics from scratch.
+</Milestone>
+
+---
+
+## Resources
+
+<Resource
+  title="Claude Code Documentation"
+  description="Official reference for all Claude Code features, settings, and tool behaviors."
+  href="https://docs.anthropic.com/en/docs/claude-code"
+  type="docs"
+/>
+
+<Resource
+  title="CLAUDE.md Template"
+  description="Production CLAUDE.md template used at A Square Solutions — adapt for your project."
+  href="/docs/claude-code-wp-rest-api"
+  type="template"
+/>

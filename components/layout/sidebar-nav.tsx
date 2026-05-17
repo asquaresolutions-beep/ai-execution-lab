@@ -31,6 +31,7 @@ const NAV = [
     group: 'Execution',
     items: [
       { href: '/playbooks', label: 'Playbooks' },
+      { href: '/tracks',    label: 'Tracks'    },
     ],
   },
 ]

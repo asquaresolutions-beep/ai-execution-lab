@@ -77,6 +77,11 @@ export { PromptBlock }                 from './mdx/prompt-block'
 export { CodeBlock }                   from './mdx/code-block'
 export { StepList, Checklist }         from './mdx/step-list'
 
+// Execution track lesson components
+export { Checkpoint, CheckItem }       from './mdx/checkpoint'
+export { Resource }                    from './mdx/resource-block'
+export { Milestone }                   from './mdx/milestone'
+
 // Media
 export { YouTube }     from './media/youtube-embed'
 export { VideoEmbed }  from './media/video-embed'

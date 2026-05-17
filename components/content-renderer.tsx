@@ -1,5 +1,5 @@
 import { MDXRemote } from 'next-mdx-remote/rsc'
-import { mdxComponents, WorkflowBlock, WorkflowStep, PromptBlock, CodeBlock, StepList, Checklist, YouTube, VideoEmbed, BeforeAfter, Gallery } from './mdx-components'
+import { mdxComponents, WorkflowBlock, WorkflowStep, PromptBlock, CodeBlock, StepList, Checklist, YouTube, VideoEmbed, BeforeAfter, Gallery, Checkpoint, CheckItem, Resource, Milestone } from './mdx-components'
 import remarkGfm from 'remark-gfm'
 import rehypeSlug from 'rehype-slug'
 import rehypeHighlight from 'rehype-highlight'
@@ -17,6 +17,11 @@ const allComponents = {
   VideoEmbed,
   BeforeAfter,
   Gallery,
+  // Track lesson components
+  Checkpoint,
+  CheckItem,
+  Resource,
+  Milestone,
 }
 
 interface ContentRendererProps {
