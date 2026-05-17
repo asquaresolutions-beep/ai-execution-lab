@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getItem, getAllSlugs } from '@/lib/content'
+import { getItem, getAllSlugs, getNeighbors } from '@/lib/content'
 import { ContentPage } from '@/components/content-page'
 import type { Metadata } from 'next'
 
@@ -13,9 +13,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const item = getItem('docs', slug)
   if (!item) return {}
+  const fm = item.frontmatter
   return {
-    title: item.frontmatter.title,
-    description: item.frontmatter.description,
+    title: fm.title,
+    description: fm.description,
+    openGraph: { title: fm.title, description: fm.description },
   }
 }
 
@@ -23,5 +25,6 @@ export default async function DocPage({ params }: Props) {
   const { slug } = await params
   const item = getItem('docs', slug)
   if (!item) notFound()
-  return <ContentPage item={item} />
+  const { prev, next } = getNeighbors('docs', slug)
+  return <ContentPage item={item} prev={prev} next={next} />
 }

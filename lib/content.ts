@@ -138,6 +138,19 @@ export function getRecentItems(limit = 6): ContentMeta[] {
     .slice(0, limit)
 }
 
+/** Previous and next items within a section — for article navigation. */
+export function getNeighbors(
+  section: ContentSection,
+  slug: string
+): { prev: ContentMeta | null; next: ContentMeta | null } {
+  const items = getAllMeta(section)
+  const idx   = items.findIndex((i) => i.slug === slug)
+  return {
+    prev: idx > 0                ? items[idx - 1] : null,
+    next: idx < items.length - 1 ? items[idx + 1] : null,
+  }
+}
+
 /** Count of items per section — for dashboard stats. */
 export function getSectionCounts(): Record<ContentSection, number> {
   const sections: ContentSection[] = ['docs', 'systems', 'labs', 'case-studies', 'playbooks']

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getItem, getAllSlugs } from '@/lib/content'
+import { getItem, getAllSlugs, getNeighbors } from '@/lib/content'
 import { ContentPage } from '@/components/content-page'
 import type { Metadata } from 'next'
 
@@ -20,5 +20,6 @@ export default async function CaseStudyPage({ params }: Props) {
   const { slug } = await params
   const item = getItem('case-studies', slug)
   if (!item) notFound()
-  return <ContentPage item={item} />
+  const { prev, next } = getNeighbors('case-studies', slug)
+  return <ContentPage item={item} prev={prev} next={next} />
 }

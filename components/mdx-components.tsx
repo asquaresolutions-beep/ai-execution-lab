@@ -77,6 +77,12 @@ export { PromptBlock }                 from './mdx/prompt-block'
 export { CodeBlock }                   from './mdx/code-block'
 export { StepList, Checklist }         from './mdx/step-list'
 
+// Media
+export { YouTube }     from './media/youtube-embed'
+export { VideoEmbed }  from './media/video-embed'
+export { BeforeAfter } from './media/before-after'
+export { Gallery }     from './media/gallery'
+
 // ─────────────────────────────────────────────────────────────
 // Standard MDX element overrides
 // ─────────────────────────────────────────────────────────────
@@ -118,17 +124,11 @@ export const mdxComponents: MDXComponents = {
     )
   },
 
-  // ── Code blocks
-  pre: ({ children, ...props }) => (
-    <div className="my-6 rounded-xl border border-surface-700/60 overflow-hidden">
-      <pre
-        className="overflow-x-auto bg-surface-950/80 p-4 text-sm leading-relaxed"
-        {...props}
-      >
-        {children}
-      </pre>
-    </div>
-  ),
+  // ── Code blocks (client wrapper with copy button)
+  pre: (props) => {
+    const { PreBlock } = require('./layout/pre-block')
+    return <PreBlock {...props} />
+  },
 
   // ── Tables
   table: ({ children }) => (
