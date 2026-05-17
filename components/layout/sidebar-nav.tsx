@@ -11,7 +11,10 @@ import { cn } from '@/lib/utils'
 const NAV = [
   {
     group: null,
-    items: [{ href: '/', label: 'Dashboard', exact: true }],
+    items: [
+      { href: '/', label: 'Dashboard', exact: true },
+      { href: '/start-here', label: '▶ Start Here' },
+    ],
   },
   {
     group: 'Knowledge',

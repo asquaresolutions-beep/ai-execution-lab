@@ -10,7 +10,8 @@ const SECTIONS: ContentSection[] = ['docs', 'systems', 'labs', 'case-studies', '
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: BASE_URL, lastModified: new Date(), changeFrequency: 'weekly', priority: 1 },
+    { url: BASE_URL,                         lastModified: new Date(), changeFrequency: 'weekly',  priority: 1.0 },
+    { url: `${BASE_URL}/start-here`,         lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },
     // /ops and /syndicate are noindex internal tools — excluded from sitemap
     ...SECTIONS.map((section) => ({
       url: `${BASE_URL}${SECTION_META[section].href}`,

@@ -33,18 +33,40 @@ export function Sidebar() {
       <SidebarNav />
 
       {/* Footer */}
-      <div className="mt-auto px-4 py-4 border-t border-white/[0.06]">
-        <a
-          href="https://asquaresolution.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block text-xs text-surface-600 hover:text-surface-400 transition-colors font-mono"
-        >
-          asquaresolution.com ↗
-        </a>
-        <p className="mt-1 text-[10px] text-surface-700">
-          A Square Solutions · AI Ops
-        </p>
+      <div className="mt-auto px-4 py-4 border-t border-white/[0.06] space-y-2">
+        <div>
+          <a
+            href="https://asquaresolution.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-xs text-surface-600 hover:text-surface-400 transition-colors font-mono"
+          >
+            asquaresolution.com ↗
+          </a>
+          <p className="mt-0.5 text-[10px] text-surface-700">
+            A Square Solutions · Engineering Journal
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <a
+            href="https://trustseal.asquaresolution.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] font-mono text-surface-700 hover:text-surface-500 transition-colors"
+            title="TrustSeal — AI trust verification"
+          >
+            TrustSeal ↗
+          </a>
+          <a
+            href="https://scamcheck.asquaresolution.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] font-mono text-surface-700 hover:text-surface-500 transition-colors"
+            title="ScamCheck — AI scam detection"
+          >
+            ScamCheck ↗
+          </a>
+        </div>
       </div>
     </aside>
   )

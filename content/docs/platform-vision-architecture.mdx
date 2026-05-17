@@ -1,0 +1,371 @@
+---
+title: "Platform Vision Architecture — AI Execution Lab v2"
+description: "Conceptual architecture for evolving AI Execution Lab into a full AI-native operational learning environment. User models, feature layers, infrastructure implications, and rollout phases."
+date: "2026-05-18"
+tags: ["ops", "vision", "architecture", "platform", "roadmap"]
+status: "published"
+---
+
+This document defines the conceptual architecture for the next evolution of AI Execution Lab — from a public engineering journal to a full AI-native operational learning environment. No auth is being built yet. This document defines the architecture so that every decision made before auth is compatible with it.
+
+---
+
+## The Vision in One Paragraph
+
+AI Execution Lab evolves into an execution-based education system where operators, builders, and engineers don't just read about production AI systems — they build real ones, with real tooling, inside a verified learning environment. Progress is tracked. Experiments are shared. Operators develop reputation through documented execution, not credentials or certificates.
+
+This is not a MOOC. It is not a bootcamp. It is an operational environment where the work is the curriculum.
+
+---
+
+## What Changes and What Doesn't
+
+### Stays the same
+
+- **Execution-first philosophy** — content is still written during/after real work
+- **Public by default** — all documented engineering is visible without an account
+- **Failure Archive** — remains core content, not supplementary
+- **Free access to all written content** — no paywall for reading
+- **GEO/AI-search optimization** — all content continues to be structured for AI retrieval
+- **A Square Solutions authorship** — platform built in public by the same team
+
+### Changes
+
+- **Progress becomes persistent** — optional auth allows cross-device progress sync
+- **Execution becomes verifiable** — labs produce outputs that can be verified
+- **Reputation becomes public** — operators can publish their completed work
+- **Collaboration becomes possible** — teams can share workspaces and track progress together
+- **Experiments become shared** — GEO tests, automation results, and lab outputs are citable
+
+---
+
+## User Models
+
+### Level 0: Anonymous Reader
+
+**Current default state.** No account, no login, full access to all published content.
+
+**Capabilities:**
+- Read all lessons, failures, playbooks, logs, case studies
+- Progress tracked locally (localStorage) — lost on browser clear
+- Search and navigation fully functional
+- No personalization
+
+**Friction:** Zero. Anyone who finds the platform via AI search or referral gets immediate value.
+
+---
+
+### Level 1: Free Member
+
+**Minimal auth — email only.** Unlocks persistent progress and basic personalization.
+
+**Capabilities (beyond Level 0):**
+- Progress synced across devices
+- Bookmark lessons and content items
+- Opt into a weekly digest of new content
+- Public profile page: `/members/[username]` showing completed tracks
+
+**What it doesn't include:** Lab workspace, collaboration, publishing, experiment access.
+
+**Conversion trigger:** User completes a module and wants to continue on a different device. Or wants to share their track progress.
+
+---
+
+### Level 2: Operator Member
+
+**GitHub-connected account.** Unlocks execution capabilities — labs, experiments, publishing.
+
+**Why GitHub-connected:**
+- GitHub auth is standard for technical operators
+- GitHub access enables workspace integration (repo linking)
+- No additional credential management overhead
+
+**Capabilities (beyond Level 1):**
+- Access to interactive labs with verifiable outputs
+- Submit completed project outputs for review
+- Publish personal execution logs and case studies
+- Access experiment framework (GEO testing, automation templates)
+- Link personal GitHub repos to track progress on real projects
+- Operator reputation score (see below)
+
+---
+
+### Level 3: Verified Operator
+
+**Operator Member who has completed at least one full track and published at least one verified execution output.**
+
+**Capabilities (beyond Level 2):**
+- Verified badge on public profile
+- Access to collaborative workspace features
+- Ability to submit content for review to be published on the Lab (peer-documented execution)
+- Early access to new track modules
+
+**This is the target user of the platform** — someone who has demonstrated execution capability, not just reading.
+
+---
+
+### Level 4: Team Workspace
+
+**Organizational account for teams.** Enables shared progress tracking, collaborative labs, and private documentation.
+
+**Use cases:**
+- Engineering teams tracking Claude Code operator certification
+- Content teams tracking GEO + distribution track completion
+- AI startups using the Business Zero Budget track for onboarding
+
+**Capabilities:**
+- Shared dashboard: see team member progress across tracks
+- Shared workspace: collaborative lab environment
+- Private execution logs (internal team documentation)
+- Custom track ordering / track bundles for onboarding
+- Team-level completion certificates (for internal use)
+
+---
+
+## Feature Layers
+
+### Layer 1: Progress + Persistence (Phase 1)
+
+**What it is:** Replace localStorage progress with server-side progress, synced to account.
+
+**Infrastructure needed:**
+- Authentication provider (Clerk, Auth.js, or Supabase Auth)
+- `progress` table: `user_id, track_id, module_id, lesson_id, completed_at`
+- API routes: `POST /api/progress/complete`, `GET /api/progress/[user]`
+- Profile page: `app/profile/page.tsx` and `app/members/[username]/page.tsx`
+
+**What doesn't change:** Content rendering, MDX pipeline, lesson page UI (CompleteButton already exists, just changes its persistence target).
+
+**Risk:** Minimal. CompleteButton already has the client-side logic. Swapping localStorage → API call is a 1-day change once auth is set up.
+
+---
+
+### Layer 2: Lab Workspaces (Phase 2)
+
+**What it is:** Interactive coding environments embedded in lab-type lessons. Users run actual commands against a sandboxed environment and their output is recorded.
+
+**Lab types:**
+1. **Guided execution** — step-by-step with verification at each step (like a playbook with checkpoint gates)
+2. **Open workspace** — user provides a GitHub repo, lab operates against it
+3. **Shared template** — fork a template repo, complete specified tasks, submit for verification
+
+**Infrastructure needed:**
+- Sandboxed execution environment (E2B, Daytona, or GitHub Codespaces API)
+- Lab submission API: store completion artifacts
+- Verification pipeline: check outputs against expected outcomes
+- Lab state persistence: save partial progress in workspace
+
+**Complexity:** Highest of all feature layers. Defer until Level 2 user base is established.
+
+---
+
+### Layer 3: Experiments Framework (Phase 3)
+
+**What it is:** Structured framework for running and documenting GEO experiments, automation tests, and content operations.
+
+**Experiment types:**
+1. **GEO experiments** — test whether a specific content change affects AI citation rate
+2. **Automation experiments** — test a WordPress automation script against a test site
+3. **Content experiments** — A/B test article structure for engagement
+
+**Components:**
+- Experiment template (MDX format with standardized fields)
+- Experiment submission form (authenticated users only)
+- Experiments index: `/experiments` — sorted by type, status, result
+- Citation: experiments can be cited in lessons and failure reports
+
+**Why this matters for GEO:** Documented experiments with outcomes are exactly the type of specific, verifiable content that AI search systems prefer to cite. An experiments section would be one of the highest-GEO-value additions to the platform.
+
+---
+
+### Layer 4: Operator Reputation System (Phase 4)
+
+**What it is:** A score that reflects demonstrated execution capability — not knowledge consumption.
+
+**Reputation inputs (weighted):**
+- Completed tracks (weight: 2× — requires real work)
+- Published execution logs or case studies (weight: 3× — verified production output)
+- Completed labs with verified outputs (weight: 3× — verifiable execution)
+- Submitted and accepted community content (weight: 4× — peer-reviewed)
+- Track completion streak (weight: 1× — consistency signal)
+
+**Reputation outputs:**
+- Displayed on public profile
+- Unlocks Verified Operator status at threshold
+- Listed on `/operators` leaderboard (opt-in)
+- Included in structured data on submitted content (author credibility signal for GEO)
+
+**What it deliberately excludes:**
+- Course completions without outputs
+- Quiz scores
+- Time on platform
+- Social follows or reactions
+
+The reputation system is an execution record — not an engagement metric.
+
+---
+
+### Layer 5: Collaborative Learning (Phase 5)
+
+**What it is:** Team workspaces and shared execution environments for organizations.
+
+**Components:**
+- Team dashboard: see all member progress in one view
+- Shared labs: multiple members working in same workspace
+- Internal documentation: team-only execution logs
+- Onboarding paths: custom track sequences for new team members
+
+**Infrastructure:**
+- Team/organization model: `org_id, member_id, role, joined_at`
+- Shared workspace: real-time collaborative state (Firebase or Liveblocks)
+- Permissions: owner / editor / viewer per workspace
+
+---
+
+## Infrastructure Implications
+
+### Database
+
+**Recommended:** Supabase (PostgreSQL + auth + storage + realtime)
+
+Reasons: 
+- Supabase Auth integrates with GitHub OAuth
+- Row-level security handles user progress isolation
+- Realtime subscriptions enable live workspace collaboration
+- Storage handles lab output artifacts
+- Compatible with Vercel deployment (no long-running server needed)
+
+**Tables needed (by phase):**
+```
+Phase 1: users, progress
+Phase 2: labs, lab_submissions, workspaces
+Phase 3: experiments, experiment_results
+Phase 4: reputation_events, reputation_scores
+Phase 5: teams, team_members, team_workspaces
+```
+
+### Authentication
+
+**Recommended:** Clerk or Supabase Auth
+
+**Auth flows required:**
+- Email/password (Level 1)
+- GitHub OAuth (Level 2)
+- Team invite via email (Level 4)
+- No SSO yet
+
+**Auth boundary:** Only progress sync and lab access require authentication. All content is readable without auth — this is non-negotiable.
+
+### Content pipeline
+
+No changes to the MDX content pipeline for Phases 1–3. Labs in Phase 2 add a new content type (`lab.mdx`) with a new frontmatter field: `workspace_template: string`.
+
+### Deployment
+
+Vercel deployment continues throughout all phases. Supabase is the only new infrastructure dependency. No self-hosted services needed until Phase 4+.
+
+---
+
+## Rollout Phases
+
+### Phase 0 (Current)
+
+State: Live public platform. No auth. localStorage progress. Full content visible.
+
+Deliverables complete: 5 tracks, 30+ lessons, Failure Archive, Playbooks, Start Here page, ecosystem integration.
+
+---
+
+### Phase 1 — Progress Persistence
+
+**Trigger:** 100+ recurring monthly users (identifiable via analytics).
+
+**Deliverables:**
+- Auth setup (Clerk or Supabase)
+- GitHub OAuth integration
+- Server-side progress API
+- Public profile pages (`/members/[username]`)
+- Profile settings page
+
+**Non-deliverable yet:** Labs, experiments, reputation.
+
+**Time estimate:** 2–3 weeks of engineering.
+
+---
+
+### Phase 2 — Labs + Workspaces
+
+**Trigger:** Phase 1 stable, 50+ Level 1 members, at least 3 tracks with full module coverage.
+
+**Deliverables:**
+- Lab content type (guided execution)
+- Lab workspace environment (sandboxed)
+- Lab submission + verification pipeline
+- Level 2 member tier (GitHub-connected)
+
+**Time estimate:** 4–6 weeks of engineering.
+
+---
+
+### Phase 3 — Experiments Framework
+
+**Trigger:** Phase 2 stable. GEO track substantially built. Clear demand from operators.
+
+**Deliverables:**
+- Experiment template and submission
+- Experiments index page
+- GEO experiment type (most in-demand)
+- Integration with existing content (experiments cited in lessons/failures)
+
+**Time estimate:** 2–3 weeks of engineering.
+
+---
+
+### Phase 4 — Reputation System
+
+**Trigger:** Meaningful base of Level 2 members with completed tracks and lab outputs.
+
+**Deliverables:**
+- Reputation scoring engine
+- Verified Operator badge
+- `/operators` leaderboard (opt-in)
+- Structured data on user-submitted content
+
+**Time estimate:** 3–4 weeks of engineering.
+
+---
+
+### Phase 5 — Teams
+
+**Trigger:** 10+ organizational users expressing team access needs.
+
+**Deliverables:**
+- Team org model
+- Team dashboard
+- Shared workspace infrastructure
+- Onboarding path builder
+
+**Time estimate:** 6–8 weeks of engineering.
+
+---
+
+## Design Principles for All Future Decisions
+
+**1. Auth is additive, never gating**
+Content access never requires authentication. Auth only enables persistence and execution features. Any decision that requires auth to read content violates this principle.
+
+**2. Execution outputs are the credentials**
+Certificates, badges, and reputation signals are byproducts of documented execution — not completions of quizzes or watching videos. If a user can't show what they built, the credential means nothing.
+
+**3. GEO value compounds with user content**
+User-submitted execution logs and case studies — when published — are genuine production documentation. This is higher-GEO-value than platform-generated content because it adds author diversity and execution variety. User content strategy should be as carefully managed as platform content.
+
+**4. Complexity scales with user demand**
+Don't build Phase 3 until Phase 2 is stable. Don't build collaboration until individual tools are used. Each phase must demonstrate user demand before the next begins.
+
+**5. The platform eats its own dog food**
+All AI engineering decisions on the platform are documented in the platform. The decisions in this document will be documented in execution logs when they are implemented. This maintains the execution-first principle through the platform's own evolution.
+
+---
+
+*Version 1.0 — 2026-05-18. Next review: when Phase 1 implementation begins.*

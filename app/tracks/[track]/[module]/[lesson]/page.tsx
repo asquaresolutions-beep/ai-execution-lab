@@ -10,9 +10,10 @@ import {
   TRACK_ACCENTS,
 } from '@/lib/tracks'
 import { getLessonContent } from '@/lib/lesson-content'
-import { LessonSidebar } from '@/components/tracks/lesson-sidebar'
-import { LessonNav }     from '@/components/tracks/lesson-nav'
+import { LessonSidebar }  from '@/components/tracks/lesson-sidebar'
+import { LessonNav }      from '@/components/tracks/lesson-nav'
 import { CompleteButton } from '@/components/tracks/complete-button'
+import { RelatedContent } from '@/components/tracks/related-content'
 import { ContentRenderer } from '@/components/content-renderer'
 import { ReadingProgress } from '@/components/layout/reading-progress'
 import { cn } from '@/lib/utils'
@@ -174,6 +175,11 @@ export default async function LessonPage({ params }: Props) {
                   Progress saved locally
                 </span>
               </div>
+            )}
+
+            {/* Related content */}
+            {content && (
+              <RelatedContent lessonId={lessonId} trackId={trackId} />
             )}
 
             {/* Prev / Next lesson */}

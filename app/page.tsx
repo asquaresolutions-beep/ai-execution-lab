@@ -77,7 +77,7 @@ export default function HomePage() {
         </h1>
 
         <p className="text-base text-surface-400 max-w-2xl leading-relaxed">
-          Public AI execution engineering by{' '}
+          A public AI engineering journal by{' '}
           <a
             href="https://asquaresolution.com"
             target="_blank"
@@ -86,22 +86,29 @@ export default function HomePage() {
           >
             A Square Solutions
           </a>
-          . Real deployments, real failures, real measurements — documented in production
-          while building AI tools, GEO/AI-search pipelines, and execution systems.
+          . Production failures with exact fixes, operational playbooks, Claude Code workflows,
+          and execution tracks built from two years of daily AI engineering — documented while
+          the work happens.
         </p>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono text-surface-600">
-          <span>Not a tutorial site</span>
+          <span>Implementation over theory</span>
           <span>·</span>
-          <span>Every document traces back to an actual execution</span>
+          <span>Failures are first-class content</span>
           <span>·</span>
-          <span>Failures are documented as they happen</span>
+          <span>Built before documented</span>
         </div>
 
         <div className="mt-6 flex flex-wrap gap-2">
           <Link
-            href="/tracks"
+            href="/start-here"
             className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600 transition-colors shadow-sm"
+          >
+            ▶ Start Here
+          </Link>
+          <Link
+            href="/tracks"
+            className="inline-flex items-center gap-2 rounded-lg border border-brand-500/25 bg-brand-500/[0.06] px-4 py-2 text-sm font-medium text-brand-400 hover:bg-brand-500/[0.12] hover:border-brand-500/40 transition-colors"
           >
             Execution Tracks
           </Link>

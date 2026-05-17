@@ -1,0 +1,259 @@
+---
+title: "Track Experience Audit — May 2026"
+description: "Full audit of all five AI Execution Lab tracks: lesson quality, pacing, gaps, and prioritized improvement roadmap."
+date: "2026-05-18"
+tags: ["ops", "audit", "tracks", "quality", "roadmap"]
+status: "published"
+---
+
+Audit date: 2026-05-18. Coverage: 5 tracks, 18 modules, 57 total lessons (30 available, 27 coming-soon). This document is the authoritative quality assessment before the authority expansion phase.
+
+---
+
+## Summary Findings
+
+| Track | Available Lessons | Quality Score | Primary Gap |
+|---|---|---|---|
+| Claude Code Operator | 17 / 32 | **Strong** | Module 4–5 gaps; no IDE/Cursor lesson |
+| AI Business Zero Budget | 11 / 18 | **Strong** | Module 1 complete; modules 2–5 all coming-soon |
+| GEO + AI Search | 1 / 10 | **Thin** | Only GEO vs SEO published; entire architecture track missing |
+| AI Automation Systems | 1 / 9 | **Skeleton** | Pipeline Design published; nothing else |
+| AI Content + Distribution | 2 / 10 | **Thin** | Architecture lessons up; production + distribution missing |
+
+**Overall state:** The platform has one flagship track in strong shape (Claude Code Operator), one well-built foundation module (AI Business zero-budget-stack), and three tracks that are essentially announced but not built. This is the correct sequencing — depth before breadth — but it creates a discoverability problem: users landing on GEO, Automation, or Content tracks see mostly Coming Soon.
+
+---
+
+## Phase 1 — Strongest Lessons
+
+These lessons represent the platform's highest-quality content. They demonstrate execution-first principles, have high specificity, and provide immediate practical value.
+
+### Tier 1 — Flagship Quality
+
+**1. `choosing-your-ai-engineering-stack` (Claude Code Operator / Foundations)**
+- Operator-level difficulty, correctly scoped
+- Documents the actual A Square Solutions production stack with justifications
+- Compares Claude Code vs Cursor vs Copilot on operational grounds
+- Includes cost modeling across zero-revenue, first-revenue, and scale
+- Evidence: `LessonMeta` correctly cites live production usage
+- **Strength:** Most specific, most verifiable lesson on the platform
+
+**2. `production-prompt-anatomy` (Claude Code Operator / Prompt Engineering)**
+- 6-part framework with named patterns
+- Failure cases given equal weight to success cases
+- Directly usable in production immediately after reading
+- **Strength:** Dense information, no filler, verifiable framework
+
+**3. `claude-md-architecture` (Claude Code Operator / Foundations)**
+- Covers something not documented elsewhere
+- CLAUDE.md design is a real differentiator in AI-assisted development
+- Operational specificity that can't be generic
+- **Strength:** Unique content with high search specificity
+
+**4. `content-patching-system` (Claude Code Operator / WordPress REST API)**
+- Read→Transform→Check→Apply→Verify pattern documented as a Playbook type
+- Pattern is genuinely novel and reusable
+- Well-structured with verification steps
+- **Strength:** Unique operational procedure, high practical value
+
+**5. `build-failure-diagnosis` (Claude Code Operator / Vercel Deployment)**
+- Error taxonomy approach (categorize before fixing)
+- Covers edge cases not in official Vercel docs
+- Directly connected to Failure Archive failures
+- **Strength:** Addresses common pain point with systematic approach
+
+**6. `multi-agent-orchestration` (Claude Code Operator / Scaling Systems)**
+- Orchestrator + worker pattern well-explained
+- Context window management explained operationally
+- **Strength:** Covers genuinely advanced territory
+
+**7. `adsense-approval-reality` (AI Business / Zero Budget Stack)**
+- Honest, non-hyped framing
+- Specific checklist with real failure reasons
+- Global RPM figures, not India-specific
+- **Strength:** Expectation-setting that prevents beginner frustration
+
+**8. `avoid-tool-subscription-traps` (AI Business / Zero Budget Stack)**
+- Psychological trigger analysis is rare and accurate
+- 8 specific trap examples with alternatives
+- Monthly audit procedure is immediately actionable
+- **Strength:** Behavioral + tactical — two dimensions most lessons lack
+
+---
+
+## Phase 2 — Weakest Lessons
+
+These lessons exist and compile correctly but need significant improvement before Phase 3 rollout.
+
+**1. `first-agentic-task` (Claude Code Operator / Foundations)**
+- **Issue:** Starts with "What this lesson covers" instead of an execution-first hook
+- **Issue:** Missing `LessonMeta` difficulty/evidence block
+- **Issue:** `FailureAnalysis` component appears partway through but lesson intro is weak
+- **Priority fix:** Rewrite intro paragraph to start with the actual task execution scenario, not a description of what you'll learn
+
+**2. `geo-vs-seo` (GEO / AI Search Mechanics)**
+- **Issue:** Only lesson in an entire track — creates a "start and immediately hit Coming Soon" experience
+- **Issue:** Lesson is conceptually correct but lacks specifics: no named AI systems with their actual retrieval behavior, no citation examples
+- **Priority fix:** Add second GEO lesson immediately; enrich geo-vs-seo with concrete examples from real Perplexity/ChatGPT queries
+
+**3. `content-systems-thinking` (AI Content / Content Architecture)**
+- **Issue:** Available but isolated — Module 2+ is all coming-soon
+- **Issue:** Lesson is conceptually valid but has no execution component — pure theory
+- **Priority fix:** Add "here's what a content system looks like in practice" section with real examples from this platform
+
+**4. `pipeline-design` (AI Automation / Automation Architecture)**
+- **Issue:** Only lesson in the track — identical problem to GEO track
+- **Issue:** Describes the Read→Transform→Check→Apply→Verify pattern but the actual WordPress automation playbook (same pattern) is in Claude Code Operator track — creates impression of duplicate content without cross-linking
+- **Priority fix:** Add explicit cross-link to Claude Code Operator content-patching-system; publish at least 2 more automation lessons
+
+**5. `choosing-your-product` (AI Business / Zero Budget Stack)**
+- **Issue:** Lesson was recently created and is structurally sound, but the three viable models section lists content business, AI tool, and AI-augmented service without showing what differentiates them in practice
+- **Priority fix:** Add a comparison matrix showing the three models against: required skills, time to first dollar, competition level, and AI leverage
+
+---
+
+## Phase 3 — Missing Foundational Lessons
+
+These lessons are either Coming Soon or not yet defined, but represent critical gaps for the stated audience.
+
+### Claude Code Operator track — missing foundations
+
+| Missing Lesson | Where | Why Critical |
+|---|---|---|
+| `prompt-failure-patterns` | Prompt Engineering | Operators need failure taxonomy before building workflows |
+| `pr-review-workflow` | GitHub Workflows | Completing the GitHub integration story |
+| `env-vars-secrets` | Vercel Deployment | Every deployment professional needs this; currently gap in Module 4 |
+| `rollback-strategies` | Vercel Deployment | Recovery is as important as deployment |
+| `ide-integration` | Foundations | Cursor/VS Code workflow is how most operators use Claude Code day-to-day |
+
+### AI Business track — missing foundations
+
+| Missing Lesson | Where | Why Critical |
+|---|---|---|
+| `mvp-with-claude` | First Product | Track promises "build a product" but module is all coming-soon |
+| `landing-page-system` | First Product | Cannot monetize without this |
+| `geo-for-startups` | Distribution | Required bridge between business track and GEO track |
+| `stripe-setup` | Revenue | Revenue module missing both lessons |
+
+### GEO track — missing entire track body
+
+All of `rag-pipeline`, `citation-signals`, `pillar-architecture`, `entity-optimization`, `answer-engineering`, `geo-metrics`, `testing-framework`, `content-operations` are Coming Soon. With only 1 of 10 lessons published, this track cannot fulfill its promise. **Priority: publish 3 more GEO lessons before any other GEO promotion.**
+
+---
+
+## Phase 4 — Lessons Too Theoretical
+
+These lessons explain concepts without sufficient execution grounding.
+
+**`content-systems-thinking`** — Explains why content systems compound but doesn't show the anatomy of a real system. Reader learns the concept but can't build one. Need: A "here is a real content system at 6 months" section.
+
+**`geo-vs-seo`** — Accurately describes the paradigm shift but the examples are generic. "AI search engines prefer authoritative sources" is true but doesn't tell an operator what to do Monday morning. Need: 3 specific "do this, not this" examples with actual queries and citation outcomes.
+
+**`choosing-your-product`** — Describes the three models at concept level. Need: A decision matrix comparing models across 5 operational dimensions.
+
+**`first-organic-traffic-system`** — The timeline section is accurate but reads as disclaimers. Need: A worked example showing a specific topic cluster from zero to first traffic, with realistic numbers.
+
+**`context-loading-strategies`** — Good framework but examples are generic file types rather than real codebase patterns. Need: 2–3 concrete CLAUDE.md + context-loading examples from the actual Lab or A Square Solutions codebase.
+
+---
+
+## Phase 5 — Lessons Needing Real Execution Examples
+
+These lessons are strong conceptually but need a "here's exactly what this looked like in practice" section.
+
+| Lesson | What's Missing |
+|---|---|
+| `task-decomposition` | A real task broken down step-by-step from start to finish — with the actual prompts |
+| `debugging-methodology` | A real debugging session walkthrough — the Lab has production failures that match |
+| `reading-build-errors` | Should link directly to the Failure Archive entries (`edge-runtime`, `blockJS`) |
+| `bad-commit-recovery` | Needs a "real scenario" example with actual git output |
+| `branch-strategy` | The "experiment branch" pattern needs a real example from AI work |
+| `wp-auth-patterns` | Authentication error examples need the actual WP error response payloads |
+| `deployment-pipeline` | Should show the actual local→build→verify loop from a real deployment |
+
+---
+
+## Module Balance Assessment
+
+### Claude Code Operator — 8 modules
+
+Modules 1–3 (Foundations, Prompt Engineering, GitHub): **Well-balanced.** 5–4–3 lessons respectively, good pacing.
+
+Module 4 (Vercel Deployment): **Under-built.** 2 available, 2 coming-soon. Env vars and rollback are essential.
+
+Module 5 (WordPress REST API): **Under-built.** Bulk operations and error handling are coming-soon; users hit the limits of what's available.
+
+Modules 6–8 (Product Development, Debugging, Scaling): **Strong conceptual coverage, thin execution.** Feature planning and debugging methodology are excellent; the rest are coming-soon.
+
+**Recommended module focus order:** 4 → 5 → 2 (add prompt-failure-patterns) → 6
+
+### AI Business Zero Budget — 5 modules
+
+Module 1 (Zero Budget Stack): **Complete and strong.** 11 lessons, all available, global framing. Flagship module.
+
+Modules 2–5: **All coming-soon.** This is the correct sequencing — build depth in Module 1 first — but the track page currently shows 5 modules with only 1 fully available. Users need clear signaling.
+
+**Recommended:** Add estimated publish dates to module descriptions for modules 2–5.
+
+---
+
+## Pacing Consistency Issues
+
+### Lesson length distribution
+
+Available lessons range from ~800 words to ~3,500 words. The duration estimates (15–40 min) are broadly accurate, but there are two outliers:
+
+- `choosing-your-ai-engineering-stack` at ~4,000 words feels long even for "operator" level — consider adding a TL;DR summary box at the top
+- `first-agentic-task` is on the short end relative to its claimed 30-minute duration — needs more execution content
+
+### Intro quality
+
+The best lessons (`production-prompt-anatomy`, `content-patching-system`, `multi-agent-orchestration`) open with an execution scenario or a direct claim. The weakest lessons (`first-agentic-task`, some business lessons) open with "This lesson covers..." which signals tutorial-mode, not execution-mode.
+
+**Standard to enforce for new lessons:** First sentence must be a direct statement of what's true, what breaks, or what the lesson will enable — not a description of what the lesson covers.
+
+---
+
+## Screenshots and Diagrams — Deferred List
+
+These lessons are written but need visual aids to reach full quality:
+
+| Lesson | Visual Needed |
+|---|---|
+| `dev-environment` | Screenshot: terminal showing Claude Code running with session indicator |
+| `claude-md-architecture` | Diagram: how CLAUDE.md loads into context at session start |
+| `deployment-pipeline` | Diagram: local→GitHub→Vercel→production flow with failure points labeled |
+| `wp-auth-patterns` | Screenshot: WordPress admin → Users → Application Passwords UI |
+| `multi-agent-orchestration` | Diagram: orchestrator→subagent task graph |
+| `adsense-approval-reality` | Screenshot: AdSense application checklist items |
+
+Mark these with a `TODO: screenshot-needed` comment in the relevant MDX file when they are next edited.
+
+---
+
+## Priority Improvement Roadmap
+
+### This week (highest impact)
+
+1. Add cross-link from `pipeline-design` → Claude Code Operator `content-patching-system`
+2. Rewrite `first-agentic-task` intro paragraph
+3. Add comparison matrix to `choosing-your-product`
+4. Publish at least 2 more GEO track lessons (next recommended: `rag-pipeline`, `citation-signals`)
+
+### Next two weeks
+
+5. Complete Claude Code Operator Module 4: `env-vars-secrets` and `rollback-strategies`
+6. Publish `mvp-with-claude` and `landing-page-system` in AI Business Module 2
+7. Enrich `context-loading-strategies` with real codebase examples
+8. Add "real execution example" sections to: `task-decomposition`, `debugging-methodology`, `bad-commit-recovery`
+
+### This month
+
+9. Complete Claude Code Operator Module 5: `bulk-operations` and `error-handling-rollback`
+10. Publish 3 lessons in AI Automation track to establish track viability
+11. Add `prompt-failure-patterns` to prompt engineering module
+12. Add estimated publish timelines to all coming-soon track pages
+
+---
+
+*Audit conducted by A Square Solutions. Next audit: 2026-07-01 or after 20 new lessons published.*
