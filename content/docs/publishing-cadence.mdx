@@ -1,0 +1,239 @@
+---
+title: "Publishing Cadence"
+description: "Weekly publishing workflow, failure-report process, execution log rhythm, and playbook publishing guide for ongoing platform operations."
+date: "2026-05-17"
+tags: ["ops", "publishing", "workflow", "cadence"]
+status: "published"
+---
+
+This document governs the operational rhythm of the platform. It answers: what to publish, when, in which section, and with which frontmatter.
+
+---
+
+## Weekly Publishing Rhythm
+
+A sustainable cadence that keeps the platform live without forcing output:
+
+| Cadence | Content type | Target volume |
+|---|---|---|
+| After every significant session | Execution Log | 1 per session |
+| After every deployment | Execution Log (`log_type: deployment`) | 1 per deploy |
+| After every failure | Failure Archive entry | 1 per incident |
+| Weekly | Weekly log summary | 1 per week |
+| Monthly | Case Study or Lab result | 1 per month |
+| As completed | Docs, Systems, Playbooks | On completion |
+
+**The minimum viable week:** 1 execution log. Everything else is additive.
+
+---
+
+## Failure-Report Workflow
+
+Document failures immediately while details are fresh — typically within 1 hour of resolution.
+
+### Template
+
+```bash
+# Create the file
+content/failures/YYYY-MM-DD-short-description.mdx
+```
+
+### Required frontmatter
+
+```yaml
+---
+title: "Short description of what broke"
+description: "One-sentence summary of the failure and its impact."
+date: "YYYY-MM-DD"
+tags: ["relevant", "tags"]
+status: "published"
+severity: "low|medium|high|critical"
+failure_status: "resolved|open|investigating"
+failure_type: "build|runtime|config|dependency|logic|deployment"
+project: "which project or system"
+resolution_time: "Xm" or "Xh Ym"
+stack: ["Next.js", "Vercel", "relevant stack"]
+---
+```
+
+### Severity guide
+
+| Severity | Meaning |
+|---|---|
+| `low` | Minor inconvenience, workaround available, no user impact |
+| `medium` | Blocked workflow for < 30 min, partial functionality loss |
+| `high` | Deployment failed, > 30 min blocked, user-facing impact |
+| `critical` | Production down, data risk, security issue |
+
+### Content structure
+
+A good failure report has:
+
+1. **What happened** — exact observable symptom
+2. **Impact** — what it blocked, how long
+3. **Root cause** — the actual technical cause, not the symptom
+4. **Resolution** — exactly what fixed it, what commands ran
+5. **Prevention** — what to do differently; pattern to add to the codebase
+
+Use `<IncidentReport>`, `<ExecutionEvidence>`, and `<DeploymentLog>` MDX components where appropriate.
+
+---
+
+## Execution Log Workflow
+
+Execution logs are the day-to-day operational record. Low friction — a log takes 5–10 minutes to write.
+
+### When to log
+
+- **Daily:** significant work session (1+ hour of focused AI execution work)
+- **Deployment:** every production push
+- **Debug:** non-trivial debugging session with a resolution
+- **Experiment:** any test of a hypothesis, even inconclusive
+- **Release:** major feature or section launch
+
+### File naming
+
+```bash
+content/logs/YYYY-MM-DD-short-description.mdx
+```
+
+### Required frontmatter
+
+```yaml
+---
+title: "What you did — specific, not vague"
+description: "One sentence summarising the session outcome."
+date: "YYYY-MM-DD"
+tags: ["relevant", "tags"]
+status: "published"
+log_type: "daily|weekly|deployment|debug|experiment|release"
+duration: "Xh Ym"
+outcome: "One sentence: what was shipped or decided"
+stack: ["tools used"]
+---
+```
+
+### Content structure
+
+Logs should be terse and execution-focused:
+
+- **What was attempted** — the goal going in
+- **What happened** — what actually occurred, including diversions
+- **What was shipped** — the concrete outputs
+- **What was learned** — any non-obvious insight
+- **Next** — the logical next action
+
+Logs are not essays. 200–600 words is ideal. Use code blocks sparingly — link to the actual code instead.
+
+---
+
+## Weekly Summary Log
+
+Every week (Sunday or Monday), write a weekly log that covers the full week:
+
+```yaml
+log_type: weekly
+title: "Week of YYYY-MM-DD: [theme of the week]"
+```
+
+The weekly log should cover:
+- What was shipped across all sessions
+- Failures encountered and resolved
+- Active threads / open questions
+- Next week's priority
+
+---
+
+## Playbook Publishing Workflow
+
+Playbooks are written after a repeatable operation has been run at least twice. Don't write a playbook from theory.
+
+### When to write a playbook
+
+- You've done the same operation 2+ times
+- The operation has clear prerequisites and steps
+- The operation has known failure modes
+- You'd want to hand it to someone else (or a future AI session)
+
+### Required frontmatter
+
+```yaml
+---
+title: "Verb + Object: what this playbook accomplishes"
+description: "One-sentence summary of the operation and outcome."
+date: "YYYY-MM-DD"
+tags: ["relevant", "tags"]
+status: "published"
+goal: "What you have when this playbook is complete"
+estimated_time: "Xh" or "X–Xh"
+difficulty: "beginner|intermediate|advanced"
+prerequisites:
+  - "Thing you need to have or know before starting"
+  - "Another prerequisite"
+stack: ["tools used"]
+---
+```
+
+### Content structure
+
+1. **Context** — why this operation exists
+2. **Prerequisites** — what you need before starting (also in frontmatter)
+3. **Steps** — numbered, clear, executable
+4. **Expected outputs** — what you should see at each milestone
+5. **Failure modes** — what can go wrong and how to recover
+6. **Verification** — how to confirm success
+
+Use `<WorkflowTimeline>` for the main steps, `<ValidationGate>` for quality checks, `<TroubleshootingSection>` for failure modes.
+
+---
+
+## Docs + Systems Publishing Workflow
+
+### Docs
+
+Write when you have reference material that you'll return to. Docs are definitional — they explain how something works, not how to do something (that's a playbook).
+
+```yaml
+---
+title: "Clear noun: what this documents"
+description: "One-sentence summary."
+date: "YYYY-MM-DD"
+tags: ["relevant", "tags"]
+status: "published"
+---
+```
+
+### Systems
+
+Write when you've built and operated a system long enough to document its architecture, failure modes, and maintenance notes. Systems entries are durable — they describe what exists in production.
+
+```yaml
+---
+title: "System name: what it is"
+description: "One-sentence summary of the system's purpose and status."
+date: "YYYY-MM-DD"
+updated: "YYYY-MM-DD"
+tags: ["relevant", "tags"]
+status: "published"
+stack: ["components of the system"]
+---
+```
+
+Update the `updated` field whenever you make significant changes to the system.
+
+---
+
+## Publishing Quality Gates
+
+Before publishing any content:
+
+- [ ] `title` is specific and descriptive — not vague
+- [ ] `description` is one sentence, under 160 chars
+- [ ] `date` is accurate (the date you're writing it, not a future date)
+- [ ] `tags` are lowercase, relevant, consistent with existing tags
+- [ ] `status` is `published` (not `draft`) when you're ready to go live
+- [ ] No placeholder text, no "TODO", no lorem ipsum
+- [ ] MDX components used correctly (check props match component API)
+- [ ] Internal links verified (no broken `/docs/x` links)
+
+Use the `/syndicate` tool to generate platform-specific distribution copy after publishing.

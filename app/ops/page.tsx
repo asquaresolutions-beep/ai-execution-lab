@@ -308,9 +308,12 @@ export default function OpsPage() {
                 { label: 'Syndication tool',      href: '/syndicate' },
                 { label: 'Topics overview',       href: '/tags' },
                 { label: 'Publishing workflow',   href: '/docs/publishing-workflow' },
+                { label: 'Publishing cadence',    href: '/docs/publishing-cadence' },
                 { label: 'Frontmatter reference', href: '/docs/frontmatter-reference' },
+                { label: 'Analytics setup',       href: '/docs/analytics-setup' },
                 { label: 'Launch checklist',      href: '/docs/launch-checklist' },
                 { label: 'Deployment workflow',   href: '/docs/deployment-workflow' },
+                { label: 'Launch assets',         href: '/docs/launch-assets' },
                 { label: 'Execution Tracks',      href: '/tracks' },
                 { label: 'Sitemap',               href: '/sitemap.xml' },
               ].map(({ label, href }) => (

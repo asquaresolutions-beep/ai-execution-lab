@@ -1,12 +1,14 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { getAllMeta, type ContentMeta } from '@/lib/content'
+import { buildSectionMetadata } from '@/lib/metadata'
 import { formatDateMono, cn } from '@/lib/utils'
 
-export const metadata: Metadata = {
-  title: 'Execution Logs',
-  description: 'Daily build logs, deployment journals, debugging sessions, and weekly execution summaries from active production AI work.',
-}
+export const metadata: Metadata = buildSectionMetadata(
+  'Execution Logs',
+  'Daily build logs, deployment journals, debugging sessions, and weekly execution summaries from active production AI work.',
+  '/logs',
+)
 
 // ─────────────────────────────────────────────────────────────
 // Type config

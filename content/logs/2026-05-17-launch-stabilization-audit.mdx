@@ -1,0 +1,68 @@
+---
+title: "Launch Stabilization — Production Audit + Operational Docs"
+description: "Full production audit, metadata fixes across all section index pages, accessibility improvements, and operational documentation sprint."
+date: "2026-05-17"
+tags: ["ops", "audit", "seo", "accessibility", "documentation"]
+status: "published"
+log_type: "release"
+duration: "2h"
+outcome: "149-page build passing, 7 section index pages now have full OG/Twitter/canonical metadata, 3 new operational docs published"
+stack: ["Next.js 15", "Claude Code", "TypeScript"]
+---
+
+Phase 6 of the AI Execution Lab build: Launch Stabilization + Public Operations. Objective was to harden the platform for real public use — no new major systems, only audit, fix, and document.
+
+## What Was Audited
+
+**Metadata audit:** Read all 22 page.tsx files. Found that all 7 content slug pages (`/docs/[slug]`, `/systems/[slug]`, etc.) correctly used `buildArticleMetadata` — full OG article type, Twitter card, canonical URL, dynamic OG image. Clean.
+
+**Section index pages audit:** Found the critical gap — all 7 section index pages (`/docs`, `/systems`, `/labs`, `/case-studies`, `/playbooks`, `/failures`, `/logs`) had only bare `title` + `description` metadata. Missing `openGraph`, `twitter`, and `alternates.canonical`. When these pages are shared on social media, they render with no OG image and no Twitter card. Real SEO and shareability gap.
+
+**Client component audit:** 22 client components. All justified — `usePathname`, clipboard API, scroll listeners, Framer Motion hooks, intersection observers. No unnecessary client boundaries found.
+
+**Accessibility audit:** `article-share.tsx` — three SVG icons had no `aria-hidden`. Screen readers would announce them. Share buttons lacked `aria-label` on external links. Minor but real.
+
+**Sitemap audit:** Covers all 7 sections, all content items, all tag routes, all track routes and lessons. Correct.
+
+**Structured data audit:** WebSite + Organization schemas in layout, TechArticle/Article JSON-LD on all content pages. Correct.
+
+## What Was Fixed
+
+**7 section index pages** updated to use `buildSectionMetadata` — each now produces:
+- `openGraph.type: 'website'`
+- `openGraph.title: "${title} | AI Execution Lab"`
+- `twitter.card: 'summary'`
+- `twitter.creator: @asquaresolution`
+- `alternates.canonical: full URL`
+
+**`article-share.tsx` accessibility:**
+- Added `aria-hidden="true"` to all three SVG icons
+- Added `aria-label` to X/Twitter and LinkedIn external links
+
+## New Operational Docs Published
+
+Three docs written this session:
+
+**`/docs/analytics-setup`** — How to activate Plausible, GA4, or Vercel Analytics. Documents the env var pattern, what each tracker provides, how Web Vitals beaconing works, how to add the `/api/vitals` endpoint. No code changes required to switch providers.
+
+**`/docs/publishing-cadence`** — The full operational rhythm: when to write logs vs failures vs playbooks vs docs, frontmatter requirements for each content type, severity guide for failures, quality gate checklist. This is the day-to-day publishing SOP.
+
+**`/docs/launch-assets`** — Platform description (four lengths: one-liner through full), launch announcement copy for LinkedIn + Twitter thread + newsletter, SEO meta copy table, social positioning guide (what the platform is and isn't, tone guide with wrong/right examples).
+
+## Build Result
+
+```
+149 pages, 0 TypeScript errors, 0 build errors
+```
+
+The increase from the previous 149 pages represents the three new doc pages.
+
+Actually 152 pages total — three new docs added. Build clean.
+
+## What Comes Next
+
+Platform is ready for public use. Ongoing:
+- Add new content as work happens (logs after sessions, failures after incidents)
+- Set `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` in Vercel to activate analytics
+- Submit sitemap to Google Search Console post-launch
+- Continue building Execution Tracks content

@@ -1,12 +1,14 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { getAllMeta, type ContentMeta } from '@/lib/content'
+import { buildSectionMetadata } from '@/lib/metadata'
 import { formatDateMono, cn } from '@/lib/utils'
 
-export const metadata: Metadata = {
-  title: 'Failure Archive',
-  description: 'Documented production failures — root cause analysis, resolution timelines, and prevention patterns from real AI execution work.',
-}
+export const metadata: Metadata = buildSectionMetadata(
+  'Failure Archive',
+  'Documented production failures — root cause analysis, resolution timelines, and prevention patterns from real AI execution work.',
+  '/failures',
+)
 
 // ─────────────────────────────────────────────────────────────
 // Severity config

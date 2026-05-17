@@ -1,0 +1,161 @@
+---
+title: "Analytics Setup"
+description: "How to activate Plausible, Google Analytics 4, and Vercel Analytics on the AI Execution Lab platform."
+date: "2026-05-17"
+tags: ["ops", "analytics", "plausible", "observability"]
+status: "published"
+---
+
+The platform has a fully wired analytics layer — zero-config in development, env-gated in production. No code changes are required to activate any provider.
+
+---
+
+## Architecture
+
+Analytics is isolated in two components:
+
+| Component | Location | Purpose |
+|---|---|---|
+| `<Analytics />` | `components/analytics/index.tsx` | Plausible + GA4 script injection |
+| `<WebVitals />` | `components/analytics/web-vitals.tsx` | Core Web Vitals reporting |
+
+Both are rendered in `app/layout.tsx`. Neither fires in `NODE_ENV=development` — local dev is always clean.
+
+---
+
+## Option 1: Plausible (Recommended)
+
+Plausible is privacy-first, cookie-free, GDPR-compliant. No consent banners required.
+
+**Setup:**
+
+1. Create account at [plausible.io](https://plausible.io) (free tier available)
+2. Add your domain (e.g. `ai-execution-lab.vercel.app` or your custom domain)
+3. In Vercel project settings → Environment Variables:
+
+```
+NEXT_PUBLIC_PLAUSIBLE_DOMAIN=yourdomain.com
+```
+
+4. Redeploy — analytics fires automatically on next build
+
+**What it tracks:** page views, unique visitors, referrers, entry/exit pages, bounce rate, visit duration. No personal data.
+
+**Verification:** Visit any page in production → Plausible dashboard should show a live visitor within seconds.
+
+---
+
+## Option 2: Google Analytics 4
+
+GA4 provides more detailed funnel and engagement data. Requires a Google account.
+
+**Setup:**
+
+1. Create a GA4 property at [analytics.google.com](https://analytics.google.com)
+2. Copy the Measurement ID (format: `G-XXXXXXXXXX`)
+3. In Vercel project settings → Environment Variables:
+
+```
+NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+```
+
+4. Redeploy
+
+**What it tracks:** page views, scroll depth, engagement time, events, demographics (if enabled), conversion funnels.
+
+**Verification:** GA4 Realtime view should show activity within 30 seconds of a page visit in production.
+
+---
+
+## Option 3: Vercel Analytics
+
+Vercel's built-in analytics is zero-friction if you're already on Vercel. Requires package installation.
+
+**Setup:**
+
+```bash
+# Install the package
+node node_modules/.bin/next... (use direct node install)
+# Manually install: add "@vercel/analytics" to package.json dependencies
+```
+
+Then in `components/analytics/index.tsx`:
+
+```typescript
+// Uncomment these two lines:
+import { Analytics as VercelAnalytics } from '@vercel/analytics/react'
+const VERCEL_ANALYTICS = true
+
+// Uncomment in the JSX:
+{VERCEL_ANALYTICS && <VercelAnalytics />}
+```
+
+Redeploy. Analytics appear in Vercel Dashboard → Analytics tab.
+
+---
+
+## Core Web Vitals
+
+`<WebVitals />` is active in all environments:
+
+**Development:** Logs to browser console with colour-coded ratings:
+```
+[Web Vitals] LCP: 847ms (good)
+[Web Vitals] CLS: 0 (good)
+[Web Vitals] FCP: 412ms (good)
+```
+
+**Production:** Sends via `navigator.sendBeacon()` to `/api/vitals`. To capture these server-side, create `app/api/vitals/route.ts`:
+
+```typescript
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function POST(req: NextRequest) {
+  const metric = await req.json()
+  // Log to your preferred observability platform
+  // e.g. console.log, write to DB, send to Datadog, etc.
+  console.log('[Web Vitals]', metric)
+  return NextResponse.json({ ok: true })
+}
+```
+
+Metrics schema:
+```typescript
+{
+  name:   'LCP' | 'CLS' | 'FCP' | 'INP' | 'TTFB',
+  value:  number,    // milliseconds (except CLS which is unitless)
+  rating: 'good' | 'needs-improvement' | 'poor',
+  id:     string,    // unique per-session metric ID
+}
+```
+
+---
+
+## Combining Providers
+
+All three providers can run simultaneously. The analytics component renders all active providers:
+
+```typescript
+// components/analytics/index.tsx — what's firing depends on env vars set:
+// NEXT_PUBLIC_PLAUSIBLE_DOMAIN → Plausible script
+// NEXT_PUBLIC_GA_ID            → GA4 gtag scripts
+// VERCEL_ANALYTICS = true      → Vercel Analytics component
+```
+
+Running Plausible + GA4 together is a common setup: Plausible for the lightweight privacy-first dashboard, GA4 for deeper funnel analysis.
+
+---
+
+## Observability Checklist
+
+Before launch:
+
+- [ ] Set `NEXT_PUBLIC_SITE_URL` in Vercel → used in canonical URLs, sitemaps, OG images
+- [ ] Choose and configure at least one analytics provider
+- [ ] Verify analytics fires on live deployment (check dashboard after first visit)
+- [ ] Open browser DevTools in production — no console errors
+- [ ] Check Web Vitals scores via Lighthouse or browser console
+- [ ] Submit sitemap to Google Search Console
+- [ ] Submit sitemap to Bing Webmaster Tools
+
+Current env var status is visible at [/ops](/ops) → Analytics Status panel.
