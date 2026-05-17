@@ -1,0 +1,202 @@
+## What this lesson covers
+
+Every Claude Code session starts cold. Claude has no memory of your project, your conventions, or the decisions you made last week. CLAUDE.md is how you solve that permanently.
+
+<LessonObjectives items={[
+  "Understand exactly what Claude reads from CLAUDE.md and when",
+  "Design a six-section architecture that covers all critical context",
+  "Write rules that actually change Claude's behavior — not just describe it",
+  "Build a refinement loop to improve your CLAUDE.md from session feedback"
+]} />
+
+---
+
+## What CLAUDE.md actually does
+
+CLAUDE.md is injected into Claude's context at the start of every session — not cached, read fresh each time. This means:
+
+- Every session starts briefed, not blank
+- Changes take effect immediately next session
+- It's the only persistent memory Claude has about your project
+
+Think of it as a briefing document for an expert contractor who just walked in. Not a tutorial. Not documentation. A briefing — dense, operational, current.
+
+---
+
+## The six-section architecture
+
+A production CLAUDE.md has exactly six sections. Anything outside this structure is usually noise.
+
+**1. Project identity** — What this is, who it's for, the core value prop in two sentences. Claude needs this to make judgment calls: "would this change be appropriate for this project?"
+
+**2. Tech stack (exact versions)** — Not just "React" — specify library, version, pattern, and configuration. `Next.js 15 App Router with TypeScript 5.4 — not Pages Router` is the level of specificity that prevents wrong decisions.
+
+**3. Critical rules** — Absolute constraints. Anything Claude must never do. If a constraint is non-obvious, explain why — context helps Claude generalize the rule correctly to situations you didn't anticipate.
+
+**4. Common commands** — The exact commands for your specific setup. Not general patterns — the actual command Claude should run for build, test, type check, and lint.
+
+**5. Directory structure** — A one-level-deep map of where things live and which directories are off-limits.
+
+**6. Current work** — What's in progress right now. This section changes most frequently and has the highest value per word.
+
+---
+
+## Annotated real example
+
+This is the CLAUDE.md from this platform — annotated line by line:
+
+<CodeBlock filename="CLAUDE.md" language="markdown">
+{`# Project: AI Execution Lab
+
+## What this is
+Next.js 15 App Router content + learning platform for AI operator training.
+Deployed on Vercel. Content is MDX files in /content/. No backend database.
+
+## Tech stack
+- Runtime: Node.js 20 / TypeScript 5.4
+- Framework: Next.js 15 App Router (NOT Pages Router)
+- Styling: Tailwind CSS 3.4
+- Content: next-mdx-remote v6 (blockJS: false required — v6 breaking change)
+- Deploy: Vercel (auto-deploy on push to master)
+
+## Critical rules
+- NEVER run \`npm install\` — npm is blocked on this machine
+  Use: node node_modules/next/dist/bin/next build
+- NEVER import server-only modules (fs, path) in 'use client' components
+  Server code → lib/lesson-content.ts or suffix .server.ts
+- ALWAYS run TypeScript before committing:
+  node node_modules/typescript/bin/tsc --noEmit
+- NEVER modify files in /generated/ — auto-generated, changes are overwritten
+
+## Common commands
+\`\`\`bash
+# Build
+node node_modules/next/dist/bin/next build
+
+# Type check  
+node node_modules/typescript/bin/tsc --noEmit
+
+# Dev server
+node node_modules/next/dist/bin/next dev
+\`\`\`
+
+## Directory structure
+\`\`\`
+app/           Route pages + API routes (App Router)
+components/    React components — mdx/, tracks/, layout/, media/
+content/       MDX files — docs/, systems/, lessons/[track]/[module]/
+lib/           Utilities — lesson-content.ts is server-only
+public/        Static assets
+\`\`\`
+
+## Current work
+- Building claude-code-operator flagship track (Module 2 content in progress)
+- lib/lesson-content.ts imports fs — never import in client components
+- Progress event bus: window.dispatchEvent('track:progress') for reactive sidebar`}
+</CodeBlock>
+
+Notice what's absent: project history, general rationale, motivational framing, explanations of why TypeScript is good. CLAUDE.md is dense and operational.
+
+---
+
+## The "Current Work" section is highest-value real estate
+
+Every other section is static. Current Work updates every few sessions. It's high-value because it tells Claude what you're actively building — so it makes better decisions without re-explaining.
+
+**Pattern:** At the end of a working session, update Current Work with what's in progress, what you learned, what's broken or unfinished.
+
+<Callout type="lab" title="Think of it as a handoff document">
+If you had to hand this project to another engineer tomorrow, what would they need to know to pick up where you left off? That's what Current Work should contain — not the whole history, just the live state.
+</Callout>
+
+---
+
+## Common CLAUDE.md mistakes
+
+<FailureAnalysis
+  title="Too much project history"
+  before={`## About the project
+This project was started in 2024 as a way to learn Next.js.
+We decided to use TypeScript because it helps with type safety.
+The architecture was inspired by Vercel's documentation site...`}
+  after={`## What this is
+Next.js 15 App Router content platform. MDX files in /content/.
+Deployed to Vercel. No backend database.`}
+  lesson="Claude doesn't need history or rationale — only operational facts that affect current decisions."
+/>
+
+<FailureAnalysis
+  title="Vague critical rules"
+  before={`## Rules
+- Be careful with the database
+- Don't break things
+- Follow best practices`}
+  after={`## Critical rules
+- NEVER run raw SQL against production — use the migration system in /db/migrations/
+- ALL database reads go through lib/db.ts — never import pg directly in routes
+- Run \`npm test\` before ANY commit touching /lib/ or /api/`}
+  lesson="Rules without specifics are ignored. Be exact about what's forbidden and why — Claude needs enough context to generalize correctly."
+/>
+
+<FailureAnalysis
+  title="Missing the exact command"
+  before={`## Commands
+Build: use npm to build
+Tests: run the test suite`}
+  after={`## Common commands
+\`\`\`bash
+# Build (npm is blocked — use node directly)
+node node_modules/next/dist/bin/next build
+
+# Tests
+node node_modules/jest/bin/jest.js --passWithNoTests
+\`\`\``}
+  lesson="Claude will guess at commands if you don't specify them. On non-standard setups, guessing fails. Be exact."
+/>
+
+---
+
+## The CLAUDE.md refinement loop
+
+Your first CLAUDE.md will be incomplete. The refinement loop:
+
+1. Start a session — notice Claude makes a wrong assumption
+2. Identify what context would have prevented it
+3. Add it to CLAUDE.md in the relevant section
+4. Next session: verify the assumption is now correct
+
+After 3–5 sessions, your CLAUDE.md becomes genuinely useful. After 10–15, it becomes a reliable briefing document that meaningfully improves Claude's output on first response.
+
+---
+
+## Slash commands that interact with CLAUDE.md
+
+<CommandRefTable title="Claude Code memory commands">
+  <CommandRef command="/init" flag="slash" description="Read CLAUDE.md and announce what Claude now knows about the project. Useful at session start to verify the briefing is loaded." example="> /init" />
+  <CommandRef command="/memory" flag="slash" description="Show all memory files Claude has loaded for the current project." example="> /memory" />
+</CommandRefTable>
+
+---
+
+<Checkpoint title="CLAUDE.md is working when:">
+  <CheckItem>Claude identifies your tech stack correctly without being told</CheckItem>
+  <CheckItem>Claude refuses forbidden commands without being reminded</CheckItem>
+  <CheckItem>Claude uses the exact commands from your Common commands section</CheckItem>
+  <CheckItem>A new session starts with Claude already oriented to Current Work</CheckItem>
+  <CheckItem>You've iterated at least twice based on Claude making wrong assumptions</CheckItem>
+</Checkpoint>
+
+---
+
+<Milestone n={2} title="Project always self-briefs">
+Your CLAUDE.md architecture is in place. Every session from this point starts with Claude fully oriented — no re-establishing context, no explaining your stack, no repeating the rules. The briefing happens automatically.
+</Milestone>
+
+---
+
+<Resource
+  title="Claude Code Memory Documentation"
+  description="Official reference for CLAUDE.md format, memory hierarchy, and /init behavior."
+  href="https://docs.anthropic.com/en/docs/claude-code/memory"
+  type="docs"
+/>

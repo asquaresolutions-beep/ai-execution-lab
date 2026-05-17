@@ -1,0 +1,183 @@
+## What this lesson covers
+
+Debugging with Claude is faster than debugging alone — but only if you approach it correctly. Pasting an error and asking Claude to fix it produces patches. Applying the methodology produces understanding, and understanding produces fixes that don't break other things.
+
+<LessonObjectives items={[
+  "Apply the Reproduce → Isolate → Understand → Fix → Verify sequence correctly",
+  "Use binary search debugging to find which change introduced a bug",
+  "Give Claude exactly the right input for diagnosis — not too much, not too little",
+  "Verify fixes properly — not just the absence of the original error"
+]} />
+
+---
+
+## The three laws of debugging
+
+**Law 1: Reproduce before fixing.**
+
+If you can't reproduce it, you can't verify the fix. Attempting to fix an unreproduced bug results in guessing — and guessing at production systems is expensive.
+
+**Law 2: Understand before patching.**
+
+A patch that removes the error symptom without understanding the cause often introduces a different bug. Understanding the root cause is what enables confident, targeted fixes.
+
+**Law 3: Verify the fix, not just the absence of the original error.**
+
+A fix that removes the error might have introduced a regression. Verification means: the original error is gone AND the adjacent functionality still works.
+
+---
+
+## The debugging sequence
+
+```
+Reproduce → Isolate → Understand → Fix → Verify
+```
+
+**Reproduce:** Get a reliable, minimal reproduction. If it's intermittent, identify the exact conditions that make it happen.
+
+**Isolate:** Narrow down which component, file, or change is responsible. The goal is to go from "something is broken" to "this specific function returns the wrong value when called with this specific input."
+
+**Understand:** Know the root cause — not just which line of code, but why that line produces the wrong behavior. Claude is exceptionally good at this step if you give it the right input.
+
+**Fix:** Apply the minimal change that addresses the root cause. Not the maximal change that seems related.
+
+**Verify:** Run the full test suite (or equivalent manual checks) to confirm the fix works and nothing adjacent broke.
+
+---
+
+## Binary search debugging
+
+When something worked recently and is now broken, binary search through the git history:
+
+<CodeBlock filename="binary search with git" language="bash">
+{`# Find when it broke using git bisect
+git bisect start
+git bisect bad HEAD              # current state is broken
+git bisect good v1.2.0          # this commit was known-good
+
+# git checks out the midpoint commit
+# Test whether the bug exists at that point
+# Then tell git:
+git bisect good  # or:
+git bisect bad
+
+# git keeps halving until it finds the first bad commit
+# Exit bisect when done:
+git bisect reset`}
+</CodeBlock>
+
+For a range of 100 commits, git bisect finds the culprit in 7 steps. Manual binary search is the same idea without git bisect — check out commits halfway through the suspected range.
+
+**The common case:** "It worked yesterday." Check git log for commits since then. If there are 5 commits, check out commit 3 and test. Broken? → problem is in commits 1–3. Working? → problem is in commits 4–5.
+
+---
+
+## Giving Claude the right input for diagnosis
+
+The quality of Claude's diagnosis depends entirely on the quality of what you give it.
+
+**What Claude needs to diagnose correctly:**
+1. The full error — not paraphrased, the raw text
+2. The file and line number where it originates
+3. What changed recently (commit message, what was different)
+4. What you've already tried
+5. The relevant code — not the whole file, the specific function or component
+
+**The diagnosis prompt:**
+
+<CodeBlock filename="diagnosis prompt" language="text">
+{`Bug diagnosis needed. Don't fix yet — explain first.
+
+Error (copy-pasted from terminal/browser):
+[paste full error here]
+
+File and location:
+[file path]:line number
+
+What changed recently:
+[Last commit: "feat(auth): switched from cookie to JWT sessions" — 2 hours ago]
+
+What I've tried:
+[reverting the specific function didn't help; adding console.logs shows X]
+
+Relevant code:
+[paste the specific function or component, not the whole file]
+
+Question: What is the root cause? What is the exact mechanism producing this error?`}
+</CodeBlock>
+
+The last line is critical: ask for the root cause, not for a fix. Once you understand the root cause, the fix is usually obvious — and you can evaluate whether Claude's proposed fix is correct.
+
+---
+
+## The "explain first, fix second" discipline
+
+<FailureAnalysis
+  title="Asking for a fix before understanding the error"
+  before={`> Here's the error: [paste]. Fix it.
+
+// Claude patches the immediate symptom.
+// The actual root cause is elsewhere.
+// New error appears in a different place.
+// You paste that error. Claude patches that too.
+// Three more errors appear.
+// You've been chasing symptoms for 2 hours.`}
+  after={`> Here's the error: [paste]. Explain the root cause — don't fix yet.
+
+// Claude: "The root cause is: session.userId can be undefined
+// because parseSession() returns SessionData | null, but getUser()
+// expects string. The fix should be at the call site — check for
+// null before calling getUser, not in getUser itself."
+
+// You: that makes sense. Apply that fix.
+// One change. Error resolved. No regression.`}
+  lesson="Understanding the root cause takes 2 minutes. Chasing symptoms takes hours. The discipline to ask 'explain first' is what separates systematic debugging from patch-and-pray."
+/>
+
+---
+
+## Isolating the bug: useful techniques
+
+**Console trace:** Add console.log at boundaries — input to the function, output from the function. Find where the unexpected value first appears.
+
+**Minimal reproduction:** Strip the failing code down to the smallest version that still reproduces the bug. If a 200-line component fails, try to reproduce in 20 lines. Often the act of minimizing finds the bug.
+
+**Type assertions:** Add explicit type annotations to the suspect variable. TypeScript will show you exactly where the type contract breaks.
+
+<CodeBlock filename="type assertion debugging" language="typescript">
+{`// Before: TypeScript inference is hiding the issue
+const user = await getUser(session.userId)
+
+// After: explicit type reveals the mismatch
+const userId: string = session.userId  // ← TypeScript error appears HERE
+const user = await getUser(userId)`}
+</CodeBlock>
+
+**Comment out halves:** If something in module A or module B is causing the bug, comment out module B. If the bug persists, it's in A. If it goes away, it's in B. Recurse.
+
+---
+
+## Verifying fixes correctly
+
+After applying a fix:
+
+<Checklist items={[
+  "The original error no longer appears",
+  "TypeScript passes (tsc --noEmit) — fixes should not introduce new type errors",
+  "The test suite passes if you have one",
+  "The feature the bug was in still works correctly (end-to-end manual check)",
+  "Adjacent features that share the fixed code still work",
+  "The fix doesn't just suppress the error — it addresses the root cause"
+]} />
+
+The last item is the hardest. A try/catch that swallows the error and returns null is not a fix — it's error suppression. Verify that the root cause is addressed, not just the symptom.
+
+---
+
+<Checkpoint title="Your debugging methodology is solid when:">
+  <CheckItem>You always reproduce before fixing — never guessing at unreproducible bugs</CheckItem>
+  <CheckItem>You ask Claude to "explain first" before asking it to fix</CheckItem>
+  <CheckItem>You've used git bisect or manual binary search to find an introduced bug</CheckItem>
+  <CheckItem>Your verification checklist includes adjacent functionality, not just the original error</CheckItem>
+  <CheckItem>You can describe the root cause of a recent bug in one sentence</CheckItem>
+</Checkpoint>

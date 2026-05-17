@@ -1,0 +1,189 @@
+## What this lesson covers
+
+AI-assisted development changes the risk profile of a git branch. Claude can touch more files faster than you would manually — which means a bad decision propagates further before you catch it. The right branch strategy contains that risk without slowing down.
+
+<LessonObjectives items={[
+  "Design a branch taxonomy for AI-assisted development",
+  "Apply the experiment branch pattern for uncertain Claude implementations",
+  "Know exactly when to commit during a long Claude session",
+  "Build the merge review discipline that catches AI errors before they hit main"
+]} />
+
+---
+
+## The three branch types for AI work
+
+**Feature branches** — Standard feature development. One branch per feature. Claude does the implementation work here. You review and merge.
+
+```
+main
+  └── feat/user-notifications    ← Claude builds here
+  └── feat/export-csv            ← separate feature, parallel development
+```
+
+**Experiment branches** — When Claude is trying an approach you're not sure will work. Cheap to create, easy to delete, no guilt about throwing away.
+
+```
+main
+  └── feat/auth-refactor
+        └── exp/auth-jwt-approach      ← trying one approach
+        └── exp/auth-session-approach  ← trying another
+```
+
+**Fix branches** — For isolated bug fixes. Short-lived, narrow scope. Merge fast or throw away.
+
+```
+main
+  └── fix/dashboard-filter-reactivity
+```
+
+---
+
+## The experiment branch pattern
+
+This is the most underused pattern in AI-assisted development.
+
+**When to use it:** Any time you're not sure Claude's architectural approach will work. This includes:
+- Refactoring a complex system where multiple approaches are viable
+- Implementing a feature where the right abstraction isn't clear
+- Trying Claude's suggested approach when you have doubts about it
+
+**The workflow:**
+
+1. Create an experiment branch off the feature branch (not main)
+2. Let Claude implement its approach fully
+3. Test it — does it actually work?
+4. If yes: cherry-pick good commits or merge the experiment branch
+5. If no: delete the experiment branch, approach from a different angle
+
+<CodeBlock filename="experiment branch workflow" language="bash">
+{`# Start from your feature branch
+git checkout feat/notification-system
+
+# Create experiment branch for Claude's first approach
+git checkout -b exp/notifications-websocket
+
+# Let Claude implement fully, then test
+# ... testing ...
+
+# If it works — merge back to feature branch
+git checkout feat/notification-system
+git merge exp/notifications-websocket
+
+# If it doesn't — just delete it
+git checkout feat/notification-system
+git branch -D exp/notifications-websocket
+# Zero cost. Start again with a different approach.`}
+</CodeBlock>
+
+The psychological value: you can let Claude try something ambitious without worrying about polluting your main feature branch. The experiment is isolated by design.
+
+---
+
+## When to commit during a long Claude session
+
+Long Claude sessions — 30+ minutes, 10+ files changed — should not wait until the end to commit. Stage and commit natural checkpoints.
+
+**Commit when:**
+- A logical unit of work is complete (component built, API route working, migration done)
+- TypeScript passes at this point, even if more work remains
+- You've reviewed the changes and they're correct
+- Before Claude starts a significantly different part of the task
+
+**Don't commit when:**
+- Files are half-changed (migration applied, but code using it not updated yet)
+- TypeScript is failing
+- You haven't reviewed the diff
+
+**Pattern: checkpoint commits**
+
+<CodeBlock filename="checkpoint commit flow" language="bash">
+{`# After Claude builds the UserStats component:
+git diff --staged                    # review
+tsc --noEmit                        # verify TypeScript
+git add components/dashboard/StatsCard.tsx
+git commit -m "feat(dashboard): add StatsCard component with API integration"
+
+# Continue — Claude builds the ActivityFeed
+# After that's reviewed and TypeScript passes:
+git add components/dashboard/ActivityFeed.tsx app/api/user/activity/route.ts
+git commit -m "feat(dashboard): add ActivityFeed with paginated activity API"
+
+# Now assemble the page
+# ...`}
+</CodeBlock>
+
+Checkpoint commits mean if Claude breaks something in the next step, you have a clean recovery point.
+
+---
+
+## Naming conventions for AI work branches
+
+Consistent naming makes it easy to understand the history and scope of AI work:
+
+<CommandRefTable title="Branch naming conventions">
+  <CommandRef command="feat/description" flag="flag" description="Standard feature development with Claude." example="feat/user-notifications" />
+  <CommandRef command="fix/description" flag="flag" description="Isolated bug fix." example="fix/auth-redirect-loop" />
+  <CommandRef command="exp/description" flag="flag" description="Experiment — uncertain approach, may be discarded." example="exp/auth-websocket-approach" />
+  <CommandRef command="refactor/description" flag="flag" description="Refactoring — no new behavior, structural changes." example="refactor/extract-validation-lib" />
+  <CommandRef command="chore/description" flag="flag" description="Config, dependencies, tooling — not product features." example="chore/upgrade-next-15-5" />
+</CommandRefTable>
+
+Add this naming convention to your CLAUDE.md so Claude creates branches with the right names automatically.
+
+---
+
+## The merge review discipline
+
+The most important rule: **never merge AI work into main without reviewing the diff yourself.**
+
+Claude's summary of what it did is accurate most of the time. But "most of the time" isn't good enough for main. The diff review catches:
+- Files changed that weren't supposed to be in scope
+- Changes that are correct but introduce subtle issues (type narrowing broken, edge case missed)
+- Accidental console.logs or debug code left in
+- Changes to config files Claude touched while working
+
+**The merge review checklist:**
+
+<Checklist items={[
+  "Run: git diff main...feat/your-branch and read every changed file",
+  "Run TypeScript on the full codebase: tsc --noEmit",
+  "Run your test suite if you have one",
+  "Check that no files outside the stated scope were changed",
+  "Search for TODO, FIXME, console.log, debugger in the changed files",
+  "Verify the feature works end-to-end in the dev environment"
+]} />
+
+This takes 5–10 minutes for a medium-sized feature. It's not optional.
+
+---
+
+<FailureAnalysis
+  title="Merging on Claude's word"
+  before={`> I've completed all the changes. The notification system is
+> working correctly with email and in-app channels. TypeScript
+> passes and the tests are all green.
+
+// Merged directly to main without reviewing the diff.
+// Claude missed that it had changed app/layout.tsx in a way
+// that broke the mobile menu on every page.`}
+  after={`// After Claude reports completion:
+git diff main...feat/notifications | head -200
+tsc --noEmit
+npm test
+
+// Found: app/layout.tsx changed unexpectedly.
+// Reverted that file, confirmed everything else was correct.
+// Merged safely.`}
+  lesson="Claude's completion summary reflects its intent, not necessarily the full reality of what changed. The diff review is the safety net that catches the gap."
+/>
+
+---
+
+<Checkpoint title="Your branch strategy is production-safe when:">
+  <CheckItem>Every feature has its own branch — nothing done directly on main</CheckItem>
+  <CheckItem>You've created at least one experiment branch for an uncertain Claude approach</CheckItem>
+  <CheckItem>You make checkpoint commits during long Claude sessions, not just at the end</CheckItem>
+  <CheckItem>Branch names follow the type/description convention</CheckItem>
+  <CheckItem>You have never merged AI work into main without running git diff first</CheckItem>
+</Checkpoint>

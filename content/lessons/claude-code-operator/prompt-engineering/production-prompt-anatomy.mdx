@@ -1,0 +1,162 @@
+## What this lesson covers
+
+Most Claude Code failures aren't model failures — they're prompt failures. Claude produced exactly what was asked for. The problem was what was asked. This lesson gives you the framework for writing prompts that get correct, reliable output from complex production codebases.
+
+<LessonObjectives items={[
+  "Learn the 6-part production prompt framework — applicable to every type of task",
+  "Understand why vague prompts fail at scale (not just in simple cases)",
+  "Write before/after rewrites of real prompts using the framework",
+  "Apply the framework immediately to your current project"
+]} />
+
+---
+
+## Why production prompts are different
+
+In a simple coding assistant use case, Claude sees one file, fixes one thing, and you verify in seconds. In production agentic work:
+
+- Claude touches 5–20 files per task
+- Misunderstandings compound across 10+ tool calls
+- Wrong assumptions are hard to catch until something breaks
+- Re-running failed tasks costs time and sometimes causes damage
+
+A vague prompt that works fine for a 2-minute task will reliably fail for a 25-minute agentic task. The framework scales with complexity.
+
+---
+
+## The 6-part production prompt framework
+
+Every reliable production prompt has these six elements. Not all need to be long — but all need to be present.
+
+**1. Role context** — What expertise should Claude operate with?
+
+Not "you are an expert developer" (filler). Meaningful role context tells Claude the domain, the constraints of that domain, and the level of caution expected:
+
+> "You're operating as a production systems engineer on a live e-commerce platform. Cautious approach. Any changes to checkout or payment flows require explicit confirmation before applying."
+
+**2. Codebase context** — What's the current state of the system?
+
+Claude knows nothing about your codebase unless you tell it. Even with CLAUDE.md, specific tasks need specific context:
+
+> "The auth system uses Next.js middleware at `/middleware.ts`. Session tokens are validated via `lib/auth.ts:validateSession()`. We switched to JWT 3 days ago — there may be old cookie-based session validation code still in routes."
+
+**3. Task definition** — What exactly needs to happen?
+
+The single most important element. One sentence minimum. State the end state, not just the action:
+
+> "Audit all route files under `app/api/` for places that call `getUserFromCookie()` — that function was deprecated when we switched to JWT. Replace each call with `getUserFromToken(req)` from `lib/auth.ts`."
+
+**4. Scope constraints** — What must not be changed?
+
+Explicit scope limits prevent Claude from "helpfully" touching adjacent code that you didn't intend to change:
+
+> "Only modify files under `app/api/`. Don't touch `middleware.ts`, `lib/auth.ts`, or any test files. Don't change any function signatures."
+
+**5. Output format** — How should results be structured?
+
+Especially important for review tasks or when you need to process Claude's output further:
+
+> "Before making any changes, list every file you'll touch and what change you'll make. Show the list and wait for my approval."
+
+**6. Verification criteria** — How will you know it's done?
+
+Gives Claude a concrete success condition:
+
+> "After changes: run `tsc --noEmit` and report the result. If there are TypeScript errors, fix them before reporting completion."
+
+---
+
+## The framework in practice
+
+**Bad prompt:**
+
+<CodeBlock filename="bad prompt" language="text">
+{`Fix the auth bug.`}
+</CodeBlock>
+
+This will fail. Claude doesn't know which auth file, which bug, what "fixed" looks like, or what not to touch.
+
+**Good prompt — same task:**
+
+<CodeBlock filename="production prompt" language="text">
+{`You're working in a Next.js 15 App Router codebase with JWT auth.
+
+Context:
+- Auth middleware: middleware.ts (validates JWT in Authorization header)
+- Session helper: lib/auth.ts — getUserFromToken(req: Request): User | null
+- Bug: API routes under app/api/ still call getUserFromCookie() which was removed 3 days ago when we switched to JWT
+
+Task:
+Find every file under app/api/ that calls getUserFromCookie() and replace each call with the correct getUserFromToken(req) pattern from lib/auth.ts.
+
+Constraints:
+- Only touch files under app/api/
+- Don't modify middleware.ts or lib/auth.ts
+- Don't change any function signatures or return types
+
+Before making changes: list the files you'll modify and what you'll change in each. Wait for confirmation.
+
+Verification: after changes, run tsc --noEmit and report the result.`}
+</CodeBlock>
+
+This is 3× longer, but the task is 10× more likely to complete correctly in one pass.
+
+---
+
+## Role context that actually works
+
+Role context is most useful when it changes Claude's behavior — not just its confidence.
+
+<FailureAnalysis
+  title="Filler role context"
+  before={`You are an expert senior software engineer with 15 years of experience.
+Please help me with the following task...`}
+  after={`You're working on a production WordPress site with 50,000 active users.
+Treat every content operation as if failure would impact live traffic.
+Do not apply any changes without a dry-run pass first.`}
+  lesson="Generic seniority framing does nothing. Role context that describes domain-specific caution and specific behavioral constraints actually changes Claude's approach."
+/>
+
+---
+
+## The scope constraint is the safety net
+
+The most valuable single element of the framework — and the most commonly omitted.
+
+Without a scope constraint, Claude extends fixes to adjacent code. This is usually helpful in simple cases and often destructive in complex ones:
+
+- "Fix the typo in the button label" → Claude also reformats the whole component
+- "Add error handling to this function" → Claude refactors the entire module
+- "Update the API endpoint" → Claude changes the type definitions, the client, and the docs
+
+Add this to every task: **"Only modify [specific scope]. Do not touch [adjacent things]."**
+
+---
+
+## The verification step is not optional
+
+Without a verification step, Claude declares "done" based on its mental model of correctness. That model is good but not perfect, especially for runtime behavior.
+
+The minimum viable verification:
+
+> "After changes, run: `node node_modules/typescript/bin/tsc --noEmit` and report the result."
+
+For anything that touches data or APIs:
+
+> "After changes, run the test suite with `npm test` and report any failures."
+
+---
+
+<Checkpoint title="Your prompt framework is calibrated when:">
+  <CheckItem>Every prompt you write has a clear task definition (end state, not just action)</CheckItem>
+  <CheckItem>Every code-modification prompt has an explicit scope constraint</CheckItem>
+  <CheckItem>Every code-modification prompt has a TypeScript or test verification step</CheckItem>
+  <CheckItem>You've rewritten a recent vague prompt using the 6-part framework and compared results</CheckItem>
+  <CheckItem>You can write a complete production prompt in under 3 minutes for any standard task</CheckItem>
+</Checkpoint>
+
+---
+
+<Milestone n={4} title="Production prompt discipline established">
+You have the framework that makes every task you give Claude more likely to succeed on the first pass. Apply it consistently — especially for complex, multi-file tasks where the cost of failure is highest.
+</Milestone>

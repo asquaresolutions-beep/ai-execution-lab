@@ -1,0 +1,188 @@
+## What this lesson covers
+
+The most common way to break an agentic workflow is giving Claude a task that's too large. Claude attempts it, gets 60% done, loses the thread, and either delivers broken output or stalls. Task decomposition is the discipline of breaking complex goals into atomic units that Claude can execute reliably.
+
+<LessonObjectives items={[
+  "Understand why large tasks fail at the prompt level — not the model level",
+  "Apply the three laws of atomic task design",
+  "Build a decomposition plan from a real product spec",
+  "Sequence dependent tasks and identify what can run in parallel"
+]} />
+
+---
+
+## Why monolithic tasks fail
+
+When you give Claude a large task, multiple things work against you:
+
+**Context drift.** Across 30+ tool calls, Claude's earlier decisions drift out of active attention. A constraint stated in step 1 gets violated in step 22.
+
+**Scope creep.** Large tasks have fuzzy edges. Claude makes judgment calls about what's "related" and expands the scope. Each expansion adds risk.
+
+**Hard to review.** When Claude changes 15 files in one session, reviewing the output is tedious. Errors slip through because auditing 15 files of changes is hard.
+
+**Partial completion.** If Claude fails at step 18 of 25, you have a project in a half-changed state that may not be reversible.
+
+Decomposed tasks are shorter, more reviewable, and independently verifiable.
+
+---
+
+## The three laws of atomic tasks
+
+**Law 1: An atomic task can be described in one sentence.**
+
+If you need two sentences to describe the task, it's probably two tasks.
+
+> "Add input validation to the registration form" → One task ✓
+> "Add input validation to the registration form and write tests for it" → Two tasks ✗
+
+**Law 2: An atomic task touches at most 3–4 files.**
+
+More than 4 files usually means the task has implicit sub-goals. Find them and separate them.
+
+> Touch: form component, validation utility, form type definitions → 3 files ✓
+> Touch: form, validation, types, API route, tests, error UI, success UI → 7 files ✗
+
+**Law 3: An atomic task has a clear binary completion state.**
+
+"Done" should be yes or no — not "mostly done" or "done except for..."
+
+> Done: TypeScript passes, form validates empty fields correctly → Binary ✓
+> Done: the auth system feels better → Not binary ✗
+
+---
+
+## The decomposition process
+
+Given a real product spec, here's the process:
+
+**Step 1: State the full goal**
+
+> "Add Google OAuth login to the app — users can click 'Sign in with Google', authenticate, and land on their dashboard."
+
+**Step 2: List all the things that need to change**
+
+Walk through the system mentally (or ask Claude to help):
+- Google OAuth credentials (outside the codebase — do this first manually)
+- Auth library config: add Google provider
+- API route: `/api/auth/callback/google`
+- Database: store Google ID on user record
+- Frontend: Google sign-in button on the login page
+- Redirect logic: after OAuth, land on dashboard
+- Error handling: failed OAuth, user already exists with that email
+- Tests: mock OAuth flow
+
+**Step 3: Identify dependencies**
+
+Which tasks require another to be complete first?
+
+```
+[credentials] → [auth config] → [API route] → [redirect logic]
+                               ↓
+                          [DB schema] → [DB query in route]
+                                         ↓
+[login button] → independent — can run in parallel with DB changes
+[tests]         → dependent on everything else being complete
+```
+
+**Step 4: Build the execution sequence**
+
+```
+1. Update auth library config (add Google provider)
+2. Run DB migration (add google_id to users table)  ← can run in parallel with 1
+3. Build API route for OAuth callback
+4. Add redirect logic to dashboard after auth
+5. Add Google sign-in button to login page
+6. Write tests for OAuth flow
+```
+
+**Step 5: Define verification for each task**
+
+Each task gets its own completion criteria before moving to the next.
+
+---
+
+## Real decomposition example
+
+**Bad (monolithic) prompt:**
+
+<CodeBlock filename="monolithic task" language="text">
+{`Build the complete user dashboard — stats, recent activity, profile settings, and a way to export their data as CSV.`}
+</CodeBlock>
+
+This will fail or deliver poor quality. Four features, dozens of files, no clear verification.
+
+**Good (decomposed) execution:**
+
+<CodeBlock filename="decomposed execution plan" language="text">
+{`Task 1: Stats cards
+- File: components/dashboard/StatsCard.tsx (new)
+- Data: GET /api/user/stats → { postsCount, commentsCount, joinDate }
+- Done when: TypeScript passes, card renders with mock data
+
+Task 2: Recent activity feed
+- File: components/dashboard/ActivityFeed.tsx (new)  
+- Data: GET /api/user/activity → Activity[]
+- Done when: feed renders with pagination, TypeScript passes
+
+Task 3: Dashboard page assembly
+- File: app/dashboard/page.tsx
+- Assembles StatsCard + ActivityFeed with parallel data fetching
+- Done when: both components render, loading states work
+
+Task 4: Profile settings
+- Files: app/dashboard/settings/page.tsx, app/api/user/settings/route.ts
+- Done when: user can update display name and email, change saves to DB
+
+Task 5: CSV export
+- Files: app/api/user/export/route.ts
+- Done when: GET /api/user/export returns valid CSV of user's activity`}
+</CodeBlock>
+
+You run one task, verify it, then run the next. Bugs are isolated. Review is manageable.
+
+---
+
+## When to ask Claude to decompose for you
+
+For tasks larger than you can decompose mentally, ask Claude to do it:
+
+<CodeBlock filename="decomposition prompt" language="text">
+{`I want to add a complete notification system to the app — users get in-app notifications for comments, likes, and mentions, with a notification bell in the nav showing unread count.
+
+Before writing any code:
+1. List every file you'd need to create or modify
+2. Identify the dependencies between tasks
+3. Propose an execution order
+4. Flag any risks or design decisions I should make upfront
+
+Don't write any code yet. Just give me the decomposition plan.`}
+</CodeBlock>
+
+Review Claude's plan before approving. Often Claude will identify files you forgot or flag a design decision that would be painful to change later.
+
+---
+
+## Parallel task execution
+
+Independent tasks can run simultaneously. In Claude Code, you can open multiple terminal sessions. The constraint: tasks that share files must be sequential.
+
+**Safe to run in parallel:**
+- Frontend component + backend API route (different files)
+- Two separate features in different modules
+- Tests for one feature + implementation of another
+
+**Must be sequential:**
+- Schema migration → code that uses the new schema
+- Shared utility function → all code that calls it
+- Type definition → files that use that type
+
+---
+
+<Checkpoint title="Your decomposition practice is solid when:">
+  <CheckItem>You can describe every task in your plan with one sentence</CheckItem>
+  <CheckItem>No task in your plan touches more than 4 files</CheckItem>
+  <CheckItem>Every task has a binary verification criterion (TypeScript + test, or manual check)</CheckItem>
+  <CheckItem>You've identified which tasks are dependent and which can run in parallel</CheckItem>
+  <CheckItem>You've used Claude to decompose at least one task you couldn't decompose yourself</CheckItem>
+</Checkpoint>

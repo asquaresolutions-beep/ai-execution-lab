@@ -1,0 +1,296 @@
+## What this lesson covers
+
+The most dangerous thing in WordPress automation is applying changes without verification. A script that reads, transforms, and writes without checking its own output will corrupt content at scale — silently, and often irreversibly. The content patching system is the architecture that makes automation safe.
+
+<LessonObjectives items={[
+  "Implement the Read → Transform → Check → Apply → Verify pattern end to end",
+  "Build a dry-run mode that shows exactly what would happen before anything changes",
+  "Write content assertions that catch bad transformations before they reach WordPress",
+  "Design a rollback path using the pre-patch backup"
+]} />
+
+---
+
+## The patching pattern
+
+Every safe content automation operation follows five steps:
+
+**1. Read** — GET the current content from WordPress. Store the original.
+
+**2. Transform** — Apply your changes to the in-memory copy. Nothing is written to WordPress yet.
+
+**3. Check** — Assert that the transformed content meets your quality criteria. If any assertion fails, stop — do not proceed to Apply.
+
+**4. Apply** — POST/PATCH the transformed content to WordPress using `context=edit`.
+
+**5. Verify** — GET the content again from WordPress and confirm your changes landed correctly.
+
+This pattern cannot silently corrupt content. Either the assertions catch the problem before writing, or the verification catches it after. Either way, you know.
+
+---
+
+## The dry-run implementation
+
+Every script that modifies content must have a dry-run mode:
+
+<CodeBlock filename="wp_patcher.py" language="python">
+{`import os
+import sys
+import json
+import requests
+import base64
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class PatchResult:
+    post_id: int
+    success: bool
+    dry_run: bool
+    changes_description: str
+    error: Optional[str] = None
+
+
+class WPContentPatcher:
+    def __init__(self, site_url: str, username: str, app_password: str):
+        self.base_url = f"{site_url}/wp-json/wp/v2"
+        credentials = base64.b64encode(
+            f"{username}:{app_password.replace(' ', '')}".encode()
+        ).decode()
+        self.headers = {
+            "Authorization": f"Basic {credentials}",
+            "Content-Type": "application/json"
+        }
+
+    def get_post(self, post_id: int) -> dict:
+        """Read: GET post with edit context for raw content"""
+        response = requests.get(
+            f"{self.base_url}/posts/{post_id}",
+            params={"context": "edit"},  # CRITICAL: returns raw content, not rendered
+            headers=self.headers
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def check_assertions(self, original: dict, transformed: dict) -> list[str]:
+        """Check: return list of failed assertions (empty = all pass)"""
+        failures = []
+
+        # Content must not be empty after transformation
+        if not transformed.get("content", {}).get("raw", "").strip():
+            failures.append("FAIL: transformed content is empty")
+
+        # Title must not have changed (we're only patching content)
+        if original.get("title") != transformed.get("title"):
+            failures.append(f"FAIL: title changed unexpectedly")
+
+        # Transformed content must be shorter or similar length (catch runaway expansion)
+        orig_len = len(original.get("content", {}).get("raw", ""))
+        new_len = len(transformed.get("content", {}).get("raw", ""))
+        if new_len > orig_len * 2:
+            failures.append(f"FAIL: content grew by {new_len/orig_len:.1f}x — possible runaway expansion")
+
+        return failures
+
+    def patch_post(
+        self,
+        post_id: int,
+        transform_fn,
+        changes_description: str,
+        dry_run: bool = True
+    ) -> PatchResult:
+        """Full Read → Transform → Check → Apply → Verify cycle"""
+
+        # 1. Read
+        print(f"  Reading post {post_id}...")
+        try:
+            original = self.get_post(post_id)
+        except Exception as e:
+            return PatchResult(post_id, False, dry_run, changes_description, f"Read failed: {e}")
+
+        # 2. Transform (in memory — nothing written yet)
+        transformed = transform_fn(original.copy())
+
+        # 3. Check
+        failures = self.check_assertions(original, transformed)
+        if failures:
+            error_msg = "Assertions failed:\n" + "\n".join(f"  {f}" for f in failures)
+            print(f"  ✗ {error_msg}")
+            return PatchResult(post_id, False, dry_run, changes_description, error_msg)
+
+        # Dry run: stop here
+        if dry_run:
+            print(f"  [DRY RUN] Would apply: {changes_description}")
+            print(f"  [DRY RUN] Post {post_id}: '{original.get('title', {}).get('raw', 'unknown')}'")
+            return PatchResult(post_id, True, dry_run, changes_description)
+
+        # 4. Apply
+        print(f"  Applying: {changes_description}...")
+        try:
+            response = requests.post(
+                f"{self.base_url}/posts/{post_id}",
+                headers=self.headers,
+                json={
+                    "content": transformed["content"]["raw"],
+                    # Add other fields you changed here
+                }
+            )
+            response.raise_for_status()
+        except Exception as e:
+            return PatchResult(post_id, False, dry_run, changes_description, f"Apply failed: {e}")
+
+        # 5. Verify
+        print(f"  Verifying...")
+        verified = self.get_post(post_id)
+        # Add verification logic: does the live post contain what you wrote?
+
+        print(f"  ✓ Post {post_id} patched and verified")
+        return PatchResult(post_id, True, dry_run, changes_description)
+`}
+</CodeBlock>
+
+---
+
+## Using the patcher
+
+<CodeBlock filename="run_patch.py" language="python">
+{`from wp_patcher import WPContentPatcher
+import re
+
+DRY_RUN = True  # Change to False only after dry run confirms correct behavior
+
+patcher = WPContentPatcher(
+    site_url=os.environ["WP_SITE_URL"],
+    username=os.environ["WP_USERNAME"],
+    app_password=os.environ["WP_APP_PASSWORD"]
+)
+
+def fix_em_dashes(post: dict) -> dict:
+    """Replace -- with proper em dash in post content"""
+    content = post["content"]["raw"]
+    content = content.replace(" -- ", " — ")
+    content = content.replace(" --\\n", " —\\n")
+    post["content"] = {"raw": content}
+    return post
+
+# Run on a single post first
+post_ids = [1234, 5678, 9012]  # start with 1, expand after dry run confirms
+
+print(f"Mode: {'DRY RUN' if DRY_RUN else 'LIVE — CHANGES WILL APPLY'}")
+print()
+
+results = []
+for post_id in post_ids:
+    print(f"Post {post_id}:")
+    result = patcher.patch_post(
+        post_id=post_id,
+        transform_fn=fix_em_dashes,
+        changes_description="Replace -- with em dash in content",
+        dry_run=DRY_RUN
+    )
+    results.append(result)
+
+# Summary
+passed = sum(1 for r in results if r.success)
+failed = sum(1 for r in results if not r.success)
+print(f"\\nResults: {passed} passed, {failed} failed")
+if failed:
+    for r in results:
+        if not r.success:
+            print(f"  Post {r.post_id}: {r.error}")`}
+</CodeBlock>
+
+---
+
+## The `context=edit` parameter — why it matters
+
+This is the most common mistake in WordPress REST API automation:
+
+<FailureAnalysis
+  title="Reading rendered HTML instead of raw content"
+  before={`# Without context=edit
+GET /wp-json/wp/v2/posts/123
+
+# Returns "content": {"rendered": "<p>Hello <strong>world</strong></p>"}
+# The "rendered" field is HTML — already processed by WordPress.
+# If you write this back, WordPress double-processes it.
+# Result: escaped HTML, broken shortcodes, corrupted blocks.`}
+  after={`# With context=edit
+GET /wp-json/wp/v2/posts/123?context=edit
+
+# Returns "content": {"raw": "Hello **world**\n\n[gallery id=5]"}
+# Raw content: what was actually saved in the editor.
+# Read raw, transform raw, write raw — no double-processing.`}
+  lesson="Always use context=edit when reading content you'll write back. Never transform rendered HTML — it's already processed."
+/>
+
+---
+
+## Writing assertions for your specific transformation
+
+The generic assertions in the patcher above are a baseline. Add transformation-specific assertions:
+
+<CodeBlock filename="custom assertions" language="python">
+{`def check_em_dash_assertions(original: dict, transformed: dict) -> list[str]:
+    failures = []
+
+    orig_content = original["content"]["raw"]
+    new_content = transformed["content"]["raw"]
+
+    # The fix should reduce the count of " -- "
+    orig_count = orig_content.count(" -- ")
+    new_count = new_content.count(" -- ")
+    if new_count >= orig_count and orig_count > 0:
+        failures.append(f"FAIL: em dash replacement didn't reduce ' -- ' count ({orig_count} → {new_count})")
+
+    # Should not have introduced literal 'amp;' or other HTML entities
+    if "&amp;" in new_content and "&amp;" not in orig_content:
+        failures.append("FAIL: HTML entities appeared in transformed content")
+
+    # Block structure should be preserved (Gutenberg comment markers)
+    orig_blocks = orig_content.count("<!-- wp:")
+    new_blocks = new_content.count("<!-- wp:")
+    if abs(orig_blocks - new_blocks) > 0:
+        failures.append(f"FAIL: block count changed ({orig_blocks} → {new_blocks})")
+
+    return failures`}
+</CodeBlock>
+
+---
+
+## The backup and rollback path
+
+Before any live run, save the originals:
+
+<CodeBlock filename="backup_before_patch.py" language="python">
+{`import json
+from pathlib import Path
+
+def backup_posts(patcher, post_ids: list[int], backup_dir: str = "backups"):
+    Path(backup_dir).mkdir(exist_ok=True)
+    for post_id in post_ids:
+        post = patcher.get_post(post_id)
+        backup_path = f"{backup_dir}/post_{post_id}_backup.json"
+        with open(backup_path, "w") as f:
+            json.dump(post, f, indent=2)
+        print(f"Backed up post {post_id} → {backup_path}")`}
+</CodeBlock>
+
+Rollback is then a reverse patch: read the backup JSON and POST it back with the raw content.
+
+---
+
+<Checkpoint title="Your patching system is production-safe when:">
+  <CheckItem>Every script has a DRY_RUN flag that defaults to True</CheckItem>
+  <CheckItem>You've run dry-run on a subset before running live on the full set</CheckItem>
+  <CheckItem>Your GET requests use context=edit</CheckItem>
+  <CheckItem>You have at least 3 content assertions specific to your transformation</CheckItem>
+  <CheckItem>You have a backup of the original content before any live run</CheckItem>
+  <CheckItem>You've tested rollback on at least one post</CheckItem>
+</Checkpoint>
+
+---
+
+<Milestone n={6} title="WordPress automation is safe">
+You have the architecture that makes content automation auditable, testable, and recoverable. The dry-run pattern means you'll never apply a bad transformation at scale — you'll always see exactly what would happen first.
+</Milestone>

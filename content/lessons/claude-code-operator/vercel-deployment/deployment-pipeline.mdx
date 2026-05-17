@@ -1,0 +1,165 @@
+## What this lesson covers
+
+Vercel auto-deploys on every push to your connected branch. That's convenient until it becomes a source of noise — failed builds in production, build minutes spent on avoidable errors, debugging in Vercel's logs instead of your local terminal. The solution is a local pipeline that catches failures before they reach Vercel.
+
+<LessonObjectives items={[
+  "Build the local → verify → push pipeline that eliminates avoidable Vercel failures",
+  "Configure pre-push checks that run automatically with git hooks",
+  "Read a Vercel deployment in progress and know when to let it run vs intervene",
+  "Set up the post-deployment verification routine"
+]} />
+
+---
+
+## Why local build matters
+
+Vercel and your local machine run the same Next.js build — but there are critical differences:
+
+| Factor | Local | Vercel |
+|---|---|---|
+| OS | Windows/macOS | Linux |
+| File system | Case-insensitive | Case-sensitive |
+| Node version | Whatever you have | Defined in `.nvmrc` |
+| Env vars | Your `.env.local` | Vercel environment variables |
+| Build minutes | Free | Limited |
+| Feedback speed | Seconds | 2–4 minutes |
+
+A build that passes locally and fails on Vercel usually means: wrong Node version, case-sensitivity bug in an import path, or a missing environment variable. These are all catchable locally with the right setup.
+
+---
+
+## The three-step local pipeline
+
+Run these three steps before every push. In order. All three must pass.
+
+**Step 1: TypeScript validation**
+
+<CodeBlock filename="terminal" language="bash">
+{`node node_modules/typescript/bin/tsc --noEmit`}
+</CodeBlock>
+
+Catches type errors before the build. TypeScript errors will always fail Vercel — better to catch them in 5 seconds locally than wait 3 minutes for Vercel to tell you.
+
+**Step 2: Production build**
+
+<CodeBlock filename="terminal" language="bash">
+{`node node_modules/next/dist/bin/next build`}
+</CodeBlock>
+
+This is the same command Vercel runs. If it passes locally, Vercel will almost always pass too. If it fails locally, you get the error in your terminal immediately — no waiting for Vercel.
+
+**Step 3: Smoke test**
+
+After the build: run the dev server and manually test the 3 most critical paths of your application. This catches runtime errors that don't surface during build — API routes returning wrong data, pages that render but throw client-side errors, auth flows breaking.
+
+---
+
+## The pre-push script
+
+Make the pipeline repeatable — don't rely on remembering it:
+
+<CodeBlock filename="pre-push.sh" language="bash">
+{`#!/bin/bash
+set -e  # Stop on first failure
+
+echo "→ TypeScript check..."
+node node_modules/typescript/bin/tsc --noEmit
+
+echo "→ Production build..."
+node node_modules/next/dist/bin/next build
+
+echo "✓ All checks passed. Safe to push."
+`}
+</CodeBlock>
+
+<CodeBlock filename="terminal" language="bash">
+{`# Make it executable
+chmod +x pre-push.sh
+
+# Run before pushing
+./pre-push.sh && git push`}
+</CodeBlock>
+
+Or as a git hook (runs automatically on `git push`):
+
+<CodeBlock filename=".git/hooks/pre-push" language="bash">
+{`#!/bin/bash
+set -e
+echo "Running pre-push checks..."
+node node_modules/typescript/bin/tsc --noEmit
+echo "✓ TypeScript passed"
+# Add next build here if you want full build gate on every push
+# node node_modules/next/dist/bin/next build`}
+</CodeBlock>
+
+<Callout type="info" title="Full build on every push is slow">
+Running `next build` as a git hook adds 60–90 seconds to every push. For frequent small commits, skip the build hook and use TypeScript-only. Run the full build manually before pushes that touch significant code.
+</Callout>
+
+---
+
+## Reading a Vercel deployment in progress
+
+After pushing, monitor the deployment in the Vercel dashboard. What to watch:
+
+**Phase 1: Building** — Vercel clones your repo and runs `next build`. This is where most failures happen. Watch the build log in real-time.
+
+**Phase 2: Deploying** — Build artifacts are deployed to Vercel's edge network. Failures here are rare but include: edge function deployment errors (runtime mismatches), invalid headers configuration, or build artifact too large.
+
+**Phase 3: Ready** — Deployment is live. The preview URL is active.
+
+**When to cancel a deployment in progress:**
+
+Only cancel if you've already pushed a fix. If you see a TypeScript error in the Vercel logs, don't cancel — the fix isn't live yet anyway. Push the fix first, then the new deployment supersedes the failed one.
+
+---
+
+## Environment variables — the most common deployment gap
+
+Local builds have `.env.local`. Vercel deployments have environment variables configured in the Vercel dashboard. They must match.
+
+**Checklist for new environment variables:**
+
+<Checklist items={[
+  "Added the variable to .env.local for local development",
+  "Added the variable to Vercel → Project → Settings → Environment Variables",
+  "Set the correct Environment: Production / Preview / Development",
+  "Variables starting with NEXT_PUBLIC_ are exposed to the browser — verify that's intended",
+  "Redeployed after adding new Vercel environment variables (they don't apply to existing deployments)"
+]} />
+
+<FailureAnalysis
+  title="Missing Vercel environment variable"
+  before={`// Local: works fine, STRIPE_SECRET_KEY is in .env.local
+// Vercel: build fails or API returns 500 at runtime
+
+Error: Missing environment variable: STRIPE_SECRET_KEY
+    at app/api/checkout/route.ts:8`}
+  after={`// 1. Add to Vercel dashboard:
+//    STRIPE_SECRET_KEY → Value → Environment: Production
+
+// 2. Redeploy (new env vars require a new deployment)
+git commit --allow-empty -m "chore: trigger redeploy for env var"
+git push`}
+  lesson="Every environment variable used in code must exist in both .env.local and the Vercel dashboard. Check both whenever adding a new variable."
+/>
+
+---
+
+## Post-deployment verification
+
+After every production deployment, verify these before declaring success:
+
+<Checkpoint title="Post-deployment verification:">
+  <CheckItem>The production URL loads without a 500 error</CheckItem>
+  <CheckItem>The most critical user path works end-to-end (login, core feature, key API route)</CheckItem>
+  <CheckItem>No error spike in your monitoring (if you have one)</CheckItem>
+  <CheckItem>The deployment shows "Ready" in the Vercel dashboard (not "Error")</CheckItem>
+  <CheckItem>Any new environment variables are confirmed working in the production context</CheckItem>
+</Checkpoint>
+
+---
+
+<Milestone n={5} title="Deployment pipeline is operational">
+You have a local pipeline that catches failures before Vercel does, a pre-push gate that runs automatically, and a post-deployment verification routine. Deployments are now a controlled operation, not a coin flip.
+</Milestone>

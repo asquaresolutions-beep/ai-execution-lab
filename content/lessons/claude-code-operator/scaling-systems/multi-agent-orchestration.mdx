@@ -1,0 +1,234 @@
+## What this lesson covers
+
+Multi-agent orchestration is for tasks that exceed what a single Claude session can reliably complete: tasks with too many files, too many sequential steps, or genuinely independent work streams that can run in parallel. This lesson covers when to use it, how to design the orchestrator/worker split, and how to manage outputs without creating new complexity.
+
+<LessonObjectives items={[
+  "Identify the specific conditions that warrant multi-agent architecture over a single session",
+  "Design the orchestrator prompt that delegates reliably without ambiguity",
+  "Write worker prompts that execute single atomic tasks with verifiable output",
+  "Manage the integration phase — combining worker outputs without introducing conflicts"
+]} />
+
+---
+
+## When multi-agent architecture is warranted
+
+Multi-agent is not the default. It adds coordination overhead. Use it when:
+
+**Condition 1: The task would fill or approach the context window.**
+
+200k tokens sounds large. A single agent reading 50 files (many at 100–300 lines each), generating 20 modified files, and tracking the whole transformation will approach limits. Signs: Claude starts making mistakes it wouldn't have made earlier, or responses become less specific.
+
+**Condition 2: Genuinely independent work streams exist.**
+
+Two features that touch completely different files can run in parallel. One agent builds the email notification system while another builds the CSV export — they don't share files, so they can't conflict.
+
+**Condition 3: The task has a natural stage boundary.**
+
+Stage 1: Audit all 200 posts for missing alt text (read-only, fast). Stage 2: Generate alt text for the flagged posts (write-heavy, slow). These are naturally separate — audit first, then a separate agent does the writes based on the audit results.
+
+**Condition 4: Error in one stream should not block the other.**
+
+If the auth refactor fails, the dashboard feature should still be completable. Independent agents fail independently.
+
+---
+
+## The orchestrator / worker pattern
+
+**Orchestrator:** Knows the full task. Breaks it into atomic pieces. Delegates to workers. Collects and verifies outputs. Integrates the results.
+
+**Workers:** Each gets one atomic task. Full context for that task only. Produce a structured, verifiable output. Do not know about other workers or the full goal.
+
+The orchestrator never does implementation work directly — it delegates, verifies, and integrates.
+
+---
+
+## The orchestrator prompt
+
+The orchestrator prompt is a coordination document, not a task prompt:
+
+<CodeBlock filename="orchestrator prompt" language="text">
+{`You are coordinating a multi-step codebase transformation.
+
+Full goal: 
+Migrate all API routes from the legacy response format { success: bool, data: any }
+to the new format { status: 'ok' | 'error', payload: unknown, error?: string }
+
+Your coordination tasks:
+1. Audit: Find every API route in app/api/ that uses the legacy format
+   Output: a list of files with the specific lines to change
+
+2. Delegate transformation: For each file identified in the audit,
+   the transformation is: update the response object shape and update
+   the TypeScript return type annotation
+
+3. Collect results: Verify each transformation passed TypeScript checks
+
+4. Integration check: After all transformations, run tsc --noEmit and report
+
+Do the audit first. Show me the complete list of files to change
+before any transformation begins.`}
+</CodeBlock>
+
+The orchestrator's first output is always the audit or plan — before any worker starts.
+
+---
+
+## Worker prompt anatomy
+
+Each worker gets a complete, self-contained task:
+
+<CodeBlock filename="worker prompt" language="text">
+{`You are working on a single file transformation as part of a larger migration.
+
+Project context:
+- Next.js 15 App Router, TypeScript 5.4
+- We're migrating API response format from { success, data } to { status, payload, error }
+
+Your single task:
+Transform the API route at app/api/user/profile/route.ts
+
+Specific changes:
+1. Line 34: change { success: true, data: user } to { status: 'ok', payload: user }
+2. Line 52: change { success: false, data: null } to { status: 'error', payload: null, error: 'User not found' }
+3. Update the return type annotation from Response<LegacyFormat> to Response<ApiResponse>
+   where ApiResponse is imported from lib/types.ts (already exists there)
+
+Constraints:
+- Only modify app/api/user/profile/route.ts
+- Do not change the business logic, only the response format
+- Do not modify any imported types
+
+Verification:
+After making changes, run: tsc --noEmit
+Report: ✓ TypeScript passed OR ✗ Error: [paste the error]`}
+</CodeBlock>
+
+Notice the worker prompt has:
+- Specific file (one file only)
+- Specific line numbers and changes
+- Explicit constraints
+- A verification step with a structured output format
+
+---
+
+## Managing parallel execution
+
+In Claude Code, you can run multiple sessions simultaneously using separate terminal windows. Each runs independently.
+
+**Parallelism safety rules:**
+
+<Checklist items={[
+  "Workers must not modify the same file — assign exclusive file ownership",
+  "Shared types and utilities must be finalized before workers that use them start",
+  "Define the output format workers use to report results before parallelizing",
+  "Have one orchestrator session receiving all worker reports — don't split coordination"
+]} />
+
+**Practical parallel session setup:**
+
+<CodeBlock filename="parallel session workflow" language="text">
+{`Terminal 1 (Orchestrator):
+> Run the audit. List all files that need the format change.
+[Produces list of 8 files]
+
+Terminal 2 (Worker A — files 1-4):
+> [Worker prompt with files 1-4]
+
+Terminal 3 (Worker B — files 5-8):  
+> [Worker prompt with files 5-8]
+
+[Both complete — report back to Terminal 1]
+
+Terminal 1 (Orchestrator):
+> Worker A reported: 4 files transformed, TypeScript passed
+> Worker B reported: 3 files transformed, 1 TypeScript error in route.ts:67
+> Handle the error in route.ts:67, then run full tsc --noEmit`}
+</CodeBlock>
+
+---
+
+## The integration phase
+
+After workers complete, the orchestrator runs integration:
+
+<CodeBlock filename="integration prompt" language="text">
+{`All workers have completed their transformations. Integration phase:
+
+1. Run the full TypeScript check: tsc --noEmit
+   Report all errors if any.
+
+2. If TypeScript passes: run the build: node node_modules/next/dist/bin/next build
+   Report whether the build succeeds.
+
+3. Do a quick sanity check: grep -r "success: true" app/api/ to confirm
+   no legacy format remains.
+
+4. Report the final status: how many files changed, any remaining issues.`}
+</CodeBlock>
+
+The integration phase is where conflicts surface — two workers that were each correct independently might produce an incompatible combined state. TypeScript check catches most of these.
+
+---
+
+## Failure handling in multi-agent work
+
+When a worker fails:
+
+1. **Isolate the failure** — don't let it block other workers that don't depend on it
+2. **Report clearly** — "Worker B failed at app/api/user/route.ts because of X"
+3. **Fix at the orchestrator level** — the orchestrator decides whether to re-delegate or fix directly
+4. **Verify before integrating** — a partially-fixed worker output can corrupt the integration
+
+<FailureAnalysis
+  title="Workers modifying shared files"
+  before={`Worker A: modifies lib/types.ts to add ResponseFormat type
+Worker B: modifies lib/types.ts to add the same ResponseFormat type differently
+
+Both complete "successfully" — but when integrated, lib/types.ts has
+a conflict or a duplicate type that breaks the build.`}
+  after={`Orchestrator rule: lib/types.ts changes happen in a preliminary step
+by the orchestrator before any workers start. Workers only consume
+shared types — they never modify shared files.
+
+If shared types need changes: do it once, verify it, then start workers.`}
+  lesson="Shared file writes must be serialized. Multi-agent parallelism is safe only when each agent has exclusive ownership of the files it modifies."
+/>
+
+---
+
+## When not to use multi-agent
+
+Multi-agent adds real coordination overhead. Don't use it when:
+
+- A single well-scoped session would work (most tasks)
+- The tasks are dependent (B requires A to be complete first)
+- The files share too much state (risk of conflicts exceeds the parallelism benefit)
+- The orchestration complexity is greater than just doing it sequentially
+
+The rule: if you're spending more than 5 minutes designing the orchestration, step back. Can the task be decomposed and run sequentially in one context instead? Usually yes.
+
+---
+
+<Checkpoint title="You're ready for multi-agent work when:">
+  <CheckItem>You can articulate why this specific task needs multi-agent (not just "it's big")</CheckItem>
+  <CheckItem>The orchestrator prompt separates audit/planning from execution</CheckItem>
+  <CheckItem>Each worker prompt has one file, one task, and a verification step</CheckItem>
+  <CheckItem>No two workers modify the same file</CheckItem>
+  <CheckItem>The integration phase includes a full TypeScript check and build verification</CheckItem>
+</Checkpoint>
+
+---
+
+<Milestone n={7} title="AI execution at scale">
+You can now run coordinated multi-agent workflows — parallel execution for independent tasks, orchestrator verification for integration, and failure isolation that keeps the whole operation recoverable. This is the architecture for serious AI-assisted engineering work.
+</Milestone>
+
+---
+
+<Resource
+  title="Claude Code Multi-Agent Documentation"
+  description="Official reference for spawning sub-agents, the Agent tool, and orchestration patterns."
+  href="https://docs.anthropic.com/en/docs/claude-code/sub-agents"
+  type="docs"
+/>

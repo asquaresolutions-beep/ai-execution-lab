@@ -1,0 +1,165 @@
+## What this lesson covers
+
+Running your first real agentic task is different from chatting with Claude. Claude will read files, run commands, make changes, and report back — all without you typing each step. This lesson teaches you how to phrase tasks, read the tool-use loop as it runs, intervene correctly, and verify the output.
+
+<LessonObjectives items={[
+  "Phrase a real agentic task that Claude can execute without constant guidance",
+  "Read the tool-use loop in real-time and understand what Claude is doing",
+  "Know exactly when to interrupt Claude and when to let it run",
+  "Verify Claude's work systematically — not just by reading its summary"
+]} />
+
+---
+
+## The anatomy of an agentic task
+
+An agentic task is a request Claude executes using a sequence of tool calls — Read, Write, Edit, Bash, Glob, Grep — until it completes the goal or gets stuck.
+
+The loop:
+
+```
+Prompt → Plan → Tool call → Read result → Plan next step → Tool call → ...
+```
+
+Claude doesn't run all tools at once. It plans one step, executes it, reads the result, and plans the next step based on what it found. This is why agentic tasks can diverge from your intent — small misunderstandings compound across steps.
+
+---
+
+## Phrasing a task for agentic execution
+
+The difference between a task Claude can run autonomously and one that stalls every three steps is how it's phrased.
+
+**What a good agentic task includes:**
+- What exists now (current state)
+- What should exist after (end state)
+- Which files are in scope
+- What should not be touched
+- How to verify it's done
+
+<FailureAnalysis
+  title="Underspecified task"
+  before={`Add dark mode to the app.`}
+  after={`Add a dark mode toggle to the site. The theme state should live in a React context at lib/theme-context.tsx. The toggle component goes in components/layout/theme-toggle.tsx and should be added to the header in components/layout/header.tsx next to the existing nav.
+
+Constraints: don't touch app/layout.tsx — the dark class is already applied there. Don't add any new npm packages.
+
+Verify by: TypeScript passes (tsc --noEmit) and the toggle renders in the header without breaking the nav layout.`}
+  lesson="Underspecified tasks cause Claude to make assumptions. Those assumptions compound across 10 tool calls. The extra 2 minutes you spend specifying saves 20 minutes of correction."
+/>
+
+---
+
+## Reading the tool-use loop
+
+When Claude runs an agentic task, you'll see tool calls in real-time. Here's what a healthy loop looks like:
+
+<TerminalBlock title="Claude Code — agentic task in progress" session={[
+  { cmd: "Find all TypeScript files in /lib that import from 'fs' and list them", prompt: ">" },
+  { out: "I'll use Glob to find TypeScript files in /lib, then Grep to find fs imports." },
+  { out: "" },
+  { out: "⬡ Glob: lib/**/*.ts → found 8 files" },
+  { out: "⬡ Grep: 'from .fs.' in lib/**/*.ts → 2 matches" },
+  { out: "" },
+  { out: "Files that import from 'fs':" },
+  { out: "  lib/lesson-content.ts  (line 6: import fs from 'fs')" },
+  { out: "  lib/content.ts         (line 3: import { readFileSync } from 'fs')" },
+  { out: "" },
+  { out: "Both are server-only utilities — this is expected. No client components import fs directly." }
+]} />
+
+Each `⬡` line is a tool call. You're watching Claude's actual work in real-time.
+
+**What healthy looks like:**
+- Tool calls are in a logical sequence (Glob → Grep → Read → Edit)
+- Claude announces what it found before the next step
+- The plan evolves based on actual findings, not assumptions
+
+**Red flags to watch for:**
+- Claude edits a file without reading it first
+- The tool calls go in circles (reading the same file repeatedly)
+- Claude announces completion before verifying the result
+
+---
+
+## When to interrupt
+
+Claude runs autonomously, but you have full control. Use `Ctrl+C` to stop Claude mid-task.
+
+**Interrupt immediately when:**
+- Claude is about to edit a file that's clearly out of scope
+- The plan Claude announced in step one is already wrong
+- Claude is about to run a destructive command (even if it's in your allow list)
+- The tool calls have been going in circles for 3+ steps
+
+**Do not interrupt when:**
+- Claude reads more files than you expected — it might need more context
+- The task is taking longer than expected — complex tasks take time
+- Claude's first approach looks different from yours — different isn't wrong
+
+**After interrupting:** Correct the assumption directly: "Stop — don't touch auth.ts. The issue is in middleware.ts only." Then let Claude re-plan from that correction.
+
+---
+
+## Your first real task
+
+Run this exact task in a real project:
+
+<TerminalBlock title="Claude Code REPL" session={[
+  { cmd: "Read the files in /lib and tell me: which ones import from 'fs' or 'path', which ones are marked 'use client', and flag any file that does both (server module in client file). Show me the results as a table.", prompt: ">" }
+]} />
+
+This task is good because:
+- It's read-only (no edits, safe to run on any project)
+- It requires multiple tool calls (Glob → Grep → Read → analyze)
+- The output is verifiable — you can manually check the result
+- It exercises real agentic capability
+
+Watch the tool calls as Claude works. Note which files it reads, in what order, and why.
+
+---
+
+## Verifying Claude's output
+
+Never accept Claude's summary as verification. Claude summarizes what it intended to do — not always what it actually did.
+
+The verification checklist for any agentic task:
+
+<Checklist items={[
+  "Read the actual files Claude changed — don't just read its summary",
+  "Run the project's type check or test suite if Claude modified code",
+  "Check git diff to see exactly what changed before staging",
+  "If Claude ran shell commands, check their actual output (not Claude's interpretation of it)",
+  "For file operations: verify the files exist where Claude says they do"
+]} />
+
+<Callout type="danger" title="The trust-but-verify discipline">
+This isn't about distrust — it's about system discipline. Claude's summaries are accurate most of the time. But agentic tasks that touch 10+ files have surface area for errors. One undetected wrong edit compounds into a broken build. The 60 seconds of verification is always worth it.
+</Callout>
+
+---
+
+## Common first-task failures
+
+**Claude edits the wrong file:** Usually from ambiguous scope. Fix by specifying the exact file path in your task.
+
+**Claude finishes but something's broken:** Claude verified against its mental model, not actual execution. Always run `tsc --noEmit` and your test suite after code-changing tasks.
+
+**Claude gets stuck asking questions mid-task:** Your task didn't have enough context. Claude hit an ambiguity and stopped. Re-phrase with the missing information included upfront.
+
+**Claude runs more tool calls than expected:** Not necessarily bad — complex tasks have hidden complexity. Watch what it finds, not how many steps it takes.
+
+---
+
+<Checkpoint title="You're ready to run agentic tasks when:">
+  <CheckItem>You can phrase a task with current state, end state, scope, and constraints</CheckItem>
+  <CheckItem>You can read the tool-use loop and identify what Claude is doing at each step</CheckItem>
+  <CheckItem>You know the exact keyboard shortcut to interrupt Claude (Ctrl+C)</CheckItem>
+  <CheckItem>You've run the verification checklist on a completed task</CheckItem>
+  <CheckItem>You've caught at least one case where Claude's summary and actual output differed</CheckItem>
+</Checkpoint>
+
+---
+
+<Milestone n={3} title="Agentic execution — active">
+You've run your first real agentic task and know how to read, guide, and verify it. This is the core skill that everything else in this track builds on.
+</Milestone>

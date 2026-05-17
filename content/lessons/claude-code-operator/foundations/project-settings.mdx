@@ -1,0 +1,209 @@
+## What this lesson covers
+
+The `.claude/settings.json` file controls what Claude Code can and cannot do in your project. Get this right and you have a powerful, safe operator. Get it wrong and you have either an overly restricted Claude that asks permission for everything, or an unrestricted Claude that can cause real damage.
+
+<LessonObjectives items={[
+  "Understand the permission model — allow/deny, patterns, and resolution order",
+  "Configure a production settings.json for your specific project type",
+  "Test your permissions without guessing whether they work",
+  "Design constraints that are safe without being so restrictive Claude is useless"
+]} />
+
+---
+
+## How the permission model works
+
+Claude Code evaluates every tool call against your permission rules before running it. The evaluation order:
+
+1. **Deny list** — If the call matches any deny rule, it's blocked immediately
+2. **Allow list** — If it matches an allow rule, it runs without asking
+3. **Neither** — Claude asks for your permission in the terminal
+
+The pattern syntax uses glob-style matching:
+
+<CodeBlock filename="pattern examples" language="bash">
+{`Bash(git *)           # any git command
+Bash(npm run *)       # any npm run command  
+Bash(rm -rf *)        # any rm -rf (commonly denied)
+Bash(sudo *)          # any sudo (commonly denied)
+Read(**/*.ts)         # read any TypeScript file
+Write(src/**)         # write anything under src/`}
+</CodeBlock>
+
+---
+
+## A production settings.json
+
+This is the starting configuration for a Next.js/Node.js project. Adapt from here:
+
+<CodeBlock filename=".claude/settings.json" language="json">
+{`{
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git branch *)",
+      "Bash(git stash *)",
+      "Bash(node *)",
+      "Bash(npm run *)",
+      "Bash(npx *)",
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "Bash(mkdir -p *)",
+      "Bash(cp *)",
+      "Bash(mv *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard *)",
+      "Bash(chmod *)",
+      "Bash(chown *)",
+      "Bash(curl * | bash)",
+      "Bash(wget * | bash)"
+    ]
+  }
+}`}
+</CodeBlock>
+
+<Callout type="warn" title="rm -rf is always denied">
+Even on your own machine, denying `rm -rf *` in Claude's permissions is the right call. If Claude needs to delete something, it should be specific: `rm specificfile.json`, not a recursive glob. The deny rule forces specificity.
+</Callout>
+
+---
+
+## The allowlist philosophy
+
+The allow list isn't about trust — it's about reducing friction for safe operations. Commands you allow skip the confirmation prompt entirely, which matters in long agentic sessions where Claude is running dozens of tool calls.
+
+**Allow freely:** reading, searching, safe git operations, running your own build scripts, running tests.
+
+**Always deny:** recursive deletion, sudo, force-push, piping remote content to a shell, anything that modifies system configuration.
+
+**Leave at "ask":** anything specific to your project that isn't covered above — Claude will prompt and you can decide in context.
+
+---
+
+## Per-project vs global settings
+
+Settings can live at two levels:
+
+<CommandRefTable title="Settings file locations">
+  <CommandRef command="~/.claude/settings.json" flag="flag" description="Global settings — apply to every project on this machine." />
+  <CommandRef command=".claude/settings.json" flag="flag" description="Project settings — override global settings for this repo. Commit this file." />
+  <CommandRef command=".claude/settings.local.json" flag="flag" description="Local overrides — not committed to git. Use for personal preferences that shouldn't be shared." />
+</CommandRefTable>
+
+**Recommended pattern:** Keep restrictive global settings (deny the dangerous stuff), and use project settings to expand what's allowed for that specific project's commands.
+
+---
+
+## Testing your permissions
+
+Don't guess whether your permissions are correct. Test them explicitly:
+
+<TerminalBlock session={[
+  { cmd: "claude", out: "Welcome to Claude Code..." },
+  { cmd: "Try to run: rm -rf ./test-dir", out: "I need permission to run this command:\n  rm -rf ./test-dir\n  [This command is blocked by your deny rules]" },
+  { cmd: "Run: git status", out: "[runs without asking — allowed by your git * rule]" },
+  { cmd: "/status", out: "API Status: Connected\nPermissions: .claude/settings.json loaded\nDeny rules: 8 active" }
+]} />
+
+If Claude asks for permission on something you intended to allow, check:
+- Pattern syntax (use `*` for wildcards, not `**` for single-argument matching)
+- Whether the command matches your allow pattern exactly
+- Whether a deny rule is taking precedence
+
+---
+
+## Project-type configurations
+
+**Python automation project:**
+
+<CodeBlock filename=".claude/settings.json" language="json">
+{`{
+  "permissions": {
+    "allow": [
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(pip show *)",
+      "Bash(pytest *)",
+      "Bash(git *)"
+    ],
+    "deny": [
+      "Bash(pip install *)",
+      "Bash(sudo *)",
+      "Bash(rm -rf *)"
+    ]
+  }
+}`}
+</CodeBlock>
+
+**WordPress automation project:**
+
+<CodeBlock filename=".claude/settings.json" language="json">
+{`{
+  "permissions": {
+    "allow": [
+      "Bash(python *)",
+      "Bash(curl -X GET *)",
+      "Bash(curl -X POST *)",
+      "Bash(git *)",
+      "Bash(cat *)",
+      "Bash(ls *)"
+    ],
+    "deny": [
+      "Bash(curl -X DELETE *)",
+      "Bash(sudo *)",
+      "Bash(rm -rf *)",
+      "Bash(mysql *)"
+    ]
+  }
+}`}
+</CodeBlock>
+
+Note: denying `curl -X DELETE` doesn't prevent Claude from deleting via your Python scripts — it only prevents direct curl DELETE calls. Your automation layer handles deletion with its own safety checks.
+
+---
+
+<FailureAnalysis
+  title="Deny list too broad"
+  before={`"deny": [
+  "Bash(*)"
+]
+
+// Claude asks for permission before every single
+// command. Agentic tasks become unusable.`}
+  after={`"deny": [
+  "Bash(rm -rf *)",
+  "Bash(sudo *)",
+  "Bash(git push --force*)"
+]
+// Only genuinely dangerous patterns are blocked.
+// Everything else either auto-runs or asks once.`}
+  lesson="Over-restricting permissions doesn't make you safer — it makes agentic tasks unusable. Block the dangerous patterns specifically."
+/>
+
+---
+
+<Checkpoint title="Permissions are correctly configured when:">
+  <CheckItem>.claude/settings.json exists at your project root</CheckItem>
+  <CheckItem>git status and git diff run without asking for confirmation</CheckItem>
+  <CheckItem>rm -rf is blocked (Claude shows it's denied, not just asks)</CheckItem>
+  <CheckItem>Your project's primary commands (npm run, python, etc.) are allowed</CheckItem>
+  <CheckItem>You've verified sudo is denied</CheckItem>
+</Checkpoint>
+
+---
+
+<Resource
+  title="Claude Code Settings Reference"
+  description="Complete reference for all settings.json options, permission patterns, and file locations."
+  href="https://docs.anthropic.com/en/docs/claude-code/settings"
+  type="docs"
+/>

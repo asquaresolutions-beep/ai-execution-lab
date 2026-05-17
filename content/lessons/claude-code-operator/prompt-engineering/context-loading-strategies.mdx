@@ -1,0 +1,175 @@
+## What this lesson covers
+
+Claude starts every session with zero knowledge of your project beyond what's in CLAUDE.md. Context loading is the practice of giving Claude the right information before it starts working — so the first response is already oriented, not a miss that needs correction.
+
+<LessonObjectives items={[
+  "Understand what Claude knows at session start vs what it needs to be told",
+  "Build a session-opening ritual that front-loads critical context",
+  "Apply targeted context loading for specific task types (debugging, feature work, reviews)",
+  "Manage context window budget — what to include and what to cut"
+]} />
+
+---
+
+## What Claude knows at session start
+
+**Automatically loaded:**
+- CLAUDE.md (full file, injected automatically)
+- Files you reference directly in the conversation
+
+**Not loaded — Claude must read them:**
+- Any file in your codebase (unless you ask Claude to read it)
+- The current state of your application
+- What changed since the last session
+- What's broken, what's in progress, what's deployed
+
+**Never loaded:**
+- Previous session conversations (no memory between sessions)
+- Your mental model of how the system works
+
+This gap between what Claude knows and what it needs is where most session failures originate.
+
+---
+
+## The five context-loading strategies
+
+### Strategy 1: CLAUDE.md + /init
+
+The baseline. CLAUDE.md covers project-level context. `/init` makes Claude confirm it's loaded:
+
+<TerminalBlock title="Claude Code REPL" session={[
+  { cmd: "/init", prompt: ">" },
+  { out: "Loaded CLAUDE.md. This is a Next.js 15 App Router project with TypeScript 5.4." },
+  { out: "I see you're currently building the Claude Code Operator track (Module 2 in progress)." },
+  { out: "Key constraints noted: npm is blocked, use node directly. Server-only modules must not be imported in client components." },
+  { out: "Ready." }
+]} />
+
+This confirms Claude absorbed the briefing correctly. If the output is wrong, your CLAUDE.md needs updating before you start working.
+
+### Strategy 2: File reads at session start
+
+For tasks with specific file dependencies, tell Claude to read them before the task:
+
+<CodeBlock filename="context-loading prompt" language="text">
+{`Before we start, read these files:
+- app/api/auth/route.ts
+- lib/auth.ts
+- middleware.ts
+
+Then tell me what you understand about the current auth flow.`}
+</CodeBlock>
+
+This does two things: loads the files into Claude's context, and surfaces any misunderstandings before work begins. If Claude's summary of the auth flow is wrong, correct it before asking Claude to change anything.
+
+### Strategy 3: State declaration
+
+For continuing work from a previous session or resuming after a gap, declare the current state explicitly:
+
+<CodeBlock filename="state declaration" language="text">
+{`Current state:
+- Feature branch: feat/user-dashboard (based on main, not merged)
+- What's complete: UserDashboard component, the data fetching hook
+- What's broken: the stats cards don't update when filters change
+- What we haven't done: mobile responsive layout, tests
+- Active files: app/dashboard/page.tsx, components/dashboard/, hooks/useUserStats.ts
+
+Today: fix the filter→stats reactivity bug.`}
+</CodeBlock>
+
+This eliminates the "re-establishing context" tax at the start of every session.
+
+### Strategy 4: Error-first loading
+
+When debugging, lead with the error — not an explanation of what you were trying to do:
+
+<CodeBlock filename="error-first context" language="text">
+{`Build failure. Full error:
+
+Type error: Type 'string | undefined' is not assignable to parameter of type 'string'.
+   45 |   const user = await getUser(session.userId)
+      |                              ^^^^^^^^^^^^^^
+at app/api/profile/route.ts:45:30
+
+Context:
+- session.userId comes from: lib/auth.ts:parseSession() → returns SessionData | null
+- getUser is at: lib/db.ts:getUser(id: string)
+- This worked before we switched session handling last week
+
+Diagnose what's wrong. Don't fix yet — explain first.`}
+</CodeBlock>
+
+Claude reads the full error, finds the file, understands the type mismatch, explains the root cause. Then you decide whether the fix is correct before Claude changes anything.
+
+### Strategy 5: Scope declaration for long tasks
+
+For tasks that will run many tool calls, declare the full scope upfront:
+
+<CodeBlock filename="scope declaration" language="text">
+{`Full scope of today's work:
+- We're adding email verification to the registration flow
+- Files in scope: app/api/auth/register/route.ts, lib/email.ts (new), app/verify-email/page.tsx (new)
+- Files NOT in scope: anything else in app/api/auth/, any existing user schema
+- Done when: registration sends a verification email, /verify-email validates the token, TypeScript passes
+
+Read the current register route first, then outline your implementation plan.`}
+</CodeBlock>
+
+This prevents scope creep — Claude improving adjacent files you didn't ask it to touch.
+
+---
+
+## Context window budget
+
+The context window has a limit. In Claude Code it's 200k tokens — large, but not infinite. Long sessions with many file reads and responses can fill it.
+
+Signs you're running low:
+- Claude starts referencing files it read earlier incorrectly
+- Claude repeats information from earlier in the conversation
+- Responses become less specific and more generic
+
+**When context is getting full — use `/compact`:**
+
+<TerminalBlock title="Claude Code REPL" session={[
+  { cmd: "/compact", prompt: ">" },
+  { out: "Summarizing conversation to free context space..." },
+  { out: "Summary retained: working on auth flow, reviewed middleware.ts and lib/auth.ts, identified getUserFromCookie calls in 3 API routes, started replacing with getUserFromToken." },
+  { out: "Context reduced from 87% to 23% of limit. Ready to continue." }
+]} />
+
+`/compact` summarizes the conversation into a dense summary and discards the verbose history. The summary is kept; the raw conversation is discarded. Run it proactively — don't wait until Claude degrades.
+
+---
+
+## Context loading by task type
+
+| Task type | Load first | Strategy |
+|---|---|---|
+| Debugging | Full error output → relevant files | Error-first + file reads |
+| New feature | Spec → adjacent existing files | Scope declaration + file reads |
+| Refactoring | Files being refactored → tests | File reads + state declaration |
+| Code review | Git diff → related files | Paste diff directly into prompt |
+| Continuing work | Current state → files in progress | State declaration + /init |
+
+---
+
+<FailureAnalysis
+  title="Jumping straight to the task"
+  before={`Fix the performance issue with the dashboard.`}
+  after={`Context: the dashboard at app/dashboard/page.tsx loads UserStats and ActivityFeed components. Both make separate API calls on mount. Users report 3-4 second load times.
+
+Current state: no caching, no loading states, API calls are sequential (ActivityFeed waits for UserStats to finish).
+
+Read app/dashboard/page.tsx and the two component files. Then propose a fix — probably parallel data fetching and a skeleton loading state.`}
+  lesson="Without context, Claude has to read everything and guess at the problem. With context front-loaded, Claude reads the right files and proposes a targeted fix."
+/>
+
+---
+
+<Checkpoint title="Your context loading is effective when:">
+  <CheckItem>You run /init at the start of new sessions and verify Claude's briefing is correct</CheckItem>
+  <CheckItem>Debugging sessions start with the full error, not a description of it</CheckItem>
+  <CheckItem>Multi-session work starts with a state declaration of what's complete and what isn't</CheckItem>
+  <CheckItem>You use /compact before context fills up (not after Claude starts degrading)</CheckItem>
+  <CheckItem>Claude's first response on a task is oriented correctly — not a miss that needs correction</CheckItem>
+</Checkpoint>

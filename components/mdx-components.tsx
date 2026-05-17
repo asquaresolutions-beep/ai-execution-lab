@@ -78,9 +78,13 @@ export { CodeBlock }                   from './mdx/code-block'
 export { StepList, Checklist }         from './mdx/step-list'
 
 // Execution track lesson components
-export { Checkpoint, CheckItem }       from './mdx/checkpoint'
-export { Resource }                    from './mdx/resource-block'
-export { Milestone }                   from './mdx/milestone'
+export { Checkpoint, CheckItem }             from './mdx/checkpoint'
+export { Resource }                          from './mdx/resource-block'
+export { Milestone }                         from './mdx/milestone'
+export { LessonObjectives }                  from './mdx/lesson-objectives'
+export { TerminalBlock }                     from './mdx/terminal-block'
+export { FailureAnalysis }                   from './mdx/failure-analysis'
+export { CommandRef, CommandRefTable }       from './mdx/command-ref'
 
 // Media
 export { YouTube }     from './media/youtube-embed'

@@ -1,0 +1,198 @@
+## What this lesson covers
+
+Every WordPress REST API automation starts with authentication. Get it wrong and you're locked out, doing read-only operations, or — worse — committing credentials to your repo. Get it right and you have a reliable, revocable, auditable connection to your WordPress instance.
+
+<LessonObjectives items={[
+  "Choose the right authentication method for your use case",
+  "Set up Application Passwords and generate credentials correctly",
+  "Construct the Authorization header and test auth before writing any automation code",
+  "Diagnose the three most common auth failures without trial and error"
+]} />
+
+---
+
+## The three WordPress REST auth methods
+
+**Option 1: Application Passwords** (use this)
+
+Built into WordPress 5.6+. User-specific. Named and revocable individually. Works with Basic Auth header. No plugin required. This is the correct choice for automation.
+
+**Option 2: Basic Auth with real password**
+
+Uses your actual WordPress password. Works, but: if exposed, the impact is your entire account. No granular revocation. Bad practice for automation — don't use it.
+
+**Option 3: JWT Authentication**
+
+Requires a third-party plugin (JWT Authentication for WP REST API, etc.). More complex, token expiry to manage, plugin maintenance overhead. Not worth it unless you have specific requirements that Application Passwords don't meet.
+
+**Use Application Passwords. Always.**
+
+---
+
+## Setting up Application Passwords
+
+**In WordPress Admin:**
+
+1. Go to: **Users → Your Profile** (or the user that will own the automation)
+2. Scroll to **Application Passwords** section
+3. Enter a descriptive name: `Claude Code Automation - Production`
+4. Click **Add New Application Password**
+5. **Copy the generated password immediately** — WordPress won't show it again
+
+The generated password looks like: `abcd efgh ijkl mnop qrst uvwx` (24 characters with spaces)
+
+---
+
+## The Authorization header — exactly right
+
+The header format for Application Passwords uses HTTP Basic Auth:
+
+<CodeBlock filename="auth header construction" language="python">
+{`import base64
+
+username = "your_wordpress_username"
+app_password = "abcd efgh ijkl mnop qrst uvwx"  # with spaces, as generated
+
+# Remove spaces from the password (WordPress accepts both, but convention removes them)
+credentials = f"{username}:{app_password.replace(' ', '')}"
+encoded = base64.b64encode(credentials.encode()).decode()
+
+headers = {
+    "Authorization": f"Basic {encoded}",
+    "Content-Type": "application/json"
+}`}
+</CodeBlock>
+
+<CodeBlock filename="auth header construction (Node.js)" language="javascript">
+{`const username = "your_wordpress_username"
+const appPassword = "abcd efgh ijkl mnop qrst uvwx"
+
+const credentials = Buffer.from(
+  \`\${username}:\${appPassword.replace(/ /g, '')}\`
+).toString('base64')
+
+const headers = {
+  'Authorization': \`Basic \${credentials}\`,
+  'Content-Type': 'application/json'
+}`}
+</CodeBlock>
+
+---
+
+## Test auth before writing automation code
+
+Always verify your credentials work before writing a single line of automation logic:
+
+<TerminalBlock title="terminal — auth test" session={[
+  { cmd: "curl -s -u \"admin:abcdefghijklmnopqrstuvwx\" https://yoursite.com/wp-json/wp/v2/users/me | python3 -m json.tool | head -20" },
+  { out: "{" },
+  { out: "    \"id\": 1," },
+  { out: "    \"name\": \"Admin\"," },
+  { out: "    \"slug\": \"admin\"," },
+  { out: "    \"roles\": [" },
+  { out: "        \"administrator\"" },
+  { out: "    ]," },
+  { out: "    \"capabilities\": {" },
+  { out: "        \"read\": true," },
+  { out: "        \"edit_posts\": true" },
+  { out: "    }" },
+  { out: "}" }
+]} />
+
+A successful response returns your user data. If you see an error, fix auth before proceeding.
+
+**Quick Python auth test:**
+
+<CodeBlock filename="auth_test.py" language="python">
+{`import requests
+import base64
+
+USERNAME = "your_username"
+APP_PASSWORD = "xxxx xxxx xxxx xxxx xxxx xxxx"
+
+credentials = base64.b64encode(
+    f"{USERNAME}:{APP_PASSWORD.replace(' ', '')}".encode()
+).decode()
+
+response = requests.get(
+    "https://yoursite.com/wp-json/wp/v2/users/me",
+    headers={"Authorization": f"Basic {credentials}"}
+)
+
+if response.status_code == 200:
+    user = response.json()
+    print(f"✓ Auth successful. Logged in as: {user['name']} (ID: {user['id']})")
+    print(f"  Roles: {user.get('roles', [])}")
+else:
+    print(f"✗ Auth failed. Status: {response.status_code}")
+    print(f"  Response: {response.text[:200]}")`}
+</CodeBlock>
+
+---
+
+## The three auth failure modes
+
+**401 Unauthorized**
+
+The credentials are wrong. Check:
+- Username: is it the WordPress username, not the display name or email?
+- Password: are you using the Application Password, not your login password?
+- Encoding: is the Base64 encoding correct? Test with the curl `-u` flag first (it handles encoding for you)
+- Application Passwords enabled: some security plugins disable them. Check Wordfence settings.
+
+**403 Forbidden**
+
+Authenticated, but the user doesn't have the capability for this operation. Check:
+- The user's role: Authors can't edit others' posts; Editors can
+- The specific operation: some REST endpoints require specific capabilities
+- `edit_posts` capability is required for most write operations
+
+**Application Passwords not available**
+
+Some hosting environments disable Application Passwords:
+- Security plugins (Wordfence, iThemes Security) can disable them
+- Some managed WordPress hosts restrict them
+- Check: **Users → Profile → Application Passwords** — if the section doesn't appear, it's disabled
+
+<FailureAnalysis
+  title="Credentials in source code"
+  before={`# automation.py
+USERNAME = "admin"
+APP_PASSWORD = "abcd efgh ijkl mnop"
+
+response = requests.get(url, auth=(USERNAME, APP_PASSWORD))`}
+  after={`# automation.py — credentials from environment
+import os
+USERNAME = os.environ["WP_USERNAME"]
+APP_PASSWORD = os.environ["WP_APP_PASSWORD"]
+
+# .env file (never committed to git)
+# WP_USERNAME=admin
+# WP_APP_PASSWORD=abcd efgh ijkl mnop
+
+# .gitignore
+# .env`}
+  lesson="Application Passwords are revocable, but only if you notice they were exposed. Never commit credentials to source control — use environment variables and .env files."
+/>
+
+---
+
+## Credential management
+
+<Checklist items={[
+  "Credentials stored in .env file, not source code",
+  ".env is in .gitignore (verify with: git check-ignore -v .env)",
+  "Application Password named descriptively (includes environment: prod/staging)",
+  "Production and staging have separate Application Passwords",
+  "You know how to revoke a password: Users → Profile → Application Passwords → Revoke"
+]} />
+
+---
+
+<Checkpoint title="Auth is correctly set up when:">
+  <CheckItem>The test script returns your user data with status 200</CheckItem>
+  <CheckItem>The user account has the right role for your automation (Editor or Administrator)</CheckItem>
+  <CheckItem>Credentials are in .env, not hardcoded in any script</CheckItem>
+  <CheckItem>.env is confirmed in .gitignore</CheckItem>
+  <CheckItem>You can name the exact Application Password entry in WP Admin and know how to revoke it</CheckItem>
+</Checkpoint>

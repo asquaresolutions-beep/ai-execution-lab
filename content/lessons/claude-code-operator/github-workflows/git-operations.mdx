@@ -1,0 +1,175 @@
+## What this lesson covers
+
+Claude Code integrates directly with git — it can read status, stage files, commit, and create branches. But how Claude uses git is different from how you do, and the difference matters for keeping your repo clean and recoverable.
+
+<LessonObjectives items={[
+  "Understand exactly what git context Claude can see without being told",
+  "Configure git permissions that are safe without blocking useful operations",
+  "Apply selective staging so Claude never commits files you didn't intend",
+  "Enforce commit message quality standards through CLAUDE.md"
+]} />
+
+---
+
+## What Claude can see in your git repo
+
+Claude reads your git state the same way you would — by running git commands. What it can see:
+
+<CommandRefTable title="Git state visible to Claude">
+  <CommandRef command="git status" flag="bash" description="Staged, unstaged, and untracked files. Claude checks this before deciding what to stage." />
+  <CommandRef command="git diff" flag="bash" description="Current unstaged changes. Claude reads this to understand what's in progress." />
+  <CommandRef command="git diff --staged" flag="bash" description="Currently staged changes. Claude reads this to verify what it's about to commit." />
+  <CommandRef command="git log --oneline" flag="bash" description="Recent commit history. Claude reads this for context on what's changed recently." />
+  <CommandRef command="git branch" flag="bash" description="Current branch and local branches. Claude won't see remote branch state unless you run git fetch first." />
+</CommandRefTable>
+
+**What Claude cannot see without your help:**
+- Remote branch state (run `git fetch` before asking Claude about remote)
+- GitHub PR comments or review status
+- CI/CD run results
+- Who else is working on which branch
+
+---
+
+## Safe git permissions
+
+The permissions for git operations that work in production:
+
+<CodeBlock filename=".claude/settings.json" language="json">
+{`{
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git branch *)",
+      "Bash(git stash *)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push --force-with-lease*)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean -f*)"
+    ]
+  }
+}`}
+</CodeBlock>
+
+The denies are the four operations that destroy history or overwrite remote state. Force push is always denied — if it's ever needed, you handle it manually.
+
+---
+
+## The selective staging discipline
+
+The most important git habit when working with Claude: **never let Claude run `git add .` or `git add -A`.**
+
+These commands stage everything — including files Claude modified that you didn't review, untracked config files, `.env` files if your `.gitignore` has a gap, and work-in-progress you're not ready to commit.
+
+**Add this to your CLAUDE.md critical rules:**
+
+<CodeBlock filename="CLAUDE.md" language="markdown">
+{`## Critical rules
+- NEVER run git add . or git add -A
+  Always stage files explicitly: git add specific/file.ts
+  Or list the files: "Stage only: lib/auth.ts and app/api/auth/route.ts"`}
+</CodeBlock>
+
+**Pattern for staging with Claude:**
+
+<CodeBlock filename="staging prompt" language="text">
+{`The task is complete. Before committing, tell me:
+1. Which files you modified
+2. What changed in each file (one sentence)
+
+Then stage only those files (not . or -A) and show me the staged diff
+before committing.`}
+</CodeBlock>
+
+This gives you a checkpoint between Claude completing work and the commit landing.
+
+---
+
+## Commit message quality
+
+Default Claude commit messages are too generic:
+
+<FailureAnalysis
+  title="Generic commit messages"
+  before={`feat: Update auth
+fix: Fix bug  
+chore: Various changes
+update: update files`}
+  after={`feat(auth): replace getUserFromCookie with getUserFromToken in API routes
+fix(dashboard): resolve filter-to-stats reactivity by converting to controlled state
+refactor(lib): extract email validation to shared validateEmail() in utils.ts
+fix(build): move getLessonContent to lesson-content.ts (server-only fs import)`}
+  lesson="Generic commit messages are useless for debugging and bisecting. The commit message is documentation — write it for the engineer who needs to understand why this change was made at 2am when something breaks."
+/>
+
+**Enforce quality in CLAUDE.md:**
+
+<CodeBlock filename="CLAUDE.md" language="markdown">
+{`## Commit message rules
+Format: type(scope): description
+
+Types: feat, fix, refactor, chore, docs, perf, test
+Scope: the file or module primarily affected (auth, dashboard, lib, build)
+
+Good: feat(auth): add Google OAuth callback route
+Good: fix(middleware): handle null session in JWT validation
+Bad:  Update auth
+Bad:  Fix things
+Bad:  Various improvements
+
+Include the "why" in the body for non-obvious changes.`}
+</CodeBlock>
+
+---
+
+## Reading git state to give Claude context
+
+Before asking Claude to commit or stage, give it the full picture:
+
+<TerminalBlock title="terminal" session={[
+  { cmd: "git status", out: "On branch feat/user-dashboard\nChanges not staged:\n  modified: app/dashboard/page.tsx\n  modified: components/dashboard/StatsCard.tsx\nUntracked:\n  components/dashboard/ActivityFeed.tsx" },
+  { cmd: "git diff --stat", out: "app/dashboard/page.tsx        | 24 ++++--\ncomponents/dashboard/StatsCard.tsx | 67 +++++++++++++\n2 files changed, 85 insertions(+), 6 deletions(-)" }
+]} />
+
+Paste this output into your Claude session when asking it to stage and commit. Claude now knows exactly what exists, what's staged, and what needs to go in each commit.
+
+---
+
+## The pre-commit review habit
+
+Before every commit — regardless of Claude's confidence — run this:
+
+<CodeBlock filename="pre-commit checklist" language="bash">
+{`# 1. See what's staged
+git diff --staged
+
+# 2. Verify TypeScript is clean
+node node_modules/typescript/bin/tsc --noEmit
+
+# 3. Check for accidental files
+git status
+
+# 4. Commit with a meaningful message
+git commit -m "feat(auth): replace cookie session with JWT validation"`}
+</CodeBlock>
+
+This takes 45 seconds. It catches: files staged that shouldn't be, TypeScript errors Claude introduced, accidental `.env` inclusion, and unintended changes to config files.
+
+---
+
+<Checkpoint title="Your git workflow is production-safe when:">
+  <CheckItem>CLAUDE.md explicitly bans git add . and git add -A</CheckItem>
+  <CheckItem>CLAUDE.md has the commit message format with examples</CheckItem>
+  <CheckItem>git push --force is in your deny rules</CheckItem>
+  <CheckItem>You run git diff --staged before every commit</CheckItem>
+  <CheckItem>The last 5 commits in your project follow the type(scope): description format</CheckItem>
+</Checkpoint>

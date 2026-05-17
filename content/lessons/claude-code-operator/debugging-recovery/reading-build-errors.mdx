@@ -1,0 +1,212 @@
+## What this lesson covers
+
+Build errors have a specific anatomy. TypeScript errors, module resolution failures, and Next.js-specific build failures each have a distinct structure. Once you can read them fluently, you fix them in 5 minutes instead of 45.
+
+<LessonObjectives items={[
+  "Decode TypeScript error messages into their component parts: what, where, why",
+  "Distinguish module resolution errors from type errors — different causes, different fixes",
+  "Identify Next.js-specific error patterns (edge runtime, prerender, hydration)",
+  "Copy exactly the right information when asking Claude to help diagnose"
+]} />
+
+---
+
+## TypeScript error anatomy
+
+Every TypeScript error has three parts:
+
+```
+Type error: [description of the type mismatch]
+   [line N] | [the code at that line]
+             | [cursor pointing to the problem spot]
+at [file path]:[line]:[column]
+```
+
+**Reading example:**
+
+```
+Type error: Argument of type 'string | undefined' is not assignable
+            to parameter of type 'string'.
+   45 |   const user = await getUser(session.userId)
+      |                              ^^^^^^^^^^^^^^
+at app/api/profile/route.ts:45:30
+```
+
+Decoded:
+- **What:** `session.userId` is typed as `string | undefined`
+- **Where:** `app/api/profile/route.ts`, line 45, column 30
+- **Why:** `getUser()` expects `string` but is receiving something that could be `undefined`
+- **Fix direction:** Either narrow `session.userId` to `string` before passing it, or update `getUser()` to handle undefined
+
+---
+
+## The five common TypeScript patterns
+
+**Pattern 1: The undefined narrowing error**
+
+```
+Type 'string | undefined' is not assignable to type 'string'
+```
+
+The value may be undefined. Solutions in order of correctness:
+1. Add a null check: `if (!session.userId) return null`
+2. Use optional chaining with a fallback: `session.userId ?? ''`
+3. Assert non-null (use sparingly): `session.userId!`
+
+**Pattern 2: The missing property error**
+
+```
+Property 'email' does not exist on type 'User'
+```
+
+The type definition doesn't include the property you're using. Solutions:
+1. Add the property to the type definition (if it should be there)
+2. Use the property that does exist (typo check)
+3. Cast with `as` (only if you're certain the data has it)
+
+**Pattern 3: The function signature mismatch**
+
+```
+Expected 2 arguments, but got 1.
+```
+
+A function call is missing a required argument, or an argument was removed from the signature. Check the function definition — did a recent change add a required parameter?
+
+**Pattern 4: The implicit any**
+
+```
+Parameter 'e' implicitly has an 'any' type.
+```
+
+TypeScript needs a type annotation. Add it: `(e: React.ChangeEvent<HTMLInputElement>)`.
+
+**Pattern 5: The return type mismatch**
+
+```
+Type 'null' is not assignable to type 'User'.
+```
+
+A function that's typed to return `User` is returning `null` in some code path. Either update the return type to `User | null` or remove the null return path.
+
+---
+
+## Module resolution error anatomy
+
+```
+Module not found: Can't resolve '@/lib/utils'
+Import trace for requested module:
+  ./app/page.tsx
+  ./components/Button.tsx
+```
+
+Decoded:
+- **What:** The path `@/lib/utils` doesn't resolve to an existing file
+- **Where:** This import appears in `components/Button.tsx`, imported from `app/page.tsx`
+- **Fix direction:** Verify the file exists at `lib/utils.ts` (or `.tsx`, `/index.ts`)
+
+**The import trace** is the most useful part — it shows you where the resolution is being attempted and the chain of files that led there.
+
+**Common module resolution causes:**
+
+<CommandRefTable title="Module resolution error causes">
+  <CommandRef command="File deleted or renamed" flag="flag" description="Someone removed or renamed the file but didn't update the import. Check git log for recent file operations." example="git log --diff-filter=D -- lib/utils.ts" />
+  <CommandRef command="Path alias not configured" flag="flag" description="The path alias is missing from tsconfig.json. Add the paths mapping under compilerOptions to register your alias." example='tsconfig.json → compilerOptions → paths → "@/*": ["./*"]' />
+  <CommandRef command="Case sensitivity" flag="flag" description="Import path casing doesn't match the actual file name. Linux (Vercel) is case-sensitive; macOS isn't." />
+  <CommandRef command="Missing index file" flag="flag" description="Importing a directory without an index.ts. Create components/Button/index.ts or use the full path." />
+</CommandRefTable>
+
+---
+
+## Next.js-specific error patterns
+
+**Prerender error:**
+
+```
+Error occurred prerendering page "/tracks/claude-code-operator"
+Error: Cannot read properties of undefined (reading 'modules')
+```
+
+This means a Server Component or `generateStaticParams` function threw during build. The error line is in your server-side code. Common causes: undefined data from a helper function, a missing null check in a map() call, trying to use browser APIs during server-side rendering.
+
+**Hydration mismatch:**
+
+```
+Error: Hydration failed because the initial UI does not match what was rendered on the server.
+```
+
+The server renders one thing; the client renders something different. Always caused by:
+- Reading `localStorage` or `window` during initial render (not in `useEffect`)
+- Random values or `Date.now()` called at render time
+- Conditional rendering based on client-only state
+
+Fix: Move client-only logic to `useEffect` with a mounted state guard:
+
+<CodeBlock filename="hydration fix pattern" language="typescript">
+{`const [mounted, setMounted] = useState(false)
+
+useEffect(() => {
+  setMounted(true)
+}, [])
+
+// Render nothing server-side for client-only content
+if (!mounted) return null`}
+</CodeBlock>
+
+**Edge Runtime module conflict:**
+
+```
+Module not found: Can't resolve 'fs'
+Error: The edge runtime does not support Node.js built-ins
+```
+
+A file in the server component tree imports a Node.js built-in. Trace the import chain (shown in the error output) to find where `fs`, `path`, `crypto`, or another Node.js built-in is imported. Move that code to a server-only file that's not in the edge runtime chain.
+
+---
+
+## What to give Claude when asking for help
+
+**Give Claude the raw error — not a description of it:**
+
+<FailureAnalysis
+  title="Summarizing the error for Claude"
+  before={`The build fails because of a TypeScript error in the auth route.
+Something about a string type issue.`}
+  after={`Build failure. Raw error from terminal:
+
+Type error: Argument of type 'string | undefined' is not assignable
+to parameter of type 'string'.
+   45 |   const user = await getUser(session.userId)
+      |                              ^^^^^^^^^^^^^^
+at app/api/profile/route.ts:45:30
+
+Also paste the relevant function:
+// session.userId comes from parseSession() in lib/auth.ts
+// getUser signature: getUser(id: string): Promise<User | null>`}
+  lesson="Claude diagnoses from data, not descriptions. The raw error text + the relevant function signature is the minimum required input for accurate diagnosis."
+/>
+
+---
+
+## The diagnostic checklist before asking Claude
+
+Run these before pasting the error to Claude — you'll often solve it yourself:
+
+<Checklist items={[
+  "Read the error: what, where, why — can you decode it yourself using the patterns above?",
+  "Check the import trace if it's a module resolution error",
+  "Look at what changed recently: git diff HEAD~1 (often the bug is obvious from the diff)",
+  "Try to reproduce locally with tsc --noEmit if it's a Vercel build failure",
+  "Google the exact error message — many TypeScript patterns have documented solutions"
+]} />
+
+If you've done these and still need help: paste the raw error, the file/line, what changed recently, and the relevant code. That's the complete input Claude needs.
+
+---
+
+<Checkpoint title="You can read build errors fluently when:">
+  <CheckItem>You can decode a TypeScript error into what/where/why in under 60 seconds</CheckItem>
+  <CheckItem>You know the fix direction for all five common TypeScript patterns</CheckItem>
+  <CheckItem>You know the three Next.js-specific error patterns and their causes</CheckItem>
+  <CheckItem>You always give Claude raw error text, not descriptions</CheckItem>
+  <CheckItem>You run the diagnostic checklist before asking Claude for help</CheckItem>
+</Checkpoint>

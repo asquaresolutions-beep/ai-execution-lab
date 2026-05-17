@@ -1,0 +1,192 @@
+## What this lesson covers
+
+Vercel build failures produce a wall of log output. Knowing where to look, how to categorize the error, and what to fix locally (not in Vercel) is the skill that separates operators from developers who iterate in production.
+
+<LessonObjectives items={[
+  "Locate the root error in Vercel's log output — not the cascading symptoms",
+  "Classify build failures into the five categories that cover 95% of real failures",
+  "Fix all categories locally and verify before pushing the fix",
+  "Diagnose the case-sensitivity trap that only fails on Vercel Linux builds"
+]} />
+
+---
+
+## Reading Vercel logs: find the first error
+
+Vercel shows build output in order. When a build fails, the error that caused the failure is usually **not** the last thing shown — it's somewhere in the middle, followed by cascading failures and the final "Build failed" message.
+
+**The navigation pattern:**
+
+1. Open the failing deployment in your Vercel dashboard
+2. Click "View Build Logs"
+3. Search the page for: `Error:`, `error TS`, `Module not found`, `Type error:`
+4. Jump to the **first** occurrence — that's the root cause
+5. Everything after it is usually a cascade from that root
+
+The cascade problem: Next.js build errors often show "Failed to compile" followed by 20+ lines of type errors that are all caused by one missing type definition. Fix the root error; the cascade disappears.
+
+---
+
+## The five failure categories
+
+### Category 1: TypeScript Errors
+
+**Signature:**
+```
+Type error: Type 'string | undefined' is not assignable to parameter of type 'string'.
+```
+
+**Where:** A recent change broke a type contract. Either a type was made more strict, a new nullable value wasn't handled, or a function signature changed and call sites weren't updated.
+
+**Fix locally:**
+<CodeBlock filename="terminal" language="bash">
+{`node node_modules/typescript/bin/tsc --noEmit
+# Shows every type error with file and line number
+# Fix them all, verify tsc passes, then push`}
+</CodeBlock>
+
+### Category 2: Module Resolution Errors
+
+**Signature:**
+```
+Module not found: Can't resolve '@/lib/utils'
+Module not found: Can't resolve './components/Button'
+```
+
+**Causes:**
+- File doesn't exist at the specified path (deleted, renamed)
+- Path alias not configured in `tsconfig.json`
+- Circular import created a resolution loop
+
+**Fix locally:**
+<CodeBlock filename="terminal" language="bash">
+{`# Verify the file exists
+ls app/components/Button.tsx
+
+# Check tsconfig.json for path alias config
+cat tsconfig.json | grep -A5 '"paths"'`}
+</CodeBlock>
+
+### Category 3: Edge Runtime / Server Module Conflicts
+
+**Signature:**
+```
+Module not found: Can't resolve 'fs'
+Module not found: Can't resolve 'path'
+Error: The edge runtime does not support Node.js built-ins
+```
+
+**Cause:** A server-only module (`fs`, `path`, `crypto`, etc.) is being imported in a client component, Edge Runtime function, or a file that gets bundled for the browser.
+
+**The most common source:** A utility file that imports `fs` is also imported by a `'use client'` component. The entire import chain pulls `fs` into the client bundle.
+
+**Fix:**
+<CodeBlock filename="terminal" language="bash">
+{`# Find what imports the server-only module
+grep -r "from 'fs'" --include="*.ts" --include="*.tsx" .
+grep -r "import fs" --include="*.ts" --include="*.tsx" .
+
+# Check if those files are imported by client components
+grep -r "from '@/lib/your-server-module'" --include="*.tsx" .`}
+</CodeBlock>
+
+<CodeBlock filename="the fix pattern" language="text">
+{`Before: lib/utils.ts imports fs — imported by client components
+After:  Split into:
+  lib/utils.ts         ← pure utilities, no fs import, safe for client
+  lib/utils.server.ts  ← server-only utilities with fs, never imported by clients`}
+</CodeBlock>
+
+### Category 4: Build-Time Runtime Errors
+
+**Signature:**
+```
+Error occurred prerendering page "/your-route"
+Error: Cannot read properties of undefined (reading 'map')
+```
+
+**Cause:** Code that runs at build time (in `generateStaticParams`, `generateMetadata`, or top-level Server Components) fails because data isn't available at build time that you expected to be there.
+
+**Fix pattern:** Verify data exists before using it. Add null checks. Make `generateStaticParams` return an empty array if the data source is unavailable:
+
+<CodeBlock filename="fix: null-safe static params" language="typescript">
+{`export async function generateStaticParams() {
+  try {
+    const items = await fetchItems()
+    return items.map(item => ({ slug: item.slug }))
+  } catch {
+    return []  // build succeeds with no static pages — they render on demand
+  }
+}`}
+</CodeBlock>
+
+### Category 5: Case Sensitivity Failures
+
+**Signature:**
+```
+Module not found: Can't resolve '@/Components/Button'
+```
+(Works locally on macOS/Windows, fails on Vercel Linux)
+
+**Cause:** Your file is `components/Button.tsx` but you imported it as `@/Components/Button`. macOS and Windows file systems are case-insensitive and find the file. Vercel's Linux file system is case-sensitive and doesn't.
+
+**Find all case mismatches:**
+<CodeBlock filename="terminal" language="bash">
+{`# Check imports for capitalization mismatches
+grep -r "from '@/Components" --include="*.tsx" --include="*.ts" .
+grep -r "from '@/Lib" --include="*.tsx" --include="*.ts" .
+grep -r "from '@/App" --include="*.tsx" --include="*.ts" .`}
+</CodeBlock>
+
+**The rule:** Import paths must match the file system exactly, case included. Enforce with ESLint `import/no-unresolved` if this is a recurring issue.
+
+---
+
+## The diagnosis workflow
+
+<StepList items={[
+  "Open the failing deployment build log in Vercel",
+  "Search for: Error:, Type error:, Module not found:, Cannot read properties",
+  "Jump to the first occurrence — that's the root cause",
+  "Identify which of the five categories it is",
+  "Reproduce locally: run tsc --noEmit or next build in your terminal",
+  "Fix the error in your local environment",
+  "Verify the fix: run tsc --noEmit and next build locally until they pass",
+  "Push the fix — confirm the new Vercel deployment succeeds"
+]} />
+
+**Never iterate in Vercel.** Every failed push costs build minutes and takes 2–4 minutes to get feedback. Local build is free and takes 30–90 seconds. Fix locally, push once.
+
+---
+
+## Giving Claude the right error
+
+When Claude helps diagnose a build failure, don't paraphrase the error. Give it the raw log.
+
+<FailureAnalysis
+  title="Paraphrasing the build error"
+  before={`The build is failing because of some TypeScript problem
+with the auth types. Can you fix it?`}
+  after={`Build failure. Full error from Vercel log:
+
+Type error: Argument of type 'string | undefined' is not assignable
+to parameter of type 'string'.
+   → app/api/profile/route.ts:45:30
+
+The session.userId field comes from lib/auth.ts:parseSession().
+The function returns SessionData | null — I think that's where
+the undefined is coming from.
+
+Diagnose the root cause. Don't change anything yet.`}
+  lesson="Claude needs the exact error, file, and line number. Paraphrasing loses the signal. Copy the raw log output — don't summarize it."
+/>
+
+---
+
+<Checkpoint title="You can diagnose Vercel failures when:">
+  <CheckItem>You can navigate to the root error in a Vercel build log in under 60 seconds</CheckItem>
+  <CheckItem>You can classify any build failure into one of the five categories</CheckItem>
+  <CheckItem>You've fixed at least one real build failure entirely locally before pushing</CheckItem>
+  <CheckItem>You know the grep commands to find server module imports and case mismatches</CheckItem>
+  <CheckItem>You've never pushed a "fix attempt" to Vercel without testing it locally first</CheckItem>
+</Checkpoint>

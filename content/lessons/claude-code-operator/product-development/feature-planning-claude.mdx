@@ -1,0 +1,180 @@
+## What this lesson covers
+
+Feature planning with Claude is not the same as asking Claude to "build the feature." Planning is a separate phase — done before any code is written — where you use Claude to surface complexity, identify risks, and design a sequenced execution plan that you've approved before work starts.
+
+<LessonObjectives items={[
+  "Run the feature planning conversation that surfaces risks before implementation begins",
+  "Use Claude to identify all files that will change — including ones you'd miss manually",
+  "Define ship criteria before writing code so 'done' has a clear meaning",
+  "Structure the execution plan into atomic tasks with dependencies mapped"
+]} />
+
+---
+
+## Planning is a separate phase
+
+The most common mistake in AI-assisted product development: starting with "build this" instead of "plan how to build this."
+
+**Why planning matters more with Claude Code:**
+- Claude executes fast. A bad plan executed quickly produces a large broken codebase.
+- Claude's scope decisions (what to touch, what to leave alone) are based on the prompt. Ambiguous prompts produce ambiguous scope decisions.
+- Reviewing an implementation is harder after it's built than reviewing a plan before.
+
+**The planning investment:** 15–30 minutes of planning prevents 2–4 hours of rework.
+
+---
+
+## The feature planning conversation
+
+Use this exact prompt structure to open a planning session:
+
+<CodeBlock filename="feature planning prompt" language="text">
+{`I want to add [feature description]. Before writing any code:
+
+1. List every file you'd create or modify — include files you might not immediately
+   think of (types, tests, API routes, client components, server components separately)
+
+2. For each file, describe in one sentence what changes
+
+3. Identify dependencies — which tasks must complete before others can start?
+
+4. Flag any risks: design decisions I should make upfront, things that could break
+   existing functionality, or areas where the approach isn't obvious
+
+5. Estimate: is this 1 session of work or multiple?
+
+Don't write any code. Give me the plan first.`}
+</CodeBlock>
+
+This is not a request to build. It's a request to think out loud about the build. The output is a plan you review, not code you run.
+
+---
+
+## Real planning session example
+
+**The ask:**
+
+> Add a "Save to reading list" feature — users can save any article or lesson, and view their saved items in a /saved page.
+
+**What good Claude planning output looks like:**
+
+<CodeBlock filename="claude planning output" language="text">
+{`Files to create:
+- lib/reading-list.ts — reading list CRUD functions (localStorage-based, no backend)
+- hooks/useReadingList.ts — React hook exposing the reading list state + actions
+- components/ui/SaveButton.tsx — save/unsave button with active state
+- app/saved/page.tsx — the /saved page listing saved items
+
+Files to modify:
+- app/tracks/[track]/[module]/[lesson]/page.tsx — add SaveButton to lesson header
+- components/content-renderer.tsx — no change needed (button goes in the page, not MDX)
+- app/sitemap.ts — add /saved route (low priority, can skip)
+
+Dependencies:
+- lib/reading-list.ts must exist before hooks/useReadingList.ts
+- hooks/useReadingList.ts must exist before SaveButton.tsx
+- SaveButton.tsx must exist before the lesson page modification
+- app/saved/page.tsx is independent — can build in parallel with SaveButton
+
+Risks:
+- SSR hydration: reading list is in localStorage — if we render "saved" state on the server
+  it won't match the client. Need to handle hydration mismatch (useEffect pattern).
+- Data structure: what do we store per saved item? At minimum: {url, title, type, savedAt}.
+  Define this before implementing so all callers use the same shape.
+- No backend means no sync across devices. Is that acceptable? Confirm before building.
+
+Estimate: 1 session (90-120 min), assuming localStorage-only and no backend.`}
+</CodeBlock>
+
+Review this output before approving the plan. Notice what Claude surfaced that you might have missed:
+- The SSR hydration mismatch (a real bug if not handled)
+- The data structure question (define once, use everywhere)
+- The device sync question (a product decision, not a code decision)
+
+---
+
+## The scope conversation
+
+After Claude presents the plan, have the scope conversation:
+
+<CodeBlock filename="scope conversation" language="text">
+{`Good plan. A few decisions before we start:
+
+1. LocalStorage-only is fine for now — no sync needed
+2. Saved item shape: { url: string, title: string, type: 'lesson' | 'article', savedAt: string }
+3. Skip sitemap.ts for now
+4. One thing you didn't mention: we should also add saved count to the user's profile
+
+Updated plan with these constraints?`}
+</CodeBlock>
+
+This is the part of planning most people skip. These decisions, made now, prevent Claude from making them during implementation in ways you'd have to reverse.
+
+---
+
+## Defining ship criteria before writing code
+
+Define what "done" means before Claude writes the first line. This is your acceptance checklist.
+
+<CodeBlock filename="ship criteria definition" language="text">
+{`This feature is done when:
+
+1. TypeScript passes (tsc --noEmit) with no errors
+2. Saving a lesson adds it to localStorage correctly (can verify in DevTools)
+3. The /saved page renders all saved items with title and link
+4. SaveButton shows correct active/inactive state based on saved status
+5. Refreshing the page preserves the saved state (localStorage persists)
+6. SaveButton works on both the lesson page and the /saved page (remove from list)
+7. No hydration mismatch errors in the browser console`}
+</CodeBlock>
+
+Share these criteria with Claude at the start of implementation. Claude can verify against them and tell you when each one is met.
+
+---
+
+## From plan to execution
+
+Once the plan is approved and ship criteria are defined, execution is a series of atomic tasks:
+
+<StepList items={[
+  "Task 1: Build lib/reading-list.ts with full CRUD (saveItem, removeItem, getItems, isItemSaved). Verify: TypeScript passes, pure functions with no side effects.",
+  "Task 2: Build hooks/useReadingList.ts using the reading-list lib. Verify: hook exports correct types, handles SSR hydration with useEffect.",
+  "Task 3: Build SaveButton component. Verify: renders in both states, calls correct hook methods.",
+  "Task 4: Add SaveButton to lesson page. Verify: TypeScript passes, button appears in correct position.",
+  "Task 5: Build /saved page. Verify: renders saved items, empty state handled.",
+  "Task 6: Run full ship criteria checklist."
+]} />
+
+Each task gets a separate Claude session or a clearly scoped part of the conversation. Each one is verified before moving to the next dependent task.
+
+---
+
+<FailureAnalysis
+  title="Skipping the planning phase"
+  before={`> Build a reading list feature. Users can save articles and
+> view them on a /saved page.
+
+// Claude builds immediately:
+// - Chose PostgreSQL for storage (not what we wanted)
+// - Didn't handle SSR hydration (hydration errors on every page load)  
+// - Stored different data shapes in different components
+// - Built in 45 minutes, rework took 3 hours`}
+  after={`// 20-minute planning session first:
+// - Confirmed localStorage (no backend)
+// - Defined the data shape upfront
+// - Surfaced hydration risk before implementation
+// - Approved the plan with scope constraints
+
+// Build phase: 45 minutes, no rework`}
+  lesson="Planning time is not delay — it's the investment that makes implementation fast. The rework that planning prevents takes 5-10x longer than the planning itself."
+/>
+
+---
+
+<Checkpoint title="Feature planning is in your workflow when:">
+  <CheckItem>You run the planning prompt before any feature implementation</CheckItem>
+  <CheckItem>You've had the scope conversation and made explicit decisions before code starts</CheckItem>
+  <CheckItem>You have a written ship criteria list before implementation begins</CheckItem>
+  <CheckItem>Your execution plan is decomposed into atomic tasks with dependencies mapped</CheckItem>
+  <CheckItem>You've caught at least one non-obvious risk through the planning phase</CheckItem>
+</Checkpoint>

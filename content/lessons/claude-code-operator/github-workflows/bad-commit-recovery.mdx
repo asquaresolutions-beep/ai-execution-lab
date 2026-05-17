@@ -1,0 +1,199 @@
+## What this lesson covers
+
+Claude commits fast. That's mostly good — but occasionally a commit lands with the wrong files, broken code, or a message that makes the history unreadable. Recovery is fast if you know the right tool. The wrong tool can make things worse.
+
+<LessonObjectives items={[
+  "Classify bad commits into the three types — each has a different fix",
+  "Apply the git revert vs git reset decision correctly every time",
+  "Recover lost work using git reflog when reset goes too far",
+  "Prevent the most common Claude commit failures through CLAUDE.md rules"
+]} />
+
+---
+
+## The three types of bad commits
+
+**Type 1: Wrong files staged** — Commit contains files that shouldn't have been included (.env, unrelated changes, debug files). The code in scope is correct, the commit just has extra stuff.
+
+**Type 2: Broken code committed** — The commit itself is logically wrong: TypeScript errors, runtime failures, half-implemented feature. The code doesn't work.
+
+**Type 3: Bad commit message** — Code is correct, commit is on the right branch, but the message is useless ("fix stuff", "wip", "asdfghjkl").
+
+Each type has a different recovery path.
+
+---
+
+## The decision tree: revert vs reset
+
+This is the most important decision in commit recovery:
+
+```
+Is the bad commit pushed to a remote branch?
+├── YES → Always use git revert (safe, non-destructive)
+└── NO  → Local only?
+          ├── Only you use this branch → git reset is safe
+          └── Others may have pulled it → use git revert
+```
+
+**git revert** creates a new commit that undoes the bad one. History is preserved. Safe for shared branches.
+
+**git reset** moves the branch pointer backward. History is rewritten. Only safe for local, unshared commits.
+
+---
+
+## Recovery procedures by type
+
+### Type 1: Wrong files staged — local only
+
+<CodeBlock filename="recovery: wrong files, not pushed" language="bash">
+{`# Undo the last commit, keep the changes staged
+git reset --soft HEAD~1
+
+# Now unstage the files that shouldn't be there
+git restore --staged .env
+git restore --staged config/local.json
+
+# Re-commit without the bad files
+git add lib/auth.ts app/api/auth/route.ts
+git commit -m "feat(auth): add JWT validation to API routes"`}
+</CodeBlock>
+
+`--soft` keeps your changes staged. `--mixed` (the default) unstages them. `--hard` discards them entirely — be careful.
+
+### Type 1: Wrong files staged — already pushed
+
+<CodeBlock filename="recovery: wrong files, already pushed" language="bash">
+{`# Create a new commit that removes the unwanted file
+git rm --cached .env
+git commit -m "chore: remove accidentally committed .env file"
+
+# Also: rotate any secrets that were exposed
+# The file is gone from HEAD but still in history — assume it's compromised`}
+</CodeBlock>
+
+<Callout type="danger" title="If .env was pushed to a public repo">
+Treat all exposed credentials as compromised immediately. Rotate API keys, change passwords, revoke tokens — before removing the file. Removing the file from git history requires `git filter-repo` or a force push, which rewrites history for all contributors.
+</Callout>
+
+### Type 2: Broken code — local only
+
+<CodeBlock filename="recovery: broken code, not pushed" language="bash">
+{`# Option A: Undo the commit entirely, keep changes to fix
+git reset --mixed HEAD~1
+# Now fix the code, then re-commit
+
+# Option B: If multiple commits are broken
+git reset --mixed HEAD~3   # goes back 3 commits
+# Fix all the issues, recommit cleanly
+
+# Option C: Nuclear — discard everything back to last good state
+git reset --hard HEAD~1    # DESTROYS the changes — no recovery`}
+</CodeBlock>
+
+### Type 2: Broken code — already pushed
+
+<CodeBlock filename="recovery: broken code, already pushed" language="bash">
+{`# Safe revert — creates a new "undo" commit
+git revert HEAD
+git push
+
+# If multiple commits need reverting (e.g., last 3 commits)
+git revert HEAD~2..HEAD
+git push`}
+</CodeBlock>
+
+`git revert` is non-destructive. The bad commit stays in history, but a new commit undoes its changes. This is the only safe option once code is pushed.
+
+### Type 3: Bad commit message — local only
+
+<CodeBlock filename="recovery: bad message, not pushed" language="bash">
+{`# Amend the last commit's message
+git commit --amend -m "feat(auth): replace cookie session with JWT token validation"
+
+# Interactive rebase to fix older commits (last 5)
+git rebase -i HEAD~5
+# In the editor: change 'pick' to 'reword' on the bad commits
+# Then type the new message when prompted`}
+</CodeBlock>
+
+**Never amend or rebase commits that have been pushed to a shared branch.** It rewrites history, causing divergence for anyone who pulled those commits.
+
+---
+
+## Recovery from reset that went too far
+
+If you ran `git reset --hard` and lost work you needed:
+
+<CodeBlock filename="reflog recovery" language="bash">
+{`# git reflog shows every HEAD movement — including resets
+git reflog
+# Output:
+# a3f2c1b HEAD@{0}: reset: moving to HEAD~2
+# 7b91d4a HEAD@{1}: commit: feat(auth): add OAuth support   ← the lost commit
+# 2d4e8f3 HEAD@{2}: commit: fix(dashboard): resolve filter bug
+
+# Restore to the state before the reset
+git checkout 7b91d4a
+
+# Or create a branch at that point
+git checkout -b recovery/lost-auth-work 7b91d4a`}
+</CodeBlock>
+
+git reflog is the safety net beneath git reset. It records every state change for 90 days (default). Nothing is truly lost until the reflog expires.
+
+---
+
+## Prevention through CLAUDE.md rules
+
+Most bad commits are preventable. Add these to your CLAUDE.md critical rules:
+
+<CodeBlock filename="CLAUDE.md" language="markdown">
+{`## Critical rules — git
+- NEVER run git add . or git add -A — stage specific files only
+- ALWAYS run tsc --noEmit before committing any TypeScript changes
+- NEVER commit with a one-word message ("fix", "update", "wip")
+- NEVER use git reset --hard without confirming with me first
+- NEVER push --force to main or master
+- ALWAYS show me the staged diff (git diff --staged) before committing`}
+</CodeBlock>
+
+---
+
+## The pre-commit gate
+
+Make this a non-negotiable ritual before every Claude-assisted commit:
+
+<CodeBlock filename="pre-commit gate" language="bash">
+{`# 1. Review what's about to be committed
+git diff --staged
+
+# 2. Check nothing unexpected is staged
+git status
+
+# 3. Verify TypeScript
+node node_modules/typescript/bin/tsc --noEmit
+
+# 4. Only then: commit
+git commit -m "type(scope): description"`}
+</CodeBlock>
+
+This 60-second gate prevents 90% of bad commits before they happen.
+
+---
+
+<Checkpoint title="You're ready for production git work when:">
+  <CheckItem>You can classify a bad commit into Type 1, 2, or 3 immediately</CheckItem>
+  <CheckItem>You know whether to use revert or reset without looking it up</CheckItem>
+  <CheckItem>You've used git reflog at least once to recover state</CheckItem>
+  <CheckItem>CLAUDE.md has explicit rules banning git add . and requiring pre-commit TypeScript check</CheckItem>
+  <CheckItem>git push --force is in your deny rules for Claude's permissions</CheckItem>
+</Checkpoint>
+
+---
+
+<Resource
+  title="git reflog documentation"
+  description="Complete reference for git reflog — the recovery tool beneath git reset."
+  href="https://git-scm.com/docs/git-reflog"
+  type="reference"
+/>
