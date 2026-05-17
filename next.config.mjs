@@ -9,6 +9,13 @@ const nextConfig = {
   // Don't expose Next.js version header in production
   poweredByHeader: false,
 
+  // Ensure content MDX files are bundled with the dynamic search API function.
+  // Without this, Vercel's output file tracing may omit ./content/** from the
+  // serverless function bundle (since the path is computed at runtime via process.cwd()).
+  outputFileTracingIncludes: {
+    '/api/search': ['./content/**/*'],
+  },
+
   // Image optimization
   images: {
     remotePatterns: [
@@ -24,12 +31,14 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
 
-  // Strip console.log in production (keep warn/error)
-  compiler: {
-    removeConsole: process.env.NODE_ENV === 'production'
-      ? { exclude: ['error', 'warn'] }
-      : false,
-  },
+  // Strip console.log in production builds only (keep error/warn).
+  // Note: removeConsole only accepts true or { exclude } — never false.
+  // Wrap in conditional to avoid applying it in dev.
+  ...(process.env.NODE_ENV === 'production' && {
+    compiler: {
+      removeConsole: { exclude: ['error', 'warn'] },
+    },
+  }),
 
   // Security & caching headers
   async headers() {
@@ -47,13 +56,6 @@ const nextConfig = {
       // Aggressive cache for static assets
       {
         source: '/_next/static/(.*)',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-      // Cache fonts
-      {
-        source: '/fonts/(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],

@@ -1,6 +1,8 @@
 import { ImageResponse } from 'next/og'
 
-export const runtime     = 'edge'
+// No edge runtime — Node.js serverless is stable on Vercel and ImageResponse
+// works identically. Edge runtime on metadata image files can cause deployment
+// failures in Next.js 15 due to how Vercel handles the edge function step.
 export const alt         = 'AI Execution Lab — A Square Solutions'
 export const size        = { width: 1200, height: 630 }
 export const contentType = 'image/png'
