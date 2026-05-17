@@ -119,7 +119,7 @@ export default function OGImage() {
 
         {/* Section pills */}
         <div style={{ display: 'flex', gap: 10, marginTop: 36 }}>
-          {['Docs', 'Systems', 'Labs', 'Case Studies', 'Playbooks'].map(
+          {['Docs', 'Systems', 'Labs', 'Case Studies', 'Playbooks', 'Failures', 'Logs'].map(
             (label) => (
               <div
                 key={label}

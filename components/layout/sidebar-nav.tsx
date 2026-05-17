@@ -48,6 +48,12 @@ const NAV = [
       { href: '/syndicate', label: 'Syndication' },
     ],
   },
+  {
+    group: 'Ops',
+    items: [
+      { href: '/ops', label: 'Operations' },
+    ],
+  },
 ]
 
 // ─────────────────────────────────────────────────────────────

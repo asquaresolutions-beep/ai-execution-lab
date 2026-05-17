@@ -17,6 +17,15 @@ export function buildArticleMetadata(item: ContentItem): Metadata {
   const sectionMeta = SECTION_META[item.section]
   const url         = `${SITE_URL}${sectionMeta.href}/${item.slug}`
 
+  // Dynamic OG image — rendered server-side at /api/og
+  const ogImageUrl = `${SITE_URL}/api/og?${new URLSearchParams({
+    title:       fm.title,
+    section:     sectionMeta.label,
+    description: fm.description ?? '',
+  }).toString()}`
+
+  const ogImage = { url: ogImageUrl, width: 1200, height: 630, alt: fm.title }
+
   return {
     title:       fm.title,
     description: fm.description,
@@ -33,6 +42,7 @@ export function buildArticleMetadata(item: ContentItem): Metadata {
       modifiedTime:   fm.updated ?? fm.date,
       tags:           fm.tags,
       section:        sectionMeta.title,
+      images:         [ogImage],
     },
 
     twitter: {
@@ -41,6 +51,7 @@ export function buildArticleMetadata(item: ContentItem): Metadata {
       description:  fm.description,
       creator:      TWITTER_HANDLE,
       site:         TWITTER_HANDLE,
+      images:       [ogImageUrl],
     },
 
     alternates: {

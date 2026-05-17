@@ -1,0 +1,157 @@
+---
+title: "Launch Checklist"
+description: "Actionable pre-launch, launch, and post-launch checklist for the AI Execution Lab platform."
+date: "2026-05-17"
+tags: ["ops", "launch", "deployment", "checklist"]
+status: "published"
+---
+
+Single source of truth for platform launch readiness. Work through it top-to-bottom before announcing publicly.
+
+---
+
+## Pre-Launch: Environment & Configuration
+
+### Environment Variables
+
+Verify all required env vars are set in Vercel project settings:
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_SITE_URL` | ✅ Required | Canonical URL, OG tags, sitemap, JSON-LD |
+| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | Optional | Privacy-first analytics |
+| `NEXT_PUBLIC_GA_ID` | Optional | Google Analytics 4 |
+
+Live status is visible at `/ops` → Analytics Status panel.
+
+### Robots & Indexing
+
+- `/robots.txt` disallows `/api/`, `/ops`, `/syndicate`
+- `/sitemap.xml` generates correctly at build time
+- No `noindex` on public content pages — only `/ops` is noindex by design
+- Canonical URLs set on all content pages via `buildArticleMetadata`
+
+### Metadata & OG Images
+
+- Default OG image renders at `/opengraph-image.tsx` (1200×630, Node.js runtime)
+- Dynamic OG image API live at `/api/og?title=&section=&description=`
+- All article pages use `buildArticleMetadata` → full OG + Twitter card + canonical
+- Twitter handle `@asquaresolution` is correct in `lib/metadata.ts`
+
+---
+
+## Pre-Launch: Content Review
+
+### Minimum Content
+
+Recommended minimum before public announcement:
+
+- [ ] 3+ Docs entries (publishing-workflow and frontmatter-reference already exist)
+- [ ] 1+ Systems entry
+- [ ] 1+ Labs entry
+- [ ] 1+ Case Studies entry
+- [ ] 3+ Failure Archive entries (edge-runtime, blockjs-v6, server-module already exist)
+- [ ] 3+ Execution Logs entries
+- [ ] At least 1 complete Track with lessons
+
+### Content Quality
+
+- [ ] No `status: draft` entries in public listings (drafts only show in `/ops` dev view)
+- [ ] All published items have `title`, `description`, `date`, `tags`
+- [ ] No placeholder or lorem ipsum content
+- [ ] All failure entries have `severity`, `failure_status`, `failure_type`, `resolution_time`
+- [ ] All log entries have `log_type`, `outcome`, `duration`
+
+---
+
+## Pre-Launch: SEO & Structured Data
+
+### Schema Validation
+
+1. Open [Google Rich Results Test](https://search.google.com/test/rich-results) → paste `NEXT_PUBLIC_SITE_URL`
+2. Confirm `WebSite` schema (with SearchAction) renders correctly
+3. Confirm `Organization` schema renders correctly
+4. Open any article page → confirm `TechArticle` or `Article` schema present
+5. Validate OG tags with [OpenGraph.xyz](https://www.opengraph.xyz/)
+
+### Core Web Vitals Targets
+
+Run Lighthouse on at least one article page before launch:
+
+```bash
+# Install if needed
+npm install -g lighthouse
+
+# Run against production URL
+lighthouse https://your-domain.com/docs/publishing-workflow --output html
+```
+
+Target scores:
+- LCP: < 2.5s
+- CLS: < 0.1
+- FCP: < 1.8s
+
+Web Vitals are also reported live in the browser console (dev) via the `<WebVitals />` component.
+
+---
+
+## Launch Day
+
+### Final Build Verification
+
+```bash
+# TypeScript check — must be 0 errors
+npx tsc --noEmit
+
+# Production build — must complete with 0 errors
+next build
+```
+
+### Deployment Steps
+
+1. Push to `main` → Vercel auto-deploys
+2. Watch build log in Vercel dashboard for errors
+3. Preview deployment URL before aliasing to production domain
+4. Check `/ops` on the live deployment — confirm section counts, no open incidents
+5. Verify `/sitemap.xml` returns all pages on live domain
+6. Verify `/robots.txt` disallows are correct
+
+### Post-Deploy Smoke Test
+
+Visit each of these on the live domain:
+
+- [ ] `/` — homepage loads, stats visible, featured failures present
+- [ ] `/docs` — lists entries correctly
+- [ ] `/failures` — failure archive loads, severity dots visible
+- [ ] `/logs` — execution logs list loads
+- [ ] `/tags` — tag cloud renders
+- [ ] Any article page — OG image visible when pasted in Slack/Twitter
+- [ ] `/api/og?title=Test&section=LAB&description=Testing` — returns 1200×630 image
+- [ ] `/sitemap.xml` — valid XML with all pages
+- [ ] `/robots.txt` — disallow rules present
+
+---
+
+## Post-Launch
+
+### Analytics Confirmation
+
+- [ ] Plausible dashboard shows first page view (if configured)
+- [ ] GA4 Realtime shows activity (if configured)
+- [ ] No console errors in production
+
+### Search Console Submission
+
+1. Submit `sitemap.xml` to [Google Search Console](https://search.google.com/search-console/)
+2. Submit `sitemap.xml` to Bing Webmaster Tools
+3. Request indexing of homepage and first 3 articles manually
+
+### Ongoing Publishing
+
+- Add new content by creating MDX files in the appropriate `content/` subdirectory
+- Follow [Publishing Workflow](/docs/publishing-workflow)
+- Reference frontmatter fields at [Frontmatter Reference](/docs/frontmatter-reference)
+- Use [Deployment Workflow](/docs/deployment-workflow) for release procedures
+- Syndicate finished articles using the `/syndicate` tool
+- Log each significant session at `/logs`
+- Document failures at `/failures`

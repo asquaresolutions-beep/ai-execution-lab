@@ -1,0 +1,163 @@
+---
+title: "Deployment Workflow"
+description: "Step-by-step deployment process, rollback procedures, and environment management for the AI Execution Lab platform."
+date: "2026-05-17"
+tags: ["ops", "deployment", "vercel", "workflow"]
+status: "published"
+---
+
+The platform runs on Next.js 15 deployed to Vercel. Deployments are automatic via GitHub push to `main`. This document covers the full workflow — from local verification to production rollback.
+
+---
+
+## Standard Deployment
+
+Every deployment follows the same four-step sequence:
+
+<WorkflowTimeline>
+  <TimelineStep n={1} title="Local verification" status="verified">
+    Run TypeScript check and production build locally before pushing.
+  </TimelineStep>
+  <TimelineStep n={2} title="Push to main" status="automated">
+    Git push triggers Vercel build pipeline automatically.
+  </TimelineStep>
+  <TimelineStep n={3} title="Monitor build" status="gate">
+    Watch Vercel dashboard for build errors before the deployment goes live.
+  </TimelineStep>
+  <TimelineStep n={4} title="Smoke test" status="verified">
+    Verify homepage, one article page, sitemap, and `/ops` on the live domain.
+  </TimelineStep>
+</WorkflowTimeline>
+
+### Step 1: Local verification
+
+Always run these before pushing:
+
+```bash
+# TypeScript check — must pass with 0 errors
+npx tsc --noEmit
+
+# Production build
+next build
+```
+
+If `next build` fails:
+- Read the error output carefully — most errors are TypeScript or import boundary issues
+- The most common failure patterns are documented in the [Failure Archive](/failures)
+- Do NOT push a broken build; fix locally first
+
+### Step 2: Push to main
+
+```bash
+git add -A
+git commit -m "feat: description of change"
+git push origin main
+```
+
+Vercel picks up the push within seconds and starts a new build.
+
+### Step 3: Monitor build
+
+1. Open [Vercel Dashboard](https://vercel.com/dashboard)
+2. Click the latest deployment — watch the build log in real time
+3. Build output should show all routes as green/static
+4. If the build fails, the previous deployment remains live — no downtime
+
+Common Vercel build failures and fixes:
+
+| Error | Cause | Fix |
+|---|---|---|
+| `Edge runtime` crypto error | `runtime = 'edge'` in an image file | Change to Node.js runtime (see failure archive) |
+| Module not found | Missing import or wrong path alias | Check `@/` path and file existence |
+| React hydration error | Server/client mismatch | Check for Date.now() or Math.random() in components |
+
+### Step 4: Smoke test
+
+After the deployment goes live (usually 60–90 seconds for a content-only change):
+
+```
+✓ Homepage loads
+✓ One article page loads with correct OG metadata
+✓ /sitemap.xml returns current pages
+✓ /ops shows correct section counts
+```
+
+---
+
+## Content-Only Deployments
+
+Adding or editing MDX files in `content/` only requires:
+
+1. Create/edit the `.mdx` file
+2. Verify frontmatter is complete (required fields: `title`, `description`, `date`, `tags`, `status`)
+3. Commit and push — no TypeScript check needed for content-only changes
+
+The site is fully static — new content gets included automatically in the next build.
+
+---
+
+## Rollback
+
+Vercel keeps the full deployment history. To roll back:
+
+1. Open Vercel Dashboard → Deployments
+2. Find the last known-good deployment
+3. Click "..." → "Promote to Production"
+4. The previous build goes live instantly — no rebuild required
+
+Rollback is instant because Vercel aliases the domain to a different already-built deployment. No build queue needed.
+
+---
+
+## Environment Variables
+
+Environment variables are set in Vercel project settings, not in the repository.
+
+**Never commit `.env.local` to Git.** The `.gitignore` excludes all `.env*` files.
+
+| Variable | Set in | Notes |
+|---|---|---|
+| `NEXT_PUBLIC_SITE_URL` | Vercel → Settings → Env Vars | Required for canonical URLs |
+| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | Vercel → Settings → Env Vars | Optional analytics |
+| `NEXT_PUBLIC_GA_ID` | Vercel → Settings → Env Vars | Optional analytics |
+
+To add or change an env var:
+1. Vercel Dashboard → Project → Settings → Environment Variables
+2. Add/update the variable
+3. Redeploy (env vars only take effect on next build)
+
+Current env var status is visible at `/ops` → Analytics Status.
+
+---
+
+## Vercel Preview Deployments
+
+Every branch push (not `main`) gets a unique preview URL:
+
+```
+https://ai-execution-lab-git-<branch-name>-<username>.vercel.app
+```
+
+Use preview deployments to:
+- Test new features before merging to main
+- Share a specific state with collaborators
+- Verify that a fix works in a production-identical environment
+
+Preview deployments are identical to production except they use the preview domain.
+
+---
+
+## Deployment Checklist for Major Changes
+
+For significant changes (new sections, route changes, layout changes):
+
+- [ ] `tsc --noEmit` passes
+- [ ] `next build` completes
+- [ ] All new routes appear in build output
+- [ ] OG image API (`/api/og`) returns an image for new section labels
+- [ ] Sitemap includes new routes
+- [ ] Nav links are correct
+- [ ] Mobile layout works on new pages
+- [ ] No hydration warnings in browser console
+
+For content-only deployments, this checklist can be skipped.

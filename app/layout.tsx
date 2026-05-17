@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/layout/sidebar'
 import { TopBar } from '@/components/layout/top-bar'
 import { SearchModal } from '@/components/search/search-modal'
 import { Analytics } from '@/components/analytics'
+import { WebVitals } from '@/components/analytics/web-vitals'
 
 // ─── Fonts ───────────────────────────────────────────────────
 const fontSans = Inter({
@@ -136,6 +137,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Analytics — production only, env-gated */}
         <Analytics />
+
+        {/* Web Vitals reporter — logs in dev, beacons in prod */}
+        <WebVitals />
       </body>
     </html>
   )

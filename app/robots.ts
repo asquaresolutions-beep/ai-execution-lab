@@ -8,8 +8,8 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        // Block the search API from crawlers
-        disallow: ['/api/'],
+        // Block internal tools + API routes from crawlers
+        disallow: ['/api/', '/ops', '/syndicate'],
       },
     ],
     sitemap: `${BASE_URL}/sitemap.xml`,
