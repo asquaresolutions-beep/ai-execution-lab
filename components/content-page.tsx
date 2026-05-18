@@ -13,11 +13,13 @@ interface ContentPageProps {
   item: ContentItem
   prev?: ContentMeta | null
   next?: ContentMeta | null
+  /** Optional content injected after MDX and before the related-items section */
+  afterContent?: React.ReactNode
 }
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 
-export async function ContentPage({ item, prev, next }: ContentPageProps) {
+export async function ContentPage({ item, prev, next, afterContent }: ContentPageProps) {
   const sectionMeta = SECTION_META[item.section]
   const ac          = ACCENT_CLASSES[sectionMeta.accent]
   const fm          = item.frontmatter
@@ -216,6 +218,9 @@ export async function ContentPage({ item, prev, next }: ContentPageProps) {
 
             {/* MDX content */}
             <ContentRenderer source={item.content} />
+
+            {/* Section-specific after-content panel (e.g. debug context for failures) */}
+            {afterContent}
 
             {/* Related content */}
             {related.length > 0 && (

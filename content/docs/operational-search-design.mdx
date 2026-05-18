@@ -1,0 +1,382 @@
+---
+title: "Operational Search Design"
+description: "Design for semantic operational search: entity matching, tag overlap retrieval, pattern similarity, and the /api/operational-search endpoint architecture."
+date: "2026-05-18"
+tags: ["search", "ops", "architecture", "retrieval", "debugging", "intelligence"]
+status: published
+noindex: true
+---
+
+The current `/api/search` endpoint returns documents. That is correct — for document retrieval. But the use case this platform serves is not document retrieval. An operator searching "edge runtime error" during a live debugging session does not need a list of pages that mention edge runtime. They need: the failure entity, its pattern family, its confidence score, and the verified fix. That is an operational package, not a page list.
+
+This document specifies the design for a second-tier search system — `/api/operational-search` — that closes the gap between standard content retrieval and operational context delivery. It covers query classification, entity routing logic, confidence scoring, the response TypeScript interface, and the path toward MCP tool integration.
+
+---
+
+## The Gap Between Standard Search and Operational Retrieval
+
+### What Standard Search Returns
+
+A standard full-text search engine matches query terms against document content. It returns a ranked list of documents ordered by term frequency, metadata relevance, and authority signals. The output is a list of URLs. What happens next — clicking, reading, synthesizing across multiple documents — is entirely the user's work.
+
+The existing `/api/search` endpoint on this platform is an accurate implementation of this model. It calls `buildSearchIndex()` from `lib/search-index.ts`, which builds a flat array of `SearchItem[]` covering every section: docs, systems, labs, case-studies, and playbooks. Each item includes title, description, section, slug, href, tags, date, and a section label. A query against this index matches on title, description, or tag. It returns `ContentMeta[]` — a list of pages that are relevant.
+
+This is correct for its purpose. Browsing content, verifying topic coverage, finding a specific lesson by title — these are document retrieval problems. `/api/search` solves them.
+
+### What Operational Retrieval Must Return
+
+Operational retrieval solves a different problem: "what does the platform know about this situation?" The situation is an active debugging or planning context. The user is not browsing — they are in the middle of something that is broken or needs to be done.
+
+Consider the difference in what these two systems return for the same query:
+
+| Query | `/api/search` returns | `/api/operational-search` should return |
+|---|---|---|
+| `"edge runtime"` | 4 pages mentioning edge runtime | failure:edge-runtime-deployment-failure (confidence: 90), pattern:module-boundary-violations, verified fix, prevention checklist |
+| `"Module not found fs"` | 3 pages with build-failure tags | failure:server-module-client-bundle (confidence: 92, exact match), related failure:edge-runtime-deployment-failure (55, same-root), debugging path, pattern, evidence |
+| `"env vars vercel"` | docs and lesson pages about environment variables | failure:environment-variable-missing-production (confidence: 85), prevention pattern, resolution: "5–10 min", link to lesson |
+| `"works locally fails prod"` | pages tagged deployment | pattern:runtime-environment-scope-drift, all failures in that pattern, consolidated prevention checklist |
+
+The operational response is not a formatted version of the document response. It is a structurally different output type: a typed object with entities, confidence scores, pattern membership, and actionable steps. The consumer — whether a human operator or an AI assistant — can act on it directly.
+
+### What `/api/search` Is Missing
+
+The gap between the current state and the target is not about search algorithm quality. It is about what the output type is. The current search returns `SearchItem[]`. The operational search needs to return:
+
+- **Matched entity** — the specific failure, lesson, pattern, or pathway that best matches the query
+- **Debug context** — for failure queries: the confidence-scored failure, its pattern, its prevention steps, its evidence items
+- **Lesson impact chain** — for lesson queries: what failures this lesson prevents, what it implements, what it leads to
+- **Pathway steps** — for pathway queries: the ordered execution sequence with estimated time and success criteria
+
+These are not enriched versions of `SearchItem`. They are different structures entirely. Building them requires querying the operational memory graph in `lib/operational-memory.ts` — which `buildSearchIndex()` never touches.
+
+---
+
+## Current `/api/search` State
+
+### What It Does Well
+
+The `/api/search` GET endpoint returns the full search index as JSON — a flat array of every piece of content with its metadata. The client-side search logic filters this index by matching the query string against title, description, and tags using simple substring matching.
+
+The content is correct. The metadata is accurate. The tag coverage is consistent across all content types. Searching "vercel" returns every relevant page. Searching "mdx" returns lessons, case studies, and failure reports that involve MDX.
+
+This is genuinely useful for an operator who knows what they are looking for and is navigating the platform. The search serves a navigation function well.
+
+### What It Does Not Do
+
+The search index does not load the operational memory graph. It does not query the relationship table in `lib/operational-memory.ts` — the 32+ typed `OperationalRelationship` entries that connect entities across the platform. It does not consult the failure memory scoring in `lib/failure-memory.ts`. It does not know which failures exemplify which patterns. It does not know which lessons prevent which failures.
+
+A search for "crypto not defined" returns the failure report page if the tags match, but it does not return the confidence score, the pattern family, or the prevention checklist. Those live in `lib/failure-memory.ts` and the failure's frontmatter respectively — sources the search index never reads.
+
+This is the core gap: the platform has operational intelligence encoded in typed structures, and the search system does not reach it.
+
+---
+
+## Query Classification
+
+Before routing a query to the appropriate retrieval function, the system classifies the query type. Three classifications cover the primary use cases:
+
+### Entity Lookup
+
+The query is a direct reference to a specific entity — a slug, a title fragment, or a known keyword that maps to a specific entity.
+
+**Signal patterns:** Slug-shaped strings ("edge-runtime-deployment-failure"), entity titles ("env vars vercel", "WordPress auth"), section names ("lesson", "failure", "playbook"), or sufficiently specific proper nouns that have only one likely match in the entity registry.
+
+**Examples:**
+- `"edge-runtime-deployment-failure"` → slug match → failure entity
+- `"env vars vercel"` → keyword match → failure:environment-variable-missing-production
+- `"vite github pages routing"` → keyword match → failure:vite-github-pages-spa-routing
+
+**Routing:** Attempt exact slug match first. If no match, attempt keyword match against entity titles in the ENTITIES registry from `lib/operational-memory.ts`. Return the matched entity plus its operational context.
+
+### Pattern Lookup
+
+The query describes a class of failures, not a specific incident. The symptom described maps to a named pattern rather than a single failure report.
+
+**Signal patterns:** Generic problem descriptions ("works locally fails prod", "undefined in production", "permission denied"), descriptions of a class of behavior without a specific error message, or queries that use relative language ("sometimes fails", "intermittent error").
+
+**Examples:**
+- `"works locally fails prod"` → pattern:runtime-environment-scope-drift
+- `"module boundary error"` → pattern:module-boundary-violations
+- `"dependency upgrade broke"` → pattern:dependency-default-changes
+- `"dns not resolving"` → pattern:infrastructure-timing-dependencies
+
+**Routing:** Match query keywords against pattern names and pattern keyword sets in the failure pattern library. Return the matched pattern with all its linked failure instances and the consolidated prevention checklist.
+
+### Symptom Lookup
+
+The query is an exact or near-exact error message. This is the highest-value query type — the operator has copied a specific error string and wants a diagnosis.
+
+**Signal patterns:** Error message syntax (quotes around error text, `Module not found`, `is not defined`, `cannot read property`, stack trace fragments), error code formats (HTTP status codes, Node.js error codes), or highly specific technical strings that have a narrow match space.
+
+**Examples:**
+- `"crypto is not defined"` → match against failure error message fields → failure:server-module-client-bundle
+- `"Module not found: Can't resolve 'fs'"` → exact error message match → failure:server-module-client-bundle, confidence: 92
+- `"blockJS"` → keyword match → failure:next-mdx-remote-v6-blockjs
+- `"401 unauthorized WordPress"` → symptom → failure:wordpress-rest-api-auth-failure
+
+**Routing:** Scan the error message fields across all failure memory entries for substring matches. Match quality determines confidence. An exact match yields confidence 92–100; a partial match yields 60–80; a keyword-only match yields 40–60.
+
+<Callout type="info" title="Classification is not a hard boundary">
+Query classification sets the primary routing path. The retrieval functions share results: a symptom lookup that finds a failure also returns that failure's patterns and related lessons. Classification determines what gets top billing in the response, not what gets excluded.
+</Callout>
+
+---
+
+## The `/api/operational-search` Endpoint Design
+
+### Route and Method
+
+`GET /api/operational-search` with query parameters rather than a POST body. GET is appropriate because operational search queries are read-only, stateless, and should be cacheable at the CDN layer when the query string is stable.
+
+**Query parameters:**
+- `q` — the query string (required)
+- `type` — entity type filter: `failure`, `lesson`, `pattern`, `pathway`, `case-study` (optional; defaults to all types)
+- `context` — intent context: `failure`, `lesson`, `pathway` (optional; guides response shape)
+
+### TypeScript Response Interface
+
+```typescript
+interface OperationalSearchResponse {
+  // The classified query type
+  queryType: 'entity' | 'pattern' | 'symptom'
+
+  // Confidence of the overall match (0–100)
+  confidence: number
+
+  // Top matched entity (always present if any match found)
+  matchedEntity: {
+    id:          string          // [type]:[slug]
+    type:        string
+    slug:        string
+    title:       string
+    href:        string
+    confidence:  number
+    matchReason: string          // "exact slug" | "tag overlap" | "keyword" | "pattern" | "symptom"
+  } | null
+
+  // Debug context — present when matched entity is a failure or pattern
+  debugContext: {
+    failureSlug:         string
+    failureTitle:        string
+    confidenceScore:     number
+    severity:            string
+    recoveryComplexity:  string
+    estimatedResolution: string
+    verifiedFix:         string
+    patternId:           string | null
+    patternName:         string | null
+    preventionChecklist: string[]
+    relatedLessons:      Array<{ slug: string; title: string; href: string }>
+    evidence:            Array<{ type: string; path: string; descriptor: string }>
+  } | null
+
+  // Lesson impact chain — present when matched entity is a lesson
+  lessonImpact: {
+    lessonSlug:          string
+    lessonTitle:         string
+    failuresPrevented:   Array<{ slug: string; title: string; href: string }>
+    prerequisiteFor:     Array<{ slug: string; title: string; href: string }>
+    implementsPlaybook:  { slug: string; title: string; href: string } | null
+  } | null
+
+  // Pathway steps — present when matched entity is a pathway or execution path
+  pathwaySteps: {
+    pathwayTitle:        string
+    estimatedTime:       string
+    steps:               Array<{
+      order:             number
+      description:       string
+      lessonSlug?:       string
+      estimatedTime:     string
+      successCriteria:   string
+    }>
+    knownFailurePoints:  Array<{
+      failureSlug:       string
+      likelyAt:          string
+      preventionPattern: string
+    }>
+  } | null
+
+  // Additional matches beyond the top result
+  additionalMatches: Array<{
+    id:         string
+    type:       string
+    slug:       string
+    title:      string
+    href:       string
+    confidence: number
+  }>
+
+  // Processing metadata
+  processingTimeMs: number
+}
+```
+
+This response shape supports all three query types. The `context` parameter in the request can override which optional block is populated when the entity type is ambiguous.
+
+---
+
+## Retrieval Routing Logic
+
+The retrieval runs a deterministic pipeline. Each step either returns a high-confidence result (and stops) or passes to the next step with accumulated candidates.
+
+### Step 1: Exact Slug Match
+
+Check whether the query string exactly matches a slug in the ENTITIES registry from `lib/operational-memory.ts`.
+
+- Match: `confidence = 100`, `matchReason = "exact slug"`
+- No match: proceed to Step 2
+
+### Step 2: Tag Overlap
+
+Tokenize the query. Check the overlap between query tokens and entity tag arrays across the failure memory table and entity registry. Score each entity by the percentage of query tokens that appear in its tags.
+
+- Match threshold: at least 2 query tokens matched, or 50% token overlap for short queries
+- Confidence formula: `(matched tokens / total query tokens) × 80`
+- `matchReason = "tag overlap"`
+
+### Step 3: Keyword Match in Title
+
+Check whether the query string contains a significant substring of any entity title, or vice versa. Title matching uses normalized lowercase comparison with stop word removal.
+
+- Confidence: `60`
+- `matchReason = "keyword"`
+
+### Step 4: Pattern Keyword Match
+
+Match the query against pattern names and pattern keyword sets from the failure pattern library. A pattern match triggers retrieval of all failure instances linked to that pattern.
+
+- Confidence: `70`
+- `matchReason = "pattern"`
+
+### Step 5: Symptom Keyword Match
+
+Match the query against the `verifiedFix` and `failureType` fields of failure memory entries, and against known symptom strings in the failure frontmatter.
+
+- Confidence: `40–75` depending on match specificity
+- `matchReason = "symptom"`
+
+### Confidence Score Reference
+
+| Match type | Confidence range | Notes |
+|---|---|---|
+| Exact slug | 100 | Perfect entity identification |
+| Tag overlap (full) | 72–80 | All query tokens matched |
+| Tag overlap (partial) | 40–70 | Proportional to match fraction |
+| Keyword (title) | 60 | Title substring match |
+| Pattern keyword | 70 | Named pattern family matched |
+| Symptom keyword | 40–75 | Error message substring match |
+| No match | — | Returns `null` match with empty additional matches |
+
+<Callout type="warn" title="Low-confidence responses">
+A response with `confidence < 40` should be returned with a `lowConfidenceWarning: true` flag and should not be used as authoritative debugging context. The platform currently has 8 failures and 5 named patterns. Queries outside that coverage space will yield low-confidence responses. This is the correct behavior — the system should not fabricate confidence it does not have.
+</Callout>
+
+---
+
+## Entity Ranking
+
+When multiple entities match at the same confidence level, the ranking function applies secondary scoring to order results.
+
+### Ranking Signals
+
+**Confidence score** — primary signal. Exact matches rank above tag-overlap matches regardless of other factors.
+
+**Instance count** — failures with `instanceCount >= 2` rank above single-instance failures. A recurring failure with a battle-tested fix is more useful to an operator than a one-time incident. The confidence scoring in `lib/failure-memory.ts` already weights `instanceCount >= 2` with +30 points, which drives this organically.
+
+**Playbook presence** — failures with `hasPlaybook: true` rank above failures without a resolver playbook. A playbook-backed failure has a verified, step-by-step resolution procedure. An operator can follow it without needing to reconstruct the fix from a narrative description.
+
+**Recency** — recent failures rank slightly above older ones when confidence scores are equal. The `lastOccurrence` field in `FailureMemoryEntry` provides this signal. The bias is small: recency alone does not override a higher-confidence match.
+
+**Pattern membership** — failures that belong to a named pattern rank above orphan failures when symptom-matching. A pattern-backed failure implies that the root cause is understood at a class level, not just as an isolated incident.
+
+### Ranking Formula
+
+```
+rank_score = confidence × 0.6
+           + (instanceCount >= 2 ? 15 : 0)
+           + (instanceCount >= 3 ? 10 : 0)
+           + (hasPlaybook ? 10 : 0)
+           + (patternId != null ? 8 : 0)
+           + recency_bonus          // 0–5, based on days since lastOccurrence
+```
+
+Rank scores determine the ordering of `additionalMatches` in the response. The top `matchedEntity` is always the highest rank_score result.
+
+---
+
+## Claude Code MCP Integration Potential
+
+### Why the Endpoint Is Designed for AI Consumption
+
+The operational search endpoint is designed with a dual audience: human operators using the platform directly, and AI assistants used by operators during live sessions. The response schema is structured JSON with stable keys. It does not include prose paragraphs that require parsing. Every field is typed and named for programmatic consumption.
+
+This is not an accident. The endpoint's intended Phase 4 use case is an MCP (Model Context Protocol) tool that Claude Code can call during a debugging session. An operator working with Claude Code hits an error, asks Claude Code to diagnose it, and Claude Code queries the platform's operational memory instead of — or before — generating a response from its training data.
+
+### The MCP Tool Specification
+
+An MCP server that wraps the `/api/operational-search` endpoint exposes a tool with this signature:
+
+```typescript
+{
+  name: "operational_search",
+  description: "Query the AI Execution Lab operational memory for debugging context, failure patterns, and verified fixes. Use when encountering a build error, deployment failure, or operational problem that may have a documented precedent.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: {
+        type: "string",
+        description: "The error message, symptom description, or entity slug to look up"
+      },
+      type: {
+        type: "string",
+        enum: ["failure", "lesson", "pattern", "pathway"],
+        description: "Optional entity type filter"
+      },
+      context: {
+        type: "string",
+        enum: ["failure", "lesson", "pathway"],
+        description: "Optional intent context to guide response shape"
+      }
+    },
+    required: ["query"]
+  }
+}
+```
+
+Claude Code calls this tool when it encounters a build or deployment error. The tool returns the `OperationalSearchResponse` JSON. Claude Code incorporates the `debugContext.verifiedFix`, `debugContext.preventionChecklist`, and `debugContext.relatedLessons` into its response to the operator. The platform becomes an AI-accessible debugging memory, not a static documentation site.
+
+<Callout type="lab" title="MCP-compatible design from the start">
+The endpoint being MCP-compatible means designing for stable schema now. The response interface defined in this document should not change breaking fields once Phase 4 begins. Fields can be added. Types cannot be changed. The `matchedEntity`, `debugContext`, `lessonImpact`, and `pathwaySteps` blocks should be treated as stable contracts.
+</Callout>
+
+### How This Differs from RAG over Documentation
+
+A RAG (Retrieval-Augmented Generation) system over this platform's MDX content would embed all pages, retrieve the most semantically similar chunks for a query, and pass them to a language model as context. That approach works for open-ended questions against a static document corpus.
+
+The operational search system is not RAG. It is structured retrieval from a typed entity graph. The response is not "here are the most relevant text chunks" — it is "here is the matched failure entity, confidence 85, verified fix, prevention checklist." The structure is pre-computed from the entity graph. The language model consuming the response does not need to extract meaning from prose — it receives structured data.
+
+This distinction matters for reliability. A RAG response can hallucinate connections that are not in the source documents, because the LLM is synthesizing across chunks. An operational search response returns only what is explicitly encoded in the entity graph and frontmatter. The confidence score reflects actual instance counts and documentation quality — not semantic similarity to a query.
+
+---
+
+## Implementation Phases
+
+| Phase | Scope | Capability delivered |
+|---|---|---|
+| **Phase 1 (current)** | `/api/search` tag/title matching, ENTITIES registry, 32 relationships in operational-memory.ts | Find content by keyword; navigate relationships via frontmatter links |
+| **Phase 2** | Add entity routing to `/api/search`; implement `debugLookup(symptom)` in operational-memory.ts; return structured `DebugContext` for failure queries | Symptom → DebugContext retrieval; relationship traversal in search results |
+| **Phase 3** | Symptom keyword library — curated map of error strings → failure slugs; pattern keyword index — maps common descriptions → pattern IDs | Symptom-to-failure matching without semantic embeddings; deterministic, auditable routing |
+| **Phase 4** | `/api/operational-search` endpoint with full `OperationalSearchResponse` schema; MCP server wrapper | AI-native operational retrieval; Claude Code can query the platform for debugging context mid-session |
+
+<Callout type="success" title="Phase 2 is achievable without new infrastructure">
+Phase 2 does not require a vector database, a new deployment pipeline, or a new service. It requires connecting `buildSearchIndex()` to `lib/operational-memory.ts` and adding a routing layer that classifies queries and calls the appropriate retrieval functions. The entity graph, failure memory, and pattern library are already built. Phase 2 is assembly, not invention.
+</Callout>
+
+Phase 3 adds the symptom keyword library — a static map of known error strings and symptom descriptions to entity slugs. This is the highest-leverage addition to retrieval accuracy short of semantic embeddings. The library starts with the exact error messages documented in the 8 current failure reports and grows as new failures are documented.
+
+Phase 4 delivers the `/api/operational-search` endpoint and the MCP tool. Phase 4 depends on Phase 3 being stable — the endpoint should return high-confidence results before it is exposed to AI consumers. Confidence calibration happens in Phase 3.
+
+---
+
+*Operational Search Design v1.0 — 2026-05-18.*

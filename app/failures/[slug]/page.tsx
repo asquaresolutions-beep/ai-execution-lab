@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getItem, getAllSlugs, getNeighbors } from '@/lib/content'
 import { ContentPage } from '@/components/content-page'
+import { DebugContextPanel } from '@/components/operational/debug-context-panel'
 import { buildArticleMetadata } from '@/lib/metadata'
 import type { Metadata } from 'next'
 
@@ -22,5 +23,13 @@ export default async function FailurePage({ params }: Props) {
   const item = getItem('failures', slug)
   if (!item) notFound()
   const { prev, next } = getNeighbors('failures', slug)
-  return <ContentPage item={item} prev={prev} next={next} />
+
+  return (
+    <ContentPage
+      item={item}
+      prev={prev}
+      next={next}
+      afterContent={<DebugContextPanel slug={slug} />}
+    />
+  )
 }

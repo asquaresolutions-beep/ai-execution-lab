@@ -10,6 +10,8 @@ import {
   type PropertyStatus,
   type DebtPriority,
 } from '@/lib/ecosystem'
+import { getFailureMemorySummary, getPatternCoverage } from '@/lib/failure-memory'
+import { getMemoryGraphSummary } from '@/lib/operational-memory'
 import { SECTION_META, ACCENT_CLASSES, formatDateMono, cn } from '@/lib/utils'
 import { ReadingQueue } from '@/components/platform/reading-queue'
 
@@ -147,9 +149,14 @@ export default function OpsPage() {
   const maxVelocity     = Math.max(...velocity.map(v => v.count), 1)
 
   // Ecosystem + observability
-  const ecosystemSummary = getEcosystemSummary()
-  const p1Debt = OPERATIONAL_DEBT.filter(d => d.priority === 'p1')
+  const ecosystemSummary  = getEcosystemSummary()
+  const p1Debt            = OPERATIONAL_DEBT.filter(d => d.priority === 'p1')
   const activeExperiments = ACTIVE_EXPERIMENTS.filter(e => e.status === 'active')
+
+  // Failure intelligence metrics
+  const failureSummary  = getFailureMemorySummary()
+  const patternCoverage = getPatternCoverage()
+  const memorySummary   = getMemoryGraphSummary()
 
   // Draft count (dev only)
   const drafts = allSectionData.flatMap(({ section, items }) =>
@@ -647,6 +654,40 @@ export default function OpsPage() {
             </div>
           </div>
 
+          {/* Failure intelligence observability */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600">
+                Failure Intelligence
+              </h2>
+              <Link href="/failures" className="text-[10px] font-mono text-surface-700 hover:text-brand-400 transition-colors">
+                archive →
+              </Link>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
+              {[
+                { label: 'Failures documented', value: failureSummary.totalFailures, color: 'text-red-400' },
+                { label: 'Avg confidence',       value: `${failureSummary.avgConfidence}/100`, color: failureSummary.avgConfidence >= 70 ? 'text-green-400' : 'text-yellow-400' },
+                { label: 'High confidence paths', value: `${failureSummary.highConfidence}/${failureSummary.totalFailures}`, color: 'text-green-400' },
+                { label: 'Recurring patterns',   value: failureSummary.recurringPatterns, color: 'text-orange-400' },
+                { label: 'Named patterns',        value: patternCoverage.length, color: 'text-surface-400' },
+                { label: 'Entity relationships', value: memorySummary.relationshipCount, color: 'text-brand-400' },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="flex items-center justify-between px-4 py-2.5">
+                  <p className="text-[10px] text-surface-600">{label}</p>
+                  <span className={cn('text-[11px] font-mono font-semibold', color)}>{value}</span>
+                </div>
+              ))}
+              <Link
+                href="/pathways"
+                className="group flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors"
+              >
+                <p className="text-[10px] text-surface-600">Execution pathways</p>
+                <span className="text-[11px] font-mono text-brand-400 group-hover:text-brand-300">5 →</span>
+              </Link>
+            </div>
+          </div>
+
           {/* Analytics env status */}
           <div>
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
@@ -717,6 +758,7 @@ export default function OpsPage() {
                 <p className="text-[9px] font-mono uppercase tracking-widest text-surface-700 mb-1.5 px-1">Navigation</p>
                 <div className="space-y-1">
                   <QuickAction href="/start-here"  label="Start Here" />
+                  <QuickAction href="/pathways"    label="Execution Pathways" badge="5" />
                   <QuickAction href="/syndicate"   label="Syndication" />
                   <QuickAction href="/sitemap.xml" label="Sitemap" />
                 </div>

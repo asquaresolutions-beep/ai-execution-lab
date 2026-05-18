@@ -1,0 +1,335 @@
+---
+title: "Execution Observability Design"
+description: "Design for platform execution observability: velocity metrics, deployment stability, failure recurrence tracking, operational debt, evidence coverage, and authority growth signals."
+date: "2026-05-18"
+tags: ["ops", "observability", "architecture", "metrics", "platform", "intelligence"]
+status: published
+noindex: true
+---
+
+Execution observability is not uptime monitoring. It is not error rate tracking. It is not Core Web Vitals. Those are valid measurement concerns for a production application, but they answer a different question: "Is the platform currently functioning?" Execution observability answers a harder question: "Is this platform becoming more capable over time?"
+
+A platform that is always up but never improving is operationally stagnant. A platform that is sometimes slow but consistently producing higher-confidence failure documentation, better entity coverage, and tighter GEO query ownership is operationally healthy. The metrics need to match the question being asked.
+
+This document specifies the execution observability layer for the AI Execution Lab: what is measured, how it is measured, and what the ops dashboard should display at full maturity.
+
+---
+
+## What Execution Observability Means
+
+### The Distinction from Application Monitoring
+
+Traditional application monitoring answers availability and performance questions. It measures uptime percentages, request latency distributions, error rates, and resource utilization. These are infrastructure metrics. They tell you whether the system is running correctly.
+
+Execution observability — as this platform defines it — measures a different axis: the platform's operational intelligence output. It tracks whether the knowledge base is growing, whether the failure memory is becoming more complete, whether the evidence archive is expanding, and whether the GEO surface is widening. These are content and knowledge metrics. They tell you whether the platform is becoming a better operational tool over time.
+
+The two are not in conflict. A platform can be both always-available (application monitoring) and consistently improving (execution observability). But they require different instruments. Vercel's analytics dashboard handles the former. The observability layer described here handles the latter.
+
+### The Core Question
+
+Every metric in the execution observability layer answers some aspect of this question: **Is the platform accumulating operational intelligence at a sustainable rate, and is that intelligence becoming more reliable over time?**
+
+Sub-questions:
+- Are new failures being documented at a rate that reflects actual production work? (velocity)
+- Are documented failures becoming more reliable? (confidence score trends)
+- Are the same root causes recurring? (failure recurrence rate)
+- Is the evidence archive growing or standing still? (evidence coverage)
+- Is the platform's GEO surface expanding? (authority growth)
+- Is operational debt being paid down or accumulating? (debt tracking)
+
+---
+
+## Execution Velocity
+
+Velocity is the rate of operational intelligence production. It is measured per unit time across the primary content types.
+
+### Velocity Metrics
+
+| Metric | Unit | Current state | Healthy | Declining | Stalled |
+|---|---|---|---|---|---|
+| Lessons published | per month | ~4 (estimated) | ≥ 3 | 1–2 | 0 |
+| Failures documented | per quarter | 8 total, 3 sessions | ≥ 3/quarter | 1–2/quarter | 0/quarter |
+| Case studies produced | per major build | 7 total, 3 sessions | ≥ 1/build | < 1/build | 0 |
+| Lessons per track module | per module | varies | ≥ 4/module | 2–3/module | ≤ 1/module |
+
+**Current state context:** The platform reached 392 pages from 374 across three documented build sessions (Sessions 1–3). Each session produced a measurable increment. Session 3 (2026-05-14 to 2026-05-18) was the most intensive: platform maturity hardening, GEO intelligence framework, failure intelligence layer, evidence framework, and six new operational docs. That is approximately 18 new pages in one session — healthy velocity for a major build phase.
+
+### Velocity Thresholds Explained
+
+**Healthy** means the platform is producing operational intelligence at a rate that keeps pace with real production work. At 3+ failures documented per quarter, the failure archive reflects what is actually happening operationally. At 3+ lessons per month, the curriculum is expanding at a pace that prevents staleness.
+
+**Declining** means production activity is happening but documentation is not keeping pace. The failure archive is falling behind the actual incident rate. Lessons are being drafted but not published. This is a warning signal: if uncorrected for 2+ quarters, the platform's operational credibility degrades.
+
+**Stalled** means the platform has stopped producing new operational intelligence. Pages may still exist and be served, but the knowledge base is frozen. Stalled state for more than 60 days should trigger an audit of what is blocking production.
+
+<Callout type="info" title="Velocity is not the only signal">
+High velocity of low-quality content is worse than moderate velocity of high-quality content. A lesson published at under 900 words with no Checkpoint component does not improve the platform's operational intelligence. Velocity metrics should always be read alongside quality gate metrics (lessons passing publication gate, failures with prevention steps, evidence coverage).
+</Callout>
+
+### Tracking Velocity
+
+Velocity can be computed at build time from content frontmatter dates. The `date` field on every content item records when it was produced. A build-time function groups content by month and type, produces a time-series array, and the ops dashboard renders it as a velocity chart.
+
+No external analytics service is required. The MDX files and their frontmatter dates are the velocity record.
+
+---
+
+## Deployment Stability
+
+Deployment stability measures not whether deployments succeed (that is Vercel's job) but whether the same failure root causes recur across deployments.
+
+### Failure Recurrence Rate
+
+A failure has recurred if a new incident shares the root cause of a previously documented failure. The `instanceCount` field in `lib/failure-memory.ts` tracks this. Current recurrence data:
+
+| Failure | Instance count | Root cause recurrence |
+|---|---|---|
+| edge-runtime-deployment-failure | 2 | Yes — platform launch + Vercel Evolution case study |
+| server-module-client-bundle | 2 | Yes — platform launch + Vercel Evolution case study |
+| vite-github-pages-spa-routing | 2 | Yes — TrustSeal + ScamCheck both hit this |
+| ga4-cross-domain-tracking-gap | 2 | Yes — ScamCheck + ecosystem integration |
+| environment-variable-missing-production | 3 | Yes — multiple Vercel deployments |
+| next-mdx-remote-v6-blockjs | 1 | No recurrence yet |
+| wordpress-rest-api-auth-failure | 1 | No recurrence yet |
+| dns-subdomain-propagation-delay | 1 | No recurrence yet |
+
+Five of eight documented failures have recurred. The recurrence rate is 62.5%. This is expected at the current platform stage — the prevention patterns are recently documented and have not yet been systematically applied.
+
+**Target recurrence rate after prevention patterns are applied:** Below 30%. A failure that recurs after its prevention pattern has been explicitly documented is a process failure, not a technical one. The prevention checklist was available and was not followed.
+
+### Mean Time Between Failures by Pattern
+
+For patterns with multiple instances, mean time between failures (MTBF) measures how long the platform operated before the same root cause triggered again.
+
+The `lastOccurrence` and `date` fields in `FailureMemoryEntry` provide this data. MTBF calculation: `(lastOccurrence date - first occurrence date) / (instanceCount - 1)`.
+
+This is currently computable for the 5 recurring failures. A longer MTBF for a pattern indicates the prevention pattern is being applied more consistently. A shorter MTBF is an escalation signal.
+
+### Percentage of Deployments Requiring Emergency Debugging
+
+From the deployment log and case study record: of the major deployments to date, approximately 40% involved an unplanned debugging session to resolve a blocking failure. The target is below 15% — most deployments should be routine, with failures caught by local validation before push.
+
+<Callout type="warn" title="Emergency debugging percentage is an estimate">
+This metric requires the deployment log to track which deployments triggered a failure report. Currently the correlation is manual — linking a failure's date to the deployment log entry that triggered it. Phase 2 automation should make this programmatic by parsing the failure archive dates against the ecosystem deployment dates in `lib/ecosystem.ts`.
+</Callout>
+
+---
+
+## Failure Memory Coverage
+
+Failure memory coverage measures the completeness of the operational knowledge encoded in the failure archive.
+
+### Current Coverage Metrics
+
+| Metric | Current value | Target |
+|---|---|---|
+| Average confidence score across archive | 74 | ≥ 80 |
+| Failures with instanceCount ≥ 2 | 5 / 8 (62.5%) | ≥ 70% |
+| Failures belonging to a named pattern | 8 / 8 (100%) | Maintain 100% |
+| Failures with documented prevention steps | 8 / 8 (100%) | Maintain 100% |
+| Failures with linked related lessons | 0 / 8 (0%) | ≥ 60% |
+| Failures with a resolver playbook | 1 / 8 (12.5%) | ≥ 40% |
+
+The current archive has 100% prevention step coverage and 100% pattern membership — strong foundations. The gaps are in lesson linkage (0%) and playbook presence (12.5%). These are Phase 2 priorities: linking existing lessons to the failures they prevent, and adding resolver playbooks for the highest-severity failures.
+
+### Confidence Score Interpretation
+
+The average confidence score of 74 means the average failure in the archive has its fix battle-tested against multiple instances but lacks lesson linkage or a formal playbook. The scoring rubric from `lib/failure-memory.ts`:
+
+- Base: 20 (any documented failure with a confirmed fix)
+- +30 if instanceCount ≥ 2
+- +15 if instanceCount ≥ 3
+- +20 if hasPreventionSteps
+- +15 if hasPlaybook
+- +10 if hasRelatedLessons
+- +10 if recoveryComplexity is trivial or low
+
+A failure with instanceCount = 2, prevention steps, and no playbook or related lessons scores 70. That is close to the current average. Reaching an average of 80+ requires either increasing instance counts (more real-world data), adding playbooks, or linking related lessons — all of which represent genuine documentation quality improvements.
+
+---
+
+## Operational Debt Tracking
+
+### The `OPERATIONAL_DEBT` Structure
+
+Operational debt is tracked as a typed array in `lib/ecosystem.ts`. Each debt item has an `id`, `title`, `area` (content, technical, seo, ux, performance), `priority` (p1, p2, p3), `description`, optional `linkedDoc`, and `addedDate`.
+
+Current debt inventory:
+
+| ID | Area | Priority | Title |
+|---|---|---|---|
+| debt-001 | content | P1 | Available lesson quality gate audit |
+| debt-002 | performance | P1 | Evidence images: next/image migration |
+| debt-003 | seo | P2 | Tag synonym deduplication |
+| debt-004 | technical | P2 | lib/tracks.ts module split |
+| debt-005 | ux | P2 | Ops page quick links grouping |
+| debt-006 | ux | P3 | Start Here page mobile length |
+| debt-007 | technical | P3 | lib/bookmarks.ts schema version comment |
+
+2 P1 items, 3 P2 items, 2 P3 items. The P1 items are blocking content quality and performance respectively. Neither is a blocker for publishing, but both should be resolved before the content count grows significantly.
+
+### How Debt Accumulates
+
+Debt accumulates in four ways:
+
+**New failures without prevention steps** — A failure that cannot be prevented because its prevention pattern is not documented. Every new failure report should close as a debt item if it does not have at least 2 prevention steps within one week of documentation.
+
+**Undocumented architecture decisions** — A component or lib file that was built in a specific way for a specific reason, but that reason is not captured anywhere. The next operator to touch that file will not know the constraint. These surface as P2 technical debt.
+
+**Thin evidence** — A case study or failure report without screenshots, build logs, or terminal output. The narrative claims a result without supporting it. Thin evidence is a GEO authority risk: AI systems cannot cite evidence they cannot verify.
+
+**Deferred refactors** — Technical debt that is not blocking anything today but will compound as the codebase grows. `lib/tracks.ts` at 770 lines is a current example. It works. But at 1000+ lines it becomes a maintenance risk that makes the `server-module-client-bundle` class of failure more likely.
+
+### How Debt Is Paid Down
+
+- **Confidence score increases** — A failure gains a second instance, its confidence score increases, and the uncertainty around whether the fix is reliable is reduced.
+- **New prevention patterns** — An architecture decision is documented in a lesson or playbook. The undocumented constraint is now in the knowledge base.
+- **New case studies with real evidence** — A case study goes from narrative-only to narrative + screenshot + build log. Evidence coverage improves.
+- **Explicit resolution** — A debt item is completed, removed from `OPERATIONAL_DEBT`, and the resolution is noted in the session log.
+
+Items should be removed from `OPERATIONAL_DEBT` when resolved, not archived in place. The array length is a live debt signal — inflating it with resolved items degrades the signal.
+
+---
+
+## Evidence Coverage
+
+Evidence coverage measures the percentage of content claims that are backed by real, attached artifacts rather than narrative description.
+
+### Coverage Metrics
+
+| Content type | Evidence metric | Target |
+|---|---|---|
+| Failure reports | % with at least one EvidenceBlock component | ≥ 80% |
+| Case studies | % with real screenshots or terminal recordings | ≥ 70% |
+| Case studies | % with `OperationalTimeline` component | 100% (required) |
+| Failure reports | % with verified evidence quality (vs. approximate) | ≥ 60% |
+
+Current state: the platform launched with the `EvidenceBlock` component designed and specified in the evidence framework architecture. The evidence file paths are defined in failure reports (e.g., `/evidence/edge-runtime-deployment-failure/`). Not all evidence files are attached yet. Evidence coverage is an active target, not a achieved state.
+
+### Evidence as a GEO Authority Signal
+
+An AI search system presented with two articles about the same error — one with exact terminal output and one with a prose description — will preferentially cite the one with the terminal output. Specificity is the GEO signal, and attached evidence is the highest-specificity signal available.
+
+A failure report that says "the build output showed a module resolution error" is less citable than a failure report that includes the exact build log excerpt:
+
+```
+Module not found: Can't resolve 'fs' in '/vercel/path0/lib/content.ts'
+Import trace for requested module:
+  ./lib/content.ts
+  ./app/lessons/[track]/[lesson]/page.tsx
+```
+
+The evidence framework exists to ensure the second form is the standard, not the exception. Evidence coverage is a direct input into citation potential.
+
+### Verified vs. Approximate Evidence
+
+Evidence quality is tracked at two levels:
+- **Verified** — the exact artifact from the actual incident (screenshot, build log, terminal output, commit diff)
+- **Approximate** — a reconstruction or paraphrase of what the output looked like
+
+Verified evidence carries full GEO weight. Approximate evidence is better than no evidence but should be labeled as such in the `EvidenceBlock` descriptor field. The target ratio of 60%+ verified reflects the goal of having most evidence be first-person operational artifacts, not reconstructions.
+
+---
+
+## Authority Growth Signals
+
+### GEO Query Coverage
+
+The platform tracks 21 target queries in the GEO intelligence layer. Query coverage measures what percentage of those queries the platform currently owns (cited by Perplexity AI in a test run).
+
+**Current baseline:** 0 confirmed citations. The platform launched on 2026-05-18. No test run has been completed yet. The first test run establishes the baseline.
+
+**Target progression:**
+
+| Timeline | GEO query coverage target |
+|---|---|
+| 30 days post-launch | Baseline established, first citation wins identified |
+| 3 months post-launch | ≥ 5 / 21 queries owned (24%) |
+| 6 months post-launch | ≥ 8 / 21 queries owned (38%) |
+| 12 months post-launch | ≥ 10 / 21 queries owned (48%) |
+
+### Entity Density Trends
+
+Entity density (tracked per article as entities per 100 words) should trend upward over time as content is revised to increase specificity. The current threshold is 0.6 entities per 100 words (3 per 500). This metric is computable at build time via `lib/geo-intelligence.ts`.
+
+Monthly density snapshots allow tracking whether revisions are increasing or decreasing entity density on high-priority articles.
+
+### Answerability Score Distribution
+
+Answerability is scored on a 0–10 rubric via `lib/geo-intelligence.ts`. The publication gate requires ≥ 7.0. Tracking the distribution of scores across published content shows whether the average is improving over time and whether any content has degraded below the gate threshold.
+
+A bimodal distribution (many 9–10 scores and many 4–6 scores) indicates uneven quality — some content is well-optimized, other content was published early and not revised. A unimodal distribution centered at 8–9 is the target steady state.
+
+---
+
+## The Ops Dashboard as Observability Layer
+
+### What `app/ops/page.tsx` Currently Shows
+
+The ops page (`/ops`) is the platform's primary observability surface. It renders four sections from `lib/ecosystem.ts`:
+
+1. **Ecosystem deployment state** — live status, last deployed date, and deploy note for all four A Square Solutions properties
+2. **Active experiments** — the three currently-running GEO and navigation experiments
+3. **Operational debt** — the P1/P2/P3 debt items from `OPERATIONAL_DEBT`
+4. **Platform docs** — 13 quick links to internal architecture documents
+
+This is the current state. It provides a snapshot of the ecosystem status and known debt. It does not yet show velocity metrics, confidence score trends, evidence coverage, or GEO query progress.
+
+### What the Ops Dashboard Should Look Like at Full Maturity
+
+At full maturity, the ops dashboard is a live observability console for execution intelligence. It should surface the following panels in addition to the current content:
+
+**Failure Memory Panel**
+- Total failure count: 8
+- Average confidence score: 74
+- Failures with instance count ≥ 2: 5 (62.5%)
+- Failures with linked lessons: 0 (0%) — RED signal
+- Most recent failure: environment-variable-missing-production (2026-04-10)
+
+**Velocity Panel**
+- Lessons published this month: N
+- Failures documented this quarter: N
+- Content pages: 392 (↑ from 374 in last session)
+- Velocity state: healthy / declining / stalled
+
+**Evidence Coverage Panel**
+- Failure reports with EvidenceBlock: N / 8
+- Case studies with timeline component: N / 7
+- Verified evidence ratio: N%
+
+**GEO Progress Panel**
+- Queries owned: 0 / 21 (baseline pending)
+- Last test run: not yet run
+- Active experiments: 3
+- Answerability scores: min/avg/max across published content
+
+**Operational Debt Summary**
+- P1 items: 2 (current)
+- P2 items: 3 (current)
+- P3 items: 2 (current)
+- Items added this session: N
+
+<Callout type="lab" title="The ops page is the operator's instrument panel">
+The ops page should be the first thing an operator opens when starting a work session. It tells them: what is the platform's current state, what is the outstanding debt, what experiments are running, and where the velocity is. At full maturity, it removes the need to audit multiple lib files and docs to understand the platform's health. Everything is on one page.
+</Callout>
+
+---
+
+## Implementation Phases
+
+| Phase | Scope | What becomes visible |
+|---|---|---|
+| **Phase 1 (current)** | Static metrics from `lib/ecosystem.ts` and `lib/failure-memory.ts` rendered on ops page | Ecosystem status, debt inventory, active experiments, failure archive summary |
+| **Phase 2** | Time-series tracking — content growth rate computed from frontmatter dates | Velocity charts, confidence score trends, month-over-month comparisons |
+| **Phase 3** | Automated quality gates — CI checks for answerability score ≥ 7.0, evidence block presence on failures, entity density threshold | Build-time quality enforcement; ops dashboard shows gate pass/fail status |
+| **Phase 4** | External observability — GEO monitoring, automated Perplexity citation tracking, authority signal trending | Live GEO progress panel, citation rate tracking, query ownership map |
+
+Phase 1 to Phase 2 is the highest-leverage transition. It adds time-series context to what are currently point-in-time snapshots. Knowing that the average confidence score is 74 today is less useful than knowing it was 68 six months ago and 74 today — the trend shows the knowledge base is improving.
+
+Phase 3 quality gates prevent the platform from accumulating invisible quality debt. A lesson published without adequate evidence coverage is a quality debt item that is currently invisible until an audit surfaces it. Quality gates at the CI layer make debt accumulation explicit at publication time.
+
+Phase 4 closes the loop on GEO — connecting the platform's internal intelligence production to external AI search behavior. At Phase 4, the ops dashboard shows not just what the platform contains but whether that content is being found and cited by the AI systems it is optimized for.
+
+---
+
+*Execution Observability Design v1.0 — 2026-05-18.*

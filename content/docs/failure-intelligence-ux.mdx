@@ -1,0 +1,280 @@
+---
+title: "Failure Intelligence UX"
+description: "Upgrading the Failure Archive into an interactive debugging intelligence layer: confidence indicators, pattern clusters, recovery chain tracing, and debugging sequence visualization."
+date: "2026-05-18"
+tags: ["failures", "ux", "debugging", "intelligence", "patterns", "confidence", "architecture"]
+status: published
+noindex: true
+---
+
+The Failure Archive currently has 8 entries. Each is a well-structured incident report: root cause, resolution steps, prevention patterns, ecosystem impact. Read individually, they are useful. An operator who has read `failure:edge-runtime-deployment-failure` will not spend 23 minutes on the same Edge Runtime crypto error.
+
+But a collection of 8 incident reports is not a debugging intelligence layer. An incident log records what happened. A debugging intelligence layer tells you what to do next — and it does this faster than reading, because it has already synthesized the patterns, scored the confidence, and mapped the recovery chain before you arrive.
+
+This document defines the UX upgrade that transforms the Failure Archive from a readable collection into an interactive debugging object: confidence-scored, pattern-classified, cross-referenced to its prevention chain, and structured for replicable debugging.
+
+---
+
+## From Incident Log to Debugging Intelligence
+
+An incident log is sequential and passive. You go in, you find the entry, you read it, you extract what you need. The quality of the output depends on the quality of your reading and synthesis. The system has no opinion about what is most important or most relevant to your current debugging context.
+
+A debugging intelligence layer is active and contextual. It meets you where you are:
+
+- You arrive at the archive with a specific error. The system identifies the pattern and surfaces the highest-confidence debugging path.
+- You are reviewing the archive to understand your platform's failure profile. The system shows pattern clusters, instance counts, and confidence scores as a structured overview.
+- You are updating your runbook before a production deployment. The system surfaces the prevention checklist for each relevant pattern, not the full incident narrative.
+
+The 8 failure entries in the current archive are well-documented. They contain structured metadata through the `FailureIntelligence` component. The upgrade is in how that metadata is surfaced in the UX — not in adding new data, but in making the existing data operational.
+
+**What changes:**
+- Every failure entry displays its confidence score as a prominent, visual signal
+- The archive listing offers a pattern cluster view in addition to the chronological list
+- Each failure has a structured debugging sequence alongside the prose narrative
+- Impact relationships and blast radius are visible at a glance, before reading
+
+**What stays the same:**
+- The full incident narrative — the prose story of what happened, how it was diagnosed, what was fixed
+- The `FailureIntelligence` component metadata
+- The prevention patterns, related failures, and ecosystem impact fields
+
+The intelligence layer is additive. It makes the existing documentation more accessible under time pressure, not different in substance.
+
+---
+
+## Confidence Indicators
+
+Every failure entry should display its confidence score (0–100) prominently — as the first signal the operator sees, above the incident narrative.
+
+**Scoring factors and current archive scores:**
+
+| Failure | Confidence | Primary Gap |
+|---|---|---|
+| `failure:edge-runtime-deployment-failure` | 78 | Single documented instance |
+| `failure:server-module-client-bundle` | 75 | Single instance; clear root cause |
+| `failure:environment-variable-missing-production` | 71 | High repeat risk reduces score |
+| `failure:wordpress-rest-api-auth-failure` | 68 | High repeat risk; limited lesson coverage |
+| `failure:vite-github-pages-spa-routing` | 65 | High repeat risk; single instance |
+| `failure:next-mdx-remote-v6-blockjs` | 62 | Medium repeat risk; hours recovery |
+| `failure:dns-subdomain-propagation-delay` | 60 | High repeat risk; no controlling fix |
+| `failure:ga4-cross-domain-tracking-gap` | 55 | Low severity; medium repeat risk; delayed detection |
+
+**Color coding:**
+- Green (>=80): Battle-tested fix. Multiple confirmed instances. Deterministic root cause. The debugging path is reliable enough to follow without deviation.
+- Yellow (60–79): Documented fix. Limited instances — typically one confirmed resolution. The fix is believed correct but confidence in its generality is limited.
+- Red (&lt;60): Single instance or uncertain resolution path. Follow the documented debugging steps, but invest more in active investigation rather than assuming the documented fix applies directly.
+
+**Operator calibration from confidence scores:**
+
+A confidence-90 failure means: follow the documented fix. Invest 15 minutes. If the fix does not resolve the failure within that window, the current instance may have a different root cause than the documented one.
+
+A confidence-55 failure means: use the documented debugging path as a starting point, not a script. This is a single-instance record. Investigate actively. Document what you find — a second instance with a different debugging path will raise the confidence score for future operators.
+
+<callout type="info" title="Confidence is not severity">
+A high-confidence failure is not necessarily low-severity. `failure:edge-runtime-deployment-failure` is high-severity (blocks all deployments) and moderate-confidence (78 — single instance). The confidence score says how reliable the fix is, not how bad the failure is. Operators calibrate their debugging investment from confidence; they calibrate their response urgency from severity.
+</callout>
+
+---
+
+## Pattern Cluster Display
+
+The archive listing currently shows failures in chronological order. This is the right default for discovering what has been documented. But for a developer arriving with a specific error, or an operator reviewing the archive's failure profile, the chronological view is the wrong view.
+
+The pattern cluster view groups failures by the 5 recurring patterns identified in the Failure Pattern Library:
+
+| Pattern | Members | Avg Confidence | Last Occurrence |
+|---|---|---|---|
+| Module Boundary Violations | 2 | 76 | 2026-05-14 |
+| Runtime Environment Scope Drift | 2 | 74 | 2026-05-14 |
+| Authentication Encoding Pitfalls | 2 | 61 | 2026-05-18 |
+| Dependency Default Behavioral Changes | 1 | 62 | 2026-05-14 |
+| Infrastructure Timing Dependencies | 1 | 60 | 2026-05-14 |
+
+**Patterns with 2 instances are "recurring."** They have:
+- Merged prevention checklists (both instances contribute specific steps)
+- Higher average confidence than single-instance failures (two confirmed resolutions)
+- A named pattern definition with diagnostic shortcuts
+
+The UX distinction between recurring and single-instance patterns should be visual and immediate. A recurring pattern has a badge or indicator. A single-instance failure is clearly marked as having one documented occurrence.
+
+**Why pattern clustering matters for the archive listing:**
+
+A developer arriving with `Module not found: Can't resolve 'fs'` can jump directly to the Module Boundary Violations cluster. Both members — `failure:server-module-client-bundle` and `failure:edge-runtime-deployment-failure` — are immediately visible with their confidence scores. The operator can compare the two entries and identify which matches their specific symptom before reading either in full.
+
+This reduces time-to-correct-failure-entry from "scan 8 entries" to "identify pattern, look at 2 entries."
+
+<callout type="lab" title="Pattern view as 30-second triage">
+The pattern cluster view should answer "where do this platform's failures concentrate?" in 30 seconds. Five patterns, 8 entries, confidence scores, last-occurrence dates. An operator who spends 30 seconds on the pattern view knows: Module Boundary and Runtime Scope Drift are the dominant pattern families, Authentication Encoding has two recent instances, and no single-instance pattern has recurred yet. That is the entire failure profile. The chronological view cannot surface this without reading and synthesizing.
+</callout>
+
+---
+
+## Debugging Sequence Visualization
+
+Each failure entry has a prose narrative that tells the story of the debugging process. This is valuable for understanding — it provides context, decision rationale, and the texture of what the debugging session felt like. It is not optimal for replication.
+
+The debugging sequence visualization extracts the replicable structure from the narrative: a step-by-step timeline that a second operator can follow without reading the full incident account.
+
+**Sequence structure:**
+
+1. **Symptom** — what the operator observed first (e.g., "Vercel deployment failed, build log shows Edge Runtime crypto error")
+2. **Initial hypothesis** — the first diagnostic direction (e.g., "Assumed Next.js version incompatibility")
+3. **Elimination steps** — what was checked and ruled out, and why (e.g., "Checked next.config.js — no changes. Checked package.json — no version changes.")
+4. **Root cause identification** — the specific discovery that confirmed the cause (e.g., "Identified `export const runtime = 'edge'` in opengraph-image.tsx; next/og uses crypto internally")
+5. **Verified fix** — the exact action taken (e.g., "Removed edge runtime export; reverted to default Node.js runtime")
+6. **Prevention** — the specific steps added to the runbook after resolution
+
+This connects to the `DebugReplay` and `WorkflowTimeline` components already in the component library. `DebugReplay` renders a timeline of investigation steps with useful/not-useful markers. `WorkflowTimeline` renders a multi-step operational sequence. Both are available for use without new infrastructure.
+
+**What the sequence visualization achieves that prose cannot:**
+
+A developer actively debugging a production failure cannot read a 1,200-word incident narrative while also watching Vercel logs, checking their import tree, and messaging their team. They need a scannable sequence they can follow in order.
+
+The debugging sequence is that sequence. It is not a summary — it is a structured extraction of the investigation path that can be followed in real time.
+
+<callout type="warn" title="Sequence and narrative are complementary, not alternatives">
+The debugging sequence visualization lives alongside the full incident narrative, not in place of it. The sequence is for active debugging under time pressure. The narrative is for learning — understanding what happened, why, and what it reveals about the system. Both are required; they serve different moments in the operator's relationship to the failure.
+</callout>
+
+---
+
+## Impact Relationships
+
+When a failure occurs, the immediate question is: "What does this break?" The blast radius is often larger than the surface symptom suggests.
+
+Every failure entry should show its ecosystem impact at a glance — before the operator reads the incident narrative. The `getDebugContext()` function returns this from the operational memory graph; the UX renders it as a structured impact summary.
+
+**Current ecosystem impact mapping for the 8 archive entries:**
+
+| Failure | Blast Radius | Systems Affected |
+|---|---|---|
+| `edge-runtime-deployment-failure` | Platform-wide freeze | All Vercel deployments, all content updates |
+| `server-module-client-bundle` | Platform-wide freeze | All Vercel deployments, all features |
+| `environment-variable-missing-production` | Silent feature failure | Specific feature non-functional; automation workflows may silently fail |
+| `next-mdx-remote-v6-blockjs` | Render degradation | All MDX pages with custom components |
+| `wordpress-rest-api-auth-failure` | Automation severance | All REST API automation; WordPress content sync |
+| `dns-subdomain-propagation-delay` | Availability inconsistency | Specific subdomain unavailable for subset of users |
+| `vite-github-pages-spa-routing` | Routing failure | All direct-URL access to non-root routes |
+| `ga4-cross-domain-tracking-gap` | Data quality failure | All cross-property analytics; funnel analysis |
+
+The two deployment failures (`edge-runtime-deployment-failure` and `server-module-client-bundle`) have the largest blast radius: the entire production platform is frozen at last deployed state. Nothing can be updated, fixed, or published until the build is green.
+
+This impact severity is not obvious from the failure title or even from reading the incident narrative at speed. The impact summary makes it immediately visible — which means operators triage correctly from the first moment of diagnosis.
+
+---
+
+## Recovery Chain Tracing
+
+The path from failure to full resolution involves more than applying the fix. A complete recovery has stages: immediate containment, investigation, fix, verification, prevention update. The total operational cost includes all of these.
+
+The recovery chain traces this full path and makes it visible:
+
+**Example: `failure:edge-runtime-deployment-failure`**
+
+| Stage | Action | Time | Outcome |
+|---|---|---|---|
+| Containment | Identified build failure in Vercel dashboard | 0–2 min | Confirmed no new deployment is possible |
+| Investigation | Read build log, identified crypto module error | 2–8 min | Located `export const runtime = 'edge'` in opengraph-image.tsx |
+| Fix | Removed runtime export, committed and pushed | 8–15 min | Build succeeded |
+| Verification | Confirmed successful Vercel deployment, OG image generated | 15–23 min | Feature functional |
+| Prevention update | Added `next build` local check to deployment checklist | Day after | Runbook updated |
+
+**Total: 23 minutes active debugging + runbook update**
+
+Displaying this chain makes the operational cost concrete and plannable. An operator receiving an alert about a deployment failure knows before reading the incident: "This failure type takes approximately 23 minutes to resolve if I follow the documented path. I need to clear 30 minutes."
+
+Without the recovery chain, the operator estimates. With it, they plan.
+
+The `WorkflowTimeline` component renders this structure. The implementation requires extracting the staged recovery data from the incident narrative into typed fields — the same way the `DebuggingLineage` structure defined in `lib/failure-memory.ts` structures the investigation steps.
+
+---
+
+## Recurring Pattern Clusters on the Archive Listing
+
+The archive listing page should present two views, switchable via a tab or toggle:
+
+**View 1: Chronological list (current default)**
+All 8 entries in reverse-chronological order. Failure title, date, severity badge, confidence score, resolution time. This is the discovery view — for operators who want to browse the full archive or find a specific recent entry.
+
+**View 2: Pattern cluster view**
+Failures grouped under their 5 pattern families, sorted by instance count (recurring patterns first). Each cluster shows:
+- Pattern name and definition summary (one sentence)
+- Member failures as linked entries with confidence scores
+- Instance count badge (recurring at >=2, with a visual indicator)
+- Average confidence for the pattern
+- Last occurrence date
+
+The pattern cluster view is the operational intelligence view — for operators who want to understand the platform's failure profile in aggregate, or for operators using pattern recognition to triage an active debugging session.
+
+**Cluster view layout:**
+
+```
+Module Boundary Violations                    [2 instances] [avg. confidence: 76]
+  ├── Node.js fs Module Pulled into Client Bundle         confidence: 75
+  └── Edge Runtime Deployment Failure                     confidence: 78
+
+Runtime Environment Scope Drift               [2 instances] [avg. confidence: 74]
+  ├── Edge Runtime Deployment Failure                     confidence: 78
+  └── Missing Production Environment Variable            confidence: 71
+
+Authentication Encoding Pitfalls             [2 instances] [avg. confidence: 61]
+  ├── WordPress REST API Authentication Failure           confidence: 68
+  └── GA4 Cross-Domain Tracking Gap                       confidence: 55
+
+Dependency Default Behavioral Changes         [1 instance]  [confidence: 62]
+  └── next-mdx-remote v6 blockJS Default                  confidence: 62
+
+Infrastructure Timing Dependencies            [1 instance]  [confidence: 60]
+  └── Subdomain DNS Propagation Delay                      confidence: 60
+```
+
+Note that `failure:edge-runtime-deployment-failure` appears in two pattern families (Module Boundary Violations and Runtime Environment Scope Drift). This is correct — the failure demonstrates both patterns simultaneously. The cluster view should allow entries to appear under multiple pattern families when the failure genuinely exhibits multiple patterns.
+
+---
+
+## The Role of Instance Count
+
+The most operationally significant signal in the failure archive is not severity — it is instance count. This is counterintuitive. Severity describes how bad a failure is. Instance count describes how well understood it is.
+
+A critical failure with one documented instance is less operationally navigable than a medium-severity failure with three documented instances. The critical failure may have a correct fix, but the operator applying it is doing so on limited evidence. The medium failure with three instances has a verified fix — confirmed correct across multiple occurrences — and the operator applying it can do so with high confidence.
+
+**Why instance count drives confidence:**
+
+The confidence scoring rubric allocates 25 of 100 points to documented instances:
+- 1 instance: 10 points
+- 2 instances: 18 points
+- 3+ instances: 25 points
+
+This reflects the empirical reality of debugging: a fix verified once is a hypothesis. A fix verified three times is a procedure. The UX should surface instance counts prominently because they are the most direct indicator of fix reliability — more direct than documentation quality, more direct than recovery complexity.
+
+**What low instance counts should communicate:**
+
+An archive entry with a single documented instance should display a visible signal: "One documented occurrence." Not a warning — just an information signal. Operators encountering a failure that matches this entry know they are applying a fix from limited evidence. They should verify the fix worked before declaring the incident resolved, and they should document their resolution — especially if their debugging path diverged from the documented one.
+
+A second documented instance of a failure pattern is a meaningful event. It means the failure is genuinely recurring, the pattern classification is validated, and the fix has been confirmed a second time. The confidence score updates, the pattern is confirmed as recurring, and future operators have significantly higher confidence in the documented resolution path.
+
+<callout type="success" title="Documenting a second instance is high-value ops work">
+Adding a second documented instance to a single-instance failure entry raises the instance count score from 10 to 18 points, confirms the pattern classification, validates the prevention checklist, and raises the confidence score — making the entire archive more useful for every future operator who encounters that failure type. This is why documenting failures matters even when the fix is known.
+</callout>
+
+---
+
+## What the Upgraded Failure UX Achieves
+
+The baseline requirement for the upgraded failure UX is a specific developer workflow: a developer debugging a production failure should be able to, without synthesizing across multiple documents:
+
+1. **Identify the failure type from the archive in under 2 minutes.** The pattern cluster view + confidence indicators + typed debugging sequences make identification fast. Match symptom to pattern. Find the highest-confidence matching entry. Read the debugging sequence (not the full narrative) to confirm the match.
+
+2. **Retrieve the highest-confidence debugging path.** The debugging sequence visualization — Symptom → Elimination → Root Cause → Verified Fix — is the replicable path. It is structured for active use under pressure, not for learning.
+
+3. **Understand the pattern to avoid future recurrences.** The pattern family link gives the operator the full pattern definition, the consolidated prevention checklist, and all other instances. Understanding the pattern — not just the incident — is the durable value.
+
+4. **Find the prevention steps for their runbook.** The prevention patterns from the `FailureIntelligence` component, surfaced in the debug context panel, are the specific actions to add to deployment checklists and pre-commit procedures. They are already extracted and formatted; the UX just needs to make them findable.
+
+This four-step workflow should complete in under 10 minutes for any failure type in the archive. Currently, it requires reading the full incident narrative, the `FailureIntelligence` component metadata, and the related failure links — and synthesizing across them. The upgraded UX surfaces the required information in the correct format for each step, without requiring synthesis.
+
+The 8 current archive entries, with their 5 pattern families and confidence scores ranging from 55 to 78, represent a platform that has documented its failure profile in enough detail to make this upgrade possible without adding new content. The intelligence is already in the data. The UX upgrade makes it operational.
+
+---
+
+*Failure intelligence UX v1.0 — 2026-05-18. Implementation dependency: failure-intelligence-architecture.mdx, failure-memory-architecture.mdx, failure-pattern-library.mdx.*
