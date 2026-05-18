@@ -3,6 +3,8 @@ import type { Metadata } from 'next'
 import { CONTENT_TEMPLATES, getCapturePriorityOrder } from '@/lib/content-templates'
 import { getAllMeta } from '@/lib/content'
 import { getFailureMemorySummary } from '@/lib/failure-memory'
+import { getHighPrioritySignals, type OperationalSignal } from '@/lib/operational-signals'
+import { getPublishingPulse } from '@/lib/publishing-pulse'
 import { formatDateMono, cn } from '@/lib/utils'
 
 export const metadata: Metadata = {
@@ -131,9 +133,58 @@ function RecentlyPublished() {
 // Page
 // ─────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────
+// Priority capture queue (top signals that need content)
+// ─────────────────────────────────────────────────────────────
+
+const SIGNAL_PRIORITY_COLORS: Record<string, string> = {
+  critical: 'text-red-400',
+  high:     'text-orange-400',
+  medium:   'text-yellow-400',
+  low:      'text-surface-500',
+}
+
+function PriorityCaptureQueue({ signals }: { signals: OperationalSignal[] }) {
+  if (signals.length === 0) return null
+  return (
+    <div>
+      <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
+        Priority Capture Queue
+      </h2>
+      <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden mb-1">
+        {signals.map(signal => (
+          <div key={signal.id} className="px-4 py-3 flex items-start gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-surface-300 leading-snug">{signal.title}</p>
+              <p className="text-[10px] text-surface-600 mt-0.5 leading-relaxed truncate">
+                {signal.actionableHint}
+              </p>
+            </div>
+            <div className="shrink-0 flex items-center gap-2">
+              <span className={cn('text-[10px] font-mono capitalize', SIGNAL_PRIORITY_COLORS[signal.priority])}>
+                {signal.priority}
+              </span>
+              {signal.template && (
+                <span className="text-[10px] font-mono text-surface-700 bg-surface-900/60 border border-white/[0.04] rounded px-1.5 py-0.5">
+                  {signal.template}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <Link href="/ops/signals" className="text-[11px] font-mono text-surface-700 hover:text-brand-400 transition-colors">
+        All signals →
+      </Link>
+    </div>
+  )
+}
+
 export default function PublishPage() {
-  const priorityOrder = getCapturePriorityOrder()
+  const priorityOrder  = getCapturePriorityOrder()
   const failureSummary = getFailureMemorySummary()
+  const topSignals     = getHighPrioritySignals('high').slice(0, 5)
+  const pulse          = getPublishingPulse()
 
   return (
     <div className="px-6 lg:px-8 py-8 max-w-5xl">
@@ -212,8 +263,29 @@ export default function PublishPage() {
           </div>
         </div>
 
-        {/* Right — recent + links */}
+        {/* Right — signals + pulse + recent + links */}
         <div className="space-y-6">
+
+          {/* Priority capture queue */}
+          <PriorityCaptureQueue signals={topSignals} />
+
+          {/* Section pulse */}
+          <div>
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
+              Section Cadence
+            </h2>
+            <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
+              {pulse.sections.map(s => (
+                <div key={s.section} className="flex items-center gap-3 px-4 py-2.5">
+                  <span className="text-[10px] font-mono text-surface-600 flex-1">{s.label}</span>
+                  <span className="text-[10px] font-mono text-surface-700">{s.totalItems}</span>
+                  <span className={cn('text-[10px] font-mono w-14 text-right', s.healthColor)}>
+                    {s.daysSinceLast !== null ? `${s.daysSinceLast}d ago` : 'empty'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <RecentlyPublished />
 

@@ -12,6 +12,8 @@ import {
 } from '@/lib/ecosystem'
 import { getFailureMemorySummary, getPatternCoverage } from '@/lib/failure-memory'
 import { getMemoryGraphSummary } from '@/lib/operational-memory'
+import { getSignalSummary } from '@/lib/operational-signals'
+import { getPublishingPulse } from '@/lib/publishing-pulse'
 import { SECTION_META, ACCENT_CLASSES, formatDateMono, cn } from '@/lib/utils'
 import { ReadingQueue } from '@/components/platform/reading-queue'
 
@@ -158,6 +160,10 @@ export default function OpsPage() {
   const patternCoverage = getPatternCoverage()
   const memorySummary   = getMemoryGraphSummary()
 
+  // Operational signals + publishing pulse
+  const signalSummary   = getSignalSummary()
+  const pulse           = getPublishingPulse()
+
   // Draft count (dev only)
   const drafts = allSectionData.flatMap(({ section, items }) =>
     items.filter(i => i.frontmatter.status === 'draft').map(i => ({ ...i, section }))
@@ -201,6 +207,22 @@ export default function OpsPage() {
             <span className="text-[10px] font-mono text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded px-2 py-0.5">
               {ecosystemSummary.p1Debt} P1 debt item{ecosystemSummary.p1Debt > 1 ? 's' : ''}
             </span>
+          )}
+          {signalSummary.high > 0 && (
+            <Link
+              href="/ops/signals"
+              className="text-[10px] font-mono text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded px-2 py-0.5 hover:bg-orange-500/20 transition-colors"
+            >
+              {signalSummary.high} signal{signalSummary.high > 1 ? 's' : ''} need attention →
+            </Link>
+          )}
+          {signalSummary.high === 0 && signalSummary.total > 0 && (
+            <Link
+              href="/ops/signals"
+              className="text-[10px] font-mono text-surface-600 hover:text-surface-400 transition-colors"
+            >
+              {signalSummary.total} signal{signalSummary.total > 1 ? 's' : ''} →
+            </Link>
           )}
           {streak > 1 && (
             <span className="text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-0.5">
@@ -688,6 +710,68 @@ export default function OpsPage() {
             </div>
           </div>
 
+          {/* Operational signals */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600">
+                Operational Signals
+              </h2>
+              <Link href="/ops/signals" className="text-[10px] font-mono text-surface-700 hover:text-brand-400 transition-colors">
+                all signals →
+              </Link>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
+              {[
+                { label: 'Total signals',     value: signalSummary.total,  color: 'text-surface-400' },
+                { label: 'High priority',     value: signalSummary.high,   color: signalSummary.high > 0 ? 'text-orange-400' : 'text-green-400' },
+                { label: 'Medium',            value: signalSummary.medium, color: 'text-yellow-400' },
+                { label: 'Unscored failures', value: signalSummary.byType?.unscored_failure ?? 0, color: signalSummary.byType?.unscored_failure ? 'text-red-400' : 'text-green-400' },
+                { label: 'Low confidence',    value: signalSummary.byType?.low_confidence_fix ?? 0, color: signalSummary.byType?.low_confidence_fix ? 'text-yellow-400' : 'text-green-400' },
+                { label: 'Pattern gaps',      value: signalSummary.byType?.pattern_gap ?? 0, color: signalSummary.byType?.pattern_gap ? 'text-orange-400' : 'text-green-400' },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="flex items-center justify-between px-4 py-2.5">
+                  <p className="text-[10px] text-surface-600">{label}</p>
+                  <span className={cn('text-[11px] font-mono font-semibold', color)}>{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Publishing pulse */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600">
+                Publishing Pulse
+              </h2>
+              <Link href="/publish" className="text-[10px] font-mono text-surface-700 hover:text-brand-400 transition-colors">
+                publish →
+              </Link>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
+              {pulse.sections.map(s => (
+                <Link
+                  key={s.section}
+                  href={`/${s.section}`}
+                  className="group flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.02] transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-mono text-surface-500 group-hover:text-surface-300 transition-colors">{s.label}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[10px] font-mono text-surface-700">{s.totalItems}</span>
+                    <span className={cn('text-[10px] font-mono', s.healthColor)}>{s.healthLabel}</span>
+                  </div>
+                </Link>
+              ))}
+              <div className="flex items-center justify-between px-4 py-2.5">
+                <p className="text-[10px] text-surface-600">Last 7 days</p>
+                <span className={cn('text-[11px] font-mono font-semibold', pulse.publishedLast7Days > 0 ? 'text-green-400' : 'text-surface-600')}>
+                  {pulse.publishedLast7Days} published
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* Analytics env status */}
           <div>
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
@@ -757,6 +841,8 @@ export default function OpsPage() {
               <div>
                 <p className="text-[9px] font-mono uppercase tracking-widest text-surface-700 mb-1.5 px-1">Navigation</p>
                 <div className="space-y-1">
+                  <QuickAction href="/publish"     label="Publish"           badge={`${signalSummary.total} signals`} />
+                  <QuickAction href="/ops/signals" label="Operational Signals" badge={signalSummary.high > 0 ? `${signalSummary.high} high` : `${signalSummary.total}`} />
                   <QuickAction href="/start-here"  label="Start Here" />
                   <QuickAction href="/pathways"    label="Execution Pathways" badge="5" />
                   <QuickAction href="/syndicate"   label="Syndication" />

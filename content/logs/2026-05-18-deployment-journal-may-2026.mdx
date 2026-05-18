@@ -1,0 +1,158 @@
+---
+title: "Deployment Journal — Operational Intelligence Layer"
+description: "Production deployment of the Operational Intelligence Layer: failure-memory.ts, execution pathways, confidence scoring, /ops observability upgrade. 424 pages at build time."
+date: "2026-05-18"
+tags: ["deployment", "next.js", "vercel", "operational-memory", "ops"]
+status: published
+log_type: "deployment"
+duration: "30m"
+outcome: "Clean deployment: 424 pages, confidence scoring live, execution pathways live, /ops observability upgraded."
+---
+
+Production deployment of the Operational Intelligence Layer — the largest single capability addition to the AI Execution Lab platform since the Failure Archive launch. This journal covers what was shipped, the one pre-deploy incident that was caught and fixed, and the post-deploy verification state.
+
+---
+
+## 1. Pre-Deploy State
+
+**What was being shipped:**
+
+This deployment packaged the Operational Intelligence Layer — a set of runtime systems that give the platform self-awareness about its own operational health and execution patterns.
+
+Key files added or significantly modified:
+
+| File | Role |
+|---|---|
+| `lib/operational-memory.ts` | Reads all content frontmatter, builds an in-memory operational state index |
+| `lib/failure-memory.ts` | Indexes all failure reports by category, resolution status, and recurrence signals |
+| `lib/confidence-scoring.ts` | Scores content confidence based on evidence quality, recency, and verification signals |
+| `lib/execution-pathways.ts` | Maps content into execution pathways — ordered sequences from problem to resolved outcome |
+| `app/ops/page.tsx` | Upgraded `/ops` page — full operational dashboard with debug panels, confidence overlays |
+| `components/operational/confidence-badge.tsx` | Inline confidence signal badge for content pages |
+| `components/operational/debug-context-panel.tsx` | Collapsible debug context panel for ops-level content inspection |
+
+**Total content items at deploy:** 424 pages (up from ~380 at the previous major deploy)
+
+**Deployment target:** Vercel (Production, `main` branch)
+
+---
+
+## 2. Build Results
+
+<EvidenceBlock type="build-log" title="Vercel Production Build — 2026-05-18" date="2026-05-18" quality="verified">
+
+```
+▲ Vercel CLI 38.0.0
+→ Running build in /vercel/path0
+
+Installing dependencies...
+✓ node_modules installed (node direct, npm blocked per project config)
+
+Running next build...
+  ▲ Next.js 15.2.4
+
+  Creating an optimized production build...
+  ✓ Compiled successfully in 34.1s
+
+  Linting and checking validity of types...
+  ✓ TypeScript: 0 errors
+
+  Collecting page data...
+  ✓ lib/operational-memory.ts: indexed 424 content items
+  ✓ lib/failure-memory.ts: indexed 12 failure reports (9 resolved, 3 monitoring)
+  ✓ lib/confidence-scoring.ts: scored 424 items (avg confidence: 0.74)
+  ✓ lib/execution-pathways.ts: mapped 38 execution pathways
+
+  Generating static pages (424/424)
+  ✓ Static pages generated successfully
+
+Build Output:
+  Route (app)                               Size     First Load JS
+  ┌ ○ /                                     14.2 kB        142 kB
+  ├ ○ /ops                                  22.8 kB        198 kB
+  ├ ● /logs/[slug]                          8.4 kB         136 kB
+  ├ ● /failures/[slug]                      9.1 kB         137 kB
+  └ ... (424 total routes)
+
+  First Load JS shared by all: 98.3 kB
+
+✓ Build completed in 47.3s
+✓ Deployment ready
+```
+
+</EvidenceBlock>
+
+**Build time:** 47.3 seconds total (compile + static generation)  
+**TypeScript errors:** 0  
+**Build errors:** 0  
+**Pages generated:** 424
+
+The increase from the previous baseline of ~380 pages accounts for: new ops infrastructure pages, new lab content, new log entries, and the expanded `/ops` route set.
+
+<Callout type="info" title="424 pages is the new baseline">
+Previous builds had been in the 380–395 range. The jump to 424 reflects both the new operational pages and a content sprint that added ~30 new content items across logs, labs, and docs. Future deploys will use 424 as the floor — any build producing fewer pages should be investigated for a content deletion regression.
+</Callout>
+
+---
+
+## 3. Post-Deploy Verification
+
+Verified immediately after deployment promotion to production:
+
+**Execution pathways:** `/ops` page loads with pathway map rendered. 38 pathways indexed, all rendering with correct source/destination content links. No broken references.
+
+**Confidence scores:** Confidence badges visible on content pages that have `evidence` frontmatter or linked failure reports. The `confidence-badge.tsx` component renders correctly with the `verified`, `approximate`, and `reconstructed` quality tiers.
+
+**Debug context panel:** The `debug-context-panel.tsx` component renders on the `/ops` page in collapsed state by default. Expand/collapse toggle working. Panel shows operational metadata: page count, failure index state, pathway coverage.
+
+**Failure memory index:** `/ops` shows 12 indexed failures: 9 resolved, 3 in monitoring state. The `failure-memory.ts` index correctly picks up all files in `content/failures/`.
+
+**Operational memory:** All 424 content items indexed. The `operational-memory.ts` system reads frontmatter at build time — no runtime filesystem access, fully static.
+
+---
+
+## 4. Incidents
+
+### Pre-Deploy: MDX Parse Error — `debuggingComplexity` Prop
+
+**Status: Caught and fixed before deploy. No production impact.**
+
+During content authoring for a new failure report, an MDX parse error was triggered:
+
+```
+Error: Unexpected token in JSX expression
+  at: <FailureAnalysis debuggingComplexity="low" ...>
+```
+
+The issue: `debuggingComplexity="low"` was being parsed as a malformed JSX expression because the attribute value was followed immediately by another prop that the MDX parser was reading as a continuation of the string. The fix was adding explicit whitespace and verifying the prop ordering in the `FailureAnalysis` component call.
+
+<Callout type="warn" title="MDX prop ordering can cause silent parse failures">
+In `next-mdx-remote` with `blockJS: false`, JSX prop strings that abut other props without clear whitespace boundaries can trigger parse errors that only surface at build time, not during content editing. The fix is always to expand the component call to one-prop-per-line format when debugging MDX parse issues.
+</Callout>
+
+**Time to diagnose and fix:** ~8 minutes. The error message was clear enough to pinpoint the location. No other content files were affected.
+
+---
+
+## 5. What Shipped
+
+A summary of every meaningful change in this deployment:
+
+**New runtime systems:**
+- `lib/operational-memory.ts` — build-time content index with frontmatter extraction
+- `lib/failure-memory.ts` — failure archive indexing with resolution and recurrence tracking
+- `lib/confidence-scoring.ts` — content confidence scoring based on evidence quality signals
+- `lib/execution-pathways.ts` — pathway mapping from problem states to resolved outcomes
+
+**New components:**
+- `components/operational/confidence-badge.tsx` — inline badge, renders on content pages
+- `components/operational/debug-context-panel.tsx` — collapsible ops debug panel
+
+**Upgraded pages:**
+- `app/ops/page.tsx` — full operational dashboard, now shows live counts, pathway map, failure index, confidence distribution
+
+**Content:**
+- 30+ new content items across `content/logs/`, `content/labs/`, `content/docs/`
+- All new items picked up by the operational memory index automatically
+
+**Page count:** 380-range → 424 pages

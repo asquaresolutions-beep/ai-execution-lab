@@ -1,0 +1,166 @@
+---
+title: "GEO Experiment — Entity Density and Answerability Scoring"
+description: "Testing whether structured entity density and explicit answer formatting on asquaresolutions.com key pages increases AI citation frequency. Baseline established, implementation in progress."
+date: "2026-05-18"
+tags: ["geo", "ai-search", "entity-density", "answerability", "seo", "experiment"]
+status: published
+hypothesis: "If we increase entity density and format content for direct answerability on 5 target pages, then citation frequency in Perplexity and ChatGPT search will increase within 30 days."
+result: "ongoing"
+---
+
+Does restructuring existing content for higher entity density and direct answerability change how often AI search systems cite those pages? This experiment tests that question against real pages on asquaresolutions.com — a small business services site in the trust verification and scam detection space.
+
+The experiment is in progress. Baseline has been captured. The first two target pages have been optimized. Measurement window runs through mid-June 2026.
+
+<LessonMeta
+  difficulty="intermediate"
+  implementationTime="45m per page"
+  evidence="Ongoing experiment — A Square Solutions WordPress site, manual AI citation testing"
+/>
+
+---
+
+## 1. Hypothesis
+
+**If** we increase structured entity density (named entities, explicit definitions, Q&A formatting) and direct answerability signals on 5 key pages of asquaresolutions.com,
+
+**Then** those pages will be cited more frequently in Perplexity and ChatGPT responses to relevant queries within 30 days of the changes going live,
+
+**Because** AI retrieval systems prioritize content that directly answers a query with minimal inference burden — pages that contain the answer in an extractable, attributable form are more likely to be surfaced and cited than pages that imply the same information through narrative prose.
+
+The mechanism being tested is not SEO ranking — it is retrieval signal density. A page that scores well on traditional SEO may still be poorly optimized for AI citation if its content requires synthesis to extract a direct answer.
+
+---
+
+## 2. Baseline
+
+Baseline was established between 2026-05-10 and 2026-05-17. The measurement method: run 8 target queries through Perplexity, ChatGPT (GPT-4o web search), and Gemini with web access. Record whether any asquaresolutions.com pages appear in cited sources. Record the query and the citation position when they appear.
+
+<EvidenceBlock type="search-console" title="Pre-optimization citation baseline" date="2026-05-17" quality="approximate">
+
+| AI System | Queries run | asquaresolutions.com cited | Citation rate |
+|---|---|---|---|
+| Perplexity | 8 | 1 | 12.5% |
+| ChatGPT (web) | 8 | 0 | 0% |
+| Gemini (web) | 8 | 1 | 12.5% |
+
+**Queries that produced citations:**
+- "how to check if a website is trustworthy" — Perplexity cited the TrustSeal landing page once, position 4 of 5 sources
+- "website trust score checker" — Gemini cited the TrustSeal landing page, position 3
+
+**Queries that produced no citation:**
+- "scam website detector India"
+- "how to verify if a payment site is safe"
+- "free website reputation checker"
+- "is this website legitimate"
+- "online scam warning signs"
+- "website safety check tool"
+
+</EvidenceBlock>
+
+**Current content structure observations (pre-optimization):**
+
+The target pages are primarily written in narrative marketing prose. Key characteristics that likely reduce AI citation frequency:
+
+- Answers are embedded in multi-sentence paragraphs rather than stated directly in the first sentence of a section
+- Very few explicit entity definitions (the page mentions "trust score" but never defines it in a structured way)
+- No FAQ-style Q&A blocks despite the pages targeting question-type queries
+- Heading structure uses benefit-oriented language ("Protect your business") rather than query-matching language ("How to check if a website is trustworthy")
+- No structured data markup (FAQ schema, HowTo schema) on any of the 5 target pages
+
+<Callout type="info" title="Baseline citation rate is low but not zero">
+The two citations that did appear in the baseline are encouraging — the domain is not being ignored by AI retrieval systems. The hypothesis is that the citations are driven by domain authority signals rather than content answerability. The experiment is testing whether we can increase the citation rate by improving the content signal.
+</Callout>
+
+---
+
+## 3. Implementation
+
+The following content changes are being applied to each target page:
+
+**Entity density changes:**
+- Add a "What is [X]?" definition block near the top of each page (2–3 sentences, direct definition format)
+- Name and define key concepts explicitly: trust score, domain reputation, SSL verification, phishing indicators
+- Add entity-tagged named references where relevant (specific tool names, named processes)
+
+**Answerability changes:**
+- Restructure the first paragraph of each major section to lead with the direct answer, not the setup
+- Add a FAQ section at the bottom of each page with 4–6 questions that match the query patterns observed in Google Search Console
+- Rewrite H2 headings to match question intent where the section answers a specific question (e.g., "How TrustSeal Calculates a Trust Score" instead of "Our Verification Process")
+
+**Structured data:**
+- Add FAQ schema (`application/ld+json`) to each target page using the same Q&A pairs from the FAQ section
+- No HowTo schema in this round — keeping the variable count low for cleaner measurement
+
+**What is not changing:**
+- Page URLs (no redirects, no URL changes)
+- Backlink profile
+- Internal linking structure
+- Page publish dates (updating content, not re-publishing as new)
+
+---
+
+## 4. Target Pages
+
+Five pages selected based on search query volume in Google Search Console and relevance to queries where AI citation is plausible:
+
+1. **TrustSeal landing page** (`/trustseal`) — Primary target. Targets "website trust checker" and "website safety verification" queries. Already receiving 2 AI citations in baseline.
+
+2. **ScamCheck landing page** (`/scamcheck`) — Targets "scam website detector" and "check if website is scam" queries. Zero baseline citations despite high query relevance.
+
+3. **"How to Tell If a Website Is Safe" blog post** — Informational content targeting how-to queries. Currently written as narrative advice. High answerability potential with Q&A restructuring.
+
+4. **Website Trust Score explainer** (`/trust-score-explained`) — Definition-heavy page explaining how trust scores work. Ideal for entity density treatment — the entire page is about defining a concept.
+
+5. **Free vs Pro feature comparison page** — Lower priority for AI citation, included as a partial control. Minimal changes: only FAQ schema added, no content restructuring.
+
+<Callout type="warn" title="Page 5 is a partial control, not a true control">
+Page 5 receives FAQ schema but no content restructuring. This is not a clean control condition — it tests schema markup in isolation. A true control would require leaving a comparable page completely unchanged, which is being maintained by tracking citation rates on three other asquaresolutions.com pages that are receiving no changes in this period.
+</Callout>
+
+---
+
+## 5. Measurement Plan
+
+**Measurement cadence:** Weekly, for 4 weeks (2026-05-25, 2026-06-01, 2026-06-08, 2026-06-15)
+
+**Queries per session:** 8 target queries, same queries as baseline, run through Perplexity, ChatGPT (web search on), and Gemini
+
+**What is recorded per query:**
+- Whether any asquaresolutions.com URL appears in cited sources
+- Which specific page is cited
+- Position in the source list (1st, 2nd, 3rd, etc.)
+- The exact query used
+- The AI system and date
+
+**Limitations acknowledged:**
+- AI citation results are not deterministic — the same query can produce different sources on different runs. Each weekly measurement session is a single sample, not an average
+- ChatGPT web search behavior varies by whether the query triggers a web search at all — some queries are answered from training data with no citation
+- There is no way to know whether changes to asquaresolutions.com have been indexed by the AI systems' web crawlers within a given measurement window
+
+**Confounding factors to monitor:**
+- Any new backlinks to target pages during the experiment window
+- Google Search Console impressions/position changes (to separate ranking effects from citation effects)
+- Any Google algorithm updates during the window that could change crawl frequency
+
+---
+
+## 6. Current Status
+
+**Status: In progress. Baseline captured. Pages 1 and 3 optimized.**
+
+| Page | Baseline captured | Content restructured | FAQ schema added | First post-change measurement |
+|---|---|---|---|---|
+| TrustSeal landing | Yes | Yes | Yes | 2026-05-25 |
+| ScamCheck landing | Yes | No | No | — |
+| "How to Tell If a Website Is Safe" | Yes | Yes | Yes | 2026-05-25 |
+| Trust Score explainer | Yes | No | No | — |
+| Feature comparison (partial control) | Yes | No | Yes | 2026-05-25 |
+
+Pages 2 and 4 are scheduled for optimization this week. The measurement clock starts from when each page's changes are deployed to WordPress — the first measurement for all pages will be 2026-05-25 to allow at least 7 days post-change before measuring.
+
+<Callout type="info" title="Early observation from Page 1 optimization">
+After restructuring the TrustSeal landing page (entity definitions added, first-paragraph answerability rewrite, FAQ section added), an informal test query run on 2026-05-17 showed Perplexity citing the page for "how to check website trust score" — a query that produced no citation in the baseline. This is a single data point, not a result, but it suggests the direction is correct. The formal measurement on 2026-05-25 will establish whether this holds.
+</Callout>
+
+The experiment log will be updated with measurement results as each weekly session completes.

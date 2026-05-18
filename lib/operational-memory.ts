@@ -146,6 +146,23 @@ export const ENTITIES: OperationalEntity[] = [
     date:  '2026-04-05',
   },
 
+  {
+    id:    'failure:claude-code-context-exhaustion',
+    type:  'failure',
+    title: 'Claude Code Context Window Exhaustion Mid-Session',
+    href:  '/failures/claude-code-context-exhaustion',
+    tags:  ['claude-code', 'context', 'workflow', 'ai-assisted', 'session-management'],
+    date:  '2026-05-18',
+  },
+  {
+    id:    'failure:gsc-index-coverage-drop',
+    type:  'failure',
+    title: 'GSC Index Coverage Drop After Noindex Rollout',
+    href:  '/failures/gsc-index-coverage-drop',
+    tags:  ['gsc', 'seo', 'noindex', 'deployment', 'analytics'],
+    date:  '2026-05-18',
+  },
+
   // ── Patterns ──────────────────────────────────────────────
   {
     id:    'pattern:module-boundary-violations',

@@ -1,0 +1,143 @@
+---
+title: "TrustSeal Operations Review — May 2026"
+description: "Monthly operational state of the TrustSeal trust badge platform: deployment health, Firebase usage, Razorpay integration status, and current priorities."
+date: "2026-05-18"
+tags: ["trustseal", "operations", "firebase", "razorpay", "github-pages", "ops"]
+status: published
+log_type: "weekly"
+duration: "45m"
+outcome: "Operational state reviewed: deployment healthy, Razorpay sandbox integration complete, Firebase auth stable, payment flow testing pending."
+---
+
+Monthly operational review for TrustSeal — the AI-powered website trust badge and verification platform at [trustseal.asquaresolution.com](https://trustseal.asquaresolution.com). This review covers deployment health, Firebase service usage, Razorpay payment integration status, and the operational priorities for the next cycle.
+
+<LessonMeta
+  difficulty="intermediate"
+  implementationTime="45m"
+  evidence="Live operational review — TrustSeal production deployment, Firebase console, Razorpay sandbox dashboard"
+/>
+
+---
+
+## 1. Deployment State
+
+**Platform:** GitHub Pages via GitHub Actions CI/CD  
+**URL:** trustseal.asquaresolution.com (custom domain, CNAME configured)  
+**Build tool:** Vite  
+**Last deploy date:** 2026-05-16  
+**Build status:** Passing
+
+The GitHub Actions workflow (`deploy.yml`) triggers on push to `main`. Vite builds to `/dist`, which is published to the `gh-pages` branch. The custom domain is configured via the CNAME file in `/public` — this survives Vite wipes because it's in the static assets folder.
+
+<Callout type="info" title="SPA routing on GitHub Pages requires the 404 redirect trick">
+GitHub Pages serves SPAs by duplicating `index.html` as `404.html`. Any direct URL hit or refresh returns the 404 page, which loads the React app and lets the client router handle the path. This is in place and working. Direct URL navigation to `/dashboard` and `/verify` returns correctly.
+</Callout>
+
+**Build health:** No TypeScript errors, no Vite build warnings currently. Bundle size sits in a reasonable range for a Firebase-connected SPA — the Gemini SDK and Firebase Auth together account for the majority of bundle weight. No action needed.
+
+**Lighthouse (last manual check):** Performance in the 70–82 range on mobile. The main drag is the Firebase SDK initialization on first load. Not a critical issue for a trust verification tool where users expect a brief analysis wait time.
+
+---
+
+## 2. Firebase Operations
+
+**Project:** trustseal-prod (Firebase Spark plan, within free tier limits)
+
+### Authentication
+
+Firebase Auth is the primary auth layer. Current configuration:
+
+- **Email/Password:** Enabled, in use
+- **Google OAuth:** Enabled, in use
+- **Anonymous:** Disabled
+
+Active registered users: in the range of 15–40 (early traction phase, not yet publicly promoted). Auth error rate: negligible — no failed auth events flagged in Firebase console in the last 7 days.
+
+<Callout type="info" title="Auth persistence is set to LOCAL">
+Firebase Auth persistence is configured to `browserLocalPersistence`. Users stay logged in across sessions without re-authenticating. This is intentional for the trust verification use case where users expect to return and see their history.
+</Callout>
+
+### Firestore
+
+Collections in active use:
+
+| Collection | Purpose | Document count (approx) |
+|---|---|---|
+| `users/{uid}` | User profile, tier, usage counters | ~15–40 |
+| `verifications/{id}` | Trust analysis results, linked to user | ~80–200 |
+| `plans/{planId}` | Plan definitions (free, pro) | 2 |
+
+Security rules are set to require `request.auth != null` for all read/write on `users` and `verifications`. The `plans` collection is public read. This is correct and intentional — no auth gaps observed.
+
+Firestore reads and writes are within Spark plan limits. No quota alerts have fired.
+
+### Storage
+
+Firebase Storage is provisioned but **not actively used in the current build.** The initial architecture considered storing screenshot captures of verified sites. That feature was deferred. Storage bucket is empty. No cost.
+
+---
+
+## 3. Payment Integration (Razorpay)
+
+**Status: Sandbox complete. Production payment flow pending.**
+
+Razorpay is integrated for the premium subscription tier (Pro plan). The integration covers:
+
+- Order creation via a Firebase Cloud Function (`createRazorpayOrder`)
+- Payment modal rendered client-side using the Razorpay JS SDK
+- Payment verification handler (`verifyRazorpayPayment`) that checks the signature and updates the user's Firestore record to `tier: "pro"`
+
+### Sandbox Testing
+
+The sandbox integration is complete. Test scenarios completed:
+
+| Scenario | Result |
+|---|---|
+| Successful card payment (test card 4111 1111 1111 1111) | Pass |
+| Payment modal load and dismiss | Pass |
+| Signature verification on backend | Pass |
+| Firestore tier upgrade on success | Pass |
+| Failed payment (test decline card) | Pass — user remains on free tier |
+| Duplicate payment attempt | Pass — handled gracefully |
+
+<Callout type="warn" title="Production key rotation required before go-live">
+The current `.env` contains Razorpay **test** key IDs (`rzp_test_...`). Before switching to production, the key pair must be rotated to live keys (`rzp_live_...`) and the Firebase Cloud Function environment must be updated via `firebase functions:config:set`. This has not been done yet — intentionally. Production payments are not live.
+</Callout>
+
+**Webhook configuration:** Razorpay webhooks are configured in sandbox but not yet pointed at the production Firebase Function URL. The webhook handler exists in the codebase and handles `payment.captured` events as a reliability fallback to the client-side verification. This needs to be wired up before production launch.
+
+---
+
+## 4. Known Issues / Monitoring Items
+
+**[MONITOR] Gemini API quota on Cloud Functions**  
+Each verification call invokes Gemini via a Firebase Cloud Function. The free tier Gemini quota is sufficient for current usage levels but will need review before any traffic growth. No quota errors in the last 14 days. Monitoring passively.
+
+**[MONITOR] GitHub Pages CDN propagation**  
+Custom domain HTTPS certificate is managed by GitHub. Renewals are automatic. Last check: certificate valid, no expiry warnings.
+
+**[OPEN] Payment webhook not wired to production**  
+As noted above — the webhook handler exists, but the Razorpay dashboard webhook URL still points to a sandbox function endpoint. This is a known gap, not an incident. Blocked on the production key rotation decision.
+
+**[RESOLVED] SPA 404 routing**  
+Previously the `404.html` redirect script was missing from the Vite build output. Fixed by adding the redirect script to `index.html` and copying it as `404.html` in the GitHub Actions workflow. No recurrence.
+
+---
+
+## 5. Next Operational Priorities
+
+**Priority 1: Production payment go-live**  
+The critical path item. Steps: (1) Switch Razorpay to production mode in the dashboard, (2) Rotate API keys in Firebase Cloud Function config, (3) Update webhook URL in Razorpay dashboard to the production function endpoint, (4) Run one end-to-end test with a real card in a controlled environment, (5) Publish the Pro tier publicly.
+
+**Priority 2: Usage metering enforcement**  
+Free tier users are currently limited to 5 verifications per day in the UI, but the Cloud Function does not enforce this server-side. A determined user could call the function directly and bypass the limit. Server-side enforcement via a Firestore counter check in the function needs to be added before traffic scales.
+
+**Priority 3: Error monitoring**  
+There is no structured error tracking currently. Console logs and Firebase crash logs are the only visibility. Adding Sentry (free tier) to the React app and the Cloud Functions would give proper error aggregation. Low urgency while user count is small; becomes high urgency before any promotion.
+
+**Priority 4: Firestore index optimization**  
+The `verifications` collection is queried by `userId` and sorted by `timestamp` descending. This query requires a composite index. The index exists (created manually in the Firebase console) but is not in the `firestore.indexes.json` file in the repo. If the project is ever re-provisioned or the indexes are reset, the query will fail. The index definition should be captured in the repo.
+
+<Callout type="info" title="No active incidents">
+Current operational status: zero active incidents. Deployment healthy, auth stable, database within limits. The only blocking item for full production readiness is the Razorpay production key rotation.
+</Callout>
