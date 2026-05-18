@@ -1,0 +1,421 @@
+---
+title: "Operational Search Architecture"
+description: "Design for AI-native operational retrieval: semantic search, debugging lookup, failure pattern retrieval, and entity relationship queries for the AI Execution Lab knowledge base."
+date: "2026-05-18"
+tags: ["search", "retrieval", "ai", "architecture", "ops", "semantic", "intelligence"]
+status: "published"
+---
+
+This document is not about building a search engine. It is about designing retrieval that serves operational use cases — specifically: "I'm debugging X, what does the platform know about this?" and "I want to learn Y, what's the execution path?"
+
+The difference is not academic. A user searching "Vercel edge runtime error" is not looking for a page. They are looking for: the diagnosis of the specific error they have, the root cause, the verified fix, the prevention checklist so it doesn't happen again, and — if available — the build log from a real deployment where this exact failure occurred. That is a structured operational context, not a list of search results.
+
+This document specifies the architecture that serves that use case, starting from the current state and building toward a fully operational retrieval system.
+
+---
+
+## What Operational Search Is
+
+### Standard Search vs. Operational Search
+
+Standard search takes a query string and returns a ranked list of pages that contain those terms. The ranking is based on keyword frequency, metadata match, and some measure of authority. The output is a list of URLs. What the user does with those URLs — navigating to each, reading each, synthesizing across them — is left entirely to the user.
+
+Operational search takes an operational context — a symptom, a task description, a failure message, a learning goal — and returns structured knowledge that serves that context. The output is not a list of URLs. It is a `DebugContext`, an `ExecutionPath`, a `PatternMatch`, or an `EntityRelationship` — typed objects that the caller can act on directly.
+
+**Example of the difference:**
+
+Query: "Module not found fs"
+
+Standard search returns: 3 pages that mention "Module not found" and "fs".
+
+Operational search returns:
+
+```typescript
+{
+  debugContext: {
+    matchedFailures: [
+      { slug: "server-module-client-bundle", confidence: 0.92, matchReason: "exact error message" },
+      { slug: "edge-runtime-deployment-failure", confidence: 0.71, matchReason: "same-root relationship" }
+    ],
+    preventionPatterns: [
+      "Add 'server-only' import guard to any file that imports Node.js built-ins",
+      "Run next build locally before pushing — this class of error does not surface in next dev",
+      "Check all 'use client' component import chains before adding fs/path imports to shared modules"
+    ],
+    debuggingPath: [
+      "1. Identify which file in the build trace contains the fs import",
+      "2. Check whether that file is imported by any 'use client' component",
+      "3. Move the fs-dependent function to a server-only module",
+      "4. Update import paths in Server Components"
+    ],
+    relatedLessons: ["build-failure-diagnosis", "reading-build-errors"],
+    relatedPlaybooks: [],
+    evidence: [
+      { slug: "server-module-client-bundle", type: "build-log", path: "/evidence/server-module-client-bundle/01-next-build-fs-module-import-trace-2026-05-14.txt" }
+    ]
+  }
+}
+```
+
+The operator who hits "Module not found: Can't resolve 'fs'" at 11pm does not need to read three pages. They need the structured context above. Operational search delivers it.
+
+### Why the Distinction Matters for AI Consumers
+
+The platform is built for GEO — Generative Engine Optimization. Its content is structured to be retrieved by AI systems. The operational search system is the internal complement: it makes the platform's own knowledge base retrievable by the AI systems the operator uses during live production work.
+
+When Claude Code encounters a build error and queries a knowledge source for context, it should be able to send an operational query and receive a `DebugContext` object, not a list of pages to read. The platform's `/api/operational-search` endpoint (Phase 4) is designed for exactly this use case.
+
+---
+
+## Current Search Architecture
+
+### The `/api/search` Endpoint
+
+The `/api/search` dynamic route exists as a basic full-text search over content metadata. It queries title, description, and tags across all content in the collection. The response is a list of matching content items with their metadata — title, description, slug, section, tags, date.
+
+What this serves well:
+- Finding a specific lesson by title keyword
+- Browsing content by tag
+- Verifying whether a topic has existing coverage before creating new content
+
+What it does not serve:
+- Symptom-to-diagnosis lookup
+- Relationship traversal (finding patterns related to a specific failure)
+- Execution path retrieval (finding the ordered lesson sequence for a learning goal)
+- Cross-type context aggregation (failure report + pattern + lesson + evidence in one response)
+
+### The `lib/operational-memory.ts` Relationship Graph
+
+The operational memory module defines and traverses the entity relationship graph. It knows:
+
+- Which failures are related to which patterns (via failure frontmatter `prevention_patterns` and `related_failures`)
+- Which lessons are prerequisites for which other lessons (via lesson frontmatter `prerequisite_for`)
+- Which case studies demonstrate which patterns
+- Which playbooks are associated with which tracks
+
+This is the relationship graph that operational search traverses. It exists today. The search system needs to use it.
+
+### The Gap
+
+The current state: `/api/search` searches metadata. `lib/operational-memory.ts` knows relationships. Neither talks to the other. A search for "edge runtime" returns metadata matches. It does not traverse from those matches to related patterns, related lessons, or associated evidence.
+
+Closing this gap is the core work of operational search architecture.
+
+---
+
+## Debugging Lookup Design
+
+### What a Debugging Lookup Is
+
+A debugging lookup accepts a symptom string — the exact error message, a description of the problem, or a partial error excerpt — and returns a `DebugContext` object containing everything the platform knows that is relevant to that symptom.
+
+The retrieval strategy runs in order, stopping when a sufficiently high-confidence match is found:
+
+1. **Exact error message match** — the symptom string appears verbatim in a failure report's error description or evidence content
+2. **Error message substring match** — the symptom string appears as a substring in a failure report's fields
+3. **Tag overlap** — the symptom string matches one or more tags in the failure frontmatter
+4. **Category match** — the symptom maps to a known failure category (build, runtime, deployment, etc.)
+5. **Pattern match** — the symptom maps to a known failure pattern by keyword
+
+### The `DebugContext` Type
+
+```typescript
+interface DebugContext {
+  // Matched failure reports, ranked by confidence
+  matchedFailures: Array<{
+    slug: string
+    title: string
+    confidence: number                // 0–1
+    matchReason: string               // human-readable: "exact error message" | "tag overlap" | etc.
+    severity: Severity
+    recoveryComplexity: RecoveryComplexity
+    resolutionTime: string
+  }>
+
+  // Prevention patterns aggregated across all matched failures
+  preventionPatterns: string[]
+
+  // Ordered debugging steps derived from matched failure diagnoses
+  debuggingPath: string[]
+
+  // Lessons directly relevant to the symptom
+  relatedLessons: Array<{ slug: string; title: string; trackSlug: string }>
+
+  // Failure patterns the symptom matches
+  matchedPatterns: Array<{ patternId: string; patternName: string; matchReason: string }>
+
+  // Evidence items relevant to the debug context (from evidence index)
+  evidence: Array<{
+    contentSlug: string
+    type: EvidenceType
+    path: string
+    descriptor: string
+    captureDate: string
+  }>
+}
+```
+
+### Example: "Module not found fs"
+
+Input symptom: `"Module not found: Can't resolve 'fs'"`
+
+Retrieval execution:
+
+1. Exact match in `server-module-client-bundle` failure report → `confidence: 0.92`
+2. Tag overlap with `edge-runtime-deployment-failure` (shared tag `build-failure`, `vercel`) → `confidence: 0.55`
+3. Pattern match against "Module Boundary Violations" pattern in `failure-pattern-library.mdx`
+
+Output `DebugContext`:
+- `matchedFailures`: `server-module-client-bundle` (0.92), `edge-runtime-deployment-failure` (0.55)
+- `preventionPatterns`: union of prevention patterns from both failures, deduplicated
+- `debuggingPath`: steps from `server-module-client-bundle`'s resolution narrative, structured
+- `relatedLessons`: `build-failure-diagnosis`, `reading-build-errors`
+- `matchedPatterns`: "Module Boundary Violations"
+- `evidence`: build log from `server-module-client-bundle`
+
+<Callout type="info" title="Confidence threshold">
+A `DebugContext` is only returned if at least one failure has confidence ≥ 0.50. Below that threshold, the system returns a partial response with the closest matches and a flag indicating low confidence. This prevents the system from returning authoritative-looking debugging context for symptoms it has no real data on.
+</Callout>
+
+---
+
+## Workflow Lookup Design
+
+### What a Workflow Lookup Is
+
+A workflow lookup takes a task description — "How do I deploy a Next.js app to Vercel?" or "What do I need to do to set up environment variables for production?" — and returns an `ExecutionPath`: the ordered sequence of steps, with estimated time, prerequisites, and success criteria.
+
+This is different from a debugging lookup. The user is not responding to a failure — they are planning an operation. The retrieval system needs to find the relevant lesson sequence and playbook, and compose them into a coherent execution path.
+
+### The `ExecutionPath` Type
+
+```typescript
+interface ExecutionPath {
+  // Goal description — what this path achieves
+  goal: string
+
+  // Prerequisites — what the operator needs before starting
+  prerequisites: Array<{ lessonSlug: string; title: string }>
+
+  // Ordered steps — the execution sequence
+  steps: Array<{
+    order: number
+    description: string
+    lessonSlug?: string         // if this step has a lesson
+    estimatedTime: string       // "15 minutes", "1 hour"
+    successCriteria: string     // how to know this step is done correctly
+  }>
+
+  // Total estimated time
+  estimatedTotalTime: string
+
+  // Supporting resources
+  relatedPlaybook?: { slug: string; title: string }
+  demonstrationCaseStudy?: { slug: string; title: string }
+
+  // Known failure points — failures that commonly occur during this workflow
+  knownFailurePoints: Array<{
+    failureSlug: string
+    likelyAt: string              // "step 3", "after deployment"
+    preventionPattern: string
+  }>
+}
+```
+
+### Prerequisite Traversal
+
+The lesson frontmatter includes `prerequisite_for` and `requires` fields — the directed prerequisite graph. An execution path query traverses this graph starting from the lessons most directly relevant to the task description, walking backward through prerequisites to find the minimum starting point, then ordering forward.
+
+For "deploy a Next.js app to Vercel," the relevant lessons are in the `vercel-deployment` module. Their prerequisites include `dev-environment` and `git-operations`. The execution path starts from the earliest unmet prerequisite (or the beginning if all prerequisites are met) and walks forward to the target.
+
+---
+
+## Failure Pattern Retrieval
+
+### Pattern vs. Failure
+
+A failure report documents a specific incident: what happened, when, how it was resolved. A failure pattern documents a class of failures that share a root cause. The pattern is the abstraction above the individual failure.
+
+The `failure-pattern-library.mdx` is the current pattern index — 9 documented patterns, each with a name, description, triggering conditions, canonical prevention, and linked failure reports. The search system makes this index queryable programmatically.
+
+### Pattern Retrieval Strategy
+
+Given a symptom or failure slug, pattern retrieval identifies which pattern(s) the failure exemplifies:
+
+1. Check the failure report's `prevention_patterns` against the pattern library's canonical prevention lists
+2. Check the failure report's `category` against the pattern's `failure_types`
+3. Check the failure report's tags against the pattern's keywords
+4. Return matched patterns with the specific field that triggered the match
+
+### The `PatternMatch` Type
+
+```typescript
+interface PatternMatch {
+  patternId: string
+  patternName: string
+  description: string
+  matchedVia: 'category' | 'tag' | 'prevention-pattern' | 'explicit-link'
+  confidence: number
+  canonicalPrevention: string[]
+  linkedFailures: string[]          // slugs of failures that exemplify this pattern
+  linkedLessons: string[]           // lessons that teach prevention of this pattern
+}
+```
+
+Pattern retrieval is used by the debugging lookup (Step 5 of the retrieval strategy) and directly by the operational search endpoint when a query is classified as pattern-oriented rather than symptom-oriented.
+
+<Callout type="success" title="The pattern library is already queryable">
+The `failure-pattern-library.mdx` exists and has structured frontmatter. Pattern retrieval in Phase 2 requires reading that frontmatter and running the matching logic — no new content work needed. The content is the index.
+</Callout>
+
+---
+
+## Entity Relationship Retrieval
+
+### Relationship Queries
+
+The operational memory graph supports relationship traversal queries. These queries answer questions like:
+
+- "What failures are prevented by completing the `env-vars-secrets` lesson?" → traverse from the lesson to failure reports that cite its prevention patterns
+- "What case studies demonstrate the Module Boundary Violations pattern?" → traverse from the pattern to case studies tagged with it
+- "What lessons are required before the `multi-agent-orchestration` lesson?" → traverse the prerequisite graph backward
+
+These queries do not require full-text search. They require graph traversal over the relationship data already encoded in frontmatter.
+
+### Traversal Functions in `lib/operational-memory.ts`
+
+The operational memory module already provides:
+
+```typescript
+// Get all failures prevented by the lessons in a set
+getFailuresPreventedByLessons(lessonSlugs: string[]): FailureItem[]
+
+// Get all lessons that teach prevention of a failure
+getLessonsForFailure(failureSlug: string): LessonItem[]
+
+// Get case studies that demonstrate a pattern
+getCaseStudiesForPattern(patternId: string): CaseStudyItem[]
+
+// Get the prerequisite chain for a lesson
+getPrerequisiteChain(lessonSlug: string): LessonItem[]
+
+// Get all content related to an entity by slug and type
+getRelatedContent(slug: string, type: ContentType): RelatedContent
+```
+
+These functions are the retrieval layer for entity relationship queries. The search system calls them in response to classified relationship queries.
+
+### Relationship Query Classification
+
+A query like "what failures are prevented by the env-vars-secrets lesson?" needs to be parsed before the traversal function can be called. The search system classifies incoming queries into:
+
+- `debugging_lookup` — symptom → DebugContext
+- `workflow_lookup` — task description → ExecutionPath
+- `pattern_retrieval` — failure or symptom → PatternMatch
+- `relationship_query` — entity + relationship type → RelatedContent
+
+Classification uses keyword heuristics: queries containing "prevented by", "requires", "related to", "demonstrates" are classified as `relationship_query`. Queries containing error messages or "error", "failed", "broken" are classified as `debugging_lookup`. Queries containing "how to", "what steps", "deploy", "set up" are classified as `workflow_lookup`.
+
+---
+
+## AI-Native Retrieval Design
+
+### The Platform Is Already GEO-Optimized
+
+The content on this platform is structured for AI retrieval. Every lesson has answer-first section headers. Every failure report has an exact error message, a root cause statement, and a prevention checklist. Every case study has a structured outcome table. The entity density is high. The content is designed to be retrieved and cited by Perplexity, ChatGPT, and Gemini.
+
+That is outbound AI retrieval — the platform's content being retrieved by external AI systems.
+
+Operational search is inbound AI retrieval — an AI assistant used by the operator (Claude Code, specifically) querying the platform's knowledge base during a live debugging or planning session.
+
+These are two different flows with different requirements. Outbound retrieval is served by GEO content structure. Inbound retrieval is served by the `/api/operational-search` endpoint.
+
+### The `/api/operational-search` Endpoint (Phase 4)
+
+The endpoint accepts a POST request with a structured query:
+
+```typescript
+interface OperationalSearchRequest {
+  query: string                         // natural language or error message
+  queryType?: QueryType                 // optional: override classification
+  context?: {
+    currentLessonSlug?: string          // operator's current position in the track
+    completedLessons?: string[]         // for prerequisite-aware path planning
+    recentFailures?: string[]           // for related-failure retrieval
+  }
+}
+
+interface OperationalSearchResponse {
+  queryType: QueryType
+  debugContext?: DebugContext           // present if queryType = debugging_lookup
+  executionPath?: ExecutionPath        // present if queryType = workflow_lookup
+  patternMatches?: PatternMatch[]      // present if queryType = pattern_retrieval
+  relatedContent?: RelatedContent      // present if queryType = relationship_query
+  confidence: number                   // overall response confidence
+  processingTimeMs: number
+}
+```
+
+This endpoint is designed to be called by Claude Code in an MCP server context — a tool call that sends the current error or task description and receives structured operational context in response.
+
+<Callout type="lab" title="Claude Code as the primary consumer">
+The operational search endpoint exists because Claude Code can use it. During a debugging session, the operator can ask Claude Code to query the platform's knowledge base before proposing a fix. Claude Code sends the error message to `/api/operational-search`, receives the `DebugContext` including prevention patterns and the build log from the real incident, and incorporates that context into its response. The platform becomes an AI-accessible operational memory, not just a static documentation site.
+</Callout>
+
+---
+
+## Implementation Phases
+
+### Phase 1 (Current State)
+
+- Keyword search via `/api/search` — full-text over content metadata
+- Relationship graph defined in `lib/operational-memory.ts`
+- Evidence index designed in `lib/evidence-index.ts` (architecture phase)
+- Pattern library in `failure-pattern-library.mdx` — queryable manually
+
+**Capability:** Find content by keyword. Navigate relationships via frontmatter links.
+
+### Phase 2
+
+- Enhance `/api/search` to traverse relationships in addition to metadata matching
+- Add `debugLookup(symptom)` function to `lib/operational-memory.ts`
+- Return structured `DebugContext` for queries classified as debugging lookups
+- Surface `DebugContext` in the failure report UI — "Related Debugging Context" panel
+
+**Capability:** Symptom → DebugContext retrieval. Relationship traversal in search results.
+
+### Phase 3
+
+- Embed lesson and failure report content as vectors at build time
+- Store embeddings as JSON in `/public/search-index/` (no external vector database)
+- Serve semantic search via Vercel Edge Function with cosine similarity scoring
+- Replace keyword matching in Phase 1/2 with semantic matching where confidence is higher
+
+**Capability:** Semantic similarity matching. "Module boundary error" matches "fs cannot be resolved in client bundle" even without shared keywords.
+
+### Phase 4
+
+- `/api/operational-search` endpoint: accepts natural language query, returns typed operational context
+- MCP server wrapper that exposes the endpoint as a Claude Code tool
+- Context parameter support: operator's current lesson and completed lesson set improves prerequisite-aware path planning
+- Response confidence scoring and partial response handling for low-confidence queries
+
+**Capability:** AI-native operational retrieval. Claude Code can query "what does the platform know about this error?" and receive structured debugging context.
+
+<Callout type="warn" title="Phase 3 vector storage">
+Storing embeddings as static JSON in `/public/` avoids an external vector database dependency but has a size constraint. At 500 content pieces with 1536-dimensional embeddings (OpenAI text-embedding-3-small), the index is approximately 3MB — within static file limits. At 2,000+ pieces, this approach needs re-evaluation. Phase 3 should be re-assessed when content count exceeds 800 pieces.
+</Callout>
+
+---
+
+## Ops Page Integration
+
+The operational search architecture has a visible surface on the `/ops` page: a search bar that accepts operational queries and returns structured results in the ops-facing format.
+
+This is not the public-facing search. It is an internal debugging tool: the operator types "Module not found fs" during a live debugging session and gets the `DebugContext` panel showing the matched failure reports, prevention patterns, and debugging path — without leaving the ops page.
+
+Phase 2 delivers this. Phase 3 improves it with semantic matching. Phase 4 makes it available to AI assistants.
+
+---
+
+*Operational Search Architecture v1.0 — 2026-05-18.*

@@ -1,0 +1,303 @@
+---
+title: "Operational Memory Architecture"
+description: "Entity hierarchy, relationship structure, execution history design, and knowledge inheritance patterns for the AI Execution Lab operational memory layer."
+date: "2026-05-18"
+tags: ["ops", "architecture", "memory", "knowledge-graph", "platform", "intelligence"]
+status: published
+---
+
+The AI Execution Lab is not a documentation site with internal links. It is an operational memory system — a typed graph of entities that inherit knowledge from each other, where the connections carry semantic meaning. This document defines how the graph works, what lives in it, and how querying it produces actionable intelligence rather than just linked pages.
+
+---
+
+## What Operational Memory Is
+
+A documentation site organizes content by topic. Pages link to other pages when their subjects are related. The relationship between a lesson and a failure report it mentions is: "see also." That's a navigational hint, not a knowledge claim.
+
+An operational memory layer makes typed claims. The relationship between a lesson and a failure it prevents is not "see also" — it is `prevents`. The relationship between a failure and the playbook that fixes it is `resolved-by`. The difference matters because typed relationships are queryable: you can ask the system "what prevents this failure?" and receive a structured answer, not a list of possibly-related links.
+
+The distinction has practical consequences for debugging. A developer hitting an unfamiliar error can ask: "what do I know about this failure type?" An operational memory system returns the failure record, its pattern family, the lessons that would have prevented it, and the playbook that resolves it — in a single retrieval operation. A standard documentation site returns a search results page, and the developer assembles the context manually.
+
+This is why the distinction matters for AI-native retrieval specifically. A language model querying for debugging context benefits from a graph structure: the model can retrieve the failure entity, follow its `prevented-by` edges to the relevant lessons, follow its `resolved-by` edge to the playbook, and synthesize a complete operational response. Without typed relationships, the model receives isolated documents and produces a lower-quality synthesis.
+
+The Failure Archive, Lesson tracks, Playbooks, Case Studies, Logs, and Docs on this platform are not separate sections. They are entity types in a unified operational graph. Every piece of content occupies a node. Every cross-reference is a directed edge with a type.
+
+---
+
+## Entity Hierarchy
+
+### Primary Entities
+
+The platform's six primary entity types form the core of the graph. Each has a distinct operational role and a different relationship density.
+
+**Lesson** — A structured learning unit within a track. Lessons carry the platform's preventive knowledge. When a failure is documented, the lessons that teach the skills that would have prevented it are the nodes most directly connected. A lesson's primary outbound relationships are `prevents` (to failures) and `implements` (to playbooks).
+
+**Failure** — A production incident record from the Failure Archive. Failures carry the platform's diagnostic and recovery knowledge. A failure is the most information-dense entity type: it documents what went wrong, why, how long recovery took, and what specific actions prevent recurrence. A failure's primary inbound relationships are `caused-by` (from lessons/playbooks absent at the time) and outbound relationships are `resolved-by` (to playbooks) and `documented-in` (to logs).
+
+**Playbook** — An operational procedure for a repeatable task or recovery path. Playbooks implement lessons at the execution level and resolve failures at the fix level. A playbook sits between knowledge (lessons) and incidents (failures) in the graph.
+
+**Case Study** — A documented account of a complete operational arc — from problem to resolution to outcome. Case studies have the highest citation density: they reference failures, lessons, and playbooks in a single document and demonstrate their interactions in practice.
+
+**Log** — A dated execution record from a work session. Logs capture what was built or investigated on a specific date. They are the primary nodes in the operational timeline and serve as evidence anchors for failures and case studies.
+
+**Doc** — Reference and operational documentation. Architecture docs (like this one), workflow guides, and system references. Docs define how entities relate; they are meta-level nodes in the graph.
+
+### Secondary Entities
+
+**Evidence Artifact** — A screenshot, build log excerpt, commit reference, or deployment record attached to a failure or case study. Evidence artifacts are not standalone nodes; they are sub-entities of the failure or case study they document.
+
+**Pattern** — A named recurring failure type, defined in the failure pattern library. Patterns are aggregation nodes: multiple failure instances link to the same pattern, and querying a pattern returns all its instances plus the consolidated prevention and recovery procedures.
+
+**Experiment** — A lab or geo-intelligence experiment entry. Experiments link to the track lesson that motivated them and the log that captured their execution.
+
+### Entity Metadata Required for the Memory System
+
+Every entity requires four frontmatter fields to participate in the operational memory layer:
+
+- `slug` — the URL path segment, used as the entity identifier within its type namespace
+- `type` — the entity type (`lesson`, `failure`, `playbook`, `case-study`, `log`, `doc`)
+- `date` — ISO 8601 date, used for timeline positioning
+- `tags` — array of topic strings, used for tag-based fallback when manual relationships are absent
+- `status` — `published` or `draft`; only published entities participate in the live graph
+
+### The Entity ID Convention
+
+Every entity in the graph has a globally unique identifier in the format `[type]:[slug]`.
+
+Examples from the current platform:
+- `failure:edge-runtime-deployment-failure`
+- `failure:environment-variable-missing-production`
+- `failure:server-module-client-bundle`
+- `lesson:env-vars-secrets`
+- `playbook:wp-rest-api-automation-playbook`
+- `case-study:ai-execution-lab-platform-launch`
+- `log:2026-05-14-tracks-failure-archive-build`
+
+This convention ensures that relationship definitions can reference any entity without ambiguity, and that the graph can be queried by entity ID rather than by URL path.
+
+---
+
+## Relationship Types
+
+All relationships are typed and directional. The source entity is the entity declaring the relationship in its frontmatter or component metadata. The target entity is the entity being referenced.
+
+### Core Relationship Types
+
+**`prevents`** — Source entity contains knowledge or procedures that, if applied, prevent the target failure from occurring.
+- Direction: lesson → failure, playbook → failure
+- Query semantics: "What prevents `failure:environment-variable-missing-production`?" returns `lesson:env-vars-secrets` and `playbook:deployment-workflow`
+
+**`caused-by`** — Source entity (a failure) occurred because the target knowledge entity was not in place.
+- Direction: failure → lesson, failure → playbook
+- Query semantics: "What should have been in place before `failure:edge-runtime-deployment-failure`?" returns `lesson:build-failure-diagnosis`
+
+**`demonstrates`** — Source entity provides real-world evidence of the target entity's patterns in practice.
+- Direction: case-study → failure, log → failure, case-study → lesson
+- Query semantics: "What demonstrates `failure:server-module-client-bundle` in practice?" returns `case-study:ai-execution-lab-platform-launch`
+
+**`implements`** — Source entity (a playbook) operationalizes the procedural content of the target lesson.
+- Direction: playbook → lesson
+- Query semantics: "What implements `lesson:deployment-pipeline`?" returns `playbook:wp-rest-api-automation-playbook`
+
+**`documented-in`** — Source entity was captured in the target log entry.
+- Direction: failure → log, experiment → log
+- Query semantics: "Where was `failure:server-module-client-bundle` documented?" returns `log:2026-05-14-tracks-failure-archive-build`
+
+**`related-to`** — Bidirectional operational affinity between two entities in the same category or cluster.
+- Direction: bidirectional (either entity can declare it)
+- Query semantics: "What is operationally related to `failure:dns-subdomain-propagation-delay`?" returns `failure:vite-github-pages-spa-routing`
+
+**`prerequisite-for`** — The target lesson or concept requires the source to be understood first.
+- Direction: lesson → lesson
+- Query semantics: "What must be understood before `lesson:multi-agent-orchestration`?" returns `lesson:task-decomposition`, `lesson:production-prompt-anatomy`
+
+**`escalates-to`** — If the source failure is unresolved, it may escalate into the target (more severe) failure.
+- Direction: failure → failure
+- Query semantics: "What does `failure:environment-variable-missing-production` escalate to if unchecked?" informs urgency prioritization
+
+**`resolved-by`** — The source failure has a fix procedure documented in the target playbook.
+- Direction: failure → playbook
+- Query semantics: "How do I fix `failure:edge-runtime-deployment-failure`?" returns the Vercel deployment rollback playbook
+
+### Relationship Reference Table
+
+| Source Entity | Relationship | Target Entity | Query Use |
+|---|---|---|---|
+| `lesson:env-vars-secrets` | `prevents` | `failure:environment-variable-missing-production` | "What prevents this?" |
+| `failure:edge-runtime-deployment-failure` | `caused-by` | `lesson:build-failure-diagnosis` | "What should have been known?" |
+| `case-study:ai-execution-lab-platform-launch` | `demonstrates` | `failure:next-mdx-remote-v6-blockjs` | "Where is this documented in practice?" |
+| `case-study:ai-execution-lab-platform-launch` | `demonstrates` | `failure:server-module-client-bundle` | "Where is this documented in practice?" |
+| `failure:server-module-client-bundle` | `related-to` | `failure:edge-runtime-deployment-failure` | "What is operationally similar?" |
+| `failure:dns-subdomain-propagation-delay` | `related-to` | `failure:vite-github-pages-spa-routing` | "What is operationally similar?" |
+| `failure:environment-variable-missing-production` | `documented-in` | `log:2026-05-14-tracks-failure-archive-build` | "Where was this captured?" |
+| `lesson:branch-strategy` | `prerequisite-for` | `lesson:bad-commit-recovery` | "What must I know first?" |
+| `lesson:deployment-pipeline` | `prerequisite-for` | `lesson:rollback-strategies` | "What must I know first?" |
+| `failure:ga4-cross-domain-tracking-gap` | `related-to` | `failure:environment-variable-missing-production` | "What shares this category?" |
+
+---
+
+## Knowledge Inheritance Patterns
+
+When a new entity is documented or a relationship is established, knowledge propagates across the graph. These are the four primary inheritance patterns.
+
+### Lesson Completion Inheritance
+
+When a developer completes a lesson, the platform can infer which related lessons are the relevant next steps based on the graph. Completing `lesson:env-vars-secrets` activates `prevents` edges pointing to `failure:environment-variable-missing-production` as confirmed prevention coverage. The platform tracks completion state and uses the graph to recommend the next entity in a defined learning pathway.
+
+The inheritance rule: completing lesson A marks all lessons with `prerequisite-for → A` relationships as satisfied prerequisites, and surfaces all lessons with `related-to` or `implements` edges to A as priority next steps.
+
+### Failure Prevention Inheritance
+
+When a failure is documented with `preventionPatterns[]` in its `FailureIntelligence` component, every lesson that teaches a skill mentioned in those patterns gains implicit `prevents` coverage for that failure. This is tag-based inheritance — it doesn't require a manual relationship declaration.
+
+The inheritance rule: if a failure's `preventionPatterns[]` includes the text "validate required environment variables at startup" and a lesson's content and tags include `env-vars` and `validation`, the system infers a `prevents` relationship. Manual relationships override this inference; tag-based inference fills gaps.
+
+### Pattern Inheritance
+
+When a new failure is documented that matches an existing named pattern in the failure pattern library, all entities connected to that pattern gain additional context. A failure matching the "configuration scope mismatch" pattern inherits the pattern's full prevention checklist, all other failures in the pattern as `related-to` relationships, and the pattern's confidence score is updated.
+
+The inheritance rule: every failure instance in a pattern shares the pattern's prevention and recovery knowledge. Documenting failure N in a pattern doesn't just add N — it enriches all N-1 existing instances with N's specific debugging path and timeline data.
+
+### Case Study Authority Inheritance
+
+When a case study references a failure, the failure's documentation status improves: it now has real-world evidence of both its occurrence and its resolution in a production context. This increases the failure's citation potential in AI-native retrieval — a failure with a linked case study that provides full context is more likely to be surfaced in a debugging query than one with only an incident report.
+
+The inheritance rule: a failure gains an evidence tier upgrade when a `demonstrates` edge connects it to a case study. `case-study:ai-execution-lab-platform-launch` demonstrating `failure:server-module-client-bundle` means that failure now has both its incident report and a full narrative of how it fit into a larger build — two distinct evidence forms that enrich any retrieval query about it.
+
+---
+
+## Operational Timeline Design
+
+Every content entity has a `date` frontmatter field. The operational timeline is the unified chronological sequence of all entities across all types — failures, lessons, logs, case studies, playbooks, and docs — sorted by date.
+
+The current implementation in `lib/activity.ts` produces this as an `ActivitySignal[]` array. Each signal has a type, title, href, date, and optional metadata. The `getPlatformStatus()` function aggregates signals from all content sections into a single sorted stream, visible in `recentSignals`.
+
+The operational timeline enables a class of queries that per-section views cannot: **temporal context for debugging**.
+
+The query form is: "Show me what the platform knew about X before incident Y."
+
+If `failure:environment-variable-missing-production` is dated 2026-04-05, the temporal query returns all entities dated before 2026-04-05 that have `env-vars`, `vercel`, or `configuration` tags. This shows exactly what knowledge existed in the archive before the failure — and whether a gap existed that the failure filled.
+
+This is not theoretical. When a recurring failure occurs, the first diagnostic question is: "Did we know this was possible?" The operational timeline answers that question concretely, without inference.
+
+The ActivitySignal type in `lib/activity.ts` is the current implementation anchor. The full operational memory layer builds on top of this existing infrastructure.
+
+---
+
+## Execution Dependency Chains
+
+A dependency chain is a directed sequence of entities that traces the full arc from gap → failure → fix → documentation. It makes the operational memory actionable: any developer can follow the chain backward from any failure to the knowledge that would have prevented it, or forward from any lesson to the failure its absence causes.
+
+### Chain Structure
+
+A complete dependency chain has four nodes:
+
+1. **The lesson** — the knowledge that should have been applied
+2. **The failure** — the incident that occurred because it wasn't
+3. **The playbook** — the procedure that fixes it
+4. **The case study** — the documented arc showing the full sequence in practice
+
+### Example Chain: Environment Variable Scope Failure
+
+1. `lesson:env-vars-secrets` — teaches Vercel environment variable scope management and the fail-loudly validation pattern
+2. `failure:environment-variable-missing-production` — the production incident where `GEMINI_API_KEY` was scoped to Development only, causing a silent feature failure
+3. `playbook:deployment-workflow` — includes the pre-deployment environment variable audit procedure
+4. `case-study:ai-execution-lab-platform-launch` — documents the full platform build including this class of configuration failure
+
+Following the chain backward from the failure: the lesson was available when the failure occurred. The gap was not missing documentation — it was missing execution discipline (the deployment checklist was not used). This distinction is operationally important: it changes the prevention recommendation from "write the lesson" to "enforce the checklist."
+
+### Example Chain: Module Boundary Failure
+
+1. `lesson:reading-build-errors` — teaches how to trace import errors through the Next.js build output
+2. `failure:server-module-client-bundle` — `lib/tracks.ts` imported `fs` at the top level and was in a client component's import chain, breaking the production build
+3. `playbook:deployment-workflow` — includes the local `next build` verification step
+4. `case-study:ai-execution-lab-platform-launch` — documents this as one of three build failures encountered during the platform launch
+
+Dependency chains make knowledge gaps explicit. A chain where node 1 (the lesson) is missing tells you what to document next. A chain where node 3 (the playbook) is missing tells you what to operationalize. A chain where node 4 (the case study) is missing tells you what has been fixed but not yet turned into transferable knowledge.
+
+---
+
+## Implementation Plan
+
+### Phase 1 (Current) — Typed Entity Graph
+
+**Target:** `lib/operational-memory.ts` with typed entity graph and relationship query functions.
+
+The core data model:
+
+```typescript
+interface EntityNode {
+  id:        string          // [type]:[slug]
+  type:      EntityType
+  slug:      string
+  title:     string
+  date:      string
+  tags:      string[]
+  status:    'published' | 'draft'
+}
+
+interface EntityRelationship {
+  source:       string       // entity id
+  target:       string       // entity id
+  type:         RelationshipType
+  strength:     'explicit' | 'inferred'  // manual vs. tag-based
+}
+
+type RelationshipType =
+  | 'prevents'
+  | 'caused-by'
+  | 'demonstrates'
+  | 'implements'
+  | 'documented-in'
+  | 'related-to'
+  | 'prerequisite-for'
+  | 'escalates-to'
+  | 'resolved-by'
+```
+
+Query functions at this phase:
+- `getRelationships(entityId, type)` — returns all relationships of a given type for an entity
+- `getPreventionChain(failureSlug)` — returns lessons and playbooks that prevent a given failure
+- `getDependencyChain(startSlug)` — returns the full lesson → failure → playbook → case-study chain from any starting node
+
+### Phase 2 — Build-Time Graph Validation
+
+Validate at build time that every relationship target exists as a published entity. A `prevents` edge pointing to a non-existent lesson slug should fail the build with a clear error message — the same way a broken `href` in a Next.js `Link` is a build error.
+
+This prevents the graph from accumulating stale relationships as content is reorganized or slugs change.
+
+### Phase 3 — Tag-Based Fallback Inference
+
+When manual relationships are absent, infer relationships from tag intersection. Two entities sharing 3+ tags have an inferred `related-to` relationship. A failure whose `preventionPatterns[]` contains terms that appear in a lesson's content body and tags has an inferred `prevents` relationship.
+
+Inferred relationships are lower-weight than explicit ones. They appear in query results with an `inferred` flag so the system can distinguish documented knowledge connections from computational approximations.
+
+### Phase 4 — AI-Native Retrieval API
+
+Expose the graph as a retrieval context for AI queries. A developer asking "I'm seeing `Module not found: Can't resolve 'fs'`" triggers a retrieval operation against the entity graph:
+
+1. Match the error string against failure entity descriptions and content
+2. Return the matched failure entity with its full relationship context
+3. Include the `caused-by` lessons (what to learn), the `resolved-by` playbook (what to do now), and `demonstrates` case studies (what this looked like in practice)
+
+The graph is the context window for the retrieval operation. Without typed relationships, a vector search returns semantically similar documents. With typed relationships, the retrieval returns a structured debugging package — failure + prevention lessons + fix procedure + evidence — in a form a language model can synthesize into a specific, actionable response.
+
+---
+
+## Relationship Type Reference
+
+| Type | Direction | Typical Source | Typical Target | Query Use Case |
+|---|---|---|---|---|
+| `prevents` | lesson/playbook → failure | Lesson, Playbook | Failure | "What prevents this failure?" |
+| `caused-by` | failure → lesson/playbook | Failure | Lesson, Playbook | "What knowledge gap caused this?" |
+| `demonstrates` | case-study/log → failure/lesson | Case Study, Log | Failure, Lesson | "Where is this shown in practice?" |
+| `implements` | playbook → lesson | Playbook | Lesson | "What operationalizes this lesson?" |
+| `documented-in` | failure/experiment → log | Failure, Experiment | Log | "Where was this session recorded?" |
+| `related-to` | any → any | Any | Any | "What is operationally similar?" |
+| `prerequisite-for` | lesson → lesson | Lesson | Lesson | "What must I understand first?" |
+| `escalates-to` | failure → failure | Failure | Failure | "What does this become if unresolved?" |
+| `resolved-by` | failure → playbook | Failure | Playbook | "How do I fix this?" |
+
+---
+
+*Operational memory architecture v1.0 — 2026-05-18. Update when new relationship types are introduced or entity types are added to the platform.*

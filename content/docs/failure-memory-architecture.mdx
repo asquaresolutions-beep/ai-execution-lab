@@ -1,0 +1,359 @@
+---
+title: "Failure Memory Architecture"
+description: "Design for persistent debugging intelligence: recurring failure memory, prevention inheritance, confidence scoring, debugging lineage, and ecosystem-wide impact relationships."
+date: "2026-05-18"
+tags: ["failures", "debugging", "memory", "architecture", "patterns", "intelligence", "ops"]
+status: published
+---
+
+Eight incident reports exist in the Failure Archive. Each documents a specific production incident with a root cause, a fix, and a set of prevention patterns. That documentation has immediate value: a developer who has read `failure:edge-runtime-deployment-failure` will not waste 23 minutes on the same Edge Runtime crypto error.
+
+But isolated incident reports don't scale. As the archive grows, the question changes from "what happened here?" to "why does this keep happening?" and "how confident am I that I know the fix when I see this error?" Answering those questions requires a different structure — a persistent debugging intelligence layer that aggregates incident data into queryable patterns, scores confidence, tracks prevention coverage, and maps the blast radius of failures across the ecosystem.
+
+This document defines that layer.
+
+---
+
+## The Failure Archive as Debugging Intelligence
+
+**Current state:** Eight incident reports with `FailureIntelligence` component metadata. Each entry has structured fields — severity, recovery complexity, prevention patterns, related failures, ecosystem impact. The data is there. The aggregation layer is not.
+
+**Target state:** A queryable system where "I'm seeing this error" retrieves the full debugging context. Not the incident report page, but the operational package: the error type, the pattern it belongs to, the most reliable debugging path to root cause, the verified fix, and the confidence score for that fix.
+
+The distinction is between **memory retrieval** and **page lookup**.
+
+A page lookup returns the document that matches your search terms. It requires the developer to then read, synthesize, and apply the content — which works when the developer has time and context.
+
+Memory retrieval returns the answer, structured for immediate application: "This error matches the configuration scope mismatch pattern. Confidence: 87. Most likely cause: Vercel environment variable scoped to Development only. Verified fix: update variable scope in Vercel dashboard to include Production and trigger redeploy. Time to resolution if this is the cause: under 15 minutes."
+
+That's the difference between an archive and a debugging intelligence layer. The archive stores what happened. The intelligence layer tells you what to do next.
+
+---
+
+## Recurring Failure Memory
+
+A recurring failure is one whose root cause has triggered more than once, even if the surface symptoms differ across instances.
+
+The current Failure Archive has two clear recurring patterns:
+
+**Configuration scope mismatch** — `failure:environment-variable-missing-production` (Vercel env var Development-only) and `failure:ga4-cross-domain-tracking-gap` (GA4 cookie scoped to hostname instead of parent domain) both trace to the same root: a configuration that appears correct in local or partial contexts but is incomplete in production. The symptoms are completely different (silent feature failure vs. inflated session counts), but the failure structure is identical.
+
+**Runtime boundary violation** — `failure:edge-runtime-deployment-failure` (edge runtime on an OG image handler) and `failure:server-module-client-bundle` (Node.js `fs` import in a client component's dependency tree) both trace to the same root: code placed in the wrong runtime boundary. Again, different error messages, same failure structure.
+
+### Recurring Failure Memory Structure
+
+```typescript
+interface RecurringPattern {
+  id:                  string           // pattern slug from failure-pattern-library
+  name:                string           // human-readable pattern name
+  instances:           string[]         // failure slugs in this pattern
+  preventionChecklist: string[]         // consolidated prevention steps
+  confidenceScore:     number           // 0-100 (see scoring section)
+  lastOccurrence:      string           // ISO date of most recent instance
+}
+```
+
+When a new failure is documented that matches an existing pattern — by tag intersection, by category match, and by prevention pattern overlap — all entities in that pattern gain context:
+
+- The new failure's debugging path enriches the pattern's consolidated debugging procedure
+- The prevention checklist gains any new specific steps from the new instance
+- The confidence score updates (more instances = more confidence if they resolve consistently)
+- Every failure in the pattern gains a `related-to` edge pointing to the new instance
+
+<callout type="info" title="Pattern membership vs. category membership">
+Pattern membership is narrower than category membership. `failure:environment-variable-missing-production` and `failure:ga4-cross-domain-tracking-gap` are both in the `configuration` category but in the same recurring pattern. `failure:wordpress-rest-api-auth-failure` is also in the `configuration` category but belongs to a different pattern (authentication credential management). Patterns are root-cause groups; categories are symptom families.
+</callout>
+
+---
+
+## Prevention Inheritance
+
+Every failure in the Failure Archive has a `preventionPatterns[]` array in its `FailureIntelligence` component. These are specific, actionable statements — not general advice, but the exact steps that would have prevented the incident.
+
+Prevention inheritance makes the prevention system bidirectional.
+
+**Current state (one direction):** A failure documents what would have prevented it. A developer reading the failure learns the prevention steps.
+
+**Target state (bidirectional):** A lesson knows which failures it prevents. A failure knows which lessons prevent it. The link is traversable in both directions.
+
+### How Inheritance Works
+
+When a lesson teaches a skill that appears in a failure's `preventionPatterns[]`, that lesson is linked to the failure as `prevents`. The match is based on topic overlap: a lesson with tags `["vercel", "env-vars", "secrets"]` and a failure with a prevention pattern of "After adding any new env var locally, immediately add it to Vercel Production scope before deploying" have a clear topic alignment.
+
+The result:
+
+- `lesson:env-vars-secrets` knows: "If this lesson is not applied, `failure:environment-variable-missing-production` is likely."
+- `failure:environment-variable-missing-production` knows: "Applying `lesson:env-vars-secrets` prevents this failure."
+
+This makes the prevention system actionable from either entry point. A developer completing `lesson:env-vars-secrets` sees the failures that lesson prevents — a concrete motivation for applying the lesson's discipline. A developer investigating `failure:environment-variable-missing-production` sees the lesson that would have prevented it — a concrete prescription for the knowledge gap.
+
+### Prevention Coverage Metric
+
+Prevention coverage measures how well each failure's prevention patterns are represented in the lesson library.
+
+```typescript
+interface PreventionCoverage {
+  failureSlug:       string
+  preventionCount:   number   // total prevention patterns in FailureIntelligence
+  lessonsCovering:   number   // lessons with prevents relationship to this failure
+  coverageRate:      number   // lessonsCovering / preventionCount (0-1)
+}
+```
+
+A coverage rate below 0.5 means fewer than half of a failure's prevention patterns are taught in existing lessons. These are content gaps — specific knowledge the platform should document to prevent the failure class from recurring.
+
+---
+
+## Debugging Lineage
+
+A debugging lineage is the structured sequence of investigation steps that led from the initial symptom to the verified fix. Every failure report currently documents this in prose (the "Debugging Path" or "Timeline" section). The lineage exists; it is not yet structured.
+
+### Current Form (Prose)
+
+The `failure:environment-variable-missing-production` debugging path in prose:
+
+> Checked browser network tab — API route returned 500. Checked Vercel deployment logs — found generic error string, no stack trace. Added temporary logging to surface the actual error. Log showed: `GEMINI_API_KEY is not defined`. Checked Vercel dashboard → found variable scoped to Development only. Updated scope to Production. Triggered redeploy — feature worked immediately. Total: 52 minutes.
+
+### Target Form (Typed Sequence)
+
+```typescript
+interface DebuggingLineage {
+  failureSlug:   string
+  symptom:       string           // what the developer observed first
+  steps:         LineageStep[]
+  rootCause:     string           // the specific cause, not the category
+  fix:           string           // the specific action taken
+  verification:  string           // how fix was confirmed
+  totalTime:     string           // actual elapsed time
+}
+
+interface LineageStep {
+  sequence:   number
+  action:     string              // what was checked
+  outcome:    string              // what was found
+  useful:     boolean             // did this step advance the diagnosis?
+}
+```
+
+The structured lineage is **reusable**. When a future developer encounters `process.env.SOME_KEY returned undefined in production`, the platform can retrieve the lineage for `failure:environment-variable-missing-production` and present the investigation steps in order — from symptom to fix — without requiring the developer to read the full incident report.
+
+The lineage is also **trainable**. Across multiple instances of the same pattern, the lineage steps that consistently advanced diagnosis (useful: true) become the canonical debugging procedure for that pattern. Steps that wasted time (useful: false, but frequently attempted) become documented anti-patterns — "don't check X first; check Y."
+
+<callout type="warn" title="Lineage is distinct from prevention">
+Prevention patterns are pre-incident: steps to take before deployment to avoid the failure. Debugging lineage is post-incident: steps to take after the failure manifests to reach the root cause. Both are valuable; they serve different moments. Don't conflate them in the data model.
+</callout>
+
+---
+
+## Operational Confidence Scoring
+
+A failure's confidence score answers: "If I see this error, how confident am I that I know the fix?"
+
+A score of 100 means: this failure type is fully understood, the root cause is deterministic, the fix is verified and fast, no investigation is required. A score of 0 means: this failure has been seen but the root cause is unknown or the fix is uncertain.
+
+### Scoring Factors (100-point scale)
+
+| Factor | Points | Condition |
+|---|---|---|
+| Documented instances | 0–25 | 1 instance: 10; 2 instances: 18; 3+ instances: 25 |
+| Prevention patterns present | 0–20 | 1–2 patterns: 10; 3–4 patterns: 15; 5+ patterns: 20 |
+| Related lessons exist | 0–20 | 1 lesson: 10; 2 lessons: 15; 3+ lessons: 20 |
+| Recovery complexity | 0–20 | Days: 5; Hours: 12; Minutes: 20 |
+| Repeat risk | 0–15 | High: 5 (failure recurs → less confident); Medium: 10; Low: 15 |
+
+### Current Confidence Scores (Platform Archive)
+
+| Failure | Score | Primary Gap |
+|---|---|---|
+| `failure:edge-runtime-deployment-failure` | 78 | 1 documented instance; low repeat risk |
+| `failure:environment-variable-missing-production` | 71 | High repeat risk reduces score; prevention patterns fully documented |
+| `failure:server-module-client-bundle` | 75 | 1 instance; clear root cause; minutes recovery |
+| `failure:next-mdx-remote-v6-blockjs` | 62 | Medium repeat risk; hours recovery; 1 instance |
+| `failure:wordpress-rest-api-auth-failure` | 68 | High repeat risk; clear fix; limited lesson coverage |
+| `failure:vite-github-pages-spa-routing` | 65 | High repeat risk; clear fix; 1 instance |
+| `failure:dns-subdomain-propagation-delay` | 60 | High repeat risk; hours recovery; no controlling fix |
+| `failure:ga4-cross-domain-tracking-gap` | 55 | Low severity but medium repeat risk; delayed detection |
+
+Low-confidence areas are knowledge gaps. `failure:ga4-cross-domain-tracking-gap` at 55 and `failure:dns-subdomain-propagation-delay` at 60 indicate failure types where the platform's documented knowledge is insufficient for confident resolution. These are priority targets for additional lesson coverage and additional documented instances.
+
+---
+
+## Recovery Pattern Library
+
+A recovery pattern is the post-incident procedure for a failure class. Prevention patterns are pre-incident (avoid the failure); recovery patterns are post-incident (resolve it when it occurs). The distinction matters because some failures — DNS propagation delays, for instance — cannot be prevented, only managed.
+
+Five recovery patterns extracted from the current Failure Archive:
+
+### Pattern 1: Runtime Boundary Violation
+
+**Trigger conditions:** Build fails with `Module not found`, `Edge Runtime does not support`, or similar API boundary errors. Occurs after adding imports to shared lib files or after adding `export const runtime = 'edge'` to a route file.
+
+**Immediate containment:** Identify the specific file in the import trace. The error message includes the import chain — read from bottom to top.
+
+**Root cause investigation:** Determine whether the file is in a client component's import chain (server-module-client-bundle pattern) or whether the file uses Node.js APIs that are unavailable in the edge runtime (edge-runtime pattern).
+
+**Verified fix:** For server/client boundary: split the file — move server-only functions to a `*.server.ts` file. For edge runtime: remove the `runtime = 'edge'` export from the affected file.
+
+**Prevention for next time:** Name server-only files with `.server.ts`. Run `next build` locally before pushing. Check edge runtime compatibility table before adding any runtime export.
+
+### Pattern 2: Configuration Scope Mismatch
+
+**Trigger conditions:** Feature works in development but fails silently in production. No build error. No TypeScript error. Generic error message at runtime.
+
+**Immediate containment:** Add explicit logging to the affected feature's error handler to surface the specific error cause (not just a generic "something went wrong").
+
+**Root cause investigation:** Check environment variable scope in Vercel dashboard. Check service configuration scope (GA4 cross-domain settings, CORS headers, DNS scope). Compare development configuration against production configuration line by line.
+
+**Verified fix:** Update the configuration to include the Production scope. Trigger a redeploy. Verify the specific feature works in production.
+
+**Prevention for next time:** Validate required environment variables at module load time with explicit throws. Add scope verification to the deployment checklist.
+
+### Pattern 3: Dependency Behavioral Change
+
+**Trigger conditions:** Build succeeds, deployment succeeds, but rendered output is semantically wrong. Occurs after a dependency upgrade. No error is thrown — components render with incorrect or missing content.
+
+**Immediate containment:** Identify which dependency version changed in the last deployment. Check the changelog for that version specifically.
+
+**Root cause investigation:** Add temporary logging to the rendering or serialization layer to inspect the output before it reaches the UI. Look for new default options that change behavior without failing explicitly.
+
+**Verified fix:** Apply the opt-out or configuration change documented in the changelog. Document the configuration choice with an explanatory comment at the call site.
+
+**Prevention for next time:** Read the full changelog before any dependency upgrade. Test all custom components after any MDX or rendering package upgrade. Run a visual inspection pass, not just an automated build check.
+
+### Pattern 4: DNS and Certificate Propagation Delay
+
+**Trigger conditions:** New domain or subdomain appears to work locally but fails for other users. Inconsistent availability reports.
+
+**Immediate containment:** Do not announce the domain as live. Check propagation status with dnschecker.org from multiple global locations.
+
+**Root cause investigation:** This is not a diagnosis problem — DNS propagation delay is deterministic once identified. The issue is premature go-live, not a technical failure.
+
+**Verified fix:** Wait. Confirm propagation at 90%+ of checked locations. Verify GitHub Pages HTTPS certificate issuance (Enforce HTTPS checkbox active) before any announcement.
+
+**Prevention for next time:** Add DNS propagation verification to the deployment checklist as a required gate before go-live. Set TTL to 300s on DNS records before changes to reduce future propagation windows.
+
+### Pattern 5: Authentication Credential Failure
+
+**Trigger conditions:** All API calls to an authenticated endpoint return 401 or 403. Occurs immediately on first call, not intermittently.
+
+**Immediate containment:** Verify the credential value is correct (not expired, not truncated, not URL-encoded incorrectly).
+
+**Root cause investigation:** Check the authentication header format exactly. For WordPress Application Passwords: the header must be `Authorization: Basic base64(username:password)` where the password spaces are preserved, not encoded. Check whether the credential is being read from the correct environment variable in the correct scope.
+
+**Verified fix:** Correct the header format or update the credential. Test with a direct API call (curl or REST client) before deploying.
+
+**Prevention for next time:** Test auth flows against production credentials in a staging context before the first production deployment. Log auth failures with the specific HTTP status and response body.
+
+---
+
+## Ecosystem-Wide Impact Relationships
+
+Some failures do not confine their impact to the system where they originate. A Vercel deployment failure blocks content updates to AI Execution Lab — which blocks new lessons from publishing — which delays the content calendar — which may affect scheduled WordPress cross-linking that references new Lab content.
+
+The `ecosystemImpact[]` field in `FailureIntelligence` begins this mapping. It needs formalization into a cascade model.
+
+### Cascade Risk Model
+
+```typescript
+interface CascadeRisk {
+  sourceFailure:    string          // failure slug
+  affectedSystems:  AffectedSystem[]
+}
+
+interface AffectedSystem {
+  system:       string              // "vercel-deployment" | "wordpress-automation" | "ga4-tracking" | etc.
+  impact:       string              // specific impact description
+  severity:     'blocks' | 'degrades' | 'affects-data'
+  mitigatable:  boolean            // can the impact be reduced while the failure is unresolved?
+}
+```
+
+### Current Ecosystem Impact Mapping
+
+**`failure:edge-runtime-deployment-failure`** — blocks all Vercel deployments. Impact: AI Execution Lab frozen at last deployed state. All new content, lessons, and features are blocked. Duration: until the build error is resolved and a successful deployment completes. Mitigatable: no. The last successful deployment remains live; users can access existing content but no updates are possible.
+
+**`failure:server-module-client-bundle`** — blocks all Vercel deployments (same cascade as above). Every push to main fails at build time. All new features blocked.
+
+**`failure:environment-variable-missing-production`** — feature-level silent failure. Does not block deployment. The specific feature is non-functional in production while appearing to work in development. Cascade: if the feature is part of an automated workflow (API integration, scheduled task), those workflows fail silently. The failure is invisible in monitoring until explicit user-facing testing.
+
+**`failure:ga4-cross-domain-tracking-gap`** — data quality failure. Does not block any system. Cascade: cross-property analytics are unreliable — session counts inflated, direct traffic attribution overstated. Downstream effect: any business decision based on cross-property funnel analysis is made on incorrect data.
+
+**`failure:dns-subdomain-propagation-delay`** — availability failure for specific user segments. The property exists in DNS for some resolvers and not others. Cascade: HTTPS certificate provisioning is blocked until propagation completes, meaning users with the correct DNS record may still see certificate errors.
+
+<callout type="danger" title="Deployment failures cascade to the entire platform">
+A Vercel build failure is a platform-wide freeze. It does not affect just the feature being deployed — it blocks every content update, every lesson publication, every bug fix, and every hotfix until the build is green. The blast radius of `failure:edge-runtime-deployment-failure` and `failure:server-module-client-bundle` is the entire production platform, not just the files that changed. This is why both have `severity: high` and `deploymentRisk: high`.
+</callout>
+
+---
+
+## lib/failure-memory.ts Implementation
+
+The implementation lives in `lib/failure-memory.ts`. It reads from the existing MDX frontmatter and `FailureIntelligence` component metadata — no external database required.
+
+### Core Functions
+
+**`getFailureMemory(): FailureMemoryEntry[]`**
+
+Aggregates all failure frontmatter into a structured array. Each entry includes: slug, title, date, severity, category, recovery complexity, repeat risk, prevention patterns count, related failures count, and ecosystem impact entries.
+
+**`getPatternCoverage(): PatternCoverage[]`**
+
+Groups failures by recurring pattern (tag intersection + category match). Returns each pattern's member failures, consolidated prevention checklist, frequency, and current confidence score. Primary input for the debugging intelligence layer.
+
+```typescript
+interface PatternCoverage {
+  patternId:           string
+  patternName:         string
+  memberFailures:      string[]        // failure slugs
+  preventionChecklist: string[]
+  instanceCount:       number
+  confidenceScore:     number
+}
+```
+
+**`getConfidenceScore(slug: string): number`**
+
+Calculates the 0–100 confidence score for a specific failure using the five-factor rubric: instance count, prevention pattern count, related lesson count, recovery complexity, and repeat risk. Returns an integer.
+
+**`getHighConfidencePaths(): DebugPath[]`**
+
+Returns the failure types with confidence scores above 70 and their associated debugging paths. These are the most reliable debugging procedures in the archive — structured for direct use in retrieval responses.
+
+```typescript
+interface DebugPath {
+  failureSlug:   string
+  confidence:    number
+  steps:         string[]    // ordered investigation steps
+  verifiedFix:   string
+  timeToFix:     string      // "under 15 minutes" | "1-2 hours" etc.
+}
+```
+
+**`getEcosystemCascadeRisk(): CascadeRisk[]`**
+
+Returns the full cascade impact model — for each failure, which downstream systems are affected, what the specific impact is, and whether it is mitigatable. Used by an ops dashboard to surface the blast radius of any open or recent failure.
+
+### Integration with Existing Infrastructure
+
+`lib/failure-memory.ts` reads from the same content collection that `lib/activity.ts` and `lib/content.ts` already query. The pattern is:
+
+```typescript
+import { getAllMeta } from './content'
+
+export function getFailureMemory(): FailureMemoryEntry[] {
+  const failures = getAllMeta('failures')
+  return failures
+    .filter(f => f.frontmatter.status === 'published')
+    .map(f => buildFailureMemoryEntry(f))
+}
+```
+
+No new content parsing infrastructure is required. The MDX files are the data source. The functions aggregate and transform what is already there.
+
+<callout type="success" title="The MDX files are the database">
+Every function in `lib/failure-memory.ts` reads from MDX frontmatter at build time. This means the failure intelligence layer has zero runtime dependencies — no API calls, no external database, no query latency. The intelligence is computed once at build time and served as static data. Adding a new failure report automatically enriches the aggregate intelligence on the next build.
+</callout>
+
+---
+
+*Failure memory architecture v1.0 — 2026-05-18. Update when new failure patterns are identified or when additional failure instances are documented that change confidence scores.*

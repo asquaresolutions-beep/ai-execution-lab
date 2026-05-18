@@ -1,0 +1,221 @@
+---
+title: "Platform Evolution Roadmap — 1, 3, and 5 Years"
+description: "Operational roadmap for AI Execution Lab evolution: what the platform should be in 12 months, 3 years, and 5 years. Grounded in current operational reality, not speculation."
+date: "2026-05-18"
+tags: ["roadmap", "ops", "platform", "evolution", "strategy", "architecture"]
+status: "published"
+noindex: true
+---
+
+This document is a grounded operational roadmap, not a vision board. The distinction matters. A vision board names aspirational states. A roadmap connects where you are to where you are going, with specific milestones, specific dependencies, and specific criteria for knowing when a milestone is reached.
+
+The 1-year targets are concrete. They name specific features, specific content counts, and specific technical implementations. The 3-year targets are directional — they describe what the platform should be, not precisely how to get there. The 5-year targets are aspirational but grounded in what the platform is actually building toward, not in what would make an impressive pitch deck.
+
+**Current state (2026-05-18):** AI Execution Lab launched publicly at `lab.asquaresolution.com`. The platform is built on Next.js 15 App Router, deployed on Vercel, with approximately 374 static pages at last build. Content includes 9 execution tracks, 30 available lessons, 8 failure reports, 7 case studies, 3+ active GEO experiments, and 22 operational docs. The ecosystem includes TrustSeal (React/GitHub Pages/Razorpay), ScamCheck (React/GitHub Pages/Gemini API), and asquaresolution.com (WordPress). The platform is built and maintained by a single operator — A Square Solutions.
+
+---
+
+## 12-Month Targets
+
+These are specific, achievable, and measurable. Each one has a clear definition of done.
+
+### Content
+
+**500+ static pages, 50+ available lessons across all 9 tracks.**
+
+The current count is 374 total pages and 30 available lessons. Reaching 50 available lessons requires publishing 20 more — roughly 3 per month for 7 months. That is achievable at the current publishing cadence with focused execution, without accelerating. Each new lesson must pass the publication gate (minimum 1,200 words, at least one Checkpoint component, at least one documented failure pattern).
+
+The 9 tracks currently have uneven lesson coverage. The 12-month content plan prioritizes depth in the two most-developed tracks before expanding into sparse ones. The Claude Code Operator track (17 available lessons) reaches the full 32-lesson planned curriculum. The AI Business Zero Budget track (11 lessons) completes Module 1 and adds Module 2.
+
+**20+ failure reports.**
+
+The current count is 8. Each new failure report documents an actual production failure from the A Square Solutions ecosystem. At one per 2–3 weeks of active development, 20 failure reports is reachable. The failure reports are the highest-value GEO content — they contain exact error messages, exact root causes, and verified prevention patterns. They have the highest citation win rate of any content type on the platform.
+
+**15+ case studies.**
+
+The current count is 7. Case studies document completed operational outcomes with `CaseStudyMeta` and `OperationalTimeline` components. Each requires a measurable outcome — a before and after with a specific delta. At roughly one per month, 15 is achievable by May 2027.
+
+### Technical Infrastructure
+
+**Authentication — Supabase or Firebase, decided and implemented.**
+
+The current `localStorage` progress tracking is functional but device-bound. Authentication is required for bookmark sync across devices, lesson progress persistence in a database, and the Pro tier content gate. The decision between Supabase and Firebase should be made by Q3 2026 based on: cost at expected user counts, Next.js App Router integration patterns, and whether Supabase Postgres is needed for operational data.
+
+Authentication is a meaningful technical milestone, not a vanity feature. It is a prerequisite for every roadmap item that requires user identity.
+
+**Evidence indexing automated at build time.**
+
+The `lib/evidence-index.ts` implementation described in the Evidence Indexing Architecture document runs at build time, producing a structured index of all evidence in `/public/evidence/`. The quality gate CI step runs on every PR. The ops page displays the evidence archive summary. This is a 3-week engineering task.
+
+**`/api/operational-search` v1 — serving structured debugging context.**
+
+The Phase 2 operational search endpoint (symptom → `DebugContext`) is live. This is the internal debugging lookup tool: a search bar on `/ops` that accepts an error message and returns matched failures, prevention patterns, and debugging paths. This is not Phase 4 (the AI-queryable endpoint) — it is the human-facing surface that proves the retrieval model works before wiring it to an AI consumer.
+
+**`lib/tracks.ts` refactored into per-track files.**
+
+The current `lib/tracks.ts` is a single file containing all 9 track definitions. As the track count grows and lesson metadata expands, this file becomes a maintenance liability. The refactor splits it into `lib/tracks/[track-slug].ts` per track, with a barrel export in `lib/tracks/index.ts`. This is a prerequisite for the tag deduplication work and reduces the risk of a repeat of the `server-module-client-bundle` failure (where a monolithic module with mixed server/client dependencies caused a build failure).
+
+**Tag deduplication complete, 0 P1 operational debt items.**
+
+The platform's tag system has accumulated near-duplicate tags across content. `vercel-deployment` and `vercel-deploy`, `nextjs` and `next-js`, `env-vars` and `environment-variables` are examples. The deduplication audit produces a canonical tag list, updates all content frontmatter to use canonical tags, and adds a CI lint step that rejects non-canonical tags.
+
+P1 operational debt items are issues documented in the platform maturity audit (and subsequent audits) that block content quality or reader experience. Zero P1 items means the known quality debt has been paid down.
+
+### GEO and AI Search
+
+**10+ owned query positions in AI search results.**
+
+A "query position" is a Perplexity AI query where the platform is explicitly cited as a source. The 20-query test protocol (from the GEO Intelligence Architecture document) tracks this. The current baseline is 0 confirmed citations — the platform launched on 2026-05-18, so no test data exists yet. First test run within 30 days of launch establishes the baseline. 10 owned positions by May 2027 requires an average of less than 1 new citation per month — well within reach if the content quality standards are maintained.
+
+**Measurable citation rate.**
+
+Citation rate = (cited articles / total articles in the 20-query test) × 100%. Target: ≥30% citation rate across the 20 tracked queries. This means 6+ of the 20 test articles cited by Perplexity AI in a given month's test run.
+
+### Monetization
+
+**TrustSeal and ScamCheck at ₹10K MRR combined.**
+
+This is the A Square Solutions business target, not an AEL-specific metric. TrustSeal and ScamCheck are the products; AEL is the operational log and authority platform that supports them. Reaching ₹10K MRR across both products validates the zero-budget SaaS model that AEL documents. It also produces operational content — the journey from ₹0 to ₹10K MRR, documented with evidence, is a case study series.
+
+**AEL Pro tier with gated premium content.**
+
+The Pro tier requires authentication (above) and at least 10 premium-tier lessons. Premium lessons are not different in content format from standard lessons — they are deeper implementations, longer workflows, or proprietary playbooks from production operations. The gate is a content-value gate, not a "remove ads" gate. There are no ads on AEL to remove.
+
+---
+
+## 3-Year Targets
+
+These targets are directional. They describe what the platform should be by 2029, grounded in the current trajectory. The specific implementation path will adapt; the destinations are fixed.
+
+### Authority Position
+
+**AEL as the authoritative public operational log of AI-native product development in India.**
+
+This is a specific, achievable authority position — not "the biggest AI learning platform" but "the most operationally documented AI-native product development resource from a specific geographic and technological context."
+
+The authority comes from evidence density and failure documentation, not from content volume. By 2029, the Failure Archive should have 100+ documented failures across the A Square Solutions ecosystem, each with full evidence — build logs, diagnostic screenshots, exact error messages, and verified resolutions. That archive, queryable as a structured intelligence resource, is not replicable by competitors who generate content without operating real systems.
+
+### Operator Accounts and Execution Portfolios
+
+**Operator accounts with execution portfolios — public/private toggle, verified completion records, published case studies.**
+
+An execution portfolio is a public or private record of what an operator has built, what failures they've resolved, and what their completion pattern looks like across tracks. It is not a course certificate — it is a verifiable operational history.
+
+This requires authentication (already a 12-month target), a portfolio page at `/operators/[handle]`, and the infrastructure to associate lesson completions and submitted case studies with a user identity. The public/private toggle lets operators control what is visible.
+
+Verified completion records mean: the platform has a record that the operator completed the lesson with a timestamp. It does not mean the platform has verified that the operator actually followed the lesson's instructions in production — that kind of verification requires case study submission, not just button presses.
+
+### The Failure Archive as Intelligence API
+
+**100+ documented failures, queryable as a debugging intelligence API.**
+
+The `/api/operational-search` endpoint from the 12-month roadmap handles the AI query surface. By 2029, the content feeding it has grown to 100+ failures across the entire A Square Solutions ecosystem — not just AEL itself, but failures from TrustSeal builds, ScamCheck operations, WordPress integration work, and Razorpay integration. Each failure documented with the same evidence standards and intelligence schema.
+
+At 100 failures, the Failure Archive becomes statistically meaningful. Cross-failure pattern detection (Phase 2 of Failure Intelligence Architecture) produces real signal: failure rate by category over time, prevention pattern adoption rates, mean time to resolve by category. These are the metrics that demonstrate whether the documented prevention patterns are actually reducing failure recurrence.
+
+### Collaborative Case Studies
+
+**Other developers can submit operational case studies.**
+
+Collaborative case studies are not user-generated content — they are curated submissions that meet the same publication gate as internally produced case studies. The operator submits via a structured form (or a GitHub PR to a designated submission path). A curatorial review checks for: measurable outcomes (real before/after numbers), evidence (at least one verified screenshot or log), and operational specificity (not a tutorial, not a summary — a documented operational outcome).
+
+The value is not volume — it is credibility. Case studies from other operators building on the same stack validate that the platform's operational patterns are generalizable, not just specific to A Square Solutions' context.
+
+### Mature SaaS Products with Published Playbooks
+
+**TrustSeal and ScamCheck as mature SaaS products with their operational playbooks published on AEL.**
+
+By 2029, both products have documented growth stories. The TrustSeal build — from architecture decision through first paying customer to current MRR — is a multi-case-study series with evidence at every stage. The ScamCheck product evolution — Gemini API integration, traffic patterns, monetization decisions — follows the same format.
+
+The operational playbooks for building, maintaining, and scaling each product are published as AEL lessons. Not as marketing content for the products — as genuine operational documentation of what it takes to build and maintain a small SaaS product on a zero-budget stack in the Indian market context.
+
+---
+
+## 5-Year Targets
+
+These targets are aspirational, but each is grounded in what the platform is actively building toward. They are not features added for completeness — they are natural extensions of the 1-year and 3-year work.
+
+### AEL Operational Memory API
+
+**Any Claude Code session can query "what does AEL know about this failure pattern?" and get structured debugging context.**
+
+The Phase 4 `/api/operational-search` endpoint from the operational search architecture becomes a documented, stable API that external AI systems can call. An operator using Claude Code on their own Next.js/Vercel project can configure Claude Code to query AEL's operational memory before proposing fixes to build errors. The response — matched failures, prevention patterns, debugging paths — is drawn from 5 years of accumulated operational intelligence.
+
+This is not a database product. It is a structured public API serving a single resource: the operational knowledge accumulated from operating real AI-native products on a specific stack. The value is the specificity — it knows about Next.js 15 App Router edge runtime failures, Vercel build environment nuances, WordPress REST API authentication patterns — because those are the systems that were operated and documented.
+
+### Organization Operational Memory
+
+**Teams can deploy their own AEL instance for internal operational memory.**
+
+The platform's architecture is a Next.js content site with a file-based content system. There is no proprietary backend — the MDX content layer, the evidence archive, the operational memory graph, and the search index are all file-system-based and build-time-generated. An organization can fork the platform, replace the public content with their own operational documentation, and deploy it as an internal knowledge base.
+
+This is not a SaaS product. It is an open deployment model: the platform's architecture documentation (on AEL itself) explains how to set up an organization instance. Organizations with AI-native development workflows benefit from the same evidence-based failure documentation model applied to their own stack.
+
+### Verifiable Execution Credential
+
+**Operators with documented case studies, resolved failures, and published playbooks have provable operational credibility.**
+
+An execution portfolio by 2031 is a verifiable credential in a specific sense: the case studies are published, the failures are documented with evidence, the playbooks are public. Anyone reviewing the operator's work can read the primary documents, not just the credential summary. The credibility is in the evidence, not in a badge.
+
+This is the 5-year version of what the operator accounts and execution portfolios target starts in year 3. At 5 years, the portfolio has depth: multiple case studies spanning different problem types, a failure resolution history, and published contributions to the collaborative case study collection.
+
+### What the Platform Explicitly Avoids
+
+These are not targets that got cut from the roadmap. They are anti-targets — directions the platform has decided are wrong, regardless of how attractive they might appear.
+
+**Social features that reward posting over building.** Activity feeds, follower counts, public progress broadcasts, "liked by X operators" signals. These create incentives for platform activity that are orthogonal to — and often in conflict with — building real things. An operator who spends 2 hours writing a progress post has spent 2 hours not building. The platform should have no feature that creates this tradeoff.
+
+**AI-generated content without operational verification.** Content that describes how to do things without evidence that those things work. The distinction from standard AI-generated tutorials is the evidence requirement — any lesson or case study that describes an operational outcome must have a corresponding operational record. A lesson that describes how to configure Vercel edge functions must have been written by someone who actually configured Vercel edge functions and documented what happened, including what failed.
+
+**Generic tutorials that compete with existing documentation.** "How to use React hooks" is not what this platform publishes. The existing documentation for React, Next.js, Vercel, and every other tool in the stack is already comprehensive. The platform publishes operational experiences — what happens when you try to use these tools together in production, what breaks, and how you fix it.
+
+**Engagement metrics that don't correlate with operational learning.** Time on page, bounce rate, session count — these are marketing metrics. The platform cares about completion rate on available lessons, failure report citation rate in AI search, and case study submission rate from the operator community. These are the metrics that measure whether the platform is actually useful to people who are building things.
+
+**Premature infrastructure.** Features built before they are needed. The 5-year roadmap describes what the platform should become — not a plan to build everything on the roadmap in the next sprint. Authentication is in the 12-month plan, not the launch plan, because the platform did not need it before launch. The operational memory API is in the 5-year plan because it requires 5 years of failure documentation to be useful. Build the infrastructure when the content justifies it.
+
+---
+
+## Operational Milestones
+
+<OperationalTimeline
+  title="Platform build history and forward plan"
+  events={[
+    { date: "2026-03-15", type: "build", event: "Platform scaffolding — Next.js 15 App Router initialized, Tailwind, Vercel target set", note: "First Vercel deploy" },
+    { date: "2026-03-22", type: "build", event: "Content infrastructure — lib/content.ts, 7 section routes, getAllMeta/getItem patterns" },
+    { date: "2026-03-29", type: "build", event: "MDX component system Phase 1 — Callout, Checkpoint, LessonObjectives, StepList, CaseStudyMeta" },
+    { date: "2026-04-05", type: "build", event: "Track system — lib/tracks.ts TRACKS registry, 9 tracks defined, generateStaticParams live" },
+    { date: "2026-04-12", type: "milestone", event: "First content batch — 8 lessons, 2 playbooks, 1 system doc in production" },
+    { date: "2026-04-20", type: "build", event: "Homepage and ops dashboard — section counts, page counts, tracks summary" },
+    { date: "2026-05-10", type: "failure", event: "Edge runtime failure — export const runtime edge in opengraph-image.tsx blocks deploy for 23 minutes", note: "Resolved: removed runtime export" },
+    { date: "2026-05-12", type: "failure", event: "next-mdx-remote v6 blockJS — silently strips array props from all custom MDX components", note: "Resolved: blockJS: false in content-renderer.tsx" },
+    { date: "2026-05-14", type: "build", event: "Tracks Phase 4 + Failure Archive — 8-module Claude Code track, failure reports system, 3 initial reports" },
+    { date: "2026-05-14", type: "failure", event: "Server module in client bundle — fs import in lib/tracks.ts breaks next build, 18 minutes to resolve" },
+    { date: "2026-05-17", type: "milestone", event: "Launch stabilization — metadata audit complete, 0 TypeScript errors, 374 static pages building clean" },
+    { date: "2026-05-18", type: "milestone", event: "Public launch — lab.asquaresolution.com live, sitemap submitted to Google Search Console" },
+    { date: "2026-06-15", type: "decision", event: "Evidence indexing architecture finalized — lib/evidence-index.ts implementation begins", note: "Planned" },
+    { date: "2026-07-01", type: "build", event: "Authentication decision — Supabase or Firebase selected, implementation started", note: "Planned" },
+    { date: "2026-08-01", type: "milestone", event: "50 available lessons milestone — all 9 tracks have at least 3 published lessons", note: "Planned" },
+    { date: "2026-09-01", type: "build", event: "lib/tracks.ts refactored into per-track files — maintenance debt resolved", note: "Planned" },
+    { date: "2026-10-01", type: "measurement", event: "First GEO audit — 20-query Perplexity test, citation rate baseline established", note: "Planned" },
+    { date: "2026-11-01", type: "build", event: "/api/operational-search v1 live — symptom to DebugContext retrieval on /ops page", note: "Planned" },
+    { date: "2026-12-31", type: "milestone", event: "12-month targets check — 500+ pages, 50+ lessons, 20+ failures, auth live, GEO baseline set", note: "Planned" }
+  ]}
+/>
+
+---
+
+## How to Use This Document
+
+This document is a reference, not a commitment. The 12-month targets are commitments — each one has been assessed for feasibility against the current operational capacity of a single operator managing three products simultaneously. Missing a 12-month target is an operational event worth documenting (why it was missed, what changed, what the revised target is), not a failure to hide.
+
+The 3 and 5-year targets are directional. They exist to ensure that the near-term decisions are oriented toward the right long-term state. When evaluating whether to build a new feature, the test is: does this move the platform toward the 3-year and 5-year targets, or does it move it toward something else entirely?
+
+The things in the "What the Platform Explicitly Avoids" section are the compass. When the platform stays away from those anti-targets — social features, unverified AI content, vanity metrics, premature infrastructure — it stays on the path toward what it is actually trying to be.
+
+<Callout type="info" title="Reviewing this document">
+This document should be reviewed quarterly and updated after each 12-month target checkpoint. The review process is simple: read each target, assess whether it's on track, and update the status. The OperationalTimeline should gain new events as they happen. The 3 and 5-year targets should be revised if the platform's direction changes substantially — not because the goals shifted, but because the understanding of how to reach them improved.
+</Callout>
+
+---
+
+*Platform Evolution Roadmap v1.0 — 2026-05-18. Review scheduled: Q3 2026.*

@@ -1,0 +1,385 @@
+---
+title: "Evidence Indexing Architecture"
+description: "Metadata standards, evidence tagging, retrieval relationships, and operational relevance scoring for the AI Execution Lab evidence archive."
+date: "2026-05-18"
+tags: ["evidence", "architecture", "indexing", "metadata", "ops", "retrieval"]
+status: "published"
+---
+
+The `/public/evidence/` directory is growing. As of May 2026, it holds evidence directories for 8 failure reports, 3 case studies, and several operational docs — each containing screenshots, build logs, terminal output, and before/after pairs. That number will reach 50+ content pieces within the next six months.
+
+At that scale, a flat directory-plus-naming-convention is still retrievable if you know what you're looking for. But it stops being queryable. You can't answer "show me all deployment-log evidence from May 2026" or "find all before/after screenshot pairs for Vercel deployments" without reading every directory manually. The evidence archive becomes an evidence silo.
+
+Evidence indexing is the system that fixes this. It does not change how evidence is stored or named — the existing naming convention is the right foundation. What indexing adds is a programmatic layer that parses that convention into structured metadata, enabling cross-content queries, automated quality gates, and retrieval that serves both human operators and the operational search system.
+
+---
+
+## What Evidence Indexing Is
+
+### The Problem at Scale
+
+The evidence naming convention — `/public/evidence/[contentSlug]/[NNN]-[descriptor]-[YYYY-MM-DD].[ext]` — encodes a significant amount of metadata directly in the path. The slug tells you which content piece the evidence belongs to. The sequence number tells you the order within the incident. The descriptor tells you what is shown. The date tells you when it was captured. The extension tells you the file format.
+
+This is intentional and it works. At 10 evidence directories, it works perfectly. At 100 evidence directories with 400+ files, it still works for retrieval by path — but it stops working for retrieval by attribute. You cannot ask the filesystem "which evidence items were captured in April 2026 and belong to failure reports with severity: high?" The filesystem does not know severity, content type, or cross-content relationships. It only knows paths.
+
+What the index adds: the ability to query evidence by any combination of its parsed attributes. The index is built from the paths, not stored separately — it is re-derived from the filesystem every time the build runs.
+
+### Current State
+
+Evidence files exist in slug-named subdirectories under `/public/evidence/`. They are rendered in MDX content via `Gallery`, `BeforeAfter`, `EvidenceBlock`, `DeploymentLog`, and `TerminalBlock` components. The MDX author references evidence by path, manually.
+
+When someone wants to find evidence for a specific content piece, they navigate to `/public/evidence/[slug]/` and read the directory. When they want to find evidence across multiple content pieces — say, all analytics screenshots tagged with a date range — there is no retrieval mechanism. The answer is: search the codebase manually.
+
+### What Indexing Adds
+
+The evidence index transforms the filesystem into a queryable archive. Specifically, it enables:
+
+- `getEvidenceForSlug(slug)` — all evidence items belonging to a content piece, in sequence order
+- `getEvidenceByType(type)` — all evidence of a given type across all content pieces
+- `getEvidenceByTag(tag)` — all evidence tagged with a specific entity or technology
+- `getEvidenceByDateRange(start, end)` — all evidence captured within a date window
+- `generateEvidenceIndex()` — the full index for ops page display and audit
+
+These queries run at build time. No database, no API. The MDX content layer is already build-time; the evidence index runs in the same phase, using Node.js `fs` directly.
+
+---
+
+## Metadata Standard
+
+### What Each Evidence Item Has
+
+Every evidence item in the system resolves to a structured `EvidenceItem` object:
+
+```typescript
+interface EvidenceItem {
+  // Parsed from filename
+  contentSlug: string           // the content piece this evidence belongs to
+  sequence: number              // NNN — position within the content piece
+  descriptor: string            // human-readable identifier
+  captureDate: string           // ISO date from filename
+  format: 'png' | 'txt' | 'svg' // file extension
+
+  // Derived from descriptor pattern matching
+  type: EvidenceType            // inferred type (see taxonomy below)
+
+  // Derived from content collection
+  quality: 'verified' | 'approximate'  // verified = date matches incident, approximate = reconstructed
+  contentType: ContentType      // 'failure' | 'case-study' | 'lesson' | 'doc' | 'log'
+
+  // Paths
+  absolutePath: string          // filesystem path (server-only)
+  publicPath: string            // /evidence/[slug]/[filename] — public URL
+}
+```
+
+### What the Naming Convention Already Encodes
+
+The naming convention is the data source. The index parses it, not augment it. When a file is named:
+
+```
+/public/evidence/edge-runtime-deployment-failure/01-vercel-build-log-edge-crypto-error-2026-05-10.png
+```
+
+The parser extracts:
+- `contentSlug` → `edge-runtime-deployment-failure`
+- `sequence` → `1`
+- `descriptor` → `vercel-build-log-edge-crypto-error`
+- `captureDate` → `2026-05-10`
+- `format` → `png`
+
+The type (`deployment-log`) is then inferred from descriptor patterns. The content type (`failure`) is inferred from which directory the slug resolves to in the content collection.
+
+### Additional Metadata Not in the Filename
+
+Two fields require lookup beyond the filename:
+
+**`quality`** is set at the EvidenceBlock component level in MDX — `quality="verified"` or `quality="approximate"`. The index reads this from MDX frontmatter or component usage. If not found, it defaults to `approximate`.
+
+**`contentType`** is derived by looking up the slug in the content collection. `edge-runtime-deployment-failure` resolves to a failure report because it exists under `/content/failures/`. The content collection already knows this.
+
+---
+
+## Evidence Type Taxonomy
+
+### The Nine Types
+
+The type taxonomy from the Evidence Framework (`content/docs/evidence-framework.mdx`) defines nine evidence types. The index uses this taxonomy to enable type-based queries.
+
+| Type | Descriptor Patterns That Trigger Inference | Rendering Component |
+|---|---|---|
+| `screenshot` | `dashboard`, `browser`, `ui`, `rendered`, `page`, `app` | `EvidenceBlock type="screenshot"` |
+| `terminal` | `terminal`, `command`, `output`, `cli`, `npm`, `node` | `TerminalBlock` |
+| `analytics` | `ga4`, `analytics`, `plausible`, `search-console`, `realtime` | `EvidenceBlock type="analytics"` |
+| `deployment-log` | `vercel-deployment`, `vercel-function`, `ci-`, `github-actions` | `DeploymentLog` |
+| `build-log` | `vercel-build`, `next-build`, `tsc-`, `build-output`, `build-log` | `DeploymentLog` |
+| `debugging` | `devtools`, `network-tab`, `console-tab`, `curl-`, `http-` | `EvidenceBlock type="debugging"` |
+| `architecture` | `diagram`, `architecture`, `schema`, `flow`, `graph` | `EvidenceBlock type="architecture"` |
+| `before-after` | descriptor starts with `before-` or `after-` | `BeforeAfter` |
+| `search-console` | `search-console`, `gsc-`, `impressions`, `clicks-` | `EvidenceBlock type="search-console"` |
+
+Inference applies the patterns in order. The first match wins. If no pattern matches, the type falls back to `screenshot` for `.png` files and `terminal` for `.txt` files.
+
+### Why Type Matters for Retrieval
+
+Type is not just a display hint. It determines:
+
+1. **Rendering component** — a `deployment-log` item renders in `DeploymentLog` with log-level color coding. A `screenshot` item renders in `EvidenceBlock` with an image. The ops page needs to know which component to use for any given evidence item.
+
+2. **Expected metadata** — `analytics` items are expected to have a visible date range. `terminal` items are expected to be non-empty `.txt` files. The quality gate validates per-type expectations.
+
+3. **Retrieval query scope** — "show me all build logs from May 2026" requires type classification. Without it, the query returns all evidence from May 2026 and the caller filters manually.
+
+4. **Cross-content relationships** — a `build-log` from `edge-runtime-deployment-failure` is structurally related to the `build-log` from `server-module-client-bundle` in a way that two arbitrary screenshots are not. Type enables relationship inference.
+
+---
+
+## Evidence Tagging
+
+### What Tags Connect
+
+Tags connect evidence items to the operational memory graph — the entity network of tools, technologies, failure patterns, and operational phases that the platform's knowledge base represents.
+
+An evidence item is tagged with:
+
+- **`contentSlug`** — primary association, always present
+- **`entityType`** — the type of entity shown (`tool`, `service`, `error`, `measurement`, `configuration`)
+- **`operationalPhase`** — `build`, `deploy`, `debug`, `measure`, `plan`
+- **`technology`** — named technologies visible in the evidence: `Vercel`, `Next.js`, `TypeScript`, `GA4`, `WordPress`, `Supabase`
+- **`errorMessage`** — for debugging and build-log evidence, the exact error message visible (for search-console queries against the Failure Archive)
+
+### Tag Inference vs. Manual Tags
+
+Technology tags are inferred from descriptor patterns and content slug context. `vercel-build-log` → `Vercel`. `ga4-realtime-view` → `GA4`. `next-build-fs-module` → `Next.js`.
+
+Operational phase is inferred from type: `build-log` and `deployment-log` → `build`/`deploy`. `debugging` → `debug`. `analytics` and `search-console` → `measure`.
+
+Error message tags require manual annotation in the `EvidenceBlock` component or evidence frontmatter. They cannot be reliably inferred from filenames. This is acceptable — error message tags are only needed for high-value debugging evidence, not for every item in the archive.
+
+### Cross-Content Evidence Retrieval
+
+Tags enable the most operationally useful query type: retrieving evidence across content pieces by attribute.
+
+- "All `Vercel` evidence tagged `build` from failures with `severity: high`" → surfaces the most critical build evidence across the entire archive
+- "All `before-after` pairs from case studies" → shows every visual state change documented across the platform
+- "All `deployment-log` evidence from May 2026" → gives a timeline view of deployment activity during the launch period
+
+These queries are what makes the evidence archive an operational intelligence resource rather than a file store.
+
+---
+
+## Retrieval Relationships
+
+### Evidence → Content
+
+Each evidence item has exactly one primary content piece. This is encoded in the directory structure — the slug subdirectory is the primary association. It is not overridable.
+
+The relationship is one-to-many: one content piece has many evidence items. The reverse — one evidence item referenced by multiple content pieces — is handled by tagging, not by duplicating files.
+
+### Evidence → Pattern
+
+A failure report's evidence is also relevant to the patterns that failure exemplifies. The `edge-runtime-deployment-failure` build log is evidence for the "Edge Runtime API Incompatibility" pattern in the Failure Pattern Library, even though it's stored under the failure report's slug.
+
+The index captures this relationship via the failure report's `related_failures` and `prevention_patterns` frontmatter fields. When a failure report references a pattern, all evidence items associated with that failure report are implicitly tagged as evidence for that pattern.
+
+### Evidence → Experiment
+
+Analytics evidence has a direct relationship to the experiment it was measuring. A GA4 screenshot from a GEO experiment is evidence for the experiment's measurement phase. This relationship is captured by tagging the evidence item with the experiment's slug and `operationalPhase: measure`.
+
+When the operational search system serves a query about a specific experiment's outcomes, it can retrieve the associated analytics evidence directly from the index.
+
+### Evidence → Lesson
+
+Lessons that reference evidence items (via `EvidenceBlock` or `TerminalBlock`) create a retrieval relationship in the opposite direction. The lesson references the evidence; the index tracks which lessons reference which evidence items. This enables the query: "which lessons use this evidence item?" — useful for updating evidence across multiple locations when a system changes.
+
+---
+
+## Operational Relevance Scoring
+
+Not all evidence items are equally useful for retrieval. A build log showing an exact error message is more useful for a debugging query than a generic dashboard screenshot showing a green deploy. When the search system returns evidence items for an operational query, it should surface the most relevant items first.
+
+### Relevance Factors
+
+**Recency** — evidence captured within the last 90 days scores higher than older evidence for queries without a date constraint. Operational context changes; a Vercel dashboard screenshot from six months ago may show a deprecated UI.
+
+**Specificity** — evidence that shows a specific error state (a build log with an exact error message, a debugging screenshot with a specific HTTP 401) scores higher than evidence showing a clean or generic state. The specificity score is inferred from type: `build-log` and `debugging` evidence scores higher than `screenshot` evidence for diagnostic queries.
+
+**Linkage count** — evidence items referenced by multiple content pieces have higher relevance. An evidence item referenced in both a failure report and a related lesson is more operationally central than one referenced only in a single doc.
+
+**Type weight** — terminal output with an exact error trace scores highest for debugging queries (type: `terminal`, type: `build-log`, type: `debugging`). Analytics evidence scores highest for measurement queries. For general retrieval, the type weights are: `terminal` > `build-log` > `debugging` > `deployment-log` > `analytics` > `before-after` > `screenshot` > `architecture` > `search-console`.
+
+### Relevance Score Formula
+
+```typescript
+function computeRelevanceScore(item: EvidenceItem, context: RetrievalContext): number {
+  const recencyScore = Math.max(0, 1 - daysSince(item.captureDate) / 90)
+  const specificityScore = SPECIFICITY_WEIGHTS[item.type]
+  const linkageScore = Math.min(1, item.linkageCount / 5)
+  const typeWeight = context.preferredTypes.includes(item.type) ? 1.5 : 1.0
+
+  return (recencyScore * 0.25 + specificityScore * 0.40 + linkageScore * 0.35) * typeWeight
+}
+```
+
+The type weight multiplier applies when the retrieval context specifies a preference — a debugging query boosts `build-log` and `terminal` items; a measurement query boosts `analytics` items.
+
+---
+
+## `lib/evidence-index.ts` Implementation Plan
+
+### Function Signatures
+
+```typescript
+// Scan /public/evidence/ recursively, parse filenames, return all items
+function scanEvidenceDirectory(): EvidenceItem[]
+
+// All evidence for a single content piece, in sequence order
+function getEvidenceForSlug(slug: string): EvidenceItem[]
+
+// All evidence of a given type, across all content pieces
+function getEvidenceByType(type: EvidenceType): EvidenceItem[]
+
+// All evidence captured within a date range
+function getEvidenceByDateRange(start: string, end: string): EvidenceItem[]
+
+// All evidence tagged with a specific technology or entity
+function getEvidenceByTag(tag: string): EvidenceItem[]
+
+// Full index for ops page display, quality audit, and search indexing
+function generateEvidenceIndex(): EvidenceIndex
+
+interface EvidenceIndex {
+  items: EvidenceItem[]
+  bySlug: Record<string, EvidenceItem[]>
+  byType: Record<EvidenceType, EvidenceItem[]>
+  stats: {
+    totalItems: number
+    totalSlugs: number
+    byType: Record<EvidenceType, number>
+    byFormat: Record<string, number>
+    recentItems: EvidenceItem[]    // captured in last 30 days
+  }
+}
+```
+
+### Build-Time Execution
+
+The index runs at build time using Node.js `fs` directly. It is server-only — it imports `fs` and `path` from Node.js and must not be imported by any client component. This follows the same pattern as `lib/content.ts` and `lib/tracks.ts` (post-refactor).
+
+```typescript
+// lib/evidence-index.ts — server-only
+import fs from 'fs'
+import path from 'path'
+
+const EVIDENCE_ROOT = path.join(process.cwd(), 'public', 'evidence')
+```
+
+The `generateEvidenceIndex()` function is called in `getStaticProps` or `generateStaticParams` of the ops page and any page that renders evidence summaries. It does not run on every request — it runs once per build.
+
+<Callout type="info" title="Server-only import guard">
+Add `import 'server-only'` at the top of `lib/evidence-index.ts` once the Next.js `server-only` package is available in the project dependencies. Until then, the function exports include a comment noting the server-only requirement. Importing this module in a client component will cause a build failure — the `fs` import makes this self-enforcing.
+</Callout>
+
+### Filename Parser
+
+The filename parser uses a single regex against the evidence file basename:
+
+```typescript
+const EVIDENCE_FILENAME_PATTERN = /^(\d{2,3})-(.+)-(\d{4}-\d{2}-\d{2})\.(png|txt|svg)$/
+
+function parseEvidenceFilename(filename: string): ParsedFilename | null {
+  const match = filename.match(EVIDENCE_FILENAME_PATTERN)
+  if (!match) return null
+
+  return {
+    sequence: parseInt(match[1], 10),
+    descriptor: match[2],
+    captureDate: match[3],
+    format: match[4] as 'png' | 'txt' | 'svg'
+  }
+}
+```
+
+Files that do not match the pattern are logged as warnings during the build (not errors — malformed filenames should not break the build unless the quality gate CI step is active).
+
+---
+
+## Evidence Quality Gates
+
+Quality gates run as part of the evidence index scan. They validate per-type expectations before any evidence item is accepted into the index as `quality: verified`.
+
+### Per-Type Validation Rules
+
+**Screenshot (`png`):**
+- Filename matches the naming convention pattern
+- `captureDate` is a valid ISO date
+- File is not empty (size > 0)
+- Future (requires `sharp`): image width ≥ 1280px
+
+**Terminal output (`txt`):**
+- File is `.txt` extension (not `.png` of a terminal window)
+- File is not empty
+- Content contains at least one line with a recognizable command or error pattern
+
+**Analytics (`png`):**
+- Filename contains a date in the descriptor or `captureDate` field
+- Descriptor contains one of the analytics type patterns (`ga4`, `analytics`, `plausible`, `search-console`)
+
+**Build log and deployment log:**
+- File is `.txt` or filename follows the deployment-log naming pattern
+- File is not empty
+
+**Architecture diagram (`svg`):**
+- File is `.svg` extension
+- File size > 500 bytes (not an empty or stub SVG)
+
+### CI Integration
+
+A CI step that validates evidence filenames runs on every push to main:
+
+```bash
+# scripts/validate-evidence.ts — runs via tsx in CI
+# Scans /public/evidence/, reports malformed filenames, exits 1 if any found
+```
+
+<Callout type="warn" title="Quality gate vs. build gate">
+The quality gate does not currently fail the Vercel build on malformed evidence filenames. It runs as a GitHub Actions check step. The reason: a malformed evidence filename should block the PR merge, not the deployment — the deployment may contain unrelated changes that should not be blocked by a naming violation. The CI step failing on the PR is the right enforcement point.
+</Callout>
+
+### Quality Gate Output
+
+The quality gate produces a structured report:
+
+```
+Evidence Quality Report — 2026-05-18
+Total items: 47
+Valid: 44
+Warnings: 3
+  - /public/evidence/ga4-cross-domain-tracking-gap/03-ga4-view-before.png
+    → captureDate missing from filename (expected YYYY-MM-DD suffix before extension)
+  - /public/evidence/server-module-client-bundle/01-error.txt
+    → descriptor too generic ('error' — use specific descriptor per naming convention)
+  - /public/evidence/edge-runtime-deployment-failure/screenshot.png
+    → filename does not match naming convention (missing sequence number and date)
+```
+
+Items flagged as warnings are accepted into the index with `quality: approximate`. Items with missing `captureDate` have their date set to the file's filesystem modification time, flagged explicitly in the index entry.
+
+<Callout type="lab" title="The naming convention is the schema">
+The evidence naming convention was designed with indexability in mind. Every field the index needs — slug, sequence, descriptor, date, format — is encoded in the path. This is what makes the index derivable from the filesystem without a separate metadata store. The convention is not a formatting preference; it is the data schema. Violations break the index, not just the aesthetics.
+</Callout>
+
+---
+
+## Phase 2 — Automated Evidence Surfacing
+
+Phase 1 (current plan) produces a build-time index consumed by the ops page and the operational search system. Phase 2 surfaces the index to users.
+
+**Ops page evidence summary:** The `/ops` page gains an Evidence Archive section showing total item count, breakdown by type, recent evidence (last 30 days), and the quality gate report. This gives the operator visibility into the evidence archive without navigating the filesystem directly.
+
+**Content page evidence sidebars:** Lessons, failure reports, and case studies gain an "Evidence" section in the right rail showing all indexed evidence for that content slug — thumbnail grid for screenshots, file list for logs. This surfaces evidence that may not be explicitly embedded in the content body.
+
+**Cross-content evidence search:** The operational search system gains `getEvidenceForDebugContext(symptom)` — which retrieves the most relevant evidence items for a given debugging symptom by combining type weight, tag matching, and relevance scoring. This is the evidence layer of the `DebugContext` response type.
+
+---
+
+*Evidence Indexing Architecture v1.0 — 2026-05-18.*

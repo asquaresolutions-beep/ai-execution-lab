@@ -1,0 +1,258 @@
+---
+title: "Operational Memory Infrastructure Build"
+date: "2026-05-18"
+tags: ["operational-memory", "failure-memory", "geo-intelligence", "evidence-framework", "architecture", "platform"]
+status: published
+---
+
+<LessonMeta
+  duration="6h 40m"
+  difficulty="advanced"
+  tools={["Claude Code", "Next.js", "TypeScript", "MDX"]}
+  outcome="Full operational memory infrastructure shipped: entity graph, failure memory, GEO intelligence, evidence scaling"
+/>
+
+Six phases executed in a single session. The platform moved from documented incidents to a queryable intelligence layer — an entity graph with typed relationships, failure confidence scoring, GEO scoring infrastructure, and real case study evidence across the full ecosystem.
+
+This is the build log.
+
+---
+
+## Phase 1 — Operational Evidence Scaling
+
+**Duration:** ~1h 30m
+
+Before building memory, the evidence foundation had to be solid. Six phases of evidence scaling ran first.
+
+### EvidenceBlock Component
+
+New `<EvidenceBlock>` component created at `components/mdx/evidence-block.tsx`. Nine evidence types: `screenshot`, `terminal`, `analytics`, `deployment-log`, `build-log`, `debugging`, `architecture`, `before-after`, `search-console`. Three quality levels: `verified`, `approximate`, `reconstructed`.
+
+Registered in `components/mdx-components.tsx` and `components/content-renderer.tsx`.
+
+### FailureIntelligence Component Expansion
+
+`components/mdx/failure-intelligence.tsx` extended with five new props:
+
+- `riskScore` — numeric 0-10 blast radius rating
+- `debuggingComplexity` — `trivial | moderate | complex | expert`
+- `relatedLessons[]` — structured lesson links with slug + title
+- `relatedPlaybooks[]` — playbook cross-references
+- `recurringPattern` — pattern ID from failure-pattern-library
+
+Two new style maps added: `DEBUG_COMPLEXITY_STYLES` and `riskScoreColor()` function.
+
+### Case Study Content — 6 Files
+
+Six case studies written in parallel with component work:
+
+| Slug | Subject |
+|------|---------|
+| `ai-execution-lab-platform-launch` | Full platform build — 3 incidents documented |
+| `trustseal-architecture-build` | React + Firebase + Razorpay on GitHub Pages |
+| `scamcheck-architecture-build` | React + Gemini + Firebase — AI-native app build |
+| `ecosystem-wordpress-integration` | GA4 cross-domain + REST API integration |
+| `vercel-deployment-evolution` | Edge runtime + blockJS + env var failures traced |
+| `ai-assisted-publishing-system` | Claude Code–assisted MDX content pipeline |
+
+### Failure Content — 5 New Reports
+
+Five new failure reports added to bring the archive to 8 total:
+
+- `wordpress-rest-api-auth-failure` — Base64 encoding with URL-encoded spaces
+- `vite-github-pages-spa-routing` — SPA 404 on GitHub Pages (2 instances: TrustSeal + ScamCheck)
+- `dns-subdomain-propagation-delay` — TTL + HTTPS cert timing chain
+- `environment-variable-missing-production` — Vercel env scope checkbox
+- `ga4-cross-domain-tracking-gap` — cookie_domain parent domain misconfiguration
+
+### Documentation — 4 Architecture Docs
+
+- `docs/geo-intelligence-architecture.mdx`
+- `docs/platform-maturity-audit-2026-05.mdx`
+- `docs/failure-pattern-library.mdx`
+- `docs/evidence-framework.mdx`
+
+---
+
+## Phase 2 — Platform Maturity Hardening
+
+**Duration:** ~45m
+
+### Lesson Progress Indicator
+
+`getLessonPosition()` added to `lib/tracks.ts`. Returns `{ lessonNumber, totalLessons, moduleName }` by index into `mod.lessons[]`.
+
+Lesson page `app/tracks/[track]/[module]/[lesson]/page.tsx` updated:
+- Module breadcrumb converted from `<span>` to `<Link href={/tracks/${track.id}#${mod.id}}>`
+- "X of Y" position indicator added in `font-mono text-surface-700`
+
+### Noindex for Internal Planning Docs
+
+Eight internal planning docs received `noindex: true` in frontmatter. `lib/metadata.ts` updated to spread `robots: { index: false, follow: false }` when `fm.noindex` is set.
+
+<callout type="warn" title="Encoding incident">
+Initial attempt to add noindex via PowerShell `Set-Content -Encoding utf8` corrupted em dashes (â€") across all 8 files. Recovered with `git checkout HEAD -- [files]` and re-applied via Edit tool. PowerShell `Set-Content` is now permanently off the table for files containing non-ASCII characters.
+</callout>
+
+### Thin-Tag Noindex
+
+`app/tags/[tag]/page.tsx` updated: tag pages with fewer than 3 items get `robots: { index: false, follow: true }`. Link equity preserved; thin content excluded from indexing.
+
+### Ops Page Restructure
+
+`app/ops/page.tsx` received three new sections in the left column:
+
+1. **Ecosystem deployment state** — live status for all 4 properties with `PROPERTY_STATUS_STYLES` dot/badge system
+2. **Operational Debt** — 7 P1/P2/P3 items sourced from `lib/ecosystem.ts`
+3. **Active Experiments** — 3 tracked experiments
+
+Quick Actions replaced with 4 semantic clusters: Content, Technical, Intelligence, Navigation.
+
+---
+
+## Phase 3 — Ecosystem Intelligence Libraries
+
+**Duration:** ~1h
+
+### lib/ecosystem.ts
+
+Created `lib/ecosystem.ts` with:
+- `ECOSYSTEM_PROPERTIES[]` — 4 properties (Lab, A Square, TrustSeal, ScamCheck) with deploy status
+- `OPERATIONAL_DEBT[]` — 7 items across P1/P2/P3 priority
+- `ACTIVE_EXPERIMENTS[]` — 3 live experiments
+- `getEcosystemSummary()` — aggregated dashboard numbers
+
+### lib/geo-intelligence.ts
+
+Created `lib/geo-intelligence.ts` with:
+- `PLATFORM_ENTITIES[]` — 40+ ecosystem entities for density scoring
+- `GEO_QUERY_TAXONOMY[]` — 21 owned/competitive/gap queries
+- `computeEntityDensity()` — threshold: 0.6 entities per 100 words
+- `scoreAnswerability()` — 4-dimension rubric (directAnswer, specificity, actionability, evidence), gate at 7.0/10
+- `scoreCitationPotential()` — 0-10 score from tags, slug, content signals
+- `generateGEOReport()` — full content audit package
+- `getQueryCoverage()` — owned/competitive/gap analysis with coverage %
+
+---
+
+## Phase 4 — Operational Memory Infrastructure
+
+**Duration:** ~2h
+
+### lib/operational-memory.ts
+
+Core entity graph created. 23 entities across 7 types, 32 typed relationships.
+
+**Entity types:** `lesson`, `failure`, `playbook`, `case-study`, `log`, `doc`, `lab`, `system`, `pattern`, `experiment`
+
+**Relationship types (10):**
+
+| Type | Direction | Semantics |
+|------|-----------|-----------|
+| `prevents` | A → B | Knowing A prevents failure B |
+| `caused-by` | A ← B | A occurred because B was unknown |
+| `demonstrates` | case-study → failure | Case study shows failure in real context |
+| `implements` | lesson → playbook | Lesson teaches the playbook procedure |
+| `documented-in` | failure → doc/log | Failure has a formal write-up |
+| `related-to` | bidirectional | Operational affinity |
+| `prerequisite-for` | A → B | A should be understood before B |
+| `escalates-to` | A → B | Unresolved A leads to B |
+| `resolved-by` | failure → playbook | Playbook fixes the failure |
+| `exemplifies` | failure → pattern | Failure is an instance of the named pattern |
+
+**Query functions:**
+- `getEntityById()` — O(1) Map lookup
+- `queryRelationships()` — directional filter with optional type constraint
+- `getRelatedEntities()` — returns full entities for a relationship query
+- `getDebugContext()` — full debugging package for a failure ID
+- `getFailuresForPattern()` — all failures exemplifying a pattern
+- `getEntityRelationshipsForSlug()` — for in-page relationship panels
+- `getLessonImpactChain()` — what a lesson prevents, what demonstrates it
+- `getMemoryGraphSummary()` — entity and relationship breakdown by type
+
+### lib/failure-memory.ts
+
+Failure aggregation and confidence scoring layer created.
+
+**Confidence scoring rubric (0-100):**
+
+| Factor | Points |
+|--------|--------|
+| Base (any documented failure) | 20 |
+| `instanceCount >= 2` | +30 |
+| `instanceCount >= 3` | +15 |
+| `hasPreventionSteps` | +20 |
+| `hasPlaybook` | +15 |
+| `hasRelatedLessons` | +10 |
+| `recoveryComplexity` trivial/low | +10 |
+
+**Confidence scores across the archive:**
+
+| Failure | Confidence | Notes |
+|---------|-----------|-------|
+| environment-variable-missing-production | 95 | 3 instances, trivial fix, prevention steps |
+| edge-runtime-deployment-failure | 80 | 2 instances, prevention steps |
+| vite-github-pages-spa-routing | 80 | 2 instances (TrustSeal + ScamCheck) |
+| server-module-client-bundle | 80 | 2 instances, prevention steps |
+| wordpress-rest-api-auth-failure | 75 | 1 instance + playbook, low complexity |
+| ga4-cross-domain-tracking-gap | 70 | 2 instances, low complexity |
+| next-mdx-remote-v6-blockjs | 60 | 1 instance, prevention steps |
+| dns-subdomain-propagation-delay | 50 | 1 instance, infrastructure-timing |
+
+**Public API:**
+- `getFailureMemory()` — full table with computed scores
+- `getConfidenceScore(slug)` — per-failure score
+- `getPatternCoverage()` — instance count + coverage % + confidence per pattern
+- `getHighConfidencePaths()` — failures with score >= 70, sorted, enriched
+- `getRecurringPatterns()` — patterns with >= 2 instances + merged prevention checklists
+- `getFailureMemorySummary()` — dashboard numbers
+
+### Architecture Documentation — 5 Docs
+
+Written in parallel by background agents:
+
+- `docs/operational-memory-architecture.mdx` — entity hierarchy, relationship graph, 4 knowledge inheritance patterns, dependency chains
+- `docs/failure-memory-architecture.mdx` — recurring patterns, prevention inheritance, debugging lineage, confidence scoring, recovery patterns, ecosystem cascade model
+- `docs/evidence-indexing-architecture.mdx` — metadata standards, tagging taxonomy, retrieval relationships
+- `docs/operational-search-architecture.mdx` — semantic search design, AI-native debugging lookup
+- `docs/platform-evolution-roadmap.mdx` — 1/3/5-year evolution roadmap
+
+---
+
+## Build State
+
+All 5 phases executed without TypeScript errors. Production build clean.
+
+**Platform page count:** 374+ pages at build time.
+
+**Failure archive:** 8 reports, 5 named patterns, 32 typed relationships.
+
+**Confidence distribution:** 6 of 8 failures at confidence >= 70 (high-confidence debugging paths).
+
+**GEO coverage:** 21 queries mapped, entity density and answerability scoring active.
+
+---
+
+## Key Infrastructure Files
+
+```
+lib/
+  operational-memory.ts   — entity graph + query functions
+  failure-memory.ts       — confidence scoring + pattern coverage
+  ecosystem.ts            — deployment state + operational debt
+  geo-intelligence.ts     — entity density + answerability scoring
+
+components/mdx/
+  evidence-block.tsx      — 9-type evidence wrapper
+  failure-intelligence.tsx — extended with riskScore, complexity, related entities
+
+content/
+  case-studies/           — 6 new files
+  failures/               — 5 new files (archive: 8 total)
+  docs/
+    failure-pattern-library.mdx
+    evidence-framework.mdx
+    geo-intelligence-architecture.mdx
+    operational-memory-architecture.mdx
+    failure-memory-architecture.mdx
+```
