@@ -1,0 +1,390 @@
+---
+title: "Community Model Architecture"
+description: "Design for the execution-credibility community system — operator profiles, execution portfolios, public work journals, verification, collaborative labs, and reputation based on real work output."
+date: "2026-05-18"
+tags: ["ops", "community", "architecture", "platform", "credibility", "execution"]
+status: "published"
+---
+
+This document defines the community architecture for AI Execution Lab. "Community" is the wrong word for what this is — but it's the closest shorthand. What this document actually defines is the execution-credibility infrastructure: the system by which operators demonstrate, share, and verify real work output.
+
+The design principles come first because they constrain everything that follows. If you skip the principles section, you will misread the architecture decisions.
+
+---
+
+## Design Principles
+
+### Execution credibility is the only currency
+
+The only reputation that matters on this platform is: what have you built, what have you fixed, what have you shipped. A person who has deployed three production AI systems and documented every failure has more credibility than a person who has read every lesson on the platform. The architecture must enforce this — not as a philosophy, but as a structural constraint. Reputation inputs that don't correspond to verified execution output are not included in the scoring model, regardless of how much engagement they generate.
+
+### Participation is gated by production
+
+You cannot "participate" in the community by posting opinions, reacting to content, or showing up in a discussion thread. Participation means producing an artifact. Every community contribution type — failure report, case study, playbook variant — requires an attached execution record. This is not a moderation policy. It is an architectural requirement baked into the submission system.
+
+### The community is a byproduct, not a product
+
+A social community optimized for engagement produces engagement metrics. This platform is optimized for execution capability. The community is the byproduct of operators doing real work in the same environment and making that work visible to each other. It is not the point. The moment community metrics start driving platform decisions, the execution-first mission degrades.
+
+### What this is NOT (hard list)
+
+- No forums or discussion threads on any content
+- No comment sections (lessons, failures, playbooks — none of them)
+- No content reactions (no likes, upvotes, claps, stars on content)
+- No DMs between operators
+- No follower counts or social graphs
+- No leaderboards based on activity, login streaks, or engagement
+- No gamification streaks (the velocity tracking in the ops page is an operational self-measurement tool, not a social gamification feature)
+- No reputation decay (credibility earned through real work does not expire)
+- No public "who's online" or activity feeds showing user actions in real time
+
+---
+
+## What Makes This Different
+
+Standard "community" features optimize for one thing: return visits via social obligation. Someone commented on your post → you come back to respond. Someone followed you → you feel accountable to post more. These mechanics are effective at generating engagement and catastrophically bad at producing execution output.
+
+This platform's community mechanics optimize for: operators producing artifacts, operators verifying each other's artifacts, and the platform accumulating a corpus of real execution evidence contributed by operators beyond the core team.
+
+**The structural difference is this:** In a standard community, you earn visibility by being active. Here, you earn credibility by producing verifiable output. An operator who submits zero failure reports and three verified case studies ranks higher than an operator who has commented on every lesson and submitted nothing.
+
+The submission-first model creates natural selection: operators who are actually doing the work produce the artifacts. Operators who are only consuming don't accumulate credibility. This is a feature, not a limitation.
+
+---
+
+## Operator Profiles
+
+Operator profiles are public pages at `/operators/[username]`. They are execution records, not social profiles.
+
+**What a profile contains:**
+
+| Field | Description |
+|---|---|
+| Display name | Operator-chosen display name |
+| Track completions | List of completed tracks with verified completion dates |
+| Execution artifacts | Links to submitted and accepted artifacts (case studies, failure reports, playbook variants) |
+| Failure reports contributed | Count and links to accepted failure reports |
+| Case studies published | Count and links to accepted case studies |
+| Playbook variants accepted | Count and links to accepted variants |
+| Labs completed | Count of labs with verified outputs (Phase 2 feature) |
+| Cohorts participated | List of execution cohorts the operator has been part of |
+| Execution credibility score | Computed score from verified contributions (see Reputation Model) |
+| Member since | ISO date of account creation |
+
+**What a profile does NOT contain:**
+
+- Follower count
+- Following list
+- Profile "likes" or endorsements
+- Content views or page visit stats
+- Activity graph (no contribution heatmap)
+- Badges for account age or streak length
+- "About me" free-text bio beyond a single professional descriptor line
+
+**Public vs. private profile:** Operators choose whether their profile is public or private during onboarding. Private profiles are visible only to the operator. Public profiles are indexed by search engines. The default is public — the purpose of the platform is executed work made visible, and opting into obscurity defeats that purpose.
+
+---
+
+## Execution Portfolios
+
+An operator's portfolio is their primary community contribution. The portfolio IS the community output — not posts, not discussions, not votes.
+
+A portfolio is a public record of what you've built. It is evidence-based by architecture: every portfolio entry must include a linked artifact.
+
+**Portfolio entry types:**
+
+**Completed track with deployment:** Operator has completed a track and deployed a system as part of completing it. Evidence: link to deployed system (or screenshot if the system is internal), execution log of the deployment process. This is the most common portfolio entry type.
+
+**Failure report contributed:** Operator encountered a specific failure, documented it according to the platform's evidence standards, and submitted it for review. Evidence: the failure report itself (linked artifact). Accepted failure reports appear on the platform as platform content, with the contributing operator credited.
+
+**Case study published:** Operator documented an end-to-end execution project — problem, approach, execution record, outcome. Evidence: the case study itself, including required artifact types (see `execution-artifacts-architecture.mdx`). Case studies require A Square Solutions editorial review before publication.
+
+**Playbook variant:** Operator has run an existing platform playbook and documented a variation — different tooling, different environment, different outcome. Evidence: side-by-side comparison of original playbook and variant, execution log of the variant run.
+
+**Portfolio integrity rule:** A portfolio entry without an attached artifact is not published. The submission system enforces this — the artifact upload or link is a required field, not optional.
+
+---
+
+## Public Work Journals
+
+Operators can maintain a public work journal at `/operators/[username]/journal`. This is a voluntary, dated, execution-focused operational log.
+
+**What it is:**
+- A chronological record of execution events
+- Each entry references a specific execution event: build, deployment, debug session, automation run, experiment
+- Entries are short (target: 200–500 words) and specific
+- Dated entries with ISO timestamps
+
+**What it is not:**
+- A blog
+- An opinion column
+- A tutorial (tutorials belong in track content, not journals)
+- A place to share observations about AI in general
+
+**Entry structure:**
+
+```
+## [Date] — [Execution event one-line description]
+
+**Event type:** Build / Deployment / Debug / Automation / Experiment
+
+**Context:** [One paragraph: what was being built and why]
+
+**What happened:** [The execution record: commands run, results observed, problems encountered]
+
+**Output:** [What was produced: deployed URL, file modified, system state changed]
+
+**Cross-reference:** [Link to related platform content if applicable — failure report, lesson, playbook]
+```
+
+**Visibility:** Work journal entries are public by default (matching profile default). They are indexed by search engines and cited by the GEO optimization layer. A work journal with consistent, evidence-referenced entries is high-GEO-value content because it is specific, dated, and demonstrably produced by someone doing real work.
+
+**Review:** Work journal entries are NOT reviewed before publication. The operator publishes directly. The only moderation is after-the-fact for content policy violations. This is intentional — the review bottleneck is reserved for content that appears on the platform's main content pages.
+
+---
+
+## Contribution Systems
+
+Operators contribute to the platform in three ways. Each has its own submission path and review process.
+
+### Failure Reports
+
+**What qualifies:** A documented failure encountered during execution of AI-native work. Must include verbatim error message, reproduction conditions, root cause diagnosis, and fix. Must meet the evidence standards defined in `execution-artifacts-architecture.mdx`.
+
+**Submission path:**
+1. Operator fills submission form: error message, context, diagnosis, fix, optional screenshots
+2. Submission enters review queue
+3. A Square Solutions reviews for accuracy, completeness, and evidence quality
+4. Accepted reports are published as platform content under `type: 'failure'`, with operator credited
+5. Operator's profile is updated: failure reports contributed count +1, execution credibility score updated
+
+**Review timeline target:** 5 business days. This is not an SLA — it is an operational target.
+
+**What gets rejected:** Reconstructed errors without evidence ("I think the error was..."), failures not reproducible from the submission evidence, fixes that don't address the documented root cause.
+
+### Case Studies
+
+**What qualifies:** An end-to-end execution record of a project. Must include operational timeline (Type 8 artifact), before/after comparison (Type 6), and at least one measurement artifact (Type 7). See `execution-artifacts-architecture.mdx` for artifact type definitions.
+
+**Submission path:**
+1. Operator submits draft case study (MDX format using the case study template)
+2. Submission enters editorial review queue — separate from failure report queue
+3. A Square Solutions editorial review: evidence completeness, prose clarity, factual accuracy
+4. Accepted case studies are published at `/case-studies/[slug]`, with operator author credit
+5. Operator profile updated: case studies published count +1, execution credibility score updated with 5x weight
+
+**Why case studies get editorial review, not just accuracy review:** Case studies are the highest-credibility content type on the platform. They are cited in lessons, referenced by other operators, and indexed prominently by AI search systems. They require editorial standards equivalent to platform-authored content.
+
+### Playbook Variants
+
+**What qualifies:** An operator has run an existing platform playbook and documented a variation in tooling, environment, or approach that produces equivalent or better outcomes.
+
+**Submission path:**
+1. Operator links the original playbook they're varying from
+2. Submits: variant description, modified steps, execution log of the variant run, comparison of outcomes
+3. A Square Solutions reviews for accuracy and genuine differentiation from the original
+4. Accepted variants are published as linked content on the original playbook page
+5. Operator profile updated: playbook variants accepted count +1, execution credibility score updated
+
+---
+
+## Verification Systems
+
+Three tiers of verification, with different evidence standards and review types.
+
+### Tier 1: Execution Artifact Submission
+
+The base verification tier. An operator claims to have completed a lab or track and submits an artifact as evidence.
+
+**Requirements:** Linked artifact URL or uploaded file. Screenshot showing completed state. A brief description of what was done.
+
+**Reviewer:** Automated for structure (artifact link must resolve, screenshot must be present), then peer review for substance.
+
+### Tier 2: Peer Review
+
+Another operator (who has completed the same track or lab) reviews the submitted artifact against the completion criteria.
+
+**Reviewer requirements:** Reviewer must themselves have a verified completion for the same content item. This prevents unqualified reviews.
+
+**Review scope:** Does the artifact demonstrate the claimed skill? Does it meet the minimum evidence standard? Peer review is pass/fail — not scored.
+
+**Reviewer incentive:** Completing peer reviews accumulates toward the reviewer's mentor qualification threshold (see Mentorship Architecture below).
+
+### Tier 3: A Square Solutions Review
+
+Required for case studies and failure reports that will be published as platform content. Full editorial review — evidence quality, accuracy, completeness, prose.
+
+**Scope difference from Tier 2:** Peer review verifies that the work was done. A Square Solutions review verifies that the documentation meets publication standards. Both are required for case studies.
+
+---
+
+## Reputation Model
+
+The execution credibility score is a computed value based on verified contributions. It is not a ranking — it is a signal.
+
+**Scoring inputs and weights:**
+
+| Contribution type | Weight | Notes |
+|---|---|---|
+| Verified track completion | 2x | Requires completed artifact submission, peer review |
+| Failure report accepted and published | 3x | Full editorial review required |
+| Case study accepted and published | 5x | Full editorial review required |
+| Playbook variant accepted | 2x | A Square Solutions review required |
+| Lab completed with verified output | 3x | Phase 2 feature — not yet buildable |
+| Peer reviews completed (as reviewer) | 1x | Per review completed, capped at 10x total per track |
+
+**What does NOT contribute to the credibility score:**
+
+| Item | Reason excluded |
+|---|---|
+| Followers | Not a credibility signal |
+| Comments or replies | Not execution output |
+| Content reactions | Engagement metric, not execution metric |
+| Profile views | Popularity metric, not execution metric |
+| Work journal entries | Not peer-reviewed — valuable but unverified |
+| Time on platform | Activity metric, not output metric |
+| Login streaks | Not execution output |
+| Content shares | Distribution metric, not execution metric |
+
+**Score display:** The credibility score appears on the operator's public profile. It is displayed as a number, not a tier or rank. Operators can see their own score breakdown. Public profiles show only the total score.
+
+**Score computation timing:** Scores are recomputed whenever a new contribution is accepted. Not real-time — batch process, runs on contribution acceptance event.
+
+---
+
+## Collaborative Labs
+
+A collaborative lab is a structured execution challenge where two or more operators work on the same defined problem with shared artifact output.
+
+**Lab structure:**
+
+```
+Lab definition:
+- Name and slug
+- Challenge: defined input conditions and success criteria
+- Shared hypothesis: what the operators are testing
+- Individual execution: each operator runs independently
+- Combined findings: operators submit individual execution logs, then collaborate on a shared findings document
+
+Output:
+- Individual execution logs (per operator)
+- Combined findings document (co-authored)
+- Comparison artifact: shows divergence and convergence in approaches
+```
+
+**Why independent execution matters:** The value of a collaborative lab is the comparison between different operators' approaches to the same problem. Operators who work too closely in execution lose this comparison value. Independent execution phases should run in parallel — operators should not share results until both have completed their own execution.
+
+**Lab credibility:** Collaborative labs produce verified output for all participating operators. Each operator's individual execution log contributes to their credibility score. The combined findings document is a community artifact, attributed to all participating operators.
+
+**Lab formation:** Any two Level 2 operators (GitHub-connected, verified completion of at least one track) can propose a collaborative lab on any topic within the platform's scope. Proposed labs go through a lightweight A Square Solutions review to ensure the challenge is well-defined and the success criteria are measurable.
+
+---
+
+## Execution Cohorts
+
+An execution cohort is a time-boxed group of operators working through a track simultaneously. Cohorts create accountability through shared timeline, not social obligation.
+
+**Cohort parameters:**
+- Size: 6–12 operators (minimum 6 to generate meaningful comparison data; maximum 12 to keep review manageable)
+- Duration: defined per track (typically 2–4 weeks for a full track)
+- Cadence: operators complete lessons and modules at their own pace within the cohort window
+- End event: cohort closes when the window expires, regardless of individual completion status
+
+**Cohort leader:** The operator who completes the most track milestones within the cohort window. If multiple operators complete all milestones, the cohort leader is the first to complete. This is determined post-hoc, not used for mid-cohort motivation.
+
+**What cohort leader status means:** Cohort leader is listed on the cohort archive page. It contributes a minor credibility signal (1x weight on the cohort milestone, applied once per cohort). It does not grant platform permissions or privileges.
+
+**What cohort participation generates:**
+- Shared execution artifact: cohort operators can opt to share their individual execution logs as a cohort portfolio showing the range of approaches across operators
+- Comparison data: completion times, artifact types submitted, divergence in approach — published in anonymized form as platform content
+- Cohort credibility: verified participation in a completed cohort contributes to operator credibility score (1x per cohort milestone completed within the window)
+
+**Cohort formation:** Cohorts are created by the platform on a scheduled basis (or on demand when 6+ operators express intent). Operators join a waitlist for a specific track's next cohort. When the cohort fills, start date is set.
+
+---
+
+## Mentorship Architecture
+
+Mentorship on this platform is not an application process. It is a threshold that operators cross by doing work.
+
+**Mentor definition:** An operator who has completed peer reviews for at least 5 artifacts in a specific track, with all reviews resulting in verified acceptance. The mentor designation is track-specific — an operator can be a mentor for one track and not another.
+
+**What mentor status enables:**
+- Mentor badge on public profile (track-specific)
+- Access to the mentor queue for that track: new artifact submissions routed to available mentors before going to A Square Solutions review
+- Contribution to the operator's credibility score (3x weight per mentorship milestone — defined as every 5 reviews beyond the initial qualification threshold)
+
+**What mentor status does NOT enable:**
+- Platform admin or moderation permissions
+- Early access to unreleased content
+- Any special communication channel with other operators
+
+**Mentor revocation:** If a mentor's reviews are consistently overridden by A Square Solutions review (evidence of poor judgment in approvals), mentor status for that track is suspended pending a review of recent decisions. This is not publicly announced — it is an operational process.
+
+---
+
+## Infrastructure Requirements
+
+The community model requires Supabase infrastructure as outlined in `platform-vision-architecture.mdx`. This section maps specific community features to database tables.
+
+**Tables needed:**
+
+```
+Phase 1 (auth baseline):
+  users                — id, username, github_id, email, profile_public, created_at
+  operator_profiles    — user_id, credibility_score, last_computed_at
+
+Phase 2 (submissions):
+  artifact_submissions — id, user_id, content_type, content_href, artifact_url, artifact_screenshot, submitted_at, status
+  completion_verifications — id, submission_id, verifier_id, result, verified_at, notes
+  failure_report_submissions — id, user_id, error_verbatim, context, diagnosis, fix, status, submitted_at
+  case_study_submissions — id, user_id, draft_mdx, status, reviewer_notes, submitted_at
+
+Phase 3 (cohorts and labs):
+  cohorts              — id, track_id, start_date, end_date, status
+  cohort_members       — cohort_id, user_id, joined_at, milestones_completed
+  collab_labs          — id, name, challenge, hypothesis, status, created_by
+  collab_lab_members   — lab_id, user_id, joined_at, execution_log_url
+
+Phase 4 (reputation):
+  reputation_events    — id, user_id, event_type, weight, reference_id, created_at
+  reputation_scores    — user_id, score, last_computed_at
+  mentor_qualifications — user_id, track_id, reviews_completed, qualified_at, status
+```
+
+**Row-level security requirements:** Operators can read their own reputation_events but not other operators'. Peer reviewers can read submission data for submissions they are assigned to. A Square Solutions admin role has full read/write on all tables.
+
+**Auth alignment:** GitHub OAuth is required for Level 2 features — all community contribution and verification features are Level 2+ (per `platform-vision-architecture.mdx` user model). Level 1 (email auth only) enables profile pages and progress sync but not submissions or peer review.
+
+**Phase alignment:** The community infrastructure maps to Phase 2 and beyond in the platform rollout sequence. No community features are buildable before Phase 1 (auth) is stable. The reputation system is Phase 4.
+
+---
+
+## What Gets Built in Which Phase
+
+**Phase 1 (auth baseline):**
+- Operator profile pages (`/operators/[username]`)
+- Profile shows: username, member since, completed tracks (from progress sync), credibility score (starts at 0)
+- No submissions, no verification, no cohorts
+
+**Phase 2 (submissions and verification):**
+- Artifact submission system
+- Completion verification (peer review tier)
+- Failure report submission pipeline
+- Operator portfolio entries for completed tracks
+- Work journal (`/operators/[username]/journal`)
+
+**Phase 3 (collaborative features):**
+- Execution cohorts
+- Collaborative labs
+- Case study submission pipeline (requires Phase 2 stable)
+
+**Phase 4 (reputation and mentorship):**
+- Reputation scoring engine (requires Phase 2 event data)
+- Mentor qualification tracking
+- Credibility score display on public profiles
+- Playbook variant submission pipeline
+
+---
+
+*Community Model Architecture v1.0 — 2026-05-18. Phase dependencies: platform-vision-architecture.mdx, execution-artifacts-architecture.mdx.*

@@ -1,11 +1,13 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { getAllMeta, type ContentSection } from '@/lib/content'
+import { getPlatformStatus, getPublishingStreak, getMonthlyVelocity, getTrackCompletion } from '@/lib/activity'
 import { SECTION_META, ACCENT_CLASSES, formatDateMono, cn } from '@/lib/utils'
+import { ReadingQueue } from '@/components/platform/reading-queue'
 
 export const metadata: Metadata = {
-  title: 'Operations',
-  description: 'Platform operational status — recent failures, latest logs, content health, and publishing queue.',
+  title: 'Operations — Command Center',
+  description: 'Platform operational status — execution velocity, track completion, failures, publishing momentum, and content health.',
   robots: { index: false, follow: false },
 }
 
@@ -16,6 +18,10 @@ export const metadata: Metadata = {
 const ALL_SECTIONS: ContentSection[] = [
   'docs', 'systems', 'labs', 'case-studies', 'playbooks', 'failures', 'logs',
 ]
+
+function getAccent(key: string) {
+  return (ACCENT_CLASSES as Record<string, typeof ACCENT_CLASSES[keyof typeof ACCENT_CLASSES]>)[key] ?? ACCENT_CLASSES['brand']
+}
 
 const SEV_DOT: Record<string, string> = {
   low:      'bg-blue-400',
@@ -31,48 +37,99 @@ const STA_TEXT: Record<string, string> = {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Velocity bar (visual)
+// ─────────────────────────────────────────────────────────────
+
+function VelocityBar({ count, max }: { count: number; max: number }) {
+  const pct = max > 0 ? Math.round((count / max) * 100) : 0
+  const color = count >= 12 ? 'bg-green-500' : count >= 6 ? 'bg-yellow-500' : count >= 2 ? 'bg-orange-500' : 'bg-surface-700'
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${color}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-[10px] font-mono text-surface-600 w-4 text-right shrink-0">{count}</span>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// Track completion bar
+// ─────────────────────────────────────────────────────────────
+
+function TrackProgressBar({ pct, accent }: { pct: number; accent: string }) {
+  const ac = getAccent(accent)
+  const bgColor = ac.bg.replace('/10', '/30')
+  return (
+    <div className="flex-1 h-1 bg-white/[0.05] rounded-full overflow-hidden">
+      <div
+        className={`h-full rounded-full ${bgColor}`}
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// Quick action button
+// ─────────────────────────────────────────────────────────────
+
+function QuickAction({ href, label, badge }: { href: string; label: string; badge?: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center justify-between rounded-lg border border-white/[0.05] bg-white/[0.01] px-3 py-2 text-xs text-surface-500 hover:text-surface-200 hover:border-white/[0.10] hover:bg-white/[0.03] transition-all group"
+    >
+      <span>{label}</span>
+      <div className="flex items-center gap-1.5">
+        {badge && (
+          <span className="text-[10px] font-mono text-surface-700">{badge}</span>
+        )}
+        <span className="text-surface-700 group-hover:text-surface-400 transition-colors">→</span>
+      </div>
+    </Link>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────────────────
 
 export default function OpsPage() {
   const isProd = process.env.NODE_ENV === 'production'
 
-  // Gather all content
+  // Content data
   const allSectionData = ALL_SECTIONS.map(s => ({
     section: s,
     items: getAllMeta(s),
   }))
-
-  const failures = getAllMeta('failures')
-  const logs     = getAllMeta('logs')
+  const failures  = getAllMeta('failures')
+  const logs      = getAllMeta('logs')
 
   const openFailures   = failures.filter(f => f.frontmatter.failure_status !== 'resolved')
   const recentFailures = failures.slice(0, 5)
   const recentLogs     = logs.slice(0, 6)
 
-  // Draft count (only visible in dev)
-  const drafts = allSectionData.flatMap(({ section, items }) =>
-    items
-      .filter(i => i.frontmatter.status === 'draft')
-      .map(i => ({ ...i, section }))
-  )
+  // Activity + metrics
+  const status          = getPlatformStatus()
+  const { recentSignals, itemsThisMonth, itemsThisWeek, totalLessons, availableLessons } = status
+  const streak          = getPublishingStreak(recentSignals)
+  const velocity        = getMonthlyVelocity(recentSignals, 4)
+  const trackCompletion = getTrackCompletion()
+  const maxVelocity     = Math.max(...velocity.map(v => v.count), 1)
 
-  // Total published
+  // Draft count (dev only)
+  const drafts = allSectionData.flatMap(({ section, items }) =>
+    items.filter(i => i.frontmatter.status === 'draft').map(i => ({ ...i, section }))
+  )
   const totalPublished = allSectionData.reduce((n, { items }) => n + items.length, 0)
 
-  // Publishing velocity — items in last 30 days
+  // Staleness
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-  const recentItems = allSectionData.flatMap(({ section, items }) =>
-    items
-      .filter(i => {
-        const d = i.frontmatter.date ? new Date(i.frontmatter.date) : null
-        return d && d >= thirtyDaysAgo
-      })
-      .map(i => ({ ...i, section }))
-  )
-
-  // Staleness — sections with no new content in 30+ days
   const staleSections = allSectionData.filter(({ items }) => {
     if (items.length === 0) return false
     const latest = items[0]?.frontmatter.date
@@ -83,9 +140,9 @@ export default function OpsPage() {
   return (
     <div className="px-6 lg:px-8 py-8 max-w-5xl">
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="mb-8 pb-6 border-b border-white/[0.05]">
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-3 mb-3 flex-wrap">
           <span className="text-[10px] font-mono font-bold uppercase tracking-widest rounded px-2 py-1 border text-surface-500 bg-surface-800/60 border-surface-700/40">
             OPS
           </span>
@@ -98,22 +155,67 @@ export default function OpsPage() {
               {openFailures.length} open incident{openFailures.length > 1 ? 's' : ''}
             </span>
           )}
+          {streak > 1 && (
+            <span className="text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-0.5">
+              {streak}-day streak
+            </span>
+          )}
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-surface-50">
           Platform Operations
         </h1>
         <p className="mt-1 text-sm text-surface-500">
-          {totalPublished} items published across {ALL_SECTIONS.length} sections
-          {drafts.length > 0 && ` · ${drafts.length} draft${drafts.length > 1 ? 's' : ''} pending`}
+          {totalPublished} items · {availableLessons}/{totalLessons} lessons live
+          · {itemsThisMonth} published this month
+          {drafts.length > 0 && ` · ${drafts.length} draft${drafts.length > 1 ? 's' : ''}`}
         </p>
+      </div>
+
+      {/* ── Execution Momentum Strip ── */}
+      <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          {
+            label: 'This week',
+            value: itemsThisWeek,
+            color: itemsThisWeek >= 5 ? 'text-green-400' : itemsThisWeek >= 2 ? 'text-yellow-400' : 'text-red-400',
+            sub: 'items shipped',
+          },
+          {
+            label: 'This month',
+            value: itemsThisMonth,
+            color: itemsThisMonth >= 20 ? 'text-green-400' : itemsThisMonth >= 10 ? 'text-yellow-400' : 'text-red-400',
+            sub: 'items shipped',
+          },
+          {
+            label: 'Lessons live',
+            value: availableLessons,
+            color: 'text-brand-400',
+            sub: `of ${totalLessons} total`,
+          },
+          {
+            label: 'Open incidents',
+            value: openFailures.length,
+            color: openFailures.length > 0 ? 'text-red-400' : 'text-green-400',
+            sub: openFailures.length === 0 ? 'all resolved' : `need attention`,
+          },
+        ].map(({ label, value, color, sub }) => (
+          <div
+            key={label}
+            className="rounded-xl border border-white/[0.06] bg-white/[0.01] px-4 py-3"
+          >
+            <p className="text-[10px] font-mono text-surface-700 uppercase tracking-wider mb-1">{label}</p>
+            <p className={`text-2xl font-bold font-mono ${color}`}>{value}</p>
+            <p className="text-[10px] text-surface-700 mt-0.5">{sub}</p>
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* ── Left column: failures + logs ── */}
+        {/* ── Left: failures + logs + drafts ── */}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* Active incidents */}
+          {/* Failure archive */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600">
@@ -121,9 +223,7 @@ export default function OpsPage() {
               </h2>
               <div className="flex items-center gap-2 text-[10px] font-mono text-surface-700">
                 <span className="text-green-400">{failures.filter(f => f.frontmatter.failure_status === 'resolved').length} resolved</span>
-                {openFailures.length > 0 && (
-                  <span className="text-red-400">{openFailures.length} open</span>
-                )}
+                {openFailures.length > 0 && <span className="text-red-400">{openFailures.length} open</span>}
               </div>
             </div>
 
@@ -149,7 +249,7 @@ export default function OpsPage() {
                           {fm.title}
                         </p>
                         {fm.failure_type && (
-                          <p className="text-[10px] text-surface-700 mt-0.5">{fm.failure_type}</p>
+                          <p className="text-[10px] text-surface-700 mt-0.5 capitalize">{fm.failure_type}</p>
                         )}
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
@@ -170,26 +270,20 @@ export default function OpsPage() {
                 })}
               </div>
             )}
-
-            <div className="mt-2 flex items-center gap-3">
+            <div className="mt-2">
               <Link href="/failures" className="text-[11px] font-mono text-surface-700 hover:text-surface-400 transition-colors">
                 All failures →
-              </Link>
-              <Link href="/content/failures/new" className="text-[11px] font-mono text-brand-500/70 hover:text-brand-400 transition-colors">
-                + Add failure
               </Link>
             </div>
           </div>
 
-          {/* Recent logs */}
+          {/* Execution logs */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600">
                 Execution Logs
               </h2>
-              <span className="text-[10px] font-mono text-surface-700">
-                {logs.length} total
-              </span>
+              <span className="text-[10px] font-mono text-surface-700">{logs.length} total</span>
             </div>
 
             {recentLogs.length === 0 ? (
@@ -236,11 +330,51 @@ export default function OpsPage() {
                 })}
               </div>
             )}
-
             <div className="mt-2">
               <Link href="/logs" className="text-[11px] font-mono text-surface-700 hover:text-surface-400 transition-colors">
                 All logs →
               </Link>
+            </div>
+          </div>
+
+          {/* Track completion table */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600">
+                Track Completion
+              </h2>
+              <span className="text-[10px] font-mono text-surface-700">
+                {availableLessons}/{totalLessons} lessons live
+              </span>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
+              {trackCompletion.map(t => {
+                const ac = getAccent(t.accent)
+                return (
+                  <Link
+                    key={t.id}
+                    href={`/tracks/${t.id}`}
+                    className="group flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-surface-400 group-hover:text-surface-200 transition-colors truncate">
+                        {t.title}
+                      </p>
+                      <div className="mt-1.5">
+                        <TrackProgressBar pct={t.pct} accent={t.accent} />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] font-mono text-surface-700">
+                        {t.available}/{t.total}
+                      </span>
+                      <span className={`text-[10px] font-mono font-semibold ${ac.text} w-8 text-right`}>
+                        {t.pct}%
+                      </span>
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           </div>
 
@@ -265,9 +399,7 @@ export default function OpsPage() {
                       href={`${meta.href}/${item.slug}`}
                       className="group flex items-center gap-3 px-4 py-3 hover:bg-yellow-500/[0.03] transition-colors"
                     >
-                      <span className={`text-[10px] font-mono uppercase shrink-0 ${ac.text}`}>
-                        {meta.label}
-                      </span>
+                      <span className={`text-[10px] font-mono uppercase shrink-0 ${ac.text}`}>{meta.label}</span>
                       <span className="text-sm text-surface-400 group-hover:text-surface-200 truncate transition-colors flex-1">
                         {item.frontmatter.title}
                       </span>
@@ -280,44 +412,49 @@ export default function OpsPage() {
           )}
         </div>
 
-        {/* ── Right column: section health ── */}
+        {/* ── Right: velocity + content health + quick actions ── */}
         <div className="space-y-6">
 
-          {/* Publishing velocity */}
+          {/* Publishing velocity chart */}
           <div>
-            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
-              Publishing Velocity
-            </h2>
-            <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-2.5">
-                <p className="text-xs text-surface-400">Items last 30 days</p>
-                <span className={`text-sm font-bold font-mono ${recentItems.length >= 8 ? 'text-green-400' : recentItems.length >= 4 ? 'text-yellow-400' : 'text-red-400'}`}>
-                  {recentItems.length}
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600">
+                Velocity
+              </h2>
+              {streak > 0 && (
+                <span className="text-[10px] font-mono text-amber-400">
+                  {streak}d streak
                 </span>
+              )}
+            </div>
+            <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
+              {velocity.map(v => (
+                <div key={v.key} className="px-4 py-2.5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[11px] font-mono text-surface-500">{v.label}</p>
+                    <span className={`text-[10px] font-mono ${v.count >= 12 ? 'text-green-400' : v.count >= 6 ? 'text-yellow-400' : 'text-surface-600'}`}>
+                      {v.count}
+                    </span>
+                  </div>
+                  <VelocityBar count={v.count} max={maxVelocity} />
+                </div>
+              ))}
+              <div className="px-4 py-2.5 flex items-center justify-between">
+                <p className="text-[10px] text-surface-600">Target</p>
+                <span className="text-[10px] font-mono text-surface-700">≥ 12/mo</span>
               </div>
-              <div className="flex items-center justify-between px-4 py-2.5">
-                <p className="text-xs text-surface-400">Target (weekly × 4)</p>
-                <span className="text-[10px] font-mono text-surface-600">≥ 12 / month</span>
-              </div>
-              <div className="flex items-center justify-between px-4 py-2.5">
-                <p className="text-xs text-surface-400">Stale sections</p>
+              <div className="px-4 py-2.5 flex items-center justify-between">
+                <p className="text-[10px] text-surface-600">Stale sections</p>
                 <span className={`text-[10px] font-mono ${staleSections.length > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
                   {staleSections.length > 0
                     ? staleSections.map(s => SECTION_META[s.section as ContentSection]?.label ?? s.section).join(', ')
-                    : '✓ none'
-                  }
-                </span>
-              </div>
-              <div className="flex items-center justify-between px-4 py-2.5">
-                <p className="text-xs text-surface-400">Open failures</p>
-                <span className={`text-[10px] font-mono ${openFailures.length > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                  {openFailures.length > 0 ? `${openFailures.length} open` : '✓ all resolved'}
+                    : '✓ none'}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Section counts */}
+          {/* Content health per section */}
           <div>
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
               Content Health
@@ -327,6 +464,14 @@ export default function OpsPage() {
                 const meta   = SECTION_META[section]
                 const ac     = ACCENT_CLASSES[meta.accent]
                 const latest = items[0]
+                const daysOld = latest
+                  ? Math.floor((Date.now() - new Date(latest.frontmatter.date).getTime()) / 86_400_000)
+                  : null
+                const freshColor = daysOld === null
+                  ? 'text-surface-700'
+                  : daysOld < 7 ? 'text-green-400'
+                  : daysOld < 30 ? 'text-yellow-400'
+                  : 'text-orange-400'
                 return (
                   <Link
                     key={section}
@@ -338,8 +483,8 @@ export default function OpsPage() {
                         {meta.label}
                       </p>
                       {latest && (
-                        <p className="text-[11px] text-surface-700 mt-0.5 truncate">
-                          {formatDateMono(latest.frontmatter.date)}
+                        <p className={`text-[10px] font-mono mt-0.5 ${freshColor}`}>
+                          {daysOld === 0 ? 'today' : daysOld === 1 ? '1d ago' : `${daysOld}d ago`}
                         </p>
                       )}
                     </div>
@@ -352,57 +497,16 @@ export default function OpsPage() {
             </div>
           </div>
 
-          {/* Quick links */}
-          <div>
-            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
-              Quick Links
-            </h2>
-            <div className="space-y-1.5">
-              {[
-                { label: 'Syndication tool',      href: '/syndicate' },
-                { label: 'Topics overview',       href: '/tags' },
-                { label: 'Publishing operations',  href: '/docs/publishing-operations' },
-                { label: 'Content queue system',  href: '/docs/content-queue-system' },
-                { label: 'Research workflow',     href: '/docs/ai-research-workflow' },
-                { label: 'Content templates',     href: '/docs/content-templates' },
-                { label: 'Publishing workflow',   href: '/docs/publishing-workflow' },
-                { label: 'Publishing cadence',    href: '/docs/publishing-cadence' },
-                { label: 'Frontmatter reference', href: '/docs/frontmatter-reference' },
-                { label: 'Analytics setup',       href: '/docs/analytics-setup' },
-                { label: 'Launch checklist',      href: '/docs/launch-checklist' },
-                { label: 'Deployment workflow',   href: '/docs/deployment-workflow' },
-                { label: 'Production deployment', href: '/docs/production-deployment-guide' },
-                { label: 'Launch readiness report', href: '/docs/launch-readiness-report' },
-                { label: 'Launch assets',              href: '/docs/launch-assets' },
-                { label: 'Ecosystem integration strategy', href: '/docs/ecosystem-integration-strategy' },
-                { label: 'Ecosystem copy blocks',     href: '/docs/ecosystem-copy-blocks' },
-                { label: 'WP → Lab linking map',      href: '/docs/wordpress-to-lab-linking' },
-                { label: 'Ecosystem schema blocks',   href: '/docs/ecosystem-schema-blocks' },
-                { label: 'Execution Tracks',          href: '/tracks' },
-                { label: 'Sitemap',                   href: '/sitemap.xml' },
-              ].map(({ label, href }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="flex items-center justify-between rounded-lg border border-white/[0.05] bg-white/[0.01] px-3 py-2 text-xs text-surface-500 hover:text-surface-200 hover:border-white/[0.10] transition-all group"
-                >
-                  <span>{label}</span>
-                  <span className="text-surface-700 group-hover:text-surface-400 transition-colors">→</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Environment vars checklist */}
+          {/* Analytics env status */}
           <div>
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
               Analytics Status
             </h2>
             <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
               {[
-                { label: 'Plausible',           env: 'NEXT_PUBLIC_PLAUSIBLE_DOMAIN' },
-                { label: 'Google Analytics',    env: 'NEXT_PUBLIC_GA_ID'           },
-                { label: 'Site URL',            env: 'NEXT_PUBLIC_SITE_URL'        },
+                { label: 'Plausible',        env: 'NEXT_PUBLIC_PLAUSIBLE_DOMAIN' },
+                { label: 'Google Analytics', env: 'NEXT_PUBLIC_GA_ID' },
+                { label: 'Site URL',         env: 'NEXT_PUBLIC_SITE_URL' },
               ].map(({ label, env }) => {
                 const isSet = !!process.env[env]
                 return (
@@ -418,6 +522,57 @@ export default function OpsPage() {
                 )
               })}
             </div>
+          </div>
+
+          {/* Quick actions — operator command panel */}
+          <div>
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
+              Quick Actions
+            </h2>
+            <div className="space-y-1.5">
+              <QuickAction href="/tracks"           label="Execution Tracks" />
+              <QuickAction href="/failures"         label="Failure Archive"  badge={`${failures.length}`} />
+              <QuickAction href="/logs"             label="All Logs"         badge={`${logs.length}`} />
+              <QuickAction href="/playbooks"        label="Playbooks" />
+              <QuickAction href="/case-studies"     label="Case Studies" />
+              <QuickAction href="/syndicate"        label="Syndication Tool" />
+              <QuickAction href="/tags"             label="Topic Tags" />
+              <QuickAction href="/start-here"       label="Start Here" />
+            </div>
+          </div>
+
+          {/* Operator docs */}
+          <div>
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
+              Platform Docs
+            </h2>
+            <div className="space-y-1.5">
+              {[
+                { label: 'Content Quality Standards', href: '/docs/content-quality-standards' },
+                { label: 'Platform Focus Lock',       href: '/docs/platform-focus-lock' },
+                { label: 'Execution Checklist System',href: '/docs/execution-checklist-system' },
+                { label: 'Implementation Projects',   href: '/docs/implementation-project-system' },
+                { label: 'Execution Artifacts',       href: '/docs/execution-artifacts-architecture' },
+                { label: 'Content Expansion Roadmap', href: '/docs/content-expansion-roadmap' },
+                { label: 'Track Audit 2026-05',       href: '/docs/track-audit-2026-05' },
+                { label: 'Knowledge Graph',           href: '/docs/knowledge-graph-architecture' },
+                { label: 'Platform Vision',           href: '/docs/platform-vision-architecture' },
+                { label: 'Deployment Workflow',       href: '/docs/deployment-workflow' },
+                { label: 'Frontmatter Reference',     href: '/docs/frontmatter-reference' },
+                { label: 'Research Workflow',         href: '/docs/ai-research-workflow' },
+                { label: 'Sitemap',                   href: '/sitemap.xml' },
+              ].map(({ label, href }) => (
+                <QuickAction key={href} href={href} label={label} />
+              ))}
+            </div>
+          </div>
+
+          {/* Operator reading queue */}
+          <div>
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
+              Reading Queue
+            </h2>
+            <ReadingQueue />
           </div>
 
         </div>

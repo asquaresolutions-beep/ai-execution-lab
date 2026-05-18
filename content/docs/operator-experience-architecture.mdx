@@ -1,0 +1,288 @@
+---
+title: "Operator Experience Architecture"
+description: "Design specification for the command-center operator UX — quick actions, bookmarks, reading queue, keyboard navigation, content traversal, and implementation progress. Phase 3 of the Live Operational Ecosystem."
+date: "2026-05-18"
+tags: ["ops", "ux", "architecture", "operator", "navigation", "platform"]
+status: "published"
+---
+
+This document defines the UX architecture for the operator-facing experience of AI Execution Lab. Not the reader-facing experience — the operator-facing one. These are two different things, and conflating them produces a platform that serves neither audience well.
+
+A reader arrives, skims, leaves. An operator arrives with a specific objective, navigates to the relevant content, executes, and returns the next day to continue. The UX design problem for operators is not discovery — it is efficiency. Every extra click between an operator and the content they need is friction that degrades the platform's operational utility.
+
+---
+
+## What "Operator Experience" Means Here
+
+The platform serves serious AI operators: people who return regularly, who are working through multiple tracks simultaneously, who track their own progress, and who use the platform as a reference during live production work — not as a learning environment they visit once.
+
+This is not a consumer app. The design model is closer to a professional tool than a course platform. Notion, Linear, Obsidian — these are the reference points, not Coursera or YouTube. The operator experience should feel like a command center, not a landing page.
+
+**What this means in practice:**
+- Navigation must be keyboard-accessible, not just mouse-accessible
+- Progress must be visible at multiple levels: lesson, module, track
+- Returning operators should land on relevant-next-action state, not a homepage
+- Bookmarks and reading queues are first-class features, not afterthoughts
+- The ops page (`/ops`) is the operator's home base, not the homepage
+
+**What this explicitly is not:**
+- Gamification (no badges for streaks, no confetti for completions)
+- Social features (no activity feeds, no public progress broadcasts)
+- Discovery optimization (the homepage is for new visitors; operators already know where they're going)
+
+---
+
+## Current UX State
+
+The following features are live as of 2026-05-18:
+
+**Sidebar navigation:** Track and module structure is exposed in a persistent left-side nav on lesson pages. Sections collapse. The active lesson is highlighted. No keyboard shortcut to open/close — mouse only currently.
+
+**Lesson progress via localStorage:** The `CompleteButton` component writes lesson completion state to `localStorage` with key `ael:progress`. Key structure: `{ [lessonHref]: true }`. Progress persists across page loads on the same browser/device. Lost on browser clear.
+
+**Complete button:** Appears at the bottom of every lesson. Single click marks the lesson complete and updates the sidebar nav indicator. No undo (intentional — completions are additive). No server-side write yet.
+
+**Related content panel:** Appears in the lesson right rail on larger viewports, or below content on mobile. Shows manually curated related lessons, failure reports, or playbooks for the current lesson's topic. Static — drawn from frontmatter, not algorithmic.
+
+**Reading progress bar:** Thin horizontal bar at the top of the viewport that fills as the user scrolls down the lesson. Tracks scroll position relative to document height. No persistence — resets on page reload.
+
+These five features form the baseline operator experience. They are functional but sparse. They handle progress tracking at the lesson level and basic navigation, but they don't address the core operator workflow: managing what to read next, returning to previously discovered content, and navigating between sections without losing place.
+
+---
+
+## Phase 3 Additions
+
+Phase 3 of the Live Operational Ecosystem introduced three operator-facing components:
+
+### BookmarkButton
+
+A client-side bookmark component rendered on lesson and content pages. Clicking it adds the current page to a bookmark list stored in `localStorage` under key `ael:bookmarks`.
+
+**Bookmark interface:**
+
+```typescript
+interface Bookmark {
+  href: string;        // canonical path: /tracks/claude-code/lesson-slug
+  title: string;       // page title from frontmatter
+  type: string;        // 'lesson' | 'failure' | 'playbook' | 'case-study' | 'log'
+  addedAt: string;     // ISO 8601 timestamp
+  section?: string;    // optional: track slug for grouping
+}
+```
+
+**Storage rules:**
+- Maximum 50 bookmarks stored. When at capacity, the oldest bookmark is evicted to make room for the new one (FIFO).
+- Bookmarks are per-browser, per-device. No cross-device sync until auth is implemented.
+- Duplicate bookmarks are not allowed — bookmarking an already-bookmarked page removes the bookmark (toggle behavior).
+- The BookmarkButton renders a filled icon when the current page is in the bookmark list, hollow when it isn't. State is read from localStorage on component mount.
+
+**Why no auth dependency:** Bookmarks at this stage are an operator convenience feature, not a profile feature. Making them require auth would eliminate their utility for the majority of current users (Level 0, no account). The architecture is designed so that when auth is implemented, the localStorage bookmarks can be imported to the server-side profile — this is a standard migration path.
+
+### ReadingQueue Panel
+
+A panel component rendered on the `/ops` page inside the Quick Actions section of the command center. Reads from `ael:bookmarks` and renders the bookmark list sorted by `addedAt` descending (most recently bookmarked first).
+
+**Panel behavior:**
+- Renders up to 10 bookmarks in the panel view, with a "View all" link to `/ops/bookmarks` (planned — not yet built)
+- Each bookmark entry shows: title, content type badge, track name if available
+- Remove button on each entry: deletes from localStorage immediately, re-renders list
+- Empty state: "No bookmarks yet. Use the bookmark icon on any lesson to save it here."
+
+**Integration with ops page:** The ReadingQueue panel is one component in the ops page command center. The ops page is designed as the operator's home base — the place they go when they're about to start a session and want to orient. The reading queue answers "where was I going?" before the operator digs into nav.
+
+### LiveActivityBar
+
+A component on the homepage (`/`) that renders a compact horizontal bar showing recent platform activity: lessons published in the last 7 days, failure reports added, tracks with new modules. Not a social feed — this is publication activity, not user activity. No user data appears here.
+
+**Purpose:** Gives returning operators a fast signal about what's new without requiring them to scan nav or check a changelog. If nothing is new, the bar is empty or hidden — it doesn't display "stale" data just to fill space.
+
+---
+
+## Keyboard Navigation Architecture (Planned)
+
+This section documents the planned keyboard navigation system. None of this is built yet. It is documented here so that future implementation decisions are consistent with the architecture.
+
+### Command Palette (Cmd+K)
+
+A floating command palette triggered by `Cmd+K` (macOS) / `Ctrl+K` (Windows/Linux). This is the primary keyboard entry point for the platform.
+
+**Palette capabilities:**
+- Search all content by title (client-side, no server roundtrip — powered by a prebuilt index)
+- Navigate to any track, module, or lesson by partial name match
+- Execute quick actions: go to ops page, open bookmarks, mark current lesson complete
+- Recent items: last 5 visited lessons, listed at the top of the palette before any search input
+
+**Implementation notes:** The content index needs to be generated at build time and shipped as a static JSON file. On palette open, the JSON is fetched once and cached in memory for the session. This keeps the palette fast without requiring a search API. Content index format: `Array<{ title, href, type, section }>`.
+
+### J/K Lesson Navigation
+
+Within a track, `J` moves to the next lesson in sequence, `K` moves to the previous lesson. Navigation is linear — follows the same order as the sidebar nav.
+
+**Conditions:**
+- Only active when focus is not inside an input, textarea, or contenteditable element
+- Shows a brief toast notification with the destination lesson title before navigating (300ms delay to allow cancellation — pressing `Esc` during the delay cancels)
+- Wraps at track boundaries: `J` on the last lesson in a track does nothing (no cross-track wrapping)
+
+### B to Bookmark
+
+Pressing `B` on any lesson page toggles the bookmark state of the current page. Same effect as clicking the BookmarkButton — adds or removes from `ael:bookmarks`.
+
+**Feedback:** The BookmarkButton icon animates on the keyboard trigger (same animation as mouse click) to confirm the action. A toast notification displays: "Bookmarked" or "Bookmark removed".
+
+### Full Keyboard Shortcut Reference
+
+| Key | Context | Action |
+|---|---|---|
+| `Cmd/Ctrl + K` | Global | Open command palette |
+| `J` | Lesson page | Next lesson in track |
+| `K` | Lesson page | Previous lesson in track |
+| `B` | Lesson or content page | Toggle bookmark for current page |
+| `G` then `O` | Global | Go to Ops page |
+| `G` then `H` | Global | Go to homepage |
+| `G` then `T` | Global | Go to Tracks index |
+| `?` | Global | Show keyboard shortcut reference overlay |
+| `Esc` | Command palette open | Close palette |
+| `Esc` | Navigation toast active | Cancel pending navigation |
+| `Enter` | Command palette result focused | Navigate to result |
+| `↑` / `↓` | Command palette open | Move between results |
+
+**Implementation constraint:** All keyboard handlers must check `event.target.tagName` and `event.target.isContentEditable` before firing. Global shortcuts should never intercept input field keystrokes.
+
+---
+
+## Content Traversal Improvements (Planned)
+
+### Within-Section Navigation
+
+Current state: navigation is lesson-level only. The sidebar nav shows lessons within a track but doesn't expose section (module) structure in a way that enables fast cross-module navigation.
+
+**Planned change:** Add module-level jump targets. From any lesson, `G` then a module number (e.g., `G 2`) jumps to the first lesson of module 2 in the current track. This requires exposing module boundaries in the sidebar nav component and in the keyboard nav handler.
+
+**Why this matters:** Tracks have 4–8 modules. An operator returning to review a specific module currently has to scroll the sidebar to find it, then click. The module jump shortcut eliminates that friction.
+
+### Cross-Section Fast Paths
+
+Certain lessons and failures are referenced repeatedly across tracks. The Related Content panel already surfaces some of these connections. The planned improvement is a "fast path" link system: a small set of canonical cross-references that appear consistently.
+
+**Example:** The env-vars-secrets lesson is referenced in Claude Code track, Vercel Deployment playbook, and multiple failure reports. Instead of relying on Related Content to surface this, the lesson gets a dedicated fast path marker — a visible "Referenced from N places" count that links to a filtered list of all content that references it.
+
+**Implementation:** A build-time link graph derived from frontmatter `related` fields and in-content `<CrossRef>` components. The graph is static — updated on each build.
+
+### Recently Viewed
+
+A localStorage key `ael:recent` stores the last 10 visited lesson hrefs with timestamps. The ops page command center renders the three most recent, enabling operators to quickly resume a previous session.
+
+**Interface:**
+
+```typescript
+interface RecentItem {
+  href: string;
+  title: string;
+  type: string;
+  visitedAt: string;  // ISO 8601
+}
+```
+
+**Persistence rules:** Written on every lesson page load. Max 10 items. Oldest item evicted when at capacity. The stored list is the visited-order history — not alphabetical, not sorted by track.
+
+### Operator-Curated Sequences
+
+A planned feature for Level 2+ operators: the ability to create a named sequence of lessons drawn from across tracks. A sequence is an ordered list of content items with an operator-defined name and optional notes per item.
+
+**Use case:** An operator learning to build AI-native marketing systems might sequence: GEO Track lesson 3, Claude Code lesson 7, a playbook on automation, a failure report on deployment. This cross-track sequence doesn't exist as a platform path — the operator builds it to match their specific work context.
+
+**Storage:** localStorage for unauthenticated operators (with the same migration path to server-side when auth is implemented). No limit on number of sequences, but each sequence is capped at 20 items.
+
+---
+
+## Implementation Progress Tracking (Planned)
+
+### Per-Track Progress Bars on Track Listing Page
+
+The `/tracks` page currently shows track cards without progress indicators. The planned improvement adds a progress bar beneath each track card showing the operator's completion percentage for that track.
+
+**Data source:** Read from `ael:progress` (the existing localStorage key). Count completed lessons for the track divided by total lessons. Display as a percentage and a fraction: "7 of 18 lessons complete."
+
+**Edge cases:**
+- If no lessons are complete for a track, show an empty progress bar (not "0%" text — the bar communicates this visually)
+- If all lessons complete, show a filled bar with a checkmark — no celebratory animation (this is a professional tool)
+
+### "N of M Lessons Complete" Per Module
+
+Within a track page, show completion counts at the module level. Each module header in the lesson list includes a count: "Module 2: Deployment Operations — 3 of 5 complete."
+
+**Behavior:** This count is derived client-side from localStorage on page load. It updates immediately when an operator marks a lesson complete (the `CompleteButton` fires a custom event that the module count listens to).
+
+### Exportable Completion Record
+
+An operator should be able to export their completion record as a plain text or JSON file for use in portfolios, applications, or personal documentation. This is not a certificate — it is a raw record.
+
+**Export format:**
+
+```json
+{
+  "exported_at": "2026-05-18T14:22:00Z",
+  "platform": "AI Execution Lab",
+  "completions": [
+    {
+      "href": "/tracks/claude-code/env-vars-secrets",
+      "title": "Environment Variables and Secrets Management",
+      "track": "Claude Code Operator",
+      "completed_at": "2026-05-10T09:15:00Z"
+    }
+  ]
+}
+```
+
+**Where it lives:** A "Export my progress" button on the operator's profile/settings page (auth-dependent) or, for unauthenticated operators, a button in the ops page Quick Actions panel that exports from localStorage.
+
+---
+
+## Quick Actions Panel (Current)
+
+The ops page Quick Actions panel is the operational command center for an active session. Current contents:
+
+- Reading Queue (bookmarks, most recent first)
+- Recently Viewed (last 3 lessons)
+- Track progress summary (completion counts for each track)
+- New this week (lessons, failures, or playbooks published in the last 7 days)
+
+**Design principle:** The Quick Actions panel should answer the question "What should I do next?" in under 5 seconds, without requiring the operator to navigate anywhere. Everything in the panel is either a continuation of previous work or a direct pointer to new relevant content.
+
+**What gets added as the platform grows:**
+- Active cohort status (if the operator is in an execution cohort)
+- Playbook queue (playbooks marked "to run" — similar to bookmarks but specifically for playbooks)
+- Lab status (if any labs are in progress — Phase 2 feature)
+- Experiment tracker (active GEO or automation experiments — Phase 3 feature)
+
+---
+
+## Phase 4+ Roadmap
+
+Phase 4 introduces auth-dependent operator experience features that cannot be built without a persistent user identity:
+
+**Saved annotations:** Operators can add private notes to lessons. Notes are stored server-side, tied to operator account. Not shared publicly. This is the most-requested UX feature based on how professional tools are actually used — people annotate documentation.
+
+**Verified completion records:** When auth is in place, completion records gain cryptographic timestamps and can be verified by third parties. The export format gains a verification URL: `"verification": "https://aiexecutionlab.com/verify/[token]"`. This is relevant for operators who want to include track completions in professional portfolios.
+
+**Submission system:** Operators can submit execution artifacts directly through the platform interface rather than via email or external link. Submissions are associated with their operator account and appear in their public profile (if they choose to publish).
+
+**Team workspace implications:** When team accounts are introduced (Phase 5 in `platform-vision-architecture.mdx`), the operator UX extends to shared state. A team member's progress is visible to the team dashboard. Quick Actions shows team activity. The ReadingQueue gains a "shared queue" option where a team lead can push content to all team members' queues.
+
+None of these features are scoped for current implementation. They are documented here so that every component built before Phase 4 is architected to accommodate them — not to be thrown out when they arrive.
+
+---
+
+## UX Principles for All Future Decisions
+
+**Keyboard-first:** Any action that an operator performs more than three times per session deserves a keyboard shortcut. Bookmarking, navigation, and marking complete are the primary candidates. New features should be evaluated against this criterion before building.
+
+**Progressive disclosure:** The ops page shows a summary. Clicking into any element reveals detail. Never surface all detail at the top level — operators who want the summary shouldn't have to scroll past detail to find it.
+
+**Zero-state design matters:** Empty states (no bookmarks, no progress, new track) should be useful, not decorative. An empty ReadingQueue should tell the operator how to fill it. An empty progress bar should tell the operator where to start.
+
+**Persistence is a feature:** Any state an operator creates (bookmarks, progress, sequences) should persist as long as possible given the current infrastructure. Don't clear state on version updates. Don't expire localStorage keys without user-visible warning. Operators invest time in building their navigation state — treat it as data, not cache.
+
+---
+
+*Operator Experience Architecture v1.0 — 2026-05-18. Phase dependencies: platform-vision-architecture.mdx, execution-artifacts-architecture.mdx.*

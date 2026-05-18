@@ -1,0 +1,326 @@
+---
+title: "Case Study Expansion Architecture"
+description: "Design and template for long-form operational case studies — evidence standards, timeline structure, outcome measurement, before/after analysis, and the components that make case studies high-authority proof."
+date: "2026-05-18"
+tags: ["ops", "case-studies", "architecture", "evidence", "documentation", "platform"]
+status: "published"
+---
+
+A case study is not a success story. It is not a testimonial. It is not a narrative about what you built and how proud you are of it.
+
+A case study on this platform is a time-stamped operational record with measurable before/after states, specific artifact evidence, and generalizable lessons. It documents what was true before an operation, what actions were taken, what changed as a result, and what can be verified independently. If an outside reader cannot verify the key claims using the evidence in the document, it is not a case study — it is marketing copy.
+
+This distinction is the foundation of everything else in this document. Every design decision in the case study architecture — the frontmatter schema, the structural template, the evidence requirements, the publishing rules — exists to enforce the line between documented proof and claimed outcome.
+
+---
+
+## What Was Built: CaseStudyMeta and OperationalTimeline
+
+Two MDX components power the case study content type.
+
+### CaseStudyMeta
+
+`components/mdx/case-study-meta.tsx` renders a structured metadata block at the top of every case study. It takes:
+
+- `dateRange` — the date span of the operation ("March–May 2026" or "2026-04-12")
+- `duration` — how long the operation took ("6 weeks", "3 hours")
+- `stack` — array of tools used, rendered as tags
+- `outcomes` — array of `{ metric, before, after, delta }` objects, rendered as a before/after table
+- `context` — one-line operational context sentence
+- `difficulty` — `resolved` | `ongoing` | `partial`, rendered as a status indicator with color coding
+
+The outcomes table is the most important element. Every outcome row has four fields: the metric being measured, the before value, the after value, and the delta. The delta field accepts signed values (`+340%`, `-47s`, `0 → 1k`) and colors them green (improvement) or red (regression) automatically. The before value is rendered with strikethrough. This creates an instant visual summary of what changed.
+
+### OperationalTimeline
+
+`components/mdx/operational-timeline.tsx` renders a dated event stream. Each event in the timeline has:
+
+- `date` — ISO date or relative marker ("Week 1")
+- `event` — what happened, in one sentence
+- `type` — badge type: `build`, `deploy`, `failure`, `fix`, `milestone`, `measurement`, `decision`
+- `evidence` — optional label for an evidence link
+- `evidenceHref` — optional URL for the evidence
+- `note` — optional secondary context line
+
+The type badge is rendered in distinct colors per type — build in brand blue, deploy in green, failure in red, fix in cyan, milestone in amber, measurement in purple, decision in yellow. The visual distinction lets a reader scan the timeline and immediately see the pattern: decision → build → failure → fix → deploy → measurement.
+
+The timeline is the operational backbone of a case study. It makes the sequence of events verifiable.
+
+---
+
+## Case Study Frontmatter Schema
+
+Every case study MDX file starts with this frontmatter block. All fields are required unless marked optional.
+
+```yaml
+---
+title: "Case Study: [Operation Name]"
+description: "One sentence describing what happened and what the measurable outcome was."
+date: "2026-05-18"                        # publication date (not operation date)
+tags: ["case-study", "ops", "[relevant]"]
+status: "published"                       # published | draft
+
+# Case study classification
+case_study_type: operational              # operational | failure-recovery | product-build | content-system | automation
+
+# One-line outcome for index pages and previews
+impact: "Reduced build time from 47s to 23s by eliminating redundant TypeScript compilation steps."
+
+# Primary measurement
+outcome_metric: "Build time: 47s → 23s"  # the single number that defines success
+
+# Before/after state (one sentence each — not a summary, the actual operational state)
+before_state: "Every production build ran tsc twice: once via the build script and once via next build's internal type check."
+after_state: "Type checking runs once via pre-push hook; next.config.js disables the redundant build-time check."
+
+# Operation metadata
+stack: ["Next.js", "TypeScript", "Vercel", "GitHub Actions"]
+duration: "4 hours"                       # total elapsed time from start to verified resolution
+date_range: "2026-05-12"                  # "2026-05-12" for single day, "April–May 2026" for range
+difficulty: "resolved"                    # resolved | ongoing | partial
+---
+```
+
+The `before_state` and `after_state` fields are constrained to one sentence each by design. They cannot be summaries or generalizations — they must describe the specific operational state of the specific system at the specific time. "The site was slow" is not a valid `before_state`. "Lighthouse Performance score was 61 on mobile, measured 2026-04-10 via Vercel Speed Insights" is valid.
+
+---
+
+## The Case Study Structure Template
+
+This is the full MDX structural template. Copy it for every new case study. Every section is required. Optional sections are marked.
+
+```mdx
+---
+[frontmatter from schema above]
+---
+
+<CaseStudyMeta
+  dateRange="[date or range]"
+  duration="[elapsed time]"
+  stack={["Tool1", "Tool2", "Tool3"]}
+  outcomes={[
+    { metric: "[metric]", before: "[value]", after: "[value]", delta: "[+/- delta]" },
+    { metric: "[metric]", before: "[value]", after: "[value]", delta: "[+/- delta]" },
+  ]}
+  context="[one-line operational context]"
+  difficulty="resolved"
+/>
+
+## Problem Statement
+
+[2–3 sentences. What was wrong, broken, or suboptimal? Do not explain why it matters —
+the reader can judge that. State the operational fact.]
+
+## Initial State Documentation
+
+[Exact description of the system state before anything was changed. Include:
+- Specific measurements if available (build time, error count, traffic figures)
+- Configuration state (versions, settings, environment)
+- What was working and what wasn't
+This section is the "before" that makes the "after" meaningful.]
+
+## Approach
+
+[What strategy was chosen and why. If multiple approaches were considered and rejected,
+document them briefly. Include:
+- What was tried first
+- What was ruled out and why
+- The decision that determined the actual approach]
+
+## Execution Sequence
+
+<OperationalTimeline
+  title="Operation timeline"
+  events={[
+    { date: "[date]", type: "decision", event: "[what was decided]" },
+    { date: "[date]", type: "build", event: "[what was built or changed]" },
+    { date: "[date]", type: "failure", event: "[what went wrong]", note: "[why it went wrong]" },
+    { date: "[date]", type: "fix", event: "[what fixed it]" },
+    { date: "[date]", type: "deploy", event: "[deployment event]", evidence: "Deployment log", evidenceHref: "[URL]" },
+    { date: "[date]", type: "measurement", event: "[what was measured and the result]" },
+  ]}
+/>
+
+## Complications and Pivots
+
+[Optional section. If the operation hit unexpected obstacles that required changing the
+approach mid-stream, document them here. Be specific about what the complication was,
+when it appeared, and what changed as a result. Do not soften complications. They are
+part of the operational record.]
+
+## Resolution
+
+[The specific change that resolved the problem. Include:
+- Exact file changes (diff or code block)
+- Commands run
+- Configuration changes made
+This is not a summary — it is the exact operational record.]
+
+## Measured Outcomes
+
+[The specific numbers. Every outcome stated here must have an artifact — a screenshot,
+a log, a CLI output — that can be cited. Format as a table where possible.]
+
+| Metric | Before | After | Evidence |
+|---|---|---|---|
+| [metric] | [value] | [value] | [artifact reference] |
+
+## Generalizable Lesson
+
+[The single most important thing learned that applies beyond this specific system.
+One paragraph. Write it as if explaining it to an operator who has a different tech
+stack but the same problem class. Do not reference specific file names or project names
+here — this is the transferable principle.]
+
+## What Would Be Done Differently
+
+[Honest retrospective. What would be changed about the approach, the sequencing, the
+tools chosen, or the decisions made? This section is what separates an operational
+record from a polished success story. Every case study should have at least one thing
+the operator would do differently.]
+```
+
+---
+
+## Mandatory Evidence Requirements
+
+A case study without evidence artifacts is a narrative. Evidence requirements are not optional.
+
+**Minimum required (all three must be present):**
+
+1. **One before/after measurement with specific numbers.** Percentages are acceptable if the absolute values are also stated. "Improved by 30%" without the base number does not qualify. Required format: `[metric]: [specific number] → [specific number]`.
+
+2. **One artifact** — a screenshot, a log excerpt in a code block, a command output, or a deployment record. The artifact must directly support a claim made in the text. A screenshot that decorates the page without supporting a specific claim is decoration, not evidence.
+
+3. **One dated timeline event** in an `OperationalTimeline` component. The date must be a real date (ISO format preferred), not a relative marker like "last week."
+
+**Maximum evidence density is the target.** There is no upper limit on evidence. Every claim in the body text should be traceable to an artifact. The standard to aim for: a reader who doubts any specific claim should be able to find the supporting artifact within one scroll.
+
+**Evidence that does not qualify:**
+- Undated screenshots
+- Screenshots without the relevant metric or UI state visible
+- Vague timeline entries ("improved the configuration")
+- Self-referential evidence ("the outcome was good, as I documented here")
+- Measurements taken more than 90 days after the operation, retroactively applied to an older event
+
+---
+
+## Long-Form Structure: Balancing Narrative and Operational Density
+
+A case study targeting 2,000+ words must balance two competing demands: narrative (the story of what happened, told in a way a human wants to read) and operational density (the specific commands, configurations, and decisions that make the case study verifiable).
+
+The rule is simple: every paragraph of narrative must connect to at least one artifact or specific measurement.
+
+This does not mean every paragraph ends with a code block. It means every narrative claim is grounded. "The deployment was failing consistently" is a narrative statement — it becomes operational when followed by "with this specific error message on every push" and a code block showing the error. "Performance improved significantly" is a narrative claim — it becomes operational when the Lighthouse score before and after is cited, with dates.
+
+**Practical structure for long-form case studies:**
+
+The first 400–600 words should establish the operational context and the problem state with evidence. Before the reader reaches the approach section, they should have a clear, specific picture of what was broken and a number to represent it.
+
+The execution sequence section (OperationalTimeline) should be the operational anchor of the document. Every major decision, complication, and pivot should appear here. The narrative sections before and after the timeline provide context; the timeline provides the verifiable sequence.
+
+The complications and pivots section is where long-form case studies earn their authority. Short case studies skip this section. Long-form case studies document what went wrong during the fix — the failed first attempt, the unexpected constraint, the assumption that turned out to be wrong. This is the content that makes a case study genuinely useful to another operator, because real operations have complications.
+
+The generalizable lesson section should be the one paragraph any operator would want to read even if they have a completely different stack. Strip the project-specific details and state the principle. If the lesson can't be stated at that level of generality, it's a finding, not a lesson — document it in the body, but the lesson section should hold the transferable principle.
+
+---
+
+## Case Study Types and Their Specific Structures
+
+### Failure Recovery Case Study
+
+The most common type. Centers on a production failure and the recovery process.
+
+**Required additional structure:**
+- Error message in verbatim code block (before the timeline)
+- Root cause statement as a single sentence
+- Timeline must include: `failure` event → (any number of `decision` and `build` events) → `fix` event → `deploy` event → `measurement` event confirming resolution
+
+**Word count target:** 800–1,200 words. Failure recovery case studies should be dense and specific, not expansive.
+
+### Product Build Case Study
+
+Documents the build of a feature, tool, or system from initial spec to deployed and measured result.
+
+**Required additional structure:**
+- Initial specification or acceptance criteria (what "done" looked like before building)
+- Build log (OperationalTimeline spanning the build process, not just the deployment)
+- Deployment record with commit SHA and Vercel deployment URL
+- First 30-day metrics measurement (published after the 30-day observation period)
+
+**Word count target:** 1,500–2,500 words. Product build case studies have more to document.
+
+**Critical rule:** Do not publish a product build case study until the 30-day measurement has been taken. The build log and deployment record can be drafted immediately after launch. The publication is blocked until there is a real measurement.
+
+### Content System Case Study
+
+Documents a change to content infrastructure — a new content type, a workflow change, a publishing system overhaul.
+
+**Required additional structure:**
+- Baseline content metrics at the start of the period (sessions, indexed pages, GSC impressions)
+- 90-day post-change measurement (minimum observation period)
+- Specific description of what the content system change was (not just "improved the workflow")
+
+**Word count target:** 1,200–2,000 words.
+
+### Automation Case Study
+
+Documents replacing a manual process with an automated one.
+
+**Required additional structure:**
+- Before: manual overhead documented as time-per-operation × operations-per-week
+- Automation spec: what tool, what trigger, what output
+- Operational savings evidence: either time measurement or error rate measurement after automation
+- At least one example of the automation running successfully, with output artifact
+
+**Word count target:** 1,000–1,500 words.
+
+---
+
+## Authority Signals in Case Studies
+
+Long-form operational case studies are the highest-authority content type for AI search citation. This is not a theoretical claim — it follows directly from how AI search systems evaluate content credibility.
+
+AI search systems look for content that contains:
+- **Named entities** (specific tools, services, versions, dates, companies)
+- **Specific measurements** (exact numbers with units and dates)
+- **Verifiable events** (things that happened at a specific time and can be cross-referenced)
+- **Operational specificity** (commands, configurations, file paths that can be independently tested)
+
+Generic content — "here's how to improve your build time" — scores low on all four criteria. A case study that says "running `next build` with `typescript.ignoreBuildErrors: true` disabled reduced our type error count from 14 to 0 on 2026-04-14, measured by `tsc --noEmit` output" scores high on all four.
+
+Every design decision in the case study architecture — mandatory measurements, dated timeline events, verbatim error messages in code blocks — exists to maximize the density of these authority signals.
+
+The operational record IS the content. The formatting serves the record.
+
+---
+
+## Publishing Cadence and Timing
+
+**Target:** One case study per month minimum.
+
+**When to write:** After the operation is complete, not during. A case study written during an operation is a log, not a case study. The perspective of a completed operation — knowing what the outcome was, what the complications were, what lesson emerges — is what makes a case study structurally sound.
+
+**Minimum post-operation observation period:** 30 days before publishing outcome metrics. A deployment that looked successful on day one may reveal regressions on day 15. Outcome metrics published too early are frequently wrong. The 30-day minimum is not arbitrary — it is the minimum window in which most production regressions surface.
+
+**Exception:** Failure recovery case studies can be published immediately after the resolution is confirmed and the fix has been stable for at least 7 days. Failure recovery case studies don't require a 30-day measurement window because the primary measurement is resolution — which is binary and verifiable immediately.
+
+**Draft-first workflow:** Write the body of the case study (all sections except Measured Outcomes) immediately after the operation completes, while the details are fresh. Date and schedule the Measured Outcomes section for the 30-day mark. Publish on the 30-day date with the full document.
+
+---
+
+## The Case Study to Lesson Pipeline
+
+Individual case studies generate lesson content. The pipeline has specific rules.
+
+**Single case study → finding.** A result observed once in one context is a finding. It can be documented in the case study and referenced in related lessons, but it does not independently qualify as a reusable lesson.
+
+**Three or more case studies with the same pattern → lesson.** When the same principle appears in three or more separate case studies — regardless of whether the stack or context differs — it qualifies as a platform lesson. The lesson cites all three case studies as evidence. The case studies become the lesson's evidence base.
+
+**Two or more case studies documenting the same failure class → Failure Archive entry.** When the same failure type appears in two separate case studies (same error, different trigger or context), it qualifies as a documented failure pattern for the Failure Archive. The Failure Archive entry cites both case studies as occurrence evidence and uses their prevention patterns to build the failure's prevention section.
+
+**This pipeline has a direction:** case studies → lessons, case studies → failures. Lessons do not generate case studies. Failures do not generate case studies. The operational record (the case study) is the source of truth. Synthesized content (lessons, failure patterns) is derived from the record. This keeps the platform's content hierarchy anchored to evidence, not to theory.
+
+---
+
+*Case study expansion architecture v1.0 — 2026-05-18.*

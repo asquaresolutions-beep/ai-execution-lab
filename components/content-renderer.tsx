@@ -20,6 +20,10 @@ import {
   DeploymentLog,
   ValidationGate, ValidationPipeline,
   LessonMeta,
+  // Case study + failure intelligence
+  CaseStudyMeta,
+  OperationalTimeline,
+  FailureIntelligence,
   // Execution media system
   TerminalRecording,
   YouTubeWalkthrough,
@@ -67,6 +71,10 @@ const allComponents = {
   ValidationGate,
   ValidationPipeline,
   LessonMeta,
+  // Case study + failure intelligence components
+  CaseStudyMeta,
+  OperationalTimeline,
+  FailureIntelligence,
   // Execution media system
   TerminalRecording,
   YouTubeWalkthrough,

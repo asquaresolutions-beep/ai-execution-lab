@@ -1,0 +1,418 @@
+---
+title: "Failure Intelligence Architecture"
+description: "Design spec for the operational failure intelligence system — severity indexing, recovery complexity, prevention patterns, related failures, deployment risk scoring, and ecosystem impact mapping."
+date: "2026-05-18"
+tags: ["ops", "failures", "architecture", "intelligence", "debugging", "platform"]
+status: "published"
+---
+
+Individual failure reports are useful. A documented failure with a clear root cause and a verified fix prevents that failure from happening to the next operator who hits the same condition. That value is real and immediate.
+
+But failure reports in isolation only solve the problem once. The deeper value — the value that scales — comes from patterns across failures: which root causes recur, which fixes prevent multiple failures, which deployment patterns carry the highest risk, which categories of failure produce the highest repeat rate. This is what the Failure Intelligence layer exists to extract.
+
+The Failure Archive collects operational failures. The Failure Intelligence layer turns that collection into a queryable operational knowledge base.
+
+---
+
+## What Was Built: The FailureIntelligence Component
+
+The `FailureIntelligence` component (`components/mdx/failure-intelligence.tsx`) is a structured metadata panel rendered at the top of every Failure Archive entry. It renders eight intelligence signals, all sourced from MDX frontmatter:
+
+- **Severity** — low, medium, high, or critical, with a visual severity badge and color coding
+- **Category** — build, runtime, deployment, data, performance, dependency, configuration, or authentication
+- **Recovery complexity** — minutes, hours, or days, indicating how much operator effort the fix requires
+- **Prevention patterns** — a list of specific actions that would have prevented this failure
+- **Related failures** — a cross-linked list of other Failure Archive entries with labeled relation types
+- **Deployment risk** — how likely this failure type is to show up at deployment time
+- **Ecosystem impact** — which other systems in the operator's stack are affected when this failure occurs
+- **Time to detect** — how quickly this failure surface becomes visible after the triggering condition
+- **Repeat risk** — how likely this failure is to recur after the initial fix
+
+The component renders inline in the MDX document, before the narrative content. It gives the reader the operational verdict — severity, recovery cost, prevention path — before they read the story of how it happened.
+
+---
+
+## The Failure Frontmatter Intelligence Schema
+
+The existing Failure Archive frontmatter fields handle basic categorization:
+
+```yaml
+severity: high              # low | medium | high | critical
+failure_status: resolved    # resolved | open | partial
+failure_type: deployment    # broad classification
+resolution_time: 23 minutes # how long it took to fix in this instance
+```
+
+The intelligence layer extends this with fields that enable cross-failure analysis:
+
+```yaml
+# Core intelligence fields
+category: deployment                  # 8-value taxonomy (see below)
+recovery_complexity: minutes          # minutes | hours | days
+deployment_risk: high                 # low | medium | high
+time_to_detect: "immediate"           # string: "immediate" | "next deploy" | "3 hours" | "days"
+repeat_risk: low                      # low | medium | high
+
+# Pattern arrays
+prevention_patterns:
+  - "Never add export const runtime = 'edge' to files that use next/og"
+  - "Run tsc --noEmit before every push to surface edge compatibility errors locally"
+
+# Cross-failure links
+related_failures:
+  - slug: "server-module-client-bundle"
+    relation: "same-root"             # same-root | same-category | prevention-pair | escalation-risk
+  - slug: "next-mdx-remote-v6-blockjs"
+    relation: "same-category"
+  - slug: "vercel-build-timeout"
+    relation: "escalation-risk"
+
+# Ecosystem impact
+ecosystem_impact:
+  - "Blocks all Vercel deployments"
+  - "Prevents content updates"
+  - "Breaks OG image generation for all routes"
+```
+
+Every field in the intelligence schema is binary or enumerated — no free-text judgments that require interpretation. This is intentional. The fields are designed to be computationally queryable in Phase 2.
+
+---
+
+## Failure Category Taxonomy
+
+The eight failure categories create a structured classification system. Each category has a specific definition, typical root causes, and canonical prevention patterns.
+
+### Build
+
+**Definition:** Failure occurs during compilation or static analysis, before any runtime execution.
+
+**Typical root causes:** TypeScript type errors, missing environment variables required at build time, incompatible dependency versions, invalid import paths, Edge Runtime API incompatibilities.
+
+**Canonical prevention patterns:**
+- `tsc --noEmit` before every push
+- Environment variable audit before deployment
+- Check Node.js vs Edge Runtime API surface when adding `export const runtime`
+
+### Runtime
+
+**Definition:** Failure occurs during execution — the build succeeds, but the application throws an error when handling a request.
+
+**Typical root causes:** Null reference errors, unexpected API response shapes, missing `await` on async operations, incorrect environment variable access at request time, browser API calls in server components.
+
+**Canonical prevention patterns:**
+- Handle all API response shapes explicitly, including error states
+- Validate environment variables at startup with a typed config module
+- Mark client-only components with `'use client'`
+
+### Deployment
+
+**Definition:** Failure occurs during the deployment pipeline — build may succeed, but the deployment doesn't reach production.
+
+**Typical root causes:** Vercel build configuration errors, invalid `vercel.json`, region or function size limits exceeded, edge worker API incompatibilities, Git hook failures that block the push.
+
+**Canonical prevention patterns:**
+- Test `vercel.json` changes in a preview deployment before merging to main
+- Monitor function size in build output
+- Use `vercel build` locally to simulate the production build environment
+
+### Data
+
+**Definition:** Failure occurs because the data layer returns unexpected values, fails silently, or corrupts state.
+
+**Typical root causes:** Schema mismatches between content files and expected types, MDX frontmatter missing required fields, CMS API rate limiting, Supabase query returning `null` instead of `[]`, stale cached data.
+
+**Canonical prevention patterns:**
+- Validate all frontmatter fields at build time with Zod schemas
+- Handle `null` and empty array states explicitly in every data fetch
+- Add fallback states that fail loudly rather than silently
+
+### Performance
+
+**Definition:** Failure doesn't block functionality but degrades it to an operationally unacceptable level.
+
+**Typical root causes:** Unoptimized image rendering, missing `loading="lazy"`, synchronous operations blocking the main thread, hydration mismatches causing layout shift, missing `React.memo` on expensive renders.
+
+**Canonical prevention patterns:**
+- Run Lighthouse before every major feature deployment
+- Monitor Core Web Vitals in Vercel Analytics
+- Audit all `useEffect` dependencies for unnecessary re-renders
+
+### Dependency
+
+**Definition:** Failure originates in a third-party package or external service, not in the project's own code.
+
+**Typical root causes:** Breaking changes in minor version updates, package deprecations, peer dependency conflicts, npm registry outages, lock file divergence between local and CI.
+
+**Canonical prevention patterns:**
+- Lock all dependencies to exact versions in `package.json` for production systems
+- Test dependency updates in isolation before merging
+- Read changelogs before upgrading any package with significant API surface
+
+### Configuration
+
+**Definition:** Failure is caused by a misconfiguration of a tool, service, or environment, not by code logic.
+
+**Typical root causes:** Wrong environment variable scope (preview vs. production), incorrect redirect/rewrite rules, invalid `next.config.js` options, misconfigured CORS headers, wrong DNS records.
+
+**Canonical prevention patterns:**
+- Keep a configuration inventory document per environment
+- Test configuration changes with `vercel env pull` before applying
+- Validate `next.config.js` with TypeScript types
+
+### Authentication
+
+**Definition:** Failure is caused by credential errors, token expiration, scope mismatches, or auth flow failures.
+
+**Typical root causes:** Expired API tokens not rotated, incorrect OAuth scopes, JWT validation failures, session expiry not handled, WordPress application password not stored in correct environment variable.
+
+**Canonical prevention patterns:**
+- Set calendar reminders for API token expiry dates
+- Test auth flows against production credentials in a staging environment
+- Log auth failures with specific error codes, not generic "unauthorized" messages
+
+---
+
+## Severity Indexing Rules
+
+Severity is determined by binary criteria, not judgment. An operator assigning severity to a new failure entry should be able to reach the correct level by checking criteria, not by estimating impact.
+
+| Severity | Production Impact | Data Risk | Time to Detect | Audience Affected | Recovery Complexity |
+|---|---|---|---|---|---|
+| **Low** | None — feature degraded, not blocked | None | Immediate | Self only | Minutes |
+| **Medium** | Partial — some features blocked | None or minimal | Within an hour | Small subset of users | Hours |
+| **High** | Major — core functionality blocked | Possible data inconsistency | May be delayed | Most users | Hours to days |
+| **Critical** | Total — site or app down | Active data loss or corruption risk | May be silent | All users | Days |
+
+**Critical threshold rule:** If any one of the following is true, the failure is critical regardless of other factors:
+- Active data loss or corruption is occurring or has occurred
+- Authentication or security is compromised
+- The failure is silent — users experience broken behavior but no error is surfaced
+- Recovery requires architectural changes that affect multiple deployed systems simultaneously
+
+**High threshold rule:** If the failure blocks a core user journey (signup, login, content access, checkout) or prevents all deployments, it is high severity even if it is detected immediately.
+
+---
+
+## Recovery Complexity Scoring
+
+Recovery complexity captures how much operator effort and elapsed time the fix requires. It is independent of severity — a critical failure can have low recovery complexity if the fix is a single revert command.
+
+### Minutes
+
+**Definition:** The fix is a single command, a configuration line change, or a code revert that can be identified and applied in under 15 minutes by an operator who understands the system.
+
+**Criteria:**
+- Root cause is immediately identifiable from the error message
+- Fix requires changing one file or running one command
+- No investigation phase required
+- Can be verified with a single deployment
+
+**Examples:** Reverting an incorrect `export const runtime` declaration. Correcting a typo in an environment variable name. Removing a duplicate import.
+
+### Hours
+
+**Definition:** The fix requires investigation to identify the root cause, then a multi-step change to apply and verify. Total elapsed time: under 4 hours.
+
+**Criteria:**
+- Root cause requires checking multiple files or services to identify
+- Fix requires changes across 2–5 files or multiple configuration systems
+- Verification requires multiple test runs or a staged deployment
+- Another operator with system knowledge could reproduce the diagnosis
+
+**Examples:** Resolving a dependency version conflict. Debugging a race condition in async data fetching. Fixing a hydration mismatch between server and client renders.
+
+### Days
+
+**Definition:** The fix requires an architectural change — redesigning how a system component works, not just correcting a specific error.
+
+**Criteria:**
+- Root cause is structural: the current architecture makes this class of failure likely to recur
+- Fix requires changing how a system boundary is defined or how data flows between components
+- Multiple deployments and observation periods required to verify stability
+- Side effects of the fix need to be identified and managed
+
+**Examples:** Migrating from a dynamic to static rendering strategy. Refactoring the content fetch layer to add error boundaries. Restructuring route organization to avoid Edge Runtime conflicts.
+
+---
+
+## Related Failure Relationships
+
+The four relation types define how failures connect to each other. Every link is directional from the current failure to the referenced failure.
+
+### same-root
+
+**Definition:** Both failures share the same underlying root cause. Fixing the root cause in one context fixes both.
+
+**Use when:** The two failures are triggered by different conditions or in different files, but trace back to the same architectural decision or misunderstanding. Documenting this link helps operators recognize that a fix in one place may need to be applied system-wide.
+
+**Example:** An Edge Runtime crypto error in `opengraph-image.tsx` and an Edge Runtime crypto error in an API route handler share the same root cause: the operator didn't verify Edge API surface compatibility before adding the runtime export.
+
+### same-category
+
+**Definition:** Both failures belong to the same category (e.g., both are build failures, both are dependency failures) but have different root causes and different fixes.
+
+**Use when:** Reading one failure report would orient an operator encountering the other, even though the fixes are unrelated. This builds category-level pattern awareness.
+
+**Example:** A TypeScript type error at build time and a missing environment variable at build time are both build failures. Reading both gives an operator a more complete picture of what build failures look like on this stack.
+
+### prevention-pair
+
+**Definition:** The fix or prevention pattern from the referenced failure, if applied before this failure occurred, would have prevented this failure.
+
+**Use when:** There is a concrete causal link — a specific practice documented in another failure report would have caught this one. Use sparingly. The link must be specific, not general ("be more careful about testing" is not a prevention pair).
+
+**Example:** If a failure report documents running `tsc --noEmit` as a prevention pattern, any subsequent TypeScript build failure that `tsc --noEmit` would have caught links back to it as a prevention pair.
+
+### escalation-risk
+
+**Definition:** If this failure is not resolved within a certain window, it can escalate into the referenced (more severe) failure.
+
+**Use when:** The current failure is a warning signal that, if ignored, leads to a known worse outcome. This is the most operationally critical relationship type — it creates urgency where a low-severity failure might otherwise be deprioritized.
+
+**Example:** A build warning about deprecated API usage (low severity) can escalate to a deployment failure (high severity) when the deprecated API is removed in the next major version. Linking these creates a documented escalation path.
+
+---
+
+## Deployment Risk Scoring
+
+Deployment risk answers: how likely is this failure type to block or corrupt a deployment? This is separate from severity — a high-severity failure can have low deployment risk (it happens in runtime, not at deploy time).
+
+| Category | Deployment Risk | Rationale |
+|---|---|---|
+| build | high | Build failures by definition block deployment |
+| dependency | high | Version conflicts surface at install/build time |
+| configuration | medium | Config errors may only surface at deploy time, not during preview |
+| deployment | high | Deployment failures are definitionally deployment-blocking |
+| runtime | low | Runtime failures survive deployment; they appear after |
+| data | high | Schema mismatches caught at build break deployment |
+| performance | low | Performance regressions deploy successfully |
+| authentication | medium | Auth config errors can block production but not build |
+
+---
+
+## Ecosystem Impact Mapping
+
+When a failure occurs in one system, which other systems in the operator's stack are affected? The ecosystem impact field documents this, enabling operators to understand the blast radius of a failure before they've diagnosed it.
+
+**Blast radius patterns by failure type:**
+
+A **Vercel deployment failure** stops all deployments regardless of which system the failure originates in. Every route, every content update, every feature change is blocked. Impact: the entire platform is frozen at the last deployed state.
+
+A **WordPress authentication failure** breaks any automation that uses the WordPress REST API — content sync scripts, scheduled posts, cross-property linking tools. The WordPress site itself may be functional, but the automation layer is severed.
+
+A **Next.js edge runtime failure** in a route handler affects all requests to that route. If the route is the opengraph image generator, every page sharing an OG image is affected, which cascades into social sharing previews across all content on the platform.
+
+A **dependency failure** in a shared utility (like a content parsing package used by multiple tracks) can block rendering of all affected content simultaneously. The impact scales with how widely the dependency is used across the codebase.
+
+A **data schema failure** in the frontmatter validation layer breaks all content that fails validation — which may be one page or every page, depending on whether the schema change is backward-compatible.
+
+Document ecosystem impact with specific system names, not categories. "Blocks all Vercel deployments" is more useful than "affects deployment pipeline." The specificity is what makes the impact scannable at a glance.
+
+---
+
+## Prevention Pattern Library
+
+Prevention patterns are specific, actionable, and reusable. A prevention pattern from one failure report should be considered for adoption across any failure in the same category where the same pattern would have helped.
+
+**Build category patterns:**
+- `tsc --noEmit` before every push to main
+- Validate required environment variables at build entry with a typed config module
+- Check Edge Runtime API surface before adding `export const runtime = 'edge'` to any file
+- Run `next build` locally before pushing to catch build-only errors that `next dev` misses
+
+**Runtime category patterns:**
+- Handle all three states of async data: loading, error, and empty
+- Validate external API response shapes with Zod before accessing properties
+- Mark client-only APIs (`window`, `document`, `navigator`) with guards before calling
+
+**Dependency category patterns:**
+- Lock to exact versions for packages with frequent breaking changes
+- Read package changelogs before running any `npm update`
+- Test dependency upgrades in a feature branch with a preview deployment before merging
+
+**Configuration category patterns:**
+- Maintain a configuration inventory document per environment
+- Test environment variable changes in preview scope before production scope
+- Validate redirect and rewrite rules with a smoke test after each configuration change
+
+**Authentication category patterns:**
+- Store token expiry dates in a visible operations document
+- Test all auth flows against the environment where they'll run, not just local
+- Log auth failures with the specific error code, not a generic message
+
+---
+
+## Phase 2 — Cross-Failure Pattern Detection
+
+Phase 2 moves the intelligence layer from per-failure metadata to platform-wide analysis. The frontmatter intelligence schema is designed for programmatic querying.
+
+**Data model for cross-failure analysis:**
+
+```typescript
+interface FailureAggregate {
+  // Frequency analysis
+  categoryDistribution: Record<FailureCategory, number>
+  severityDistribution: Record<Severity, number>
+  repeatRiskDistribution: Record<'low' | 'medium' | 'high', number>
+
+  // Root cause pattern extraction
+  // (NLP or string matching on resolution fields)
+  commonRootCauses: Array<{ phrase: string; count: number }>
+
+  // Prevention pattern adoption
+  // How many lessons reference each prevention pattern
+  preventionPatternCoverage: Array<{
+    pattern: string
+    failureCount: number     // failures where this pattern would have helped
+    lessonCount: number      // lessons that reference this pattern
+    adoptionRate: number     // lessonCount / failureCount
+  }>
+
+  // Deployment risk density
+  // Which tracks or time periods have highest failure concentration
+  deploymentRiskHeatmap: Array<{
+    week: string             // ISO week
+    highRiskFailures: number
+    categories: FailureCategory[]
+  }>
+
+  // Escalation chains
+  // Unresolved failures with escalation-risk links
+  openEscalationRisks: Array<{
+    sourceSlug: string
+    targetSlug: string
+    daysSinceFirstOccurrence: number
+  }>
+}
+```
+
+**Cross-failure queries that become possible:**
+
+1. "What is the most common failure category in the last 90 days?" — drives content prioritization for new prevention content
+2. "Which prevention patterns appear in failures but not in lessons?" — identifies gaps in the lesson library
+3. "Which failure has the most escalation-risk links pointing to it?" — identifies the highest-value failure to resolve
+4. "What percentage of failures have recovery complexity of hours or more?" — measures operational overhead cost
+
+**Implementation approach:** Parse all failure MDX frontmatter at build time using the same content collection system that powers the rest of the platform. Aggregate the structured fields. Surface the aggregates in an ops dashboard route — no external database required for Phase 2. The MDX files are the database.
+
+---
+
+## Phase 2 — Failure Risk Dashboard
+
+The failure risk dashboard is an ops-facing page (`/ops/failure-intelligence`) that visualizes the aggregate intelligence data.
+
+**Dashboard components:**
+
+**Failure category heatmap** — a grid of weeks × categories showing failure density. Color-coded from empty (no failures) to red (3+ failures). Lets the operator see at a glance whether failure rate is increasing, stable, or decreasing, and whether specific categories dominate.
+
+**Prevention pattern adoption rate** — a table showing each documented prevention pattern, the number of failures it would have prevented, and the percentage of relevant lesson content that references it. A pattern with 4 failures and 0% lesson adoption is a content gap. A pattern with 100% adoption and 0 recurrences is a success story.
+
+**Mean time to resolve by category** — average `resolution_time` field values, grouped by category. Identifies whether certain categories systematically take longer to recover from, which may indicate insufficient tooling, documentation, or expertise in that area.
+
+**Open escalation risks** — a live list of failure entries with escalation-risk relationships where the source failure has `repeat_risk: high` and no linked lesson content. These are the failures most likely to recur and escalate. They are the highest-priority content targets.
+
+**Repeat risk leaderboard** — the top 5 failures by repeat risk score, ranked by a composite of: `repeat_risk` value, `recovery_complexity` value, and days since first occurrence. High repeat risk + high recovery complexity + old first occurrence = critical priority for prevention content.
+
+---
+
+*Failure intelligence architecture v1.0 — 2026-05-18.*

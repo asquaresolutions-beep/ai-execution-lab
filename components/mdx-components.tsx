@@ -95,6 +95,11 @@ export { DeploymentLog }                               from './mdx/deployment-lo
 export { ValidationGate, ValidationPipeline }          from './mdx/validation-gate'
 export { LessonMeta }                                  from './mdx/lesson-meta'
 
+// Case study + failure intelligence
+export { CaseStudyMeta }                             from './mdx/case-study-meta'
+export { OperationalTimeline }                       from './mdx/operational-timeline'
+export { FailureIntelligence }                       from './mdx/failure-intelligence'
+
 // Media — existing
 export { YouTube }     from './media/youtube-embed'
 export { VideoEmbed }  from './media/video-embed'

@@ -13,6 +13,7 @@ import { getLessonContent } from '@/lib/lesson-content'
 import { LessonSidebar }  from '@/components/tracks/lesson-sidebar'
 import { LessonNav }      from '@/components/tracks/lesson-nav'
 import { CompleteButton } from '@/components/tracks/complete-button'
+import { BookmarkButton } from '@/components/platform/bookmark-button'
 import { RelatedContent } from '@/components/tracks/related-content'
 import { ContentRenderer } from '@/components/content-renderer'
 import { ReadingProgress } from '@/components/layout/reading-progress'
@@ -162,7 +163,7 @@ export default async function LessonPage({ params }: Props) {
               </div>
             )}
 
-            {/* Complete button */}
+            {/* Complete + bookmark */}
             {content && (
               <div className="mt-10 pt-8 border-t border-white/[0.06] flex items-center justify-between flex-wrap gap-4">
                 <CompleteButton
@@ -171,9 +172,17 @@ export default async function LessonPage({ params }: Props) {
                   lessonId={lessonId}
                   accentClass={ACCENT_BTN[track.accent] ?? 'bg-brand-500'}
                 />
-                <span className="text-xs text-surface-700 font-mono">
-                  Progress saved locally
-                </span>
+                <div className="flex items-center gap-3">
+                  <BookmarkButton
+                    href={`/tracks/${trackId}/${moduleId}/${lessonId}`}
+                    title={lesson.title}
+                    type="lesson"
+                    section={track.title}
+                  />
+                  <span className="text-xs text-surface-700 font-mono">
+                    Progress saved locally
+                  </span>
+                </div>
               </div>
             )}
 

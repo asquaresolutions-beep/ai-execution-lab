@@ -2,7 +2,9 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { getAllMeta, getRecentItems } from '@/lib/content'
 import { SECTION_META, ACCENT_CLASSES, formatDateMono } from '@/lib/utils'
+import { getPlatformStatus } from '@/lib/activity'
 import { FeaturedFailures }  from '@/components/homepage/featured-failures'
+import { LiveActivityBar } from '@/components/platform/live-activity-bar'
 
 // Code-split framer-motion components — reduces initial JS parse work
 const StatsBar = dynamic(
@@ -43,6 +45,7 @@ export default function HomePage() {
   const failures    = getAllMeta('failures')
   const logs        = getAllMeta('logs')
   const recent      = getRecentItems(8)
+  const platformStatus = getPlatformStatus()
 
   const stats = [
     { key: 'docs'         as const, count: docs.length        },
@@ -126,6 +129,9 @@ export default function HomePage() {
           </Link>
         </div>
       </div>
+
+      {/* ── Live activity bar ────────────────────────────────── */}
+      <LiveActivityBar status={platformStatus} />
 
       {/* ── Stats bar ────────────────────────────────────────── */}
       <StatsBar stats={stats} />
