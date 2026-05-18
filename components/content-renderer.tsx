@@ -24,6 +24,8 @@ import {
   CaseStudyMeta,
   OperationalTimeline,
   FailureIntelligence,
+  // Evidence framework
+  EvidenceBlock,
   // Execution media system
   TerminalRecording,
   YouTubeWalkthrough,
@@ -75,6 +77,8 @@ const allComponents = {
   CaseStudyMeta,
   OperationalTimeline,
   FailureIntelligence,
+  // Evidence framework component
+  EvidenceBlock,
   // Execution media system
   TerminalRecording,
   YouTubeWalkthrough,

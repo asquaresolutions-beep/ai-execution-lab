@@ -1,0 +1,320 @@
+---
+title: "Evidence Framework"
+description: "Naming conventions, metadata structure, storage organization, integration patterns, and quality standards for operational evidence on AI Execution Lab."
+date: "2026-05-18"
+tags: ["ops", "evidence", "documentation", "quality", "framework"]
+status: published
+---
+
+Evidence is what separates documented failures from useful operational records. A failure report without evidence is a claim. A failure report with a build log, a screenshot of the error state, and a commit reference is a verifiable record. This document defines how evidence is stored, named, typed, and integrated into MDX content on this platform.
+
+---
+
+## Naming Convention
+
+Every evidence file follows a single naming pattern:
+
+```
+/public/evidence/[content-slug]/[NNN]-[descriptor]-[YYYY-MM-DD].[ext]
+```
+
+**Breakdown:**
+
+- `[content-slug]` — the exact slug of the content piece this evidence belongs to (matches the MDX filename without `.mdx`)
+- `[NNN]` — zero-padded sequence number, starting at `01`. Order reflects chronological sequence within the incident or narrative, not importance.
+- `[descriptor]` — lowercase, hyphenated, specific. Describes what is shown, not a generic label.
+- `[YYYY-MM-DD]` — the date the screenshot was taken or the log was captured. This is not the content publication date.
+- `[ext]` — `png` for screenshots, `txt` for logs, `svg` for diagrams.
+
+**Examples by evidence type:**
+
+| Evidence Type | Example Path |
+|--------------|-------------|
+| Vercel build failure screenshot | `/public/evidence/edge-runtime-deployment-failure/01-vercel-build-log-edge-crypto-error-2026-05-10.png` |
+| Browser devtools network tab | `/public/evidence/server-module-client-bundle/02-chrome-network-tab-module-not-found-2026-05-14.png` |
+| GA4 realtime tracking view | `/public/evidence/ga4-cross-domain-tracking-gap/01-ga4-realtime-two-sessions-before-fix-2026-04-20.png` |
+| Terminal output with error | `/public/evidence/environment-variable-missing-production/01-vercel-function-log-undefined-key-2026-04-05.txt` |
+| Architecture diagram | `/public/evidence/knowledge-graph-architecture/01-node-relationship-diagram-2026-05-01.svg` |
+
+<Callout type="info" title="Why the date is in the filename, not just the folder">
+Evidence files are sometimes reused across content pieces or referenced in multiple places. Having the capture date in the filename means the file is self-describing when referenced in isolation — in a PR diff, in a log, or in a link shared outside the platform context.
+</Callout>
+
+**What makes a good descriptor:**
+
+- Specific: `vercel-build-output` over `screenshot`
+- Describes subject: `ga4-realtime-view`, `chrome-network-tab`, `next-build-error-output`
+- Avoids generic terms: not `image1`, not `error`, not `before`
+- For before/after pairs: use `before-[descriptor]` and `after-[descriptor]` with the same base descriptor
+
+---
+
+## Evidence Types
+
+### Screenshot
+
+Browser screenshots, dashboard states, error messages captured in a GUI, rendered page states.
+
+Use for: Vercel dashboard, GA4 reports, browser devtools console, rendered component states (both broken and fixed), GitHub Pages settings, error overlays.
+
+File extension: `png`
+
+Example path: `/public/evidence/next-mdx-remote-v6-blockjs/03-live-platform-homepage-production-2026-05-12.png`
+
+### Terminal Output
+
+Command output, build logs, error traces captured from the command line or a terminal emulator.
+
+Use for: `next build` output, `curl` command results, npm/node command output, Git operation output.
+
+File extension: `txt`
+
+Example path: `/public/evidence/server-module-client-bundle/01-next-build-module-not-found-error-2026-05-14.txt`
+
+### Analytics Snapshot
+
+GA4 or Plausible screenshots showing metrics, reports, or realtime data. Must include a visible date range.
+
+Use for: GA4 Realtime showing session counts, Acquisition report showing direct traffic anomaly, Search Console performance data.
+
+File extension: `png`
+
+Example path: `/public/evidence/ga4-cross-domain-tracking-gap/02-ga4-acquisition-direct-traffic-inflated-2026-04-20.png`
+
+### Deployment Log
+
+Vercel build output, GitHub Actions workflow logs. Distinct from terminal output in that these come from CI/CD systems, not local commands.
+
+Use for: Vercel deployment success/failure records, GitHub Actions run logs, build pipeline output.
+
+File extension: `txt` for raw logs, `png` for dashboard screenshots of log output.
+
+Example path: `/public/evidence/edge-runtime-deployment-failure/01-vercel-deployment-edge-crypto-error-2026-05-10.txt`
+
+### Build Log
+
+`next build` TypeScript output, compilation errors, warning output captured from the build process.
+
+Use for: TypeScript error output, compilation warnings, static generation output, bundle size reports.
+
+File extension: `txt`
+
+Example path: `/public/evidence/server-module-client-bundle/01-next-build-fs-module-import-trace-2026-05-14.txt`
+
+### Debugging Session
+
+Browser devtools screenshots showing a debugging session in progress: network requests, console output, application state inspection.
+
+Use for: Chrome DevTools Network tab showing failed requests, Console tab showing errors, Application tab showing cookie or storage state.
+
+File extension: `png`
+
+Example path: `/public/evidence/wordpress-rest-api-auth-failure/01-curl-401-response-url-encoded-password-2026-04-28.png`
+
+### Architecture Diagram
+
+SVG diagrams showing system architecture, component relationships, data flow.
+
+Use for: module dependency graphs, deployment architecture diagrams, data flow diagrams.
+
+File extension: `svg`
+
+Example path: `/public/evidence/execution-artifacts-architecture/01-artifact-storage-system-diagram-2026-05-01.svg`
+
+### Before/After
+
+Paired screenshots showing state before and after a change. The pair must be filed as two separate evidence files using `before-` and `after-` descriptors with matching base names.
+
+Use for: dashboard states before and after a fix, rendered component output before and after, deployment status before and after resolution.
+
+File extension: `png`
+
+Example files:
+- `/public/evidence/next-mdx-remote-v6-blockjs/01-vercel-build-failure-next-mdx-remote-2026-05-12.png`
+- `/public/evidence/next-mdx-remote-v6-blockjs/02-vercel-production-deployments-ready-2026-05-12.png`
+
+---
+
+## Storage Organization
+
+Evidence files live under `/public/evidence/`. One subdirectory per content piece. The subdirectory name must match the content slug exactly.
+
+```
+/public/evidence/
+  edge-runtime-deployment-failure/
+    01-vercel-build-log-edge-crypto-error-2026-05-10.png
+    02-vercel-deployment-fixed-2026-05-10.png
+  next-mdx-remote-v6-blockjs/
+    01-vercel-build-failure-next-mdx-remote-2026-05-12.png
+    02-vercel-production-deployments-ready-2026-05-12.png
+    03-live-platform-homepage-production-2026-05-12.png
+  server-module-client-bundle/
+    01-next-build-fs-module-import-trace-2026-05-14.txt
+```
+
+**Rules:**
+
+- Subdirectory name = content slug, exactly. No abbreviations, no case variations. `edge-runtime-deployment-failure` not `edge-runtime` or `EdgeRuntime`.
+- All evidence for a failure report in `/public/evidence/[failure-slug]/`.
+- All evidence for a case study in `/public/evidence/[case-study-slug]/`.
+- All evidence for a doc in `/public/evidence/[doc-slug]/`.
+- Maximum 10 files per content piece before splitting. If a content piece requires more than 10 evidence files, break the content into sub-pages and split the evidence directories to match.
+
+<Callout type="warn" title="Slug matching is not optional">
+The content slug and the evidence subdirectory must match exactly. MDX components that reference evidence paths use the slug to construct the path. A mismatch results in broken images or 404s that are easy to miss on dark backgrounds.
+</Callout>
+
+---
+
+## Quality Standards
+
+Standards are per evidence type. Meeting these standards is a pre-publication requirement, not a preference.
+
+### Screenshots
+
+- Minimum 1280px wide. No exceptions for "quick captures" — resize the browser window before capturing.
+- Full-page or clearly cropped to the relevant area. No partial screenshots that cut off error messages or relevant UI context.
+- No PII visible: no user email addresses, no personal names in account UI, no billing information, no API keys in visible configuration panels.
+- Timestamp visible when relevant: for incident evidence, the browser's address bar timestamp or a visible dashboard date is required to establish when the state was captured.
+- File format: PNG only. No JPEG (lossy compression degrades text readability), no WebP.
+
+### Terminal Output
+
+- Full output, not truncated. If the output is long, include all of it — do not cut off the top or bottom. Context commands (the command that produced the output) must be visible.
+- Error message complete: the full error trace, including the import trace or stack trace, must be present. "Module not found" with no import trace is insufficient.
+- Save as plain text (`.txt`), not as a screenshot of a terminal window. Plain text is searchable, copyable, and renders cleanly in the `TerminalBlock` component.
+
+### Analytics Snapshots
+
+- Date range must be visible in the screenshot. A GA4 screenshot without a visible date range is not verifiable evidence.
+- Property name or measurement ID visible. For multi-property setups, the active property must be identifiable.
+- No PII: no user-identifying information, no individual user journeys, no personally identifiable segments.
+
+### Architecture Diagrams
+
+- SVG format preferred. PNG acceptable for diagrams generated by external tools where SVG is not available.
+- All nodes and edges labeled clearly. Abbreviations must be explained in a legend or in the content text.
+- Dark background preferred for consistency with the platform's dark theme. Diagrams that appear in the content should be legible without a light mode toggle.
+- Minimum 800px effective width when rendered at 1x.
+
+---
+
+## MDX Component Integration Map
+
+The platform provides six components for evidence display. The table maps evidence types to the correct component.
+
+| Evidence Type | Component | Notes |
+|--------------|-----------|-------|
+| Screenshot (single) | `EvidenceBlock` with `type="screenshot"` | Wrap `![alt](src)` in EvidenceBlock |
+| Screenshot collection | `Gallery` | Pass array of `{src, alt, caption}` |
+| Before/after pair | `BeforeAfter` | Requires both files before use |
+| Deployment/build log | `DeploymentLog` | Structured log with level-coded entries |
+| Terminal output | `TerminalBlock` (code block) | Use ` ```bash ` or ` ```text ` fence |
+| Commit reference | `ExecutionEvidence` | Links to commit, shows date and repo |
+| Any type with metadata | `EvidenceBlock` | Wrapper with type badge, date, context |
+
+### EvidenceBlock Usage
+
+`EvidenceBlock` is the wrapper component for any evidence item that needs a metadata header — type badge, capture date, and context description. Use it when a screenshot or log needs to be clearly attributed within a longer document.
+
+```mdx
+<EvidenceBlock
+  type="screenshot"
+  title="Vercel build output — edge crypto error"
+  date="2026-05-10"
+  context="Build failure immediately after adding edge runtime export to opengraph-image.tsx"
+  commitRef="fix: remove edge runtime from opengraph-image"
+  quality="verified"
+>
+  ![Vercel build log showing edge crypto error](/evidence/edge-runtime-deployment-failure/01-vercel-build-log-edge-crypto-error-2026-05-10.png)
+</EvidenceBlock>
+```
+
+Valid `type` values for `EvidenceBlock`: `screenshot`, `terminal`, `analytics`, `deployment-log`, `build-log`, `debugging`, `architecture`, `before-after`, `search-console`.
+
+### Gallery Usage
+
+`Gallery` renders a lightbox-enabled image grid. Use for three or more related screenshots from a single incident.
+
+```mdx
+<Gallery images={[
+  {
+    src: "/evidence/next-mdx-remote-v6-blockjs/01-vercel-build-failure-next-mdx-remote-2026-05-12.png",
+    alt: "Vercel build log showing next-mdx-remote v6 upgrade deployment — post-deploy component rendering failure",
+    caption: "01 — Vercel build output during next-mdx-remote v6 incident"
+  },
+  {
+    src: "/evidence/next-mdx-remote-v6-blockjs/02-vercel-production-deployments-ready-2026-05-12.png",
+    alt: "Vercel production deployments dashboard — all deployments in Ready state after fix",
+    caption: "02 — All production deployments restored after blockJS: false fix"
+  }
+]} />
+```
+
+### BeforeAfter Usage
+
+`BeforeAfter` renders a side-by-side or slider comparison. Requires both screenshot files to exist before the component is used in content.
+
+```mdx
+<BeforeAfter
+  before="/evidence/next-mdx-remote-v6-blockjs/01-vercel-build-failure-next-mdx-remote-2026-05-12.png"
+  after="/evidence/next-mdx-remote-v6-blockjs/02-vercel-production-deployments-ready-2026-05-12.png"
+  beforeLabel="Build Failure"
+  afterLabel="All Deployments Ready"
+  height={420}
+/>
+```
+
+### ExecutionEvidence Usage
+
+`ExecutionEvidence` links content to a specific commit and renders a metadata footer showing commit reference, date, and repository. Use in every failure report where a fix was committed.
+
+```mdx
+<ExecutionEvidence
+  commitRef="fix: remove edge runtime from opengraph-image"
+  date="2026-05-10"
+  repo="ai-execution-lab"
+  context="Fix deployed to production — confirmed working in Vercel dashboard"
+/>
+```
+
+---
+
+## Pre-Publication Evidence Checklist
+
+### For Failure Reports
+
+- [ ] Minimum 1 evidence item present (build log, deployment log, or screenshot of error state)
+- [ ] `ExecutionEvidence` component present with commit reference and date
+- [ ] Evidence files stored at `/public/evidence/[failure-slug]/` with correct naming convention
+- [ ] At least one evidence item shows the failure state (not only the resolved state)
+- [ ] No PII visible in any screenshot or log file
+- [ ] Screenshot minimum width: 1280px
+
+### For Case Studies
+
+- [ ] Minimum 2 evidence items present
+- [ ] `OperationalTimeline` references evidence files where available (screenshot path or commit ref in relevant timeline steps)
+- [ ] Before/after pair present if the case study involves a visible state change
+- [ ] Analytics evidence includes visible date range and property identifier
+- [ ] All evidence files stored at `/public/evidence/[case-study-slug]/`
+
+### For Lessons
+
+- [ ] Evidence optional but recommended for any implementation step that is non-obvious or error-prone
+- [ ] If terminal output is referenced in the content, the full output file exists at the evidence path
+- [ ] Architecture diagrams, if present, meet the quality standards (labeled, SVG preferred, legible at dark background)
+
+<Callout type="lab" title="Evidence is part of the content, not decoration">
+A failure report without evidence is reconstructed from memory and carries implicit uncertainty. Evidence — specifically, a build log with an error trace and a screenshot of the resolved dashboard — establishes that the failure is documented from the actual event, not inferred after the fact. When a future operator hits the same failure, they need to know the resolution was verified in production, not just proposed as a fix. The evidence is what carries that verification.
+</Callout>
+
+### Common Evidence Checklist Failures
+
+The most frequent pre-publication evidence issues:
+
+1. **Wrong evidence subdirectory name** — slug in `/public/evidence/` doesn't match the MDX file slug exactly. Check for `_` vs `-`, case mismatches, or abbreviated names.
+2. **Screenshot below 1280px** — common when capturing on a laptop at reduced window size. Resize to full width before capturing.
+3. **Missing date range in analytics screenshots** — GA4 defaults to "last 28 days" which changes relative to when the screenshot was taken. Set a fixed date range before capturing.
+4. **Terminal output saved as screenshot** — hard to read on mobile, not searchable, renders poorly. Save as `.txt`.
+5. **ExecutionEvidence missing from failure reports** — required for all failure reports. The commit reference is the verification link between the documented fix and the actual codebase change.

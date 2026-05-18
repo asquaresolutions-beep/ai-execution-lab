@@ -1,0 +1,283 @@
+---
+title: "A Square Solutions Ecosystem Integration: WordPress Hub + Three Subdomains"
+description: "How asquaresolution.com (WordPress) was wired into a four-property ecosystem with AI Execution Lab, TrustSeal, and ScamCheck — covering navigation integration, cross-domain GA4, SEO cross-linking, and the measurable traffic effects of treating standalone apps as one brand."
+date: "2026-05-18"
+tags: ["case-study", "wordpress", "ecosystem", "ga4", "seo", "cross-domain", "integration"]
+status: "published"
+impact: "Four-property ecosystem live under one GA4 property with consistent cross-navigation, shared brand identity, and measurable cross-property referral traffic from day one"
+stack: ["WordPress", "PHP", "GA4", "Next.js", "React", "Vite", "GitHub Pages", "Vercel"]
+---
+
+<CaseStudyMeta
+  dateRange="April–May 2026"
+  duration="3 weeks rollout"
+  difficulty="resolved"
+  stack={["WordPress", "PHP", "GA4", "Next.js", "React", "Vite", "Vercel", "GitHub Pages"]}
+  outcomes={[
+    { metric: "GA4 tracking coverage", before: "WordPress tracked only, subdomains invisible", after: "All four properties under G-MPQVF41ZYM", delta: "3 properties added" },
+    { metric: "Cross-property navigation", before: "No links between apps and main site", after: "Header nav, footer ecosystem block, homepage widgets on all properties", delta: "unified nav" },
+    { metric: "Internal backlink structure", before: "Zero cross-domain internal links", after: "25+ cross-domain link placements across all four properties", delta: "+25 links" },
+    { metric: "Brand cohesion", before: "Four disconnected apps with no shared identity", after: "Single A Square Solutions brand across all subdomains", delta: "resolved" }
+  ]}
+  context="A Square Solutions operates four web properties: asquaresolution.com (WordPress main site), lab.asquaresolution.com (Next.js/Vercel), trustseal.asquaresolution.com (React/Vite/GitHub Pages), scamcheck.asquaresolution.com (React/Vite/GitHub Pages). All share the GA4 property G-MPQVF41ZYM."
+/>
+
+Four web properties on four different stacks — WordPress, Next.js on Vercel, and two React/Vite apps on GitHub Pages — is a natural result of building products sequentially. Each product was the right stack for its use case. The problem that appears after the fourth property ships is that nothing connects them. A user who finds ScamCheck has no path to TrustSeal. A visitor who reads the AI Execution Lab has no obvious connection to the business behind it. GA4 shows each property in isolation.
+
+This case study documents the integration work that turned four standalone properties into one ecosystem: what was built on each property, how cross-domain GA4 was configured, what the SEO strategy is, and what the measurable outcomes were at completion.
+
+---
+
+## Context
+
+**Properties:**
+- `asquaresolution.com` — WordPress main site, the commercial hub and brand root
+- `lab.asquaresolution.com` — AI Execution Lab, Next.js 15 / Vercel, AI engineering journal
+- `trustseal.asquaresolution.com` — TrustSeal, React / Vite / GitHub Pages, AI trust verification tool
+- `scamcheck.asquaresolution.com` — ScamCheck, React / Vite / GitHub Pages, AI scam detection tool
+
+**Shared GA4 property:** G-MPQVF41ZYM
+
+**Problem:** Each property was built in isolation. No navigation linked them. GA4 was only installed on the WordPress main site. Users who landed on any subdomain had no way to discover the rest of the ecosystem.
+
+**Objective:** Integrate all four properties into a consistent ecosystem with shared navigation, cross-domain analytics, and an SEO cross-linking strategy.
+
+---
+
+## Why Build an Ecosystem Rather Than Standalone Apps
+
+The business case for ecosystem integration is straightforward: a user who finds one property and can easily reach the others is worth more than a user who bounces from a single property. More concretely:
+
+**Brand authority consolidation.** Search engines treat subdomains as related to the root domain when there is clear navigation and linking between them. Cross-linking across `asquaresolution.com` and its subdomains signals topical coherence around AI tools and engineering. A standalone ScamCheck with no connection to the main domain contributes less domain authority to the brand than a ScamCheck that links back to the main site and is linked from it.
+
+**User path extension.** The natural user journey is discovery on one property, evaluation, and then conversion or return visits. If a user discovers TrustSeal via search, verifies a website, and leaves, that is a single-session visit with no further engagement. If TrustSeal's header links to AI Execution Lab (the engineering record behind the product) and to ScamCheck (a related tool), the same user has paths to explore the broader offering.
+
+**Analytics completeness.** Running four separate GA4 properties — or having three properties with no analytics at all — means the operator has no view of cross-property behavior. One GA4 property across all four subdomains gives a unified picture: where do users enter the ecosystem, what do they do across properties, which content drives downstream app engagement.
+
+---
+
+## WordPress Integration Points
+
+The WordPress main site is the ecosystem hub. Four integration points were implemented.
+
+### Navigation Menu Ecosystem Block
+
+A new primary navigation item "Our Tools" was added to the WordPress main site header, with a dropdown containing:
+- AI Execution Lab — `lab.asquaresolution.com`
+- TrustSeal — `trustseal.asquaresolution.com`
+- ScamCheck — `scamcheck.asquaresolution.com`
+
+This was implemented via the WordPress Customizer → Menus panel, adding external URL menu items to the existing primary menu. No custom PHP required for the menu items themselves.
+
+### Footer Ecosystem Block
+
+A custom widget area named "Ecosystem Footer" was registered in `functions.php`:
+
+```php
+register_sidebar([
+  'name'          => 'Ecosystem Footer',
+  'id'            => 'ecosystem-footer',
+  'before_widget' => '<div class="ecosystem-widget">',
+  'after_widget'  => '</div>',
+  'before_title'  => '<h4 class="ecosystem-widget-title">',
+  'after_title'   => '</h4>',
+]);
+```
+
+A custom HTML widget was placed in this area with links to all three subdomain tools and a brief one-line description of each. The widget area is rendered in the footer template with `dynamic_sidebar('ecosystem-footer')`.
+
+### Homepage Case Study Widget
+
+The WordPress homepage includes a section titled "From the AI Engineering Journal" that pulls the three most recent case studies from AI Execution Lab. This is implemented as a hardcoded HTML block in the homepage template (not a live API call — the editorial cadence makes manual updates acceptable, and a live API call to an external domain adds latency and a failure dependency).
+
+The section includes a "Read all case studies" link to `lab.asquaresolution.com/case-studies` and individual links to the three featured pieces with title and one-line description.
+
+### Sidebar Cross-Property Links
+
+The WordPress site's sidebar widget area includes a "A Square Solutions Apps" widget listing all three subdomain tools with direct links. This appears on all post and page templates that render the sidebar. The sidebar links are contextually relevant on any AI or technology content, which represents the majority of the site's content.
+
+---
+
+## Subdomain-Side Integration
+
+Each subdomain needed equivalent changes to link back to the main site and to each other.
+
+### AI Execution Lab (Next.js / Vercel)
+
+The site header already had a nav component. Two changes were made:
+
+1. A "A Square Solutions" link was added to the header linking back to `asquaresolution.com`. This is both a navigation element and a crawler-visible link from the subdomain to the root domain.
+2. The site footer was extended with an ecosystem block listing TrustSeal and ScamCheck with descriptions.
+
+The footer ecosystem block is a static JSX component — no external data fetching. It renders as static HTML in the Next.js build output.
+
+### TrustSeal and ScamCheck (React / Vite / GitHub Pages)
+
+Both apps received the same treatment:
+
+1. App header updated to include a nav link back to `asquaresolution.com` and a "Our Tools" dropdown linking to sibling apps.
+2. App footer updated with an ecosystem block matching the style used in the WordPress footer widget.
+
+The implementation is identical React/JSX between TrustSeal and ScamCheck — one component file was written and copied across both projects with minor label differences.
+
+<Callout type="info" title="Footer ecosystem component is not shared via npm">
+TrustSeal and ScamCheck are separate repositories with no shared package infrastructure. The ecosystem footer component was duplicated rather than extracted into a shared package. Duplication is acceptable here — the component is simple (a list of links), change frequency is low, and adding a shared package registry for two React apps would add deployment complexity with no practical benefit.
+</Callout>
+
+---
+
+## Cross-Domain GA4 Configuration
+
+### The Problem
+
+GA4 treats each domain and subdomain as a separate site by default. A user who visits `asquaresolution.com`, clicks through to `lab.asquaresolution.com`, and then visits `trustseal.asquaresolution.com` generates three separate sessions unless cross-domain measurement is configured. Without it, the referral from the main site to the subdomain appears as a self-referral or as direct traffic, and the user's journey is fragmented.
+
+### Configuration Steps
+
+**Step 1: Add all subdomains to the GA4 property's domain list.**
+
+In GA4 Admin → Data Streams → Configure tag settings → Configure your domains, the following domains were added:
+- `asquaresolution.com`
+- `lab.asquaresolution.com`
+- `trustseal.asquaresolution.com`
+- `scamcheck.asquaresolution.com`
+
+This tells GA4 that navigation between these domains should not start a new session.
+
+**Step 2: Install GA4 on all subdomains.**
+
+Before this integration, only `asquaresolution.com` had GA4 installed. Each subdomain received the GA4 gtag.js snippet with the shared measurement ID `G-MPQVF41ZYM`.
+
+For the AI Execution Lab (Next.js), the GA4 script was added in `app/layout.tsx` using Next.js's `Script` component with `strategy="afterInteractive"`:
+
+```typescript
+<Script
+  src="https://www.googletagmanager.com/gtag/js?id=G-MPQVF41ZYM"
+  strategy="afterInteractive"
+/>
+<Script id="ga4-init" strategy="afterInteractive">
+  {`
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-MPQVF41ZYM', {
+      cookie_domain: 'asquaresolution.com'
+    });
+  `}
+</Script>
+```
+
+The `cookie_domain: 'asquaresolution.com'` parameter is the critical setting. It tells GA4 to set cookies on the root domain rather than the subdomain, allowing the same cookie to be read across all `*.asquaresolution.com` subdomains.
+
+For TrustSeal and ScamCheck (React/Vite), the same gtag.js snippet was added to `index.html` with the same `cookie_domain` parameter.
+
+For the WordPress main site, the existing GA4 configuration via Google Site Kit was updated to add the `cookie_domain` parameter. This required adding a custom gtag configuration in the Site Kit settings — Site Kit does not expose `cookie_domain` in its UI, so the parameter was added via a custom code snippet in the WordPress Customizer's Additional CSS/JS area (using a plugin that allows injecting custom scripts without file edits).
+
+<Callout type="warn" title="cookie_domain must match on all properties">
+If any single property in the ecosystem sets a different `cookie_domain` — or omits the parameter — cross-domain session stitching breaks for traffic that passes through that property. The `cookie_domain` parameter must be set to the root domain (`asquaresolution.com`) on every property uniformly. Verify by checking GA4's DebugView while navigating between properties.
+</Callout>
+
+**Step 3: Verify cross-domain session stitching.**
+
+Verification was done using GA4's DebugView (enabled by adding `?gtag_debug=1` to the URL). A navigation session from `asquaresolution.com` → `lab.asquaresolution.com` → `trustseal.asquaresolution.com` showed as a single session with three page groups, confirming the configuration was working.
+
+---
+
+## SEO Cross-Linking Strategy
+
+Cross-domain internal links serve two purposes: navigation for users and PageRank distribution across the ecosystem.
+
+### Link Placement Map
+
+| Source Property | Target | Placement | Link Count |
+|---|---|---|---|
+| asquaresolution.com | lab.asquaresolution.com | Header nav, footer, homepage widget, sidebar | 6 |
+| asquaresolution.com | trustseal.asquaresolution.com | Header nav, footer, sidebar, dedicated tools page | 5 |
+| asquaresolution.com | scamcheck.asquaresolution.com | Header nav, footer, sidebar, dedicated tools page | 5 |
+| lab.asquaresolution.com | asquaresolution.com | Header, footer | 2 |
+| lab.asquaresolution.com | trustseal.asquaresolution.com | Footer ecosystem block | 1 |
+| lab.asquaresolution.com | scamcheck.asquaresolution.com | Footer ecosystem block | 1 |
+| trustseal.asquaresolution.com | asquaresolution.com | Header, footer | 2 |
+| trustseal.asquaresolution.com | scamcheck.asquaresolution.com | Footer ecosystem block | 1 |
+| scamcheck.asquaresolution.com | asquaresolution.com | Header, footer | 2 |
+| scamcheck.asquaresolution.com | trustseal.asquaresolution.com | Footer ecosystem block | 1 |
+
+Total: 26 cross-domain link placements.
+
+### Anchor Text Strategy
+
+Navigation links use branded anchors: "AI Execution Lab", "TrustSeal", "ScamCheck". Footer ecosystem block links use descriptive anchors: "AI website trust verifier", "AI scam detector", "AI engineering journal". Both patterns are appropriate — branded anchors establish the entity, descriptive anchors provide topical context to crawlers.
+
+### Sitemap References
+
+The WordPress sitemap (via Yoast SEO) does not include subdomain URLs — sitemaps are domain-scoped. Each subdomain's sitemap is submitted separately in Google Search Console. The value of cross-linking for SEO is through link equity flow, not sitemap inclusion.
+
+---
+
+## Build Timeline
+
+<OperationalTimeline
+  events={[
+    { date: "2026-04-18", event: "Ecosystem integration planned — four properties identified, integration points mapped, GA4 cross-domain approach confirmed", type: "milestone" },
+    { date: "2026-04-20", event: "WordPress navigation menu updated — 'Our Tools' dropdown with all three subdomain links added to primary menu", type: "build" },
+    { date: "2026-04-21", event: "WordPress footer ecosystem widget area registered in functions.php, custom HTML widget deployed", type: "build" },
+    { date: "2026-04-22", event: "WordPress sidebar cross-property widget added, homepage case study feature section built", type: "build" },
+    { date: "2026-04-24", event: "GA4 cross-domain configuration — all four domains added to GA4 domain list, cookie_domain parameter set", type: "build" },
+    { date: "2026-04-25", event: "AI Execution Lab header and footer updated — main site link, ecosystem footer block added to Next.js layout", type: "build" },
+    { date: "2026-04-26", event: "TrustSeal header nav and footer ecosystem block added, deployed to gh-pages", type: "build" },
+    { date: "2026-04-27", event: "ScamCheck header nav and footer ecosystem block added, deployed to gh-pages", type: "build" },
+    { date: "2026-04-28", event: "GA4 DebugView verification — cross-domain session stitching confirmed across all four properties", type: "measurement" },
+    { date: "2026-05-01", event: "WordPress dedicated Tools page published — individual sections for each subdomain tool with description, link, and use case", type: "build" },
+    { date: "2026-05-05", event: "Link placement audit — 26 cross-domain links verified across all four properties", type: "measurement" },
+    { date: "2026-05-10", event: "First cross-property traffic visible in GA4 — session paths showing multi-property journeys", type: "measurement" }
+  ]}
+/>
+
+---
+
+## Measurable Outcomes
+
+**GA4 Coverage:** All four properties reporting to G-MPQVF41ZYM. Cross-domain session stitching confirmed via DebugView. Cross-property user paths visible in GA4 Exploration reports.
+
+**Navigation:** Every property in the ecosystem has a path to every other property within one click. No user who lands on any subdomain is in a navigation dead-end.
+
+**Cross-domain link count:** 26 link placements across four properties. The WordPress main site has the highest concentration (16 outbound links to subdomains) because it is the commercial hub.
+
+**Build time impact (AI Execution Lab):** Adding the ecosystem footer block and header link added 0 seconds to Vercel build time — static JSX has no build cost. The GA4 `Script` components are loaded client-side after page interactive, adding no build-time overhead.
+
+**Deployment overhead per property:**
+- WordPress: PHP file edits + Customizer changes, no deploy step required
+- AI Execution Lab: Next.js layout edit + Vercel auto-deploy on git push (~12s build)
+- TrustSeal: React component edits + manual `git push origin gh-pages` from dist/
+- ScamCheck: same as TrustSeal
+
+---
+
+## Operational Lessons
+
+**`cookie_domain` must be set identically on all properties or cross-domain stitching breaks selectively.** The symptom of a misconfigured property is that sessions that pass through it appear split in GA4 — the session before and after the misconfigured property are separate sessions. Verification via DebugView before declaring the configuration complete is not optional.
+
+**The footer ecosystem block is the highest-ROI integration point.** Every page on every property has a footer. A footer ecosystem block costs one implementation and provides a link placement on every page. Navigation header links are also universal but are more constrained by space and UX conventions — a footer has fewer competing priorities.
+
+**Duplicating a simple component across two repositories is better than prematurely extracting a shared package.** TrustSeal and ScamCheck share a footer ecosystem component by copy. If the component changes, both repositories need to be updated. At the current update frequency (near-zero — the list of ecosystem properties does not change often), this is less friction than managing a shared package, versioning it, and updating both repositories to pull the new version.
+
+**GA4 cross-domain configuration in GA4 Admin does not auto-configure the tag.** Adding domains to the GA4 Admin "Configure your domains" list is necessary but not sufficient. The gtag initialization on each property must also include the `cookie_domain` parameter. The GA4 Admin configuration tells GA4 how to interpret cookies; the `cookie_domain` parameter tells the browser how to set them. Both are required.
+
+---
+
+## Repeatable Elements
+
+- [ ] Add all ecosystem subdomains to GA4 Admin → Data Streams → Configure tag settings → Configure your domains
+- [ ] Set `cookie_domain: 'root-domain.com'` in every gtag config across all properties — not just the root domain
+- [ ] Verify cross-domain session stitching via GA4 DebugView before declaring GA4 configuration complete
+- [ ] Register a named sidebar area in WordPress `functions.php` for ecosystem link widgets — gives Customizer control without file edits
+- [ ] Build the footer ecosystem block as a static component — no API calls, no build-time data fetching
+- [ ] Include a header nav link back to the main domain on every subdomain — one link, always present, maximum crawler visibility
+
+---
+
+## Related
+
+- [Building AI Execution Lab: From Zero to Production](/case-studies/ai-execution-lab-platform-launch)
+- [TrustSeal: Building an AI Website Trust Verifier](/case-studies/trustseal-architecture-build)
+- [Vercel Deployment Pipeline Evolution](/case-studies/vercel-deployment-evolution)

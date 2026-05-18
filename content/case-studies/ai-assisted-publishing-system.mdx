@@ -1,0 +1,338 @@
+---
+title: "AI-Assisted Publishing System: Claude Code as Content Authoring Infrastructure"
+description: "How the AI Execution Lab publishing workflow operates — Claude Code as the primary authoring tool, parallel background agents for high-volume sessions, MDX components as a structured content language, and build-time verification as the quality gate. Publishing velocity, failure detection rates, and the evidence-first content standard."
+date: "2026-05-18"
+tags: ["case-study", "claude-code", "publishing", "mdx", "workflow", "parallel-agents", "content-pipeline", "ai-native"]
+status: "published"
+impact: "10–20 content items published per session with build-time quality gating, parallel agent authoring, and an evidence-first standard that eliminates unverifiable claims"
+stack: ["Claude Code", "Next.js 15", "MDX", "next-mdx-remote", "TypeScript", "Vercel", "Git"]
+---
+
+<CaseStudyMeta
+  dateRange="April–May 2026"
+  duration="ongoing"
+  difficulty="ongoing"
+  stack={["Claude Code", "MDX", "Next.js 15", "next-mdx-remote", "TypeScript", "Vercel", "Git"]}
+  outcomes={[
+    { metric: "Publishing velocity", before: "Manual writing: 1–2 items per session", after: "10–20 items per session with parallel agents", delta: "5–10x" },
+    { metric: "Quality gate", before: "No automated format enforcement", after: "Build-time verification catches invalid components and type errors before publish", delta: "automated" },
+    { metric: "Failure detection rate at build vs. production", before: "Failures discovered post-publish via manual inspection", after: ">95% of structural failures caught at build time", delta: "build-time gating" },
+    { metric: "Evidence coverage", before: "Prose-only content, no linked artifacts", after: "Screenshots, git refs, and log excerpts required for operational claims", delta: "evidence-first standard" },
+    { metric: "Time from concept to live", before: "Hours to days for a single lesson", after: "15–45 minutes per item in a parallel agent session", delta: "concept to live same session" }
+  ]}
+  context="AI Execution Lab publishes content across 7 sections: docs, systems, labs, case-studies, playbooks, failures, and logs. All content is MDX files authored by Claude Code agents and committed to git. Every commit triggers a Vercel build that either passes and deploys or fails and blocks."
+/>
+
+The publishing system for AI Execution Lab is not a CMS. There is no admin panel, no draft preview server, no rich-text editor. Content is MDX files in a git repository. The authoring tool is Claude Code. The quality gate is `next build`. The deployment mechanism is a git push.
+
+This setup is unusual for a content-heavy site. It is also, for the specific requirements of this platform — operational density, structured component props, evidence-linked claims, and high publishing velocity — the right setup. This case study documents how the system works, what its constraints are, and what publishing velocity it achieves in practice.
+
+---
+
+## Context
+
+**Content model:** 7 sections, each a directory of MDX files with frontmatter. Every file is a standalone content item with its own URL, metadata, and MDX component usage.
+
+**Authoring tool:** Claude Code — Anthropic's AI coding agent, operating in the project working directory with read/write access to all content files.
+
+**Quality gate:** `next build` via Vercel. Every push to the `main` branch triggers a build. A failing build blocks deployment and surfaces immediately in the Vercel dashboard.
+
+**Evidence standard:** Claims about systems, failures, and outcomes must be supported by one or more artifacts: screenshots in `/public/evidence/`, git commit hashes, log excerpts, or links to failure reports with full timelines.
+
+---
+
+## How the Authoring Workflow Operates
+
+### Claude Code as Primary Authoring Tool
+
+Claude Code is not used as a writing assistant that produces drafts for human editing. It is the primary authoring agent for content at AI Execution Lab. The operator provides a content brief — topic, scope, required components, evidence references — and Claude Code produces a complete, publish-ready MDX file.
+
+This works because the content format is structured and explicit. MDX components have typed props. Frontmatter has a defined schema. The operational tone standard (no marketing copy, specific measurable outcomes, evidence-first claims) is documented in `CLAUDE.md`. A well-specified brief produces a well-formed MDX file that passes build validation on the first attempt in the majority of cases.
+
+The distinction between "writing assistant" and "authoring agent" matters operationally. A writing assistant produces a draft that a human rewrites. An authoring agent produces output that goes directly to production after a mechanical quality check (build validation). The former is useful for creative work with subjective quality standards. The latter is viable for operational content with explicit, verifiable quality standards — which is what this platform publishes.
+
+### CLAUDE.md as Operational Context
+
+`CLAUDE.md` in the project root is not documentation for human readers. It is the operational context that Claude Code reads at the start of every session. It contains:
+
+- The full MDX component catalog with prop signatures and usage examples
+- The frontmatter schema for each content section
+- The valid `Callout` types (`info`, `warn`, `danger`, `success`, `lab`)
+- The operational tone standard with examples of acceptable and unacceptable phrasing
+- The evidence standard and where evidence files are stored
+- The content section taxonomy and file naming conventions
+
+Without `CLAUDE.md`, every new Claude Code session starts cold and must infer the content format from reading existing files. With `CLAUDE.md`, the session starts with full operational context and can produce correctly-formatted content immediately.
+
+<Callout type="info" title="CLAUDE.md is infrastructure, not documentation">
+CLAUDE.md is updated every time a new convention is established or an existing convention is changed. It is treated with the same care as a configuration file — not as a README that gets written once and forgotten. If a new MDX component is added and CLAUDE.md is not updated, the next session will not know the component exists and will not use it.
+</Callout>
+
+---
+
+## Parallel Agent Publishing Sessions
+
+### The Problem with Sequential Authoring
+
+A typical content session on AI Execution Lab produces 10–20 items: lessons, playbooks, case studies, failure reports, or operational logs. Writing these sequentially in a single Claude Code session has a practical limit — the context window fills as the session grows, and the quality of later items degrades as the model operates at the edge of its context.
+
+For a session targeting 15 lessons across 3 tracks, sequential authoring means all 15 lessons compete for context. Items 12–15 are written with items 1–11 still occupying the context window.
+
+### The Parallel Agent Approach
+
+The solution is to spawn multiple background Claude Code agents, each assigned a separate content workload. A typical parallel session structure:
+
+**Agent allocation for a 15-lesson session:**
+- Agent 1: 5 lessons in Track A (fresh context, full attention on Track A content)
+- Agent 2: 5 lessons in Track B (fresh context, full attention on Track B content)
+- Agent 3: 3 case studies (fresh context, case study format requirements)
+- Agent 4: 2 failure reports + 1 operational log (fresh context, incident documentation format)
+
+Each agent runs concurrently. The primary Claude Code session coordinates — it writes the briefs for each agent, spawns them, and then handles integration tasks (updating `TRACKS` registry, verifying frontmatter consistency, resolving any file conflicts) as the agents complete their work.
+
+**Total session output:** 15 content items in roughly the time it would take to write 5 sequentially, because agent wall-clock time overlaps.
+
+<Callout type="lab" title="Parallel agent sessions require clean workload partitioning">
+Parallel agents write to different files, but they may generate conflicting changes if their briefs overlap. A lesson in Track A and a case study that references Track A must not be written simultaneously if the case study references specific lesson URLs — the lesson URL may not exist until the Track A agent has written it. Partition workloads by section and ensure cross-references are resolved in the integration pass, not during parallel writing.
+</Callout>
+
+### Agent Brief Format
+
+An effective agent brief for content authoring contains:
+
+1. The target file path (absolute)
+2. The content section and item type
+3. The specific topic and scope
+4. Required MDX components (with the prop signature)
+5. Evidence references (screenshot paths, git refs, failure report links)
+6. Any cross-references to existing content (with exact URLs)
+7. The operational tone reminder (one sentence: "No marketing copy, specific measurable outcomes only")
+
+A brief that omits the file path produces output with no clear save location. A brief that omits evidence references produces prose-only content. A brief that omits component requirements produces Markdown-only content that misses the structured format. The brief format is as important as the content specification.
+
+---
+
+## MDX Components as a Structured Content Language
+
+### Why Components Enforce Format
+
+Plain Markdown allows anything. A Markdown-based publishing system can accumulate content in any format, with any level of structure, at any quality level. Over time, this produces an inconsistent corpus where each piece has its own conventions.
+
+MDX components impose format at the content level. A failure report that uses `<IncidentReport>` must supply a timeline, a root cause, and a resolution. A case study that uses `<CaseStudyMeta>` must supply an outcomes array with `metric`, `before`, and `after` fields. A lesson that uses `<LessonObjectives>` must enumerate specific objectives.
+
+The component is the format contract. Content that uses the correct components for its type automatically meets the structural requirements for that type — not because a human reviewed it for structure, but because the component system enforces it.
+
+### Component Types by Content Section
+
+**Case studies:** `CaseStudyMeta` (required), `OperationalTimeline` (required for multi-phase builds), `Callout` (optional, for warnings and important notes)
+
+**Failure reports:** `IncidentReport` (timeline, impact, root cause, resolution), `Callout type="danger"` (for critical warnings)
+
+**Lessons:** `LessonObjectives`, `StepList`, `Checklist`, `Checkpoint`, `Callout`
+
+**Playbooks:** `StepList`, `Checklist`, `Callout type="warn"` (for prerequisites and cautions)
+
+**Operational logs:** `OperationalTimeline`, `ExecutionEvidence`
+
+Each section has a component vocabulary appropriate to its content type. An agent writing a lesson knows to use `LessonObjectives` and `StepList`. An agent writing a failure report knows to use `IncidentReport` and `Callout type="danger"`. The vocabulary is defined in `CLAUDE.md`.
+
+### Build-Time Type Checking
+
+TypeScript component props provide a second layer of format enforcement. If a `CaseStudyMeta` `outcomes` array entry is missing the required `metric` field, the TypeScript compiler reports an error during `next build`. The deployment is blocked.
+
+This catches structural errors that MDX syntax validation misses. A syntactically valid MDX file can still have logically invalid component usage — wrong prop types, missing required fields, values outside the allowed set. TypeScript catches these at build time rather than letting them render incorrectly in production.
+
+<Callout type="warn" title="Valid Callout types are: info, warn, danger, success, lab">
+The Callout component accepts only these five type values. Using any other value — including "error", "note", "tip", or "caution" — either renders with no styling (if the type is not in the switch statement) or causes a TypeScript error (if the type prop has a string union type). Every new Claude Code session must be provided with this list explicitly. Inferring it from context produces incorrect guesses.
+</Callout>
+
+---
+
+## Build-Time Verification as Quality Gate
+
+### What the Build Catches
+
+`next build` runs the following checks that serve as content quality gates:
+
+1. **TypeScript compilation** — All component props are type-checked. Missing required props, wrong prop types, and invalid values for typed union fields all produce build errors.
+
+2. **MDX serialization** — Invalid MDX syntax (unclosed JSX tags, malformed expressions, illegal nested components) causes serialization errors during `compileMDX`. The build fails with the file path and error location.
+
+3. **Static page generation** — `generateStaticParams` enumerates all content slugs. A frontmatter field that `getAllMeta` cannot parse (malformed YAML, missing required field) produces a generation error.
+
+4. **Import resolution** — Any MDX file that imports a component that does not exist in the component registry fails at build time.
+
+### What the Build Does Not Catch
+
+1. **Semantic correctness** — The build cannot verify that a "before" value in a `CaseStudyMeta` outcomes array accurately reflects the pre-project state. Content accuracy is a human responsibility.
+
+2. **Silent rendering failures** — The `blockJS` failure demonstrated that a build can pass while components render empty. This is a known gap. Visual inspection of new component types after any MDX dependency upgrade is the mitigation.
+
+3. **Broken external links** — Links to external URLs are not validated at build time. Broken external links exist until a human notices them.
+
+4. **Image path correctness** — MDX files that reference images in `/public/evidence/` are not validated at build time for file existence. A missing image renders as a broken `<img>` tag.
+
+The build gate covers structural and syntactic failures comprehensively. It does not cover semantic or referential failures. The practical impact: structural failures (which are the most common failure mode in AI-authored content) are caught before deployment. Semantic failures require human review.
+
+---
+
+## Evidence-First Publishing Standard
+
+### The Standard
+
+Every operational claim in AI Execution Lab content must be supported by evidence. A claim like "the build time improved from 45s to 12s" is not accepted at face value — it must be linked to a Vercel build log screenshot, a commit reference, or an operational log entry that recorded both measurements.
+
+Evidence artifacts live in `/public/evidence/`, organized by content item:
+
+```
+/public/evidence/
+  failures/
+    edge-runtime-deployment-failure/
+      vercel-build-log-error.png
+      vercel-build-log-fix.png
+  logs/
+    2026-05-14-tracks-failure-archive-build/
+      build-output.png
+  case-studies/
+    ai-execution-lab-platform-launch/
+      first-deploy-dashboard.png
+```
+
+MDX content references evidence by path:
+
+```mdx
+<ExecutionEvidence
+  src="/evidence/failures/edge-runtime-deployment-failure/vercel-build-log-error.png"
+  alt="Vercel build log showing edge runtime crypto module error"
+  caption="Build log output from the edge runtime failure — deploy blocked at opengraph-image.tsx"
+/>
+```
+
+### Why Evidence-First Matters for an AI-Authored Platform
+
+An AI-authored content platform has a credibility problem: readers have legitimate questions about whether the operational details are accurate or generated. Evidence artifacts answer this question directly. A screenshot of a Vercel build log is not something a language model can fabricate — it is a record of an actual system state at a specific time.
+
+The evidence standard is also a content quality filter. Content that cannot be supported with evidence — because the operation was never performed, or because no artifact was captured — does not get published. This creates a strong incentive to capture artifacts during the work, not after.
+
+<Callout type="success" title="Git commit hashes are the lowest-friction evidence artifact">
+A git commit hash is always available for any work that was committed. Referencing a specific commit hash in content (e.g., "the fix was applied in commit `a3f7e2b`") costs zero additional effort if the work was already committed. It provides a verifiable, permanent reference to the exact state of the codebase at the time of the change. Build this into the content brief: always ask for the git ref of the relevant commit.
+</Callout>
+
+---
+
+## Publishing Session Structure
+
+A typical high-volume publishing session at AI Execution Lab follows this structure:
+
+**1. Session planning (5 min)**
+- Identify the content targets for the session (list of items by section and topic)
+- Verify that evidence artifacts exist for items requiring evidence
+- Partition the list into agent workloads (3–4 agents, balanced by complexity)
+
+**2. Brief preparation (10 min)**
+- Write one brief per agent, each specifying file paths, topics, required components, evidence refs, and cross-references
+- Verify all referenced file paths and evidence paths are correct before spawning agents
+
+**3. Parallel authoring (15–30 min)**
+- Spawn 3–4 background agents simultaneously
+- Primary session handles any blocking questions while agents run
+- Agents write complete MDX files and save them to the specified paths
+
+**4. Integration pass (10 min)**
+- Review each agent's output for frontmatter completeness
+- Run `next build` locally to catch any structural failures before pushing
+- Update `TRACKS` registry or section indices if new items require registration
+- Resolve any file naming conflicts or cross-reference issues
+
+**5. Commit and deploy (5 min)**
+- Stage all new files
+- Commit with a descriptive message that includes the item count and session type
+- Push to main; Vercel build runs automatically
+- Verify deployment success in Vercel dashboard
+
+**Total session time:** 45–60 minutes for 10–20 items.
+
+---
+
+## Operational Timeline
+
+<OperationalTimeline
+  events={[
+    { date: "2026-04-10", event: "Publishing workflow defined — MDX file format, CLAUDE.md content standards, evidence standard documented", type: "milestone" },
+    { date: "2026-04-15", event: "First parallel agent session — 3 agents, 12 lessons published in one session", type: "milestone" },
+    { date: "2026-04-18", event: "Evidence framework established — /public/evidence/ directory structure, ExecutionEvidence component, screenshot capture workflow", type: "build" },
+    { date: "2026-04-22", event: "Agent brief template formalized — 7-field brief format producing consistently well-formed MDX on first attempt", type: "build" },
+    { date: "2026-05-01", event: "CLAUDE.md expanded to include full component catalog with prop signatures — session cold-start time reduced", type: "build" },
+    { date: "2026-05-05", event: "Build-time type checking confirmed catching structural failures — 3 TypeScript errors caught in one session before push", type: "measurement" },
+    { date: "2026-05-10", event: "blockJS: false documentation added to CLAUDE.md — all new sessions inherit the correct MDX serialization configuration", type: "build" },
+    { date: "2026-05-14", event: "Largest single session — 4 parallel agents, 19 items published (8 lessons, 4 playbooks, 4 logs, 3 failure reports)", type: "milestone" },
+    { date: "2026-05-18", event: "Platform at 361 pages, publishing workflow declared stable and documented as case study", type: "milestone" }
+  ]}
+/>
+
+---
+
+## Measurable Outcomes
+
+**Publishing velocity:**
+
+| Session Type | Agents | Items Published | Session Duration |
+|---|---|---|---|
+| Single-agent lesson batch | 1 | 4–6 lessons | 45–60 min |
+| Parallel agent content session | 3–4 | 10–20 items | 45–60 min |
+| Emergency failure report | 1 | 1 failure report | 20–30 min |
+
+**Quality gate effectiveness:**
+
+- TypeScript build errors caught before deploy: 100% (by definition — a TypeScript error blocks the build)
+- MDX syntax errors caught before deploy: 100% (by definition — MDX parse errors block the build)
+- Silent rendering failures (e.g., blockJS): requires visual inspection — build-only check is insufficient
+
+**Evidence coverage:**
+
+All failure reports have at least one screenshot artifact. All case studies with measurable outcomes have linked evidence for at least 50% of the metrics stated. Lessons do not require evidence artifacts — they are instructional content, not operational records.
+
+**Time from concept to live:**
+
+From "this lesson needs to exist" to "lesson is deployed at a URL and returning HTTP 200": 15–45 minutes in a parallel session, or 45–90 minutes in a single-agent session for a complex item.
+
+---
+
+## Operational Lessons
+
+**CLAUDE.md must list every valid prop value for every component with an enumerated type.** The Callout `type` prop accepts five values. If CLAUDE.md says "valid types include info, warn, danger, success, lab — never use 'error'", every session produces correct callouts. If CLAUDE.md omits this, sessions occasionally use "error" or "note", which either fails the TypeScript build or renders unstyled. Explicit enumeration in CLAUDE.md costs 30 seconds to write and prevents recurring build failures.
+
+**Parallel agents require fully specified, non-overlapping briefs.** An underspecified brief produces an agent that infers file paths, frontmatter values, and component choices. Inferred choices diverge from the project conventions. The brief preparation step — 10 minutes to write 3–4 detailed briefs — is the difference between agents that produce publish-ready output and agents that require significant revision.
+
+**The commit message is the operational record.** A commit message that says "Add 8 lessons, 2 case studies, 1 failure report — parallel session 2026-05-14" tells future sessions exactly what was added, when, and in what context. A commit message that says "content update" tells nothing. Every publishing session should produce a commit message that can serve as a session log entry.
+
+**Build-time gating eliminates a class of post-publish embarrassments.** On a platform that publishes operational content for technical readers, a case study with a broken component renders as an empty section with no indication of what was supposed to be there. This is worse than a build failure — the content is live, looks incomplete, and erodes reader trust. The build gate catches this before it reaches production.
+
+---
+
+## What This Demonstrates
+
+An AI-assisted publishing system can operate at 5–10x the velocity of manual authoring when the content format is explicit and machine-verifiable. The key conditions are: a structured content language (MDX components with typed props), a build-time quality gate that enforces format mechanically, operational context documentation (CLAUDE.md) that gives agents a complete format specification at session start, and an evidence standard that anchors content claims to verifiable artifacts.
+
+The system trades content flexibility for content consistency. A blog-style CMS allows any format and any structure per post. This system requires MDX with specific components, specific frontmatter fields, and specific evidence patterns. That constraint is the source of the system's quality guarantees.
+
+---
+
+## Repeatable Elements
+
+- [ ] Maintain CLAUDE.md with the complete component catalog, prop signatures, valid enum values, and tone standard — update it whenever conventions change
+- [ ] Write parallel agent briefs with 7 fields: file path, section, item type, topic/scope, required components, evidence refs, cross-references
+- [ ] Partition parallel agent workloads by section and ensure cross-references are resolved in the integration pass
+- [ ] Run `next build` locally before pushing — catch structural failures before they occupy Vercel build minutes
+- [ ] Write commit messages as session records: item count, item types, date
+- [ ] Store evidence artifacts in `/public/evidence/` organized by content item, not by date or type
+- [ ] Never use Callout `type="error"` — valid types are `info`, `warn`, `danger`, `success`, `lab`
+
+---
+
+## Related
+
+- [Building AI Execution Lab: From Zero to Production](/case-studies/ai-execution-lab-platform-launch)
+- [Vercel Deployment Pipeline Evolution](/case-studies/vercel-deployment-evolution)
+- [next-mdx-remote v6 blockJS Default](/failures/next-mdx-remote-v6-blockjs)
+- [Claude Code Operator Track](/tracks/claude-code-operator)

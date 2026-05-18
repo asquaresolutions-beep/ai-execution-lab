@@ -24,22 +24,40 @@ type FailureCategory =
   | 'configuration'
   | 'authentication'
 
+type DebuggingComplexity = 'trivial' | 'moderate' | 'complex' | 'expert'
+
 interface RelatedFailure {
   title: string
   href:  string
   relation: 'same-root' | 'same-category' | 'prevention-pair' | 'escalation-risk'
 }
 
+interface RelatedLesson {
+  title: string
+  href:  string
+}
+
+interface RelatedPlaybook {
+  title: string
+  href:  string
+}
+
 interface Props {
-  severity:           Severity
-  recoveryComplexity: RecoveryComplexity
-  category:           FailureCategory
-  preventionPatterns: string[]
-  relatedFailures?:   RelatedFailure[]
-  deploymentRisk?:    'low' | 'medium' | 'high'
-  ecosystemImpact?:   string[]
-  timeToDetect?:      string   // "immediate" | "3 hours" | "next deploy"
-  repeatRisk?:        'low' | 'medium' | 'high'
+  severity:              Severity
+  recoveryComplexity:    RecoveryComplexity
+  category:              FailureCategory
+  preventionPatterns:    string[]
+  relatedFailures?:      RelatedFailure[]
+  deploymentRisk?:       'low' | 'medium' | 'high'
+  ecosystemImpact?:      string[]
+  timeToDetect?:         string
+  repeatRisk?:           'low' | 'medium' | 'high'
+  // Phase 3 extensions
+  riskScore?:            number             // 1-10 composite risk score
+  debuggingComplexity?:  DebuggingComplexity
+  relatedLessons?:       RelatedLesson[]
+  relatedPlaybooks?:     RelatedPlaybook[]
+  recurringPattern?:     string             // pattern name from failure-pattern-library
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -72,6 +90,20 @@ const RISK_STYLES: Record<string, string> = {
   high:   'text-red-400',
 }
 
+const DEBUG_COMPLEXITY_STYLES: Record<DebuggingComplexity, { label: string; text: string }> = {
+  trivial:  { label: 'Trivial',  text: 'text-green-400'  },
+  moderate: { label: 'Moderate', text: 'text-yellow-400' },
+  complex:  { label: 'Complex',  text: 'text-orange-400' },
+  expert:   { label: 'Expert',   text: 'text-red-400'    },
+}
+
+function riskScoreColor(score: number): string {
+  if (score <= 3) return 'text-green-400'
+  if (score <= 6) return 'text-yellow-400'
+  if (score <= 8) return 'text-orange-400'
+  return 'text-red-400'
+}
+
 // ─────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────
@@ -86,6 +118,11 @@ export function FailureIntelligence({
   ecosystemImpact = [],
   timeToDetect,
   repeatRisk,
+  riskScore,
+  debuggingComplexity,
+  relatedLessons = [],
+  relatedPlaybooks = [],
+  recurringPattern,
 }: Props) {
   const sev  = SEV_STYLES[severity]
   const comp = COMPLEXITY_STYLES[recoveryComplexity]
@@ -143,6 +180,38 @@ export function FailureIntelligence({
         )}
       </div>
 
+      {/* Phase 3 extensions: risk score, debugging complexity, recurring pattern */}
+      {(riskScore !== undefined || debuggingComplexity || recurringPattern) && (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-white/[0.01] border-b border-white/[0.06] flex-wrap">
+          {riskScore !== undefined && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-mono text-surface-700 uppercase tracking-wider">Risk</span>
+              <span className={`text-sm font-bold font-mono ${riskScoreColor(riskScore)}`}>{riskScore}</span>
+              <span className="text-[10px] font-mono text-surface-700">/10</span>
+            </div>
+          )}
+          {debuggingComplexity && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-mono text-surface-700 uppercase tracking-wider">Debug</span>
+              <span className={`text-xs font-mono font-semibold ${DEBUG_COMPLEXITY_STYLES[debuggingComplexity].text}`}>
+                {DEBUG_COMPLEXITY_STYLES[debuggingComplexity].label}
+              </span>
+            </div>
+          )}
+          {recurringPattern && (
+            <Link
+              href="/docs/failure-pattern-library"
+              className="flex items-center gap-1.5 group"
+            >
+              <span className="text-[10px] font-mono text-surface-700 uppercase tracking-wider">Pattern</span>
+              <span className="text-[10px] font-mono text-amber-400/80 bg-amber-500/[0.08] border border-amber-500/20 rounded px-2 py-0.5 group-hover:text-amber-300 transition-colors">
+                {recurringPattern}
+              </span>
+            </Link>
+          )}
+        </div>
+      )}
+
       {/* Prevention patterns */}
       {preventionPatterns.length > 0 && (
         <div className="px-4 py-4 border-b border-white/[0.06]">
@@ -181,7 +250,7 @@ export function FailureIntelligence({
 
       {/* Related failures */}
       {relatedFailures.length > 0 && (
-        <div className="px-4 py-4">
+        <div className="px-4 py-4 border-b border-white/[0.06]">
           <p className="text-[10px] font-mono text-surface-700 uppercase tracking-wider mb-2">
             Related failures
           </p>
@@ -200,6 +269,50 @@ export function FailureIntelligence({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Related lessons + playbooks */}
+      {(relatedLessons.length > 0 || relatedPlaybooks.length > 0) && (
+        <div className="px-4 py-4 flex flex-wrap gap-6">
+          {relatedLessons.length > 0 && (
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-mono text-surface-700 uppercase tracking-wider mb-2">
+                Related lessons
+              </p>
+              <div className="space-y-1.5">
+                {relatedLessons.map((l, i) => (
+                  <Link
+                    key={i}
+                    href={l.href}
+                    className="flex items-center gap-2 text-xs text-surface-400 hover:text-brand-400 transition-colors"
+                  >
+                    <span className="text-[10px] font-mono text-brand-400/60">→</span>
+                    {l.title}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+          {relatedPlaybooks.length > 0 && (
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-mono text-surface-700 uppercase tracking-wider mb-2">
+                Related playbooks
+              </p>
+              <div className="space-y-1.5">
+                {relatedPlaybooks.map((p, i) => (
+                  <Link
+                    key={i}
+                    href={p.href}
+                    className="flex items-center gap-2 text-xs text-surface-400 hover:text-amber-400 transition-colors"
+                  >
+                    <span className="text-[10px] font-mono text-amber-400/60">→</span>
+                    {p.title}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

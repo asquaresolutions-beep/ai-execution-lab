@@ -99,6 +99,7 @@ export { LessonMeta }                                  from './mdx/lesson-meta'
 export { CaseStudyMeta }                             from './mdx/case-study-meta'
 export { OperationalTimeline }                       from './mdx/operational-timeline'
 export { FailureIntelligence }                       from './mdx/failure-intelligence'
+export { EvidenceBlock }                             from './mdx/evidence-block'
 
 // Media — existing
 export { YouTube }     from './media/youtube-embed'

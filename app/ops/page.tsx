@@ -2,6 +2,14 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { getAllMeta, type ContentSection } from '@/lib/content'
 import { getPlatformStatus, getPublishingStreak, getMonthlyVelocity, getTrackCompletion } from '@/lib/activity'
+import {
+  ECOSYSTEM_PROPERTIES,
+  OPERATIONAL_DEBT,
+  ACTIVE_EXPERIMENTS,
+  getEcosystemSummary,
+  type PropertyStatus,
+  type DebtPriority,
+} from '@/lib/ecosystem'
 import { SECTION_META, ACCENT_CLASSES, formatDateMono, cn } from '@/lib/utils'
 import { ReadingQueue } from '@/components/platform/reading-queue'
 
@@ -74,6 +82,23 @@ function TrackProgressBar({ pct, accent }: { pct: number; accent: string }) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Ecosystem status helpers
+// ─────────────────────────────────────────────────────────────
+
+const PROPERTY_STATUS_STYLES: Record<PropertyStatus, { dot: string; text: string; label: string }> = {
+  live:        { dot: 'bg-green-500',              text: 'text-green-400',  label: 'Live'        },
+  degraded:    { dot: 'bg-yellow-400 animate-pulse', text: 'text-yellow-400', label: 'Degraded'  },
+  maintenance: { dot: 'bg-blue-400',               text: 'text-blue-400',   label: 'Maintenance' },
+  building:    { dot: 'bg-brand-400 animate-pulse', text: 'text-brand-400', label: 'Building'    },
+}
+
+const DEBT_PRIORITY_STYLES: Record<DebtPriority, { text: string; bg: string; border: string }> = {
+  p1: { text: 'text-red-400',    bg: 'bg-red-500/10',    border: 'border-red-500/20'    },
+  p2: { text: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
+  p3: { text: 'text-surface-500', bg: 'bg-white/[0.03]', border: 'border-white/[0.06]'  },
+}
+
+// ─────────────────────────────────────────────────────────────
 // Quick action button
 // ─────────────────────────────────────────────────────────────
 
@@ -121,6 +146,11 @@ export default function OpsPage() {
   const trackCompletion = getTrackCompletion()
   const maxVelocity     = Math.max(...velocity.map(v => v.count), 1)
 
+  // Ecosystem + observability
+  const ecosystemSummary = getEcosystemSummary()
+  const p1Debt = OPERATIONAL_DEBT.filter(d => d.priority === 'p1')
+  const activeExperiments = ACTIVE_EXPERIMENTS.filter(e => e.status === 'active')
+
   // Draft count (dev only)
   const drafts = allSectionData.flatMap(({ section, items }) =>
     items.filter(i => i.frontmatter.status === 'draft').map(i => ({ ...i, section }))
@@ -153,6 +183,16 @@ export default function OpsPage() {
           {openFailures.length > 0 && (
             <span className="text-[10px] font-mono text-red-400 bg-red-500/10 border border-red-500/20 rounded px-2 py-0.5">
               {openFailures.length} open incident{openFailures.length > 1 ? 's' : ''}
+            </span>
+          )}
+          {ecosystemSummary.degraded > 0 && (
+            <span className="text-[10px] font-mono text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded px-2 py-0.5">
+              {ecosystemSummary.degraded} property degraded
+            </span>
+          )}
+          {ecosystemSummary.p1Debt > 0 && (
+            <span className="text-[10px] font-mono text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded px-2 py-0.5">
+              {ecosystemSummary.p1Debt} P1 debt item{ecosystemSummary.p1Debt > 1 ? 's' : ''}
             </span>
           )}
           {streak > 1 && (
@@ -336,6 +376,116 @@ export default function OpsPage() {
               </Link>
             </div>
           </div>
+
+          {/* Ecosystem deployment state */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600">
+                Ecosystem
+              </h2>
+              <span className="text-[10px] font-mono text-green-400">
+                {ecosystemSummary.live}/{ecosystemSummary.total} live
+              </span>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
+              {ECOSYSTEM_PROPERTIES.map(prop => {
+                const st = PROPERTY_STATUS_STYLES[prop.status]
+                return (
+                  <a
+                    key={prop.domain}
+                    href={prop.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-start gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors"
+                  >
+                    <span className={cn('w-2 h-2 rounded-full shrink-0 mt-1', st.dot)} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-surface-300 group-hover:text-surface-100 transition-colors font-medium">
+                        {prop.name}
+                      </p>
+                      <p className="text-[10px] font-mono text-surface-700 mt-0.5 truncate">
+                        {prop.domain} · {prop.platform}
+                      </p>
+                      <p className="text-[10px] text-surface-700 mt-0.5 truncate hidden sm:block">
+                        {prop.deployNote}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className={cn('text-[10px] font-mono', st.text)}>{st.label}</p>
+                      <p className="text-[10px] font-mono text-surface-700 mt-0.5">{prop.lastDeployed}</p>
+                    </div>
+                  </a>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Operational debt */}
+          {OPERATIONAL_DEBT.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600">
+                  Operational Debt
+                </h2>
+                <span className="text-[10px] font-mono text-surface-700">
+                  {OPERATIONAL_DEBT.length} items
+                </span>
+              </div>
+              <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
+                {OPERATIONAL_DEBT.map(item => {
+                  const pst = DEBT_PRIORITY_STYLES[item.priority]
+                  return (
+                    <div key={item.id} className="px-4 py-3 flex items-start gap-3">
+                      <span className={cn(
+                        'text-[9px] font-mono font-bold uppercase rounded px-1.5 py-0.5 border shrink-0 mt-0.5',
+                        pst.text, pst.bg, pst.border
+                      )}>
+                        {item.priority.toUpperCase()}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-surface-400 leading-snug">{item.title}</p>
+                        <p className="text-[10px] font-mono text-surface-700 mt-0.5 capitalize">{item.area}</p>
+                      </div>
+                      {item.linkedDoc && (
+                        <Link
+                          href={item.linkedDoc}
+                          className="shrink-0 text-[10px] font-mono text-surface-700 hover:text-brand-400 transition-colors"
+                        >
+                          doc →
+                        </Link>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Active experiments */}
+          {activeExperiments.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600">
+                  Active Experiments
+                </h2>
+                <span className="text-[10px] font-mono text-brand-400">
+                  {activeExperiments.length} running
+                </span>
+              </div>
+              <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
+                {activeExperiments.map(exp => (
+                  <div key={exp.id} className="px-4 py-3">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className="text-xs text-surface-300 font-medium leading-snug">{exp.title}</p>
+                      <span className="text-[10px] font-mono text-brand-400 shrink-0">{exp.startDate}</span>
+                    </div>
+                    <p className="text-[11px] text-surface-600 leading-snug mb-1">{exp.hypothesis}</p>
+                    <p className="text-[10px] font-mono text-surface-700">Metric: {exp.metric}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Track completion table */}
           <div>
@@ -524,43 +674,69 @@ export default function OpsPage() {
             </div>
           </div>
 
-          {/* Quick actions — operator command panel */}
+          {/* Quick actions — grouped command panel */}
           <div>
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
-              Quick Actions
+              Quick Access
             </h2>
-            <div className="space-y-1.5">
-              <QuickAction href="/tracks"           label="Execution Tracks" />
-              <QuickAction href="/failures"         label="Failure Archive"  badge={`${failures.length}`} />
-              <QuickAction href="/logs"             label="All Logs"         badge={`${logs.length}`} />
-              <QuickAction href="/playbooks"        label="Playbooks" />
-              <QuickAction href="/case-studies"     label="Case Studies" />
-              <QuickAction href="/syndicate"        label="Syndication Tool" />
-              <QuickAction href="/tags"             label="Topic Tags" />
-              <QuickAction href="/start-here"       label="Start Here" />
+            <div className="space-y-4">
+              {/* Content */}
+              <div>
+                <p className="text-[9px] font-mono uppercase tracking-widest text-surface-700 mb-1.5 px-1">Content</p>
+                <div className="space-y-1">
+                  <QuickAction href="/tracks"       label="Execution Tracks" />
+                  <QuickAction href="/failures"     label="Failure Archive"  badge={`${failures.length}`} />
+                  <QuickAction href="/case-studies" label="Case Studies" />
+                  <QuickAction href="/playbooks"    label="Playbooks" />
+                  <QuickAction href="/logs"         label="Execution Logs"   badge={`${logs.length}`} />
+                </div>
+              </div>
+              {/* Technical */}
+              <div>
+                <p className="text-[9px] font-mono uppercase tracking-widest text-surface-700 mb-1.5 px-1">Technical</p>
+                <div className="space-y-1">
+                  <QuickAction href="/docs/deployment-workflow"             label="Deploy Workflow" />
+                  <QuickAction href="/docs/execution-checklist-system"      label="Execution Checklists" />
+                  <QuickAction href="/docs/execution-artifacts-architecture" label="Evidence Framework" />
+                  <QuickAction href="/docs/frontmatter-reference"           label="Frontmatter Reference" />
+                </div>
+              </div>
+              {/* Intelligence */}
+              <div>
+                <p className="text-[9px] font-mono uppercase tracking-widest text-surface-700 mb-1.5 px-1">Intelligence</p>
+                <div className="space-y-1">
+                  <QuickAction href="/docs/geo-intelligence-architecture"   label="GEO Intelligence" />
+                  <QuickAction href="/docs/failure-intelligence-architecture" label="Failure Intelligence" />
+                  <QuickAction href="/docs/platform-maturity-audit-2026-05" label="Maturity Audit" />
+                  <QuickAction href="/docs/knowledge-graph-architecture"    label="Knowledge Graph" />
+                  <QuickAction href="/tags"                                 label="Topic Tags" />
+                </div>
+              </div>
+              {/* Navigation */}
+              <div>
+                <p className="text-[9px] font-mono uppercase tracking-widest text-surface-700 mb-1.5 px-1">Navigation</p>
+                <div className="space-y-1">
+                  <QuickAction href="/start-here"  label="Start Here" />
+                  <QuickAction href="/syndicate"   label="Syndication" />
+                  <QuickAction href="/sitemap.xml" label="Sitemap" />
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Operator docs */}
+          {/* Internal planning docs */}
           <div>
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-3">
-              Platform Docs
+              Internal Docs
             </h2>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {[
                 { label: 'Content Quality Standards', href: '/docs/content-quality-standards' },
                 { label: 'Platform Focus Lock',       href: '/docs/platform-focus-lock' },
-                { label: 'Execution Checklist System',href: '/docs/execution-checklist-system' },
-                { label: 'Implementation Projects',   href: '/docs/implementation-project-system' },
-                { label: 'Execution Artifacts',       href: '/docs/execution-artifacts-architecture' },
                 { label: 'Content Expansion Roadmap', href: '/docs/content-expansion-roadmap' },
                 { label: 'Track Audit 2026-05',       href: '/docs/track-audit-2026-05' },
-                { label: 'Knowledge Graph',           href: '/docs/knowledge-graph-architecture' },
                 { label: 'Platform Vision',           href: '/docs/platform-vision-architecture' },
-                { label: 'Deployment Workflow',       href: '/docs/deployment-workflow' },
-                { label: 'Frontmatter Reference',     href: '/docs/frontmatter-reference' },
                 { label: 'Research Workflow',         href: '/docs/ai-research-workflow' },
-                { label: 'Sitemap',                   href: '/sitemap.xml' },
               ].map(({ label, href }) => (
                 <QuickAction key={href} href={href} label={label} />
               ))}

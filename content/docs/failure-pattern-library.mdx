@@ -1,0 +1,217 @@
+---
+title: "Failure Pattern Library"
+description: "Five recurring failure patterns extracted from the AI Execution Lab failure archive. Pattern definitions, trigger conditions, detection methods, and prevention checklists."
+date: "2026-05-18"
+tags: ["failures", "patterns", "debugging", "prevention", "ops"]
+status: published
+---
+
+The Failure Archive documents individual incidents. This library extracts what the archive reveals in aggregate: the recurring structural patterns that produce the same class of failure across different projects, stacks, and contexts. Five patterns account for the majority of failures in the archive. Knowing them by name changes how you debug.
+
+Each pattern below names the failure class, defines the trigger condition, describes how it manifests to the developer, and links directly to the archive entries that demonstrate it. Prevention checklists are specific actions, not principles.
+
+---
+
+## Pattern 1: Module Boundary Violations
+
+**Definition:** A Node.js module — or a module that transitively imports Node.js built-ins — is included in an import chain that reaches a client component or an edge runtime context. The browser bundle or edge worker cannot execute Node.js APIs, so the build or deployment fails.
+
+### What Triggers It
+
+The trigger is always a transitive import: a server-side file (one that uses `fs`, `path`, `crypto`, or other Node.js APIs) exists somewhere in the dependency graph of a `'use client'` component or an edge-runtime route. The violation does not have to be direct. Adding a server-only function to a shared lib file that is already imported by a client component is sufficient.
+
+Two specific conditions from the archive:
+
+- `lib/tracks.ts` was imported by `track-roadmap.tsx` (`'use client'`). Adding `getLessonContent()` with `import fs from 'fs'` to `lib/tracks.ts` made the entire file server-incompatible while the client component import chain remained unchanged. ([Node.js fs Module Pulled into Client Bundle](/failures/server-module-client-bundle))
+- `app/opengraph-image.tsx` had `export const runtime = 'edge'` added. The `next/og` package uses Node.js `crypto` internally. The edge runtime does not support `crypto`. The file compiled locally but failed on Vercel's edge workers. ([Edge Runtime Deployment Failure](/failures/edge-runtime-deployment-failure))
+
+### How It Manifests
+
+**Client bundle violations** are immediate and loud: `next build` fails with `Module not found: Can't resolve 'fs'` and an import trace showing exactly which client component pulled in the server module. The path to root cause is clear once you read the trace bottom-up.
+
+**Edge runtime violations** are delayed and deceptive: `next build` passes locally because the Node.js runtime handles the build. The error surfaces only when Vercel deploys to the actual edge worker: `Error: The Edge Runtime does not support Node.js 'crypto' module.`
+
+**Detection timing:** Immediate for client bundle violations (build fails). Delayed for edge runtime violations (build passes locally, deployment fails on Vercel).
+
+<Callout type="warn" title="The transitive import rule">
+If a `'use client'` component imports file B, then everything file B imports must also be browser-compatible — regardless of whether file B has a `'use client'` directive. Node.js modules anywhere in the import tree of a client component will cause a build failure. The same rule applies transitively to any depth.
+</Callout>
+
+### Demonstrated By
+
+- [Node.js fs Module Pulled into Client Bundle](/failures/server-module-client-bundle) — direct `fs`/`path` import in a shared lib file, client component import chain
+- [Edge Runtime Deployment Failure](/failures/edge-runtime-deployment-failure) — `next/og` uses `crypto` internally, edge runtime export added to OG image handler
+
+### Prevention Checklist
+
+1. Before adding any Node.js import (`fs`, `path`, `crypto`, `os`, `buffer`, `stream`) to any `lib/` file, check whether that file is in any client component's import chain.
+2. Name server-only files with a `.server.ts` suffix — this makes the boundary explicit without reading the file contents.
+3. Use the `server-only` npm package (`import 'server-only'`) in any file that must never reach the client bundle. It throws at build time if a client component tries to import it.
+4. Before adding `export const runtime = 'edge'` to any route file, verify every import in that file — and every transitive import — is listed on the Vercel Edge Runtime compatibility table.
+5. Run `next build` locally after any new import is added to a shared `lib/` file before pushing to Vercel.
+
+---
+
+## Pattern 2: Dependency Default Behavioral Changes
+
+**Definition:** A library upgrade ships a new default configuration that changes the behavior of existing code without generating a build error, TypeScript error, or visible warning. The application compiles and deploys successfully. The failure only manifests at render time as semantically incorrect output.
+
+### What Triggers It
+
+The trigger is a major version upgrade where the library authors chose to ship a new restrictive behavior as opt-out rather than opt-in. Existing codebases that upgrade inherit the new behavior automatically. Because the change produces syntactically valid output — just with content removed or transformed — no automated check catches it.
+
+The specific archive case: `next-mdx-remote` upgraded from v5 to v6. Version 6 introduced `blockJS: true` as a new default, activating the `removeJavaScriptExpressions` remark plugin during MDX serialization. This stripped all array and object literal props from JSX components in MDX content. Components received `undefined` instead of `['step one', 'step two']`. ([next-mdx-remote v6 blockJS Default Broke MDX Components](/failures/next-mdx-remote-v6-blockjs))
+
+### How It Manifests
+
+The build succeeds. TypeScript reports no errors. The deployment completes. HTTP status codes are 200. The failure is only visible when a human looks at a rendered page and notices that content is missing — component shells render but no items appear inside them.
+
+This is the worst failure signature in the archive. A build error is immediately visible. A silent render failure passes every automated quality gate and waits for visual inspection to surface.
+
+**Detection timing:** Silent. Build succeeds, deployment succeeds, HTTP smoke tests pass. Only visible via rendered page inspection.
+
+<Callout type="danger" title="Silent failures require visual verification gates">
+The failure pattern for `next-mdx-remote` v6 defeated every automated check: build status, TypeScript, HTTP status codes, and Lighthouse. The only detection method was opening a page with a custom component and observing that the content was absent. Any dependency upgrade that touches rendering or serialization requires a visual inspection pass before the deploy is marked complete.
+</Callout>
+
+### Demonstrated By
+
+- [next-mdx-remote v6 blockJS Default Broke MDX Components](/failures/next-mdx-remote-v6-blockjs) — `blockJS: true` default stripped array and object literal props from all MDX JSX components
+
+### Prevention Checklist
+
+1. Before upgrading any package that touches rendering, serialization, or content processing: read the full changelog, not just the headline version number. Look specifically for new boolean options that default to restrictive behavior.
+2. After every dependency upgrade that could affect rendered output: open a page with every custom component type and visually verify content is present.
+3. When setting an option to opt out of a library's new default (e.g., `blockJS: false`), document the reason at the call site with a comment explaining why the opt-out is intentional — this prevents future developers from removing it as apparent dead code.
+4. Add a CI smoke test that asserts on rendered text content — not just HTTP status — for pages with custom components. Visual regression or HTML content assertions both work.
+5. Maintain a staging deploy step for all dependency upgrades and verify rendered output in staging before promoting to production.
+
+---
+
+## Pattern 3: Runtime Environment Scope Drift
+
+**Definition:** Configuration, behavior, or API access that works correctly in development diverges from production behavior because development and production run in different environments. The divergence is invisible until the code reaches the production environment.
+
+### What Triggers It
+
+Two specific mechanisms from the archive:
+
+**Runtime restriction drift:** Code that passes in the Node.js runtime (local `next build`, Vercel Node.js functions) fails in a restricted runtime (Vercel edge workers). The restriction only activates in production. ([Edge Runtime Deployment Failure](/failures/edge-runtime-deployment-failure))
+
+**Environment variable scope drift:** A variable exists in `.env.local` for development but is not added to the Vercel Production scope. `process.env.VARIABLE` returns a value in local dev and returns `undefined` in every production build. The feature works completely in development and fails silently in production. ([Missing Production Environment Variable Caused Silent Feature Failure](/failures/environment-variable-missing-production))
+
+### How It Manifests
+
+For runtime restriction: deployment fails on Vercel with an explicit error message pointing to the incompatible API. The build passed locally, so the error is unexpected.
+
+For environment variable scope: the feature works in development. In production it either throws (if the code validates the variable) or fails silently with a generic error message (if the code only catches the downstream API error). The production failure is often invisible until a user reports it — because no automated check verifies that features actually work end-to-end in production.
+
+**Detection timing:** Delayed. Works locally, fails in production. Detection depends on either explicit startup validation or user-facing testing after deployment.
+
+<Callout type="warn" title="Vercel environment variable scopes are independent">
+Adding a variable to the Vercel dashboard with "Development" scope checked does not make it available in Production builds. The three scopes — Development, Preview, Production — are independent checkboxes. A variable that exists for local dev is invisible to production until Production scope is explicitly enabled.
+</Callout>
+
+### Demonstrated By
+
+- [Edge Runtime Deployment Failure](/failures/edge-runtime-deployment-failure) — edge runtime export added to OG image handler; Node.js crypto unavailable in edge workers
+- [Missing Production Environment Variable Caused Silent Feature Failure](/failures/environment-variable-missing-production) — `GEMINI_API_KEY` added to `.env.local` only, absent from Vercel Production scope
+
+### Prevention Checklist
+
+1. When adding any new environment variable locally: immediately add it to Vercel Production scope in the same session, before writing any more code.
+2. Maintain a `.env.example` file listing all required variable names (values empty). Before any deployment that introduces a new env var, diff `.env.example` against the Vercel dashboard variable list.
+3. Add a startup validation function (`validateEnv()`) that throws explicitly and immediately for any missing required variable — this surfaces the error in Vercel function logs on first invocation instead of burying it in a generic catch block.
+4. Before adding `export const runtime = 'edge'` to any file, confirm the target environment is intentional and check all imports against the Vercel Edge Runtime compatibility table.
+5. After any feature deployment: perform an end-to-end test in production (not just preview) before marking the feature as ready.
+
+---
+
+## Pattern 4: Infrastructure Timing Dependencies
+
+**Definition:** An operation assumes that an external infrastructure change — DNS record creation, TLS certificate provisioning — is immediately effective. The change has a propagation delay with non-zero TTL. Testing proceeds before propagation is complete, producing inconsistent results that appear to indicate a different failure.
+
+### What Triggers It
+
+The trigger is testing or announcing a deployment too soon after making an infrastructure change that requires external propagation. The developer's own browser and DNS resolver are typically among the fastest to pick up new records, creating a false positive: the site loads locally while failing for most users.
+
+The specific archive case: a new CNAME record for `scamcheck.asquaresolution.com` was created with a 3600s TTL. The site loaded locally after 20 minutes. It was announced as live. Reports of "site not found" came back from users on resolvers that had not yet propagated the record. The failure window lasted approximately 4 hours — the full propagation cycle. A second time-gate compounded it: GitHub Pages HTTPS certificate provisioning cannot begin until DNS propagation is complete, adding 15–30 minutes after DNS resolves. ([Subdomain DNS Propagation Delay Blocked Deployment Testing](/failures/dns-subdomain-propagation-delay))
+
+### How It Manifests
+
+Inconsistent behavior across users: some see the site, some see "site not found" or a DNS error. The failure is geography-dependent — users on resolvers that haven't propagated the record fail, users on resolvers that have succeed. The developer typically sees success because their local resolver propagates first.
+
+A secondary timing dependency: GitHub Pages HTTPS certificate status. The "Enforce HTTPS" checkbox remains greyed out until after DNS propagation is complete and the Let's Encrypt certificate has been issued. This is a reliable proxy for full propagation readiness.
+
+**Detection timing:** Delayed and inconsistent. Appears to work immediately for the developer, fails for external users for hours.
+
+<Callout type="info" title="Local browser success is not propagation verification">
+Your DNS resolver is often one of the fastest to pick up new records — especially if you use Google (8.8.8.8) or Cloudflare (1.1.1.1). Seeing the site load after 20 minutes confirms your resolver has the record. It says nothing about the remaining global resolver population. Use dnschecker.org or whatsmydns.net to verify from multiple geographic locations before announcing any domain as live.
+</Callout>
+
+### Demonstrated By
+
+- [Subdomain DNS Propagation Delay Blocked Deployment Testing](/failures/dns-subdomain-propagation-delay) — CNAME record propagation, premature go-live announcement, chained dependency with HTTPS certificate provisioning
+
+### Prevention Checklist
+
+1. After creating any DNS record: wait a minimum of 2 hours before considering the domain live. This is a hard minimum, not an estimate.
+2. Verify propagation using dnschecker.org or whatsmydns.net — check that 90%+ of listed locations resolve the correct record before proceeding.
+3. For GitHub Pages deployments: confirm the "Enforce HTTPS" checkbox is available (not greyed out) in the repository Pages settings before announcing the domain. This is the terminal indicator that both DNS and certificate provisioning are complete.
+4. Set DNS record TTL to 300 seconds (5 minutes) before any planned DNS change — this reduces the propagation window for subsequent changes.
+5. Add DNS propagation verification as a required step in any deployment checklist that involves a new custom domain.
+
+---
+
+## Pattern 5: Authentication Encoding Pitfalls
+
+**Definition:** API authentication that appears syntactically correct — the right header name, the right format, the right credential — fails silently because the credential string contains characters that are corrupted by an encoding transformation applied before the authentication handshake.
+
+### What Triggers It
+
+The trigger is an assumption about how credential strings should be prepared before encoding for an API authentication scheme. Two mechanisms from the archive:
+
+**URL encoding before Base64:** WordPress Application Passwords are displayed with spaces between character groups. The spaces are part of the credential and must be passed raw to the Base64 encoder. URL-encoding the spaces to `%20` before Base64 encoding produces a different hash that WordPress rejects with a 401 — no explanation, no "format incorrect" message. ([WordPress REST API Authentication Failure](/failures/wordpress-rest-api-auth-failure))
+
+**Silent configuration mismatch:** GA4 cross-domain tracking was installed on all four A Square Solutions properties, but the `cookie_domain` was not set to the parent domain. GA4 set separate cookies per hostname. Navigation between subdomains started new sessions attributed to "direct" traffic. The tracking appeared to be working — pageviews were recorded — but the session stitching was silently broken. The failure only emerged from anomalous metrics analysis: unusually high direct traffic and session-to-pageview ratios that didn't match expected patterns. ([GA4 Cross-Domain Tracking Not Unified Across Subdomains](/failures/ga4-cross-domain-tracking-gap))
+
+### How It Manifests
+
+For API authentication failures: an immediate and definitive error code (401 Unauthorized) that gives no indication of the specific cause. There is no "password format incorrect" response. The 401 is identical whether the credential is wrong, the format is wrong, or the encoding is wrong. Debugging requires working backward through the encoding chain.
+
+For analytics configuration mismatches: no error at all. The code runs correctly. The data records correctly. The failure is only visible as a statistical anomaly in reports — inflated session counts, incorrect attribution, broken funnel analysis — that requires domain knowledge to recognize as a symptom of misconfiguration rather than legitimate user behavior.
+
+**Detection timing:** Authentication failures are immediate (first API call returns 401). Analytics configuration failures are silent — detectable only through anomalous metric patterns, sometimes weeks after deployment.
+
+<Callout type="warn" title="A 401 with no explanation is an encoding problem until proven otherwise">
+WordPress REST API, and many other Basic Auth implementations, return a bare 401 Unauthorized without diagnostic detail when the credential encoding is incorrect. Before checking user roles, permissions, or endpoint correctness — verify that the credential string reaches the Base64 encoder unmodified. No URL encoding, no whitespace trimming, no character escaping.
+</Callout>
+
+### Demonstrated By
+
+- [WordPress REST API Authentication Failure](/failures/wordpress-rest-api-auth-failure) — Application Password spaces URL-encoded before Base64, producing a guaranteed 401 on every request
+- [GA4 Cross-Domain Tracking Not Unified Across Subdomains](/failures/ga4-cross-domain-tracking-gap) — `cookie_domain` not set to parent domain, GA4 cookie scoped per hostname, silent session fragmentation across subdomains
+
+### Prevention Checklist
+
+1. For WordPress Application Password authentication: Base64 encode the raw credential string — `username:password` with spaces in the password intact. No URL encoding anywhere in the pipeline. Verify with a `curl` GET against a known endpoint before writing any automation.
+2. Keep a working `curl` auth snippet for each API integration in project notes. Rebuilding it from memory costs the full original debugging session.
+3. For any multi-subdomain analytics installation: configure `cookie_domain` to the parent domain and verify cross-domain measurement in GA4 Admin before the first property goes live. Test with Realtime: navigate between subdomains, confirm one continuous session.
+4. After any new API integration goes live in production: verify a read operation succeeds before deploying write operations.
+5. Add `cookie_domain` configuration and GA4 cross-domain measurement to the analytics setup checklist as required steps — not optional cleanup.
+
+---
+
+## Pattern Index
+
+| Pattern | Trigger | Detection Timing | Archive Examples |
+|---------|---------|-----------------|-----------------|
+| Module Boundary Violations | Node.js module in client component import chain | Immediate (build) or delayed (edge deploy) | [server-module-client-bundle](/failures/server-module-client-bundle), [edge-runtime-deployment-failure](/failures/edge-runtime-deployment-failure) |
+| Dependency Default Behavioral Changes | Library upgrade ships breaking behavior as opt-out default | Silent (build passes, render fails) | [next-mdx-remote-v6-blockjs](/failures/next-mdx-remote-v6-blockjs) |
+| Runtime Environment Scope Drift | Dev/prod environment divergence for runtime or config | Delayed (works locally, fails in production) | [edge-runtime-deployment-failure](/failures/edge-runtime-deployment-failure), [environment-variable-missing-production](/failures/environment-variable-missing-production) |
+| Infrastructure Timing Dependencies | External propagation with non-zero TTL tested too early | Delayed and inconsistent (works for developer, fails for users) | [dns-subdomain-propagation-delay](/failures/dns-subdomain-propagation-delay) |
+| Authentication Encoding Pitfalls | Credential string transformed before encoding handshake | Immediate (401) or silent (analytics anomaly) | [wordpress-rest-api-auth-failure](/failures/wordpress-rest-api-auth-failure), [ga4-cross-domain-tracking-gap](/failures/ga4-cross-domain-tracking-gap) |
+
+<Callout type="lab" title="Using this library during debugging">
+When a failure doesn't immediately have an obvious cause, match the symptom to a pattern before diving into the specific code. A build that passes locally but fails on Vercel is almost always Pattern 1 or Pattern 3. A feature that works in dev but is broken in production is Pattern 3. Empty components after a dependency upgrade is Pattern 2. Inconsistent DNS resolution is Pattern 4. A 401 with no explanation is Pattern 5. Naming the pattern first narrows the diagnostic scope significantly.
+</Callout>

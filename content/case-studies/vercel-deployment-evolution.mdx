@@ -1,0 +1,349 @@
+---
+title: "Vercel Deployment Pipeline: From First Deploy to Mature CI/CD"
+description: "How the AI Execution Lab Vercel deployment pipeline evolved from initial setup through two documented build failures to a stable production configuration — covering edge runtime failure, next-mdx-remote v6 blockJS, environment variable scoping, preview workflows, and current build performance."
+date: "2026-05-18"
+tags: ["case-study", "vercel", "deployment", "next.js", "ci-cd", "edge-runtime", "next-mdx-remote", "build-pipeline"]
+status: "published"
+impact: "Stable Vercel pipeline building 361 static pages in 10–15 seconds with zero silent failures, atomic deployments, and two documented failure patterns that no longer recur"
+stack: ["Vercel", "Next.js 15", "next-mdx-remote", "TypeScript", "GitHub Actions", "Node.js"]
+---
+
+<CaseStudyMeta
+  dateRange="March–May 2026"
+  duration="~8 weeks total evolution"
+  difficulty="resolved"
+  stack={["Vercel", "Next.js 15", "next-mdx-remote v6", "TypeScript", "Node.js runtime"]}
+  outcomes={[
+    { metric: "Build time", before: "~45s (early build, 149 pages)", after: "10–15s (361 pages)", delta: "-30s despite 2.4x more pages" },
+    { metric: "Silent failures", before: "next-mdx-remote v6 blockJS rendered empty components with HTTP 200", after: "blockJS: false set, all component props render", delta: "eliminated" },
+    { metric: "Edge runtime failures", before: "export const runtime = 'edge' on OG image route blocked deploy for 23 min", after: "Edge exports removed from all OG image routes", delta: "non-recurring" },
+    { metric: "Deployment frequency", before: "Multiple broken deploys during development", after: "Every push to main deploys successfully", delta: "stable" },
+    { metric: "Time-to-detect failures", before: "41 min for silent blockJS failure, 23 min for edge runtime failure", after: "Build failures surface in <2 min on Vercel", delta: "23–41 min → <2 min" }
+  ]}
+  context="AI Execution Lab deployment target: lab.asquaresolution.com. Custom domain via Vercel nameserver delegation from Hostinger DNS. All deployments are triggered by git push to the main branch on GitHub."
+/>
+
+The Vercel deployment pipeline for AI Execution Lab was not designed upfront — it was discovered incrementally as the platform was built. The first deploy happened in March 2026 with a minimal Next.js scaffold. By May 2026, the pipeline had survived two significant failure events, absorbed a dependency upgrade with a breaking default, and settled into a configuration that builds 361 pages in 10–15 seconds on every push to main.
+
+This case study documents that evolution: the initial setup, what broke and why, how each failure was resolved, and what the current stable configuration looks like.
+
+---
+
+## Context
+
+**Deployment target:** `lab.asquaresolution.com`
+
+**DNS:** Custom domain via Vercel nameserver delegation. Hostinger manages the root domain `asquaresolution.com`; NS records for the root point to Vercel's nameservers, giving Vercel full DNS control for the entire domain including all subdomains.
+
+**Trigger:** Every push to the `main` branch on GitHub triggers a Vercel production deployment. Pull requests and feature branches trigger preview deployments.
+
+**Runtime:** Node.js runtime (not Edge). This is deliberate — see the edge runtime failure section below.
+
+**Build output:** Static site. `generateStaticParams` generates all routes at build time. No server-side rendering, no API routes that require runtime compute after deploy.
+
+---
+
+## Phase 1: Initial Deployment Setup (March 2026)
+
+### First Deploy
+
+The first successful Vercel deployment was a minimal Next.js 15 App Router scaffold — no content, no MDX pipeline, no custom components. The purpose was to establish the deployment target and verify the custom domain configuration before building anything substantial.
+
+**Custom domain configuration:**
+
+1. In Vercel project settings → Domains: `lab.asquaresolution.com` added
+2. Vercel provided nameserver addresses
+3. In Hostinger DNS: NS records for `asquaresolution.com` updated to point to Vercel's nameservers
+4. Vercel automatically provisioned an SSL certificate via Let's Encrypt once DNS propagated (~15 minutes)
+
+Nameserver delegation is more invasive than adding a CNAME record for a single subdomain (it hands DNS control for the entire root domain to Vercel), but it eliminates ongoing DNS management for every subsequent subdomain. New subdomains added to Vercel automatically get SSL certificates and routing without any additional Hostinger configuration.
+
+### Vercel Project Configuration
+
+```json
+// vercel.json (initial)
+{
+  "framework": "nextjs"
+}
+```
+
+No custom configuration was required at this stage. Vercel's Next.js preset detects the framework, runs `next build`, and deploys the `.next/` output. The default settings were sufficient for a minimal scaffold.
+
+**Environment variables:** None at this stage. The initial deploy had no external service dependencies.
+
+---
+
+## Phase 2: Content Pipeline Growth (April 2026)
+
+As the MDX content pipeline was built and content volume grew, build time increased proportionally. By early April, the build was generating ~50 static pages and taking around 25–30 seconds.
+
+The Vercel build log structure became operationally useful at this stage:
+
+```
+Cloning github.com/... (1.2s)
+Installing dependencies (12.3s)
+Running "next build" (18.4s)
+  ✓ Compiled successfully
+  ✓ Generating static pages (47/47)
+Uploading build artifacts (2.1s)
+Deployment complete (34s total)
+```
+
+The "Generating static pages" counter provides a direct readout of page count at every deploy. Watching this number grow became a useful indicator of content pipeline health — a page count regression (e.g., 47 pages dropping to 35 pages after a content refactor) would be immediately visible.
+
+### Environment Variables: First Addition
+
+The first environment variable was added when GA4 was integrated: `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-MPQVF41ZYM`.
+
+The `NEXT_PUBLIC_` prefix is the Next.js convention for environment variables that are safe to include in the client-side JavaScript bundle. Variables without this prefix are server-only and are never included in the browser build.
+
+<Callout type="info" title="NEXT_PUBLIC_ variables are inlined at build time">
+Variables with the `NEXT_PUBLIC_` prefix are substituted into the JavaScript bundle during `next build`, not at request time. This means the Vercel production environment's variable value is baked into the static files. Changing the variable value in Vercel dashboard requires a new deployment to take effect — the running static files retain the build-time value.
+</Callout>
+
+Vercel's environment variable scoping allows different values for Production, Preview, and Development environments. The GA4 measurement ID was scoped to Production only — preview deployments do not fire GA4 events, which prevents development and preview traffic from polluting production analytics data.
+
+---
+
+## Phase 3: Edge Runtime Failure (May 2026)
+
+### What Happened
+
+During a refactor pass on route handler patterns, `export const runtime = 'edge'` was added to `app/opengraph-image.tsx`. This export was copied from a different route's configuration without verifying whether `opengraph-image.tsx` was compatible with the Edge Runtime.
+
+The next push to main produced:
+
+```
+Error: The Edge Runtime does not support Node.js 'crypto' module.
+Learn More: https://nextjs.org/docs/messages/node-module-in-edge-runtime
+```
+
+Every subsequent push to main failed. The production deployment was blocked until the failure was resolved.
+
+**Duration:** 23 minutes from the first failed deploy to the fix being live.
+
+**Why it only appears on Vercel:** `next build` locally does not fully simulate Vercel's edge worker environment. The local build compiled successfully and reported no errors. The failure only surfaced when Vercel's edge worker attempted to execute the route and encountered the missing `crypto` module.
+
+### Root Cause
+
+`next/og` (the OpenGraph image generation library used in `opengraph-image.tsx`) uses Node.js's `crypto` module internally for image processing. The Edge Runtime is a constrained runtime that does not include `crypto` or most other Node.js built-ins — it is designed for low-latency, globally distributed execution with a minimal API surface.
+
+Setting `export const runtime = 'edge'` on a route that imports `next/og` is incompatible. The route must run on the Node.js runtime.
+
+### Resolution
+
+Remove `export const runtime = 'edge'` from `opengraph-image.tsx`. The default runtime for Next.js route handlers is Node.js, which supports `crypto`. No other changes required.
+
+```typescript
+// opengraph-image.tsx — BEFORE (broken)
+export const runtime = 'edge'
+export default function OGImage(...) { ... }
+
+// opengraph-image.tsx — AFTER (fixed)
+// No runtime export — defaults to Node.js
+export default function OGImage(...) { ... }
+```
+
+**Prevention rule:** Never add `export const runtime = 'edge'` to any route that uses `next/og`, `sharp`, or any Node.js built-in module. The Edge Runtime exclusion list is not exhaustive — when in doubt, omit the runtime export and use the Node.js default.
+
+Full failure report: [Edge Runtime Deployment Failure](/failures/edge-runtime-deployment-failure)
+
+---
+
+## Phase 4: next-mdx-remote v6 blockJS Failure (May 2026)
+
+### What Happened
+
+`next-mdx-remote` was upgraded from v5 to v6. The upgrade completed without errors. `next build` succeeded. TypeScript reported zero errors. Every page returned HTTP 200.
+
+However, every MDX component that used array or object literal props rendered empty. `<StepList items={['step one', 'step two']} />` rendered as a `StepList` with no items. `<CaseStudyMeta outcomes={[...]} />` rendered with no outcomes table. `<OperationalTimeline events={[...]} />` rendered with no events.
+
+**Detection time:** 41 minutes. The failure was invisible to all automated checks. Detection required visual inspection of rendered pages.
+
+### Root Cause
+
+`next-mdx-remote` v6 introduced `blockJS: true` as a default configuration option. This activates the `removeJavaScriptExpressions` remark plugin during MDX serialization. The plugin strips all JavaScript expressions from MDX source — including JSX prop values that use array or object literals.
+
+The expression `items={['step one', 'step two']}` is a JavaScript expression (an array literal). The plugin strips it during serialization. The component receives `undefined` for the `items` prop, renders its empty state, and returns no visible output.
+
+The failure is silent because:
+- The MDX source is valid — it parses without errors
+- The serialized output is valid — it compiles without errors
+- The rendered page is valid — it returns HTTP 200 with a well-formed HTML document
+- Only the component content is missing — the shell of the component renders, the data does not
+
+<Callout type="danger" title="blockJS: true silently strips all array and object props from MDX components">
+`next-mdx-remote` v6 ships with `blockJS: true` by default. On author-controlled MDX pipelines, this is the wrong default — it strips all structured props from every custom component. The fix is one line: set `blockJS: false` in `compileMDX` options. Without this fix, every component with array or object props silently renders empty after the v6 upgrade.
+</Callout>
+
+### Resolution
+
+In `content-renderer.tsx`, the `compileMDX` call was updated:
+
+```typescript
+const { content } = await compileMDX({
+  source: mdxSource,
+  components,
+  options: {
+    parseFrontmatter: false,
+    mdxOptions: {
+      // blockJS: false is required for author-controlled MDX pipelines.
+      // next-mdx-remote v6 defaults to blockJS: true, which activates
+      // removeJavaScriptExpressions and silently strips all array/object
+      // literal props from custom components. On a static site with
+      // developer-authored MDX in a private repo, blockJS: true provides
+      // zero security benefit and breaks all structured component props.
+      blockJS: false,
+    },
+  },
+})
+```
+
+The comment at the call site is intentional. This is a non-obvious opt-out from a security-motivated default. Without documentation, a future session would not understand why `blockJS: false` is set explicitly, and might remove it as "unnecessary configuration."
+
+Full failure report: [next-mdx-remote v6 blockJS Default](/failures/next-mdx-remote-v6-blockjs)
+
+---
+
+## Current Stable Configuration
+
+### Runtime: Node.js (Not Edge)
+
+All routes run on the Node.js runtime. No route in the project has `export const runtime = 'edge'`. This is explicit policy, not an omission.
+
+The performance difference between Node.js and Edge runtime for a static site is zero — static files are served from Vercel's CDN regardless of what runtime the build used. Edge runtime would only provide latency benefits on dynamically computed responses at request time, which this site has none of.
+
+### Build Configuration
+
+```json
+// vercel.json (current)
+{
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "outputDirectory": ".next"
+}
+```
+
+No custom build command overrides. Vercel's Next.js preset handles everything.
+
+### Environment Variables (Current)
+
+| Variable | Scope | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Production only | GA4 measurement ID for client-side analytics |
+
+Preview deployments intentionally have no GA4 variable — preview traffic is not tracked.
+
+### blockJS: false in content-renderer.tsx
+
+Set as documented above. Commented with an explanation of why the opt-out is intentional.
+
+### OG Image Routes
+
+`app/opengraph-image.tsx` has no runtime export. Node.js runtime is the implicit default, which supports `next/og` and `crypto`.
+
+---
+
+## Preview Deployment Workflow
+
+Every push to a branch other than `main` triggers a Vercel Preview deployment. The preview URL follows the pattern:
+
+```
+ai-execution-lab-<branch-name>-<hash>.vercel.app
+```
+
+Preview deployments are used to verify:
+- New content sections render correctly before merging to main
+- New MDX components display as expected
+- Navigation changes look correct in the production build (not just `next dev`)
+
+The `next dev` server and `next build` can diverge on edge cases — particularly around `generateStaticParams` completeness, server/client boundary errors, and environment variable availability. Preview deployments catch these before they reach production.
+
+<Callout type="info" title="Preview deployments use production build settings">
+Vercel preview deployments run the same `next build` command as production. They catch build-time errors that `next dev` misses: missing `generateStaticParams` entries, server module imports in client bundles, and TypeScript errors that development mode defers. Running a preview deployment before merging to main catches these failures before they block the main branch.
+</Callout>
+
+---
+
+## Build Time Evolution
+
+| Date | Page Count | Build Time | Notes |
+|---|---|---|---|
+| 2026-03-15 | ~10 pages | ~8s | Initial scaffold |
+| 2026-04-05 | ~50 pages | ~25s | MDX pipeline + first content batch |
+| 2026-05-10 | 149 pages | ~45s | Pre-edge-runtime failure state |
+| 2026-05-17 | 300+ pages | ~30s | Post-failure, post-cleanup |
+| 2026-05-18 | 361 pages | 10–15s | Current stable state |
+
+The build time improvement from ~45s at 149 pages to 10–15s at 361 pages is counterintuitive. The improvement came from:
+
+1. **Dependency installation caching.** Vercel caches `node_modules` between builds when `package.json` has not changed. Early builds in the project had frequent dependency changes that invalidated the cache. The mature project rarely changes dependencies, so installation is cached on almost every build.
+
+2. **`generateStaticParams` optimization.** Early versions of the track and lesson system called file system operations during `generateStaticParams`. These were refactored to use the in-memory `TRACKS` registry, eliminating I/O during static param generation.
+
+3. **TypeScript incremental compilation.** The `.next/` cache directory accumulates TypeScript compilation artifacts. Vercel preserves this cache between builds, making subsequent compilations faster.
+
+---
+
+## Zero-Downtime Deployment
+
+Vercel's deployment model is atomic swap. When a new build completes:
+
+1. The new build is fully staged in Vercel's infrastructure
+2. The CDN configuration is updated to point to the new build
+3. The swap happens atomically — no request sees a partially-deployed state
+
+For a static site, this means zero downtime on every deployment. There is no window where a user can request a page from the old build and get a broken experience because the new build is partially live.
+
+This is distinct from a traditional deployment where a server is updated in place. In-place updates have a window where the filesystem contains a mix of old and new files. Vercel's approach eliminates this class of failure entirely for static Next.js deployments.
+
+---
+
+## Operational Timeline
+
+<OperationalTimeline
+  events={[
+    { date: "2026-03-15", event: "First successful Vercel deploy — minimal Next.js scaffold, custom domain lab.asquaresolution.com configured via nameserver delegation", type: "milestone" },
+    { date: "2026-03-20", event: "NEXT_PUBLIC_GA_MEASUREMENT_ID added, scoped to Production only — preview deployments do not track GA4 events", type: "build" },
+    { date: "2026-04-05", event: "MDX content pipeline deployed — first batch of 50 pages generating successfully, build time ~25s", type: "milestone" },
+    { date: "2026-04-20", event: "generateStaticParams refactored to use TRACKS registry — file I/O removed from static param generation, build time drops", type: "build" },
+    { date: "2026-05-10", event: "Edge runtime failure — export const runtime = 'edge' on opengraph-image.tsx blocks deploy, 23 min to resolve", type: "failure", evidence: "/failures/edge-runtime-deployment-failure" },
+    { date: "2026-05-10", event: "Edge runtime fix — runtime export removed from opengraph-image.tsx, policy established: no edge exports on OG image routes", type: "fix" },
+    { date: "2026-05-12", event: "next-mdx-remote upgraded from v5 to v6 — blockJS: true default silently empties all array/object props on custom components", type: "failure", evidence: "/failures/next-mdx-remote-v6-blockjs" },
+    { date: "2026-05-12", event: "blockJS: false set in content-renderer.tsx compileMDX options, documented with comment explaining intentional opt-out", type: "fix" },
+    { date: "2026-05-17", event: "Build audit — 0 TypeScript errors, 0 ESLint warnings, all 300+ pages generating, OG images rendering on all section types", type: "measurement" },
+    { date: "2026-05-18", event: "361 pages building in 10–15s, zero deployment failures in 7 days, pipeline declared stable", type: "milestone" }
+  ]}
+/>
+
+---
+
+## Operational Lessons
+
+**The Vercel build log is the primary failure diagnostic tool.** Every deployment failure produces a build log in the Vercel dashboard. The log includes the exact error, the file and line number, and in most cases a link to the Next.js documentation for the error type. Checking the Vercel build log before debugging locally saves time — the error message in the build log is almost always more specific than what `next dev` surfaces.
+
+**Environment variable scoping is a deployment correctness concern, not just a configuration preference.** A GA4 measurement ID in a preview deployment means preview sessions appear in production analytics. This contaminates conversion funnels, session counts, and traffic source attribution. The correct configuration — scoping analytics variables to Production only — is a one-time setting in Vercel dashboard that costs 30 seconds and prevents permanent data contamination.
+
+**Silent failures are categorically more dangerous than loud failures.** The edge runtime failure blocked every deployment immediately and visibly. It was resolved in 23 minutes. The `blockJS` failure compiled cleanly, deployed successfully, and served broken content silently for 41 minutes before detection. The resolution was faster once detected (one line of code), but detection required manual inspection. A CI visual regression test would have caught it automatically; that infrastructure does not currently exist. The practical mitigation is a post-upgrade visual checklist: open one page of each component type and verify content renders.
+
+**`next-mdx-remote` v6 `blockJS: false` is required for any pipeline with structured component props.** Document this at the call site. The default exists for a legitimate reason (security on platforms with user-submitted MDX). The opt-out is correct for author-controlled static sites. Without the comment, a future session will not understand why `blockJS: false` is set and may remove it.
+
+---
+
+## Repeatable Elements
+
+- [ ] Never add `export const runtime = 'edge'` to any route that uses `next/og`, `sharp`, or any Node.js built-in
+- [ ] Scope analytics environment variables to Production only in Vercel dashboard — never include them in Preview scope
+- [ ] Set `blockJS: false` in `compileMDX` for all author-controlled MDX pipelines using `next-mdx-remote` v6+
+- [ ] Document `blockJS: false` with an inline comment explaining why — future sessions will not know without it
+- [ ] Use nameserver delegation for custom domains when multiple subdomains are planned — eliminates per-subdomain DNS management
+- [ ] After any MDX dependency upgrade, visually verify one page of each component type before declaring the upgrade complete
+
+---
+
+## Related
+
+- [Edge Runtime Deployment Failure](/failures/edge-runtime-deployment-failure)
+- [next-mdx-remote v6 blockJS Default](/failures/next-mdx-remote-v6-blockjs)
+- [Building AI Execution Lab: From Zero to Production](/case-studies/ai-execution-lab-platform-launch)
+- [AI-Assisted Publishing System](/case-studies/ai-assisted-publishing-system)
