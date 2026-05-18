@@ -806,6 +806,23 @@ export function getLessonNeighbors(
   }
 }
 
+/** Lesson position within its module — for "Lesson X of Y" display */
+export function getLessonPosition(
+  trackId: string,
+  moduleId: string,
+  lessonId: string
+): { lessonNumber: number; totalLessons: number; moduleName: string } | null {
+  const mod = getModule(trackId, moduleId)
+  if (!mod) return null
+  const idx = mod.lessons.findIndex((l) => l.id === lessonId)
+  if (idx === -1) return null
+  return {
+    lessonNumber: idx + 1,
+    totalLessons: mod.lessons.length,
+    moduleName:   mod.title,
+  }
+}
+
 /** Track-level stats */
 export function getTrackStats(track: Track) {
   const totalLessons     = track.modules.reduce((n, m) => n + m.lessons.length, 0)

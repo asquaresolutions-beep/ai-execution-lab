@@ -16,6 +16,7 @@ export interface ContentFrontmatter {
   updated?: string
   tags?: string[]
   status?: 'draft' | 'published' | 'archived'
+  noindex?: boolean        // true for internal planning docs — suppresses search indexing
   // Docs-specific
   difficulty?: 'beginner' | 'intermediate' | 'advanced'
   section?: string      // sidebar grouping

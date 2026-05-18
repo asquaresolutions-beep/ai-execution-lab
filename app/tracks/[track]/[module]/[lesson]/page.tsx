@@ -7,6 +7,7 @@ import {
   getModule,
   getLesson,
   getLessonNeighbors,
+  getLessonPosition,
   TRACK_ACCENTS,
 } from '@/lib/tracks'
 import { getLessonContent } from '@/lib/lesson-content'
@@ -93,8 +94,9 @@ export default async function LessonPage({ params }: Props) {
 
   if (!track || !mod || !lesson) notFound()
 
-  const ac      = TRACK_ACCENTS[track.accent]
-  const content = getLessonContent(trackId, moduleId, lessonId)
+  const ac       = TRACK_ACCENTS[track.accent]
+  const content  = getLessonContent(trackId, moduleId, lessonId)
+  const position = getLessonPosition(trackId, moduleId, lessonId)
   const { prev, next } = getLessonNeighbors(trackId, moduleId, lessonId)
 
   return (
@@ -115,7 +117,9 @@ export default async function LessonPage({ params }: Props) {
                 {track.title}
               </Link>
               <span>/</span>
-              <span className="text-surface-500">{mod.title}</span>
+              <Link href={`/tracks/${track.id}#${mod.id}`} className="hover:text-surface-400 transition-colors truncate max-w-[18ch]">
+                {mod.title}
+              </Link>
               <span>/</span>
               <span className="text-surface-500 truncate max-w-[20ch]">{lesson.title}</span>
             </nav>
@@ -132,6 +136,11 @@ export default async function LessonPage({ params }: Props) {
                 <span className="text-[10px] font-mono text-surface-700">
                   {lesson.duration}
                 </span>
+                {position && (
+                  <span className="text-[10px] font-mono text-surface-700">
+                    {position.lessonNumber} of {position.totalLessons}
+                  </span>
+                )}
               </div>
 
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-surface-50 text-balance leading-[1.2] mb-3">

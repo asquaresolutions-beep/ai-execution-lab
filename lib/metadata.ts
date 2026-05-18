@@ -31,6 +31,8 @@ export function buildArticleMetadata(item: ContentItem): Metadata {
     description: fm.description,
     keywords:    fm.tags,
     authors:     [{ name: AUTHOR_NAME, url: AUTHOR_URL }],
+    // Internal planning docs opt out of indexing via frontmatter noindex: true
+    ...(fm.noindex ? { robots: { index: false, follow: false } } : {}),
 
     openGraph: {
       type:          'article',

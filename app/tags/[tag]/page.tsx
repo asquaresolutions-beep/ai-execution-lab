@@ -24,6 +24,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    // Thin tag pages (fewer than 3 items) don't provide enough value to index
+    ...(items.length < 3 ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
       type: 'website',
       title: `${title} | ${SITE_NAME}`,
