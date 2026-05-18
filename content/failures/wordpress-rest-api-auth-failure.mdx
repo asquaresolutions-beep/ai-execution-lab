@@ -1,0 +1,115 @@
+---
+title: "WordPress REST API Authentication Failure"
+description: "Application Password authentication to WordPress REST API failed silently — returned 401 on all write operations. Root cause: incorrect header format and URL encoding of Application Password spaces."
+date: "2026-04-28"
+tags: ["wordpress", "rest-api", "authentication", "automation", "claude-code"]
+status: published
+severity: medium
+failure_status: resolved
+failure_type: authentication
+project: asquaresolution-wp
+resolution_time: 35 minutes
+recovery_complexity: minutes
+deployment_risk: low
+time_to_detect: "Immediate — first API call returns 401"
+repeat_risk: high
+---
+
+<IncidentReport
+  severity="medium"
+  status="resolved"
+  impact="WordPress REST API automation script blocked entirely. All write operations (publishing posts, updating metadata) returned 401. No content could be pushed programmatically until the auth header was corrected."
+  rootCause="WordPress Application Passwords are displayed with spaces (e.g., 'Kbqw 8P2T QLnS p3Co SlOT SNAb'). The spaces are part of the credential and must be included as-is when Base64 encoding the Authorization header. URL-encoding the spaces as %20 before Base64 encoding corrupts the credential and produces a 401 on every request."
+  resolution="Removed URL encoding from the password string before Base64 encoding. The entire 'username:password' string — spaces in password intact — is passed directly to btoa() or base64 equivalent. Verified with curl before updating the automation script."
+  prevention="Test WordPress REST API auth with a simple GET request using curl before writing any automation script. Construct the Authorization header by Base64 encoding the raw credential string — do not URL-encode any part of it."
+/>
+
+<FailureIntelligence
+  severity="medium"
+  recoveryComplexity="minutes"
+  category="authentication"
+  deploymentRisk="low"
+  timeToDetect="Immediate — first API call returns 401"
+  repeatRisk="high"
+  preventionPatterns={[
+    "Always test WordPress Application Password auth with curl before building any automation script",
+    "Never URL-encode the Application Password string — spaces are part of the credential and must be preserved",
+    "Base64 encode the full 'username:password' string as a unit, with spaces in the password intact",
+    "Keep a working curl auth snippet in the project notes so you are not reconstructing it from scratch each time",
+    "Verify with a GET request (read) before attempting any write operation"
+  ]}
+  relatedFailures={[
+    { title: "Missing Production Environment Variable Caused Silent Feature Failure", href: "/failures/environment-variable-missing-production", relation: "same-category" }
+  ]}
+  ecosystemImpact={["Blocks all programmatic WordPress content operations", "Automation scripts relying on REST API writes are non-functional until fixed"]}
+/>
+
+## What Happened
+
+The goal was a Claude Code automation script to update WordPress posts on asquaresolution.com via the REST API — patching post content, updating SEO metadata, and setting tags in bulk. A WordPress Application Password was generated in the dashboard under Users → Profile → Application Passwords.
+
+The first curl test returned `401 Unauthorized`. Nothing went through.
+
+```bash
+curl -X GET https://asquaresolution.com/wp-json/wp/v2/posts \
+  -H "Authorization: Basic $(echo -n 'cantact:Kbqw%208P2T%20QLnS%20p3Co%20SlOT%20SNAb' | base64)"
+```
+
+Every variation tried — different header formats, different credential strings, double-checking the username — produced the same 401. WordPress was rejecting the credentials silently with no additional error detail in the response body.
+
+## The Root Cause
+
+WordPress Application Passwords are shown in the dashboard formatted with spaces between character groups: `Kbqw 8P2T QLnS p3Co SlOT SNAb`. These spaces are not decorators — they are part of the actual password string and must be present when constructing the Authorization header.
+
+The mistake was URL-encoding the spaces to `%20` before Base64 encoding. This produces a different Base64 string than WordPress expects, so authentication fails every time.
+
+The correct process:
+
+1. Take the credential string exactly as shown: `cantact:Kbqw 8P2T QLnS p3Co SlOT SNAb`
+2. Base64 encode that entire string — spaces and all — without any prior encoding
+3. Set the Authorization header: `Authorization: Basic <base64-result>`
+
+```bash
+# Correct
+curl -X GET https://asquaresolution.com/wp-json/wp/v2/posts \
+  -H "Authorization: Basic $(echo -n 'cantact:Kbqw 8P2T QLnS p3Co SlOT SNAb' | base64)"
+```
+
+The difference: `echo -n 'cantact:Kbqw 8P2T ...'` — the password passed raw, spaces included, piped directly to `base64`. No URL encoding anywhere in the chain.
+
+<Callout type="warn" title="Application Password spaces are not formatting">
+WordPress displays Application Passwords with spaces for readability, but the spaces are part of the credential. The REST API expects the Base64 of the raw string with spaces. URL-encoding or removing the spaces produces a different hash and a guaranteed 401.
+</Callout>
+
+## Secondary Issue: Endpoint and Content-Type
+
+A second issue compounded the debugging: the initial test was hitting the wrong endpoint format for write operations. WordPress REST API write operations require:
+
+- Endpoint: `POST /wp-json/wp/v2/posts/{id}`
+- Header: `Content-Type: application/json`
+- Body: valid JSON object with only the fields being updated
+
+Missing `Content-Type: application/json` on a POST causes WordPress to ignore the request body and return a 400 or process the request incorrectly. This was not the root cause of the 401, but it would have caused the next failure in sequence.
+
+## Debugging Sequence
+
+| Step | Action | Result |
+|------|--------|--------|
+| 1 | Tested endpoint URL with public GET | 200 — endpoint is correct |
+| 2 | Added auth header with URL-encoded password | 401 |
+| 3 | Checked WordPress user has correct role | OK — Administrator |
+| 4 | Re-read Application Password docs | Found spaces-are-literal note |
+| 5 | Rebuilt curl command with raw password string | 200 — authenticated |
+| 6 | Tested write operation with Content-Type header | 200 — post updated |
+| 7 | Updated automation script | Working |
+
+## Prevention Pattern
+
+Before writing any WordPress REST API automation:
+
+1. Confirm the WordPress Application Password in the dashboard — note the exact string with spaces
+2. Test authentication with a curl GET against a known-good endpoint
+3. Verify a write operation with curl before adding it to any script
+4. Store the working curl snippet in the project README or notes — reconstructing it later costs the same 35 minutes
+
+The 401 from WordPress gives no indication of *why* it failed. There is no "password format incorrect" message. This makes the spaces issue genuinely easy to miss and easy to repeat — hence the high repeat risk rating.

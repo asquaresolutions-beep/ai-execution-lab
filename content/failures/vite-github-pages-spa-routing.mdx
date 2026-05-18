@@ -1,0 +1,145 @@
+---
+title: "Vite SPA Routing on GitHub Pages 404s on Refresh"
+description: "React/Vite SPA deployed to GitHub Pages returned 404 on any direct URL or page refresh. Root cause: GitHub Pages serves static files only — client-side routing paths don't map to files."
+date: "2026-04-15"
+tags: ["vite", "github-pages", "spa", "routing", "react", "deployment"]
+status: published
+severity: high
+failure_status: resolved
+failure_type: deployment
+project: trustseal
+resolution_time: 47 minutes
+recovery_complexity: minutes
+deployment_risk: high
+time_to_detect: "Immediate on first direct URL visit or refresh"
+repeat_risk: high
+---
+
+<IncidentReport
+  severity="high"
+  status="resolved"
+  impact="Every direct URL and page refresh on trustseal.asquaresolution.com returned GitHub's 404 page. Only the homepage loaded reliably. Any user who bookmarked a sub-route, shared a link, or refreshed on any route other than / hit a dead end. All navigation had to start from the homepage."
+  rootCause="GitHub Pages is a static file server. It serves files by path. When a user visits /dashboard, GitHub Pages looks for a file at /dashboard/index.html or /dashboard — neither exists. Only the root index.html exists. React Router handles routing entirely in the browser, but GitHub Pages never delivers the SPA to routes it doesn't recognize."
+  resolution="Added a 404.html file that redirects to the root index.html while preserving the original path as a query parameter. Added a script to index.html that reads the query parameter on load and uses React Router history to restore the correct URL. Both files added to the Vite build output via the public/ directory."
+  prevention="Add the 404.html redirect trick before the first GitHub Pages deployment of any SPA. Test by navigating to a sub-route and refreshing immediately after the first successful deploy. Never ship a React Router app to GitHub Pages without this fix in place."
+/>
+
+<FailureIntelligence
+  severity="high"
+  recoveryComplexity="minutes"
+  category="deployment"
+  deploymentRisk="high"
+  timeToDetect="Immediate on first direct URL visit or refresh"
+  repeatRisk="high"
+  preventionPatterns={[
+    "Add 404.html with the path-preservation redirect script before the first GitHub Pages deploy",
+    "Test by refreshing a non-root route immediately after the first successful deployment",
+    "Add 404.html to the project template so it ships with every new React/Vite app targeting GitHub Pages",
+    "Set vite.config.ts base: '/' for custom subdomain deployments — do not use a subdirectory base",
+    "Document the 404.html requirement in the project README so it is not skipped on future rebuilds"
+  ]}
+  relatedFailures={[
+    { title: "Subdomain DNS Propagation Delay Blocked Deployment Testing", href: "/failures/dns-subdomain-propagation-delay", relation: "same-category" }
+  ]}
+  ecosystemImpact={["All direct navigation and bookmarked links return 404", "Shared URLs are dead on arrival for users who follow them", "Any route accessed from external traffic (SEO, social) fails"]}
+/>
+
+## What Happened
+
+TrustSeal was deployed to GitHub Pages using the `gh-pages` npm package, serving from a custom subdomain: trustseal.asquaresolution.com. The GitHub Actions workflow ran cleanly, the build succeeded, and the DNS was configured correctly.
+
+The homepage loaded. Everything appeared fine.
+
+Then a direct navigation to `/dashboard` was tested — GitHub's standard 404 page. A refresh on the homepage worked. A refresh on any other route: GitHub 404.
+
+This is one of the most common SPA deployment failures and it happens every time a React Router app is deployed to GitHub Pages without handling it upfront.
+
+## The Root Cause
+
+GitHub Pages does not have a server that can rewrite URLs. When a request comes in for `/dashboard`, GitHub Pages looks for a file at:
+
+- `/dashboard/index.html`
+- `/dashboard`
+
+Neither exists. The Vite build outputs a single `index.html` at the root. React Router handles everything client-side — but React Router never gets to run because GitHub Pages returns a 404 before serving any HTML at all.
+
+This is fundamentally different from hosting on a server (like Vercel or a Node.js host) where you can configure a catch-all rewrite: `/* → /index.html`. GitHub Pages has no such configuration option.
+
+<Callout type="danger" title="GitHub Pages cannot rewrite URLs">
+There is no nginx config, no _redirects file, and no vercel.json on GitHub Pages. You cannot configure a catch-all route. The 404.html workaround is the only solution available within the GitHub Pages constraint.
+</Callout>
+
+## The Fix: 404.html Redirect Trick
+
+GitHub Pages serves `404.html` when it cannot find a file for a given path. This is the hook the fix uses.
+
+**`public/404.html`** — copy of the redirect script:
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script>
+      // Preserve the path by encoding it into the query string, then redirect to /
+      var l = window.location;
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/' +
+        '?p=' + encodeURIComponent(l.pathname + l.search) +
+        (l.hash ? '&h=' + encodeURIComponent(l.hash) : '')
+      );
+    </script>
+  </head>
+  <body></body>
+</html>
+```
+
+**`index.html`** — path restoration script (placed before the Vite bundle script tag):
+
+```html
+<script>
+  // Read the path that 404.html encoded into the query string and restore it
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    var p = params.get('p');
+    var h = params.get('h') || '';
+    if (p) {
+      window.history.replaceState(null, null, p + h);
+    }
+  })();
+</script>
+```
+
+**How it works:**
+
+1. User visits `trustseal.asquaresolution.com/dashboard`
+2. GitHub Pages finds no file — serves `404.html`
+3. `404.html` script redirects to `/?p=%2Fdashboard`
+4. `index.html` loads, the restoration script runs, rewrites the URL back to `/dashboard` using `history.replaceState`
+5. React app mounts, React Router reads `/dashboard` from the URL, renders the correct component
+
+The user sees the correct page. The URL bar shows the correct path. No visible redirect.
+
+## Secondary Issue: Vite Base Path
+
+For deployments to a custom subdomain (trustseal.asquaresolution.com), `vite.config.ts` must have:
+
+```typescript
+export default defineConfig({
+  base: '/',
+  // ...
+})
+```
+
+Using a subdirectory base (e.g., `base: '/trustseal/'`) is only needed when deploying to a path like `username.github.io/trustseal`. On a custom subdomain, the base is the root. Getting this wrong causes all asset references in the built HTML to point to the wrong paths.
+
+## Prevention Pattern
+
+This failure is entirely preventable with one rule: **ship the 404.html before the first GitHub Pages deployment, not after the first 404.**
+
+1. Add `public/404.html` with the redirect script to the project before any deployment
+2. Add the restoration script to `index.html`
+3. After the first deploy, test immediately: navigate to a sub-route, refresh
+4. Confirm GitHub Pages shows "Custom domain" and "Enforce HTTPS" in the repository Pages settings
+
+For any new React Router app targeting GitHub Pages: treat the 404.html as part of the base template, not an afterthought. It takes five minutes to add and saves the debugging cycle every time.

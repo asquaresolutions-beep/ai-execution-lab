@@ -10,7 +10,30 @@ failure_type: "dependency"
 project: "ai-execution-lab"
 resolution_time: "41 minutes"
 stack: ["Next.js 15", "next-mdx-remote", "Vercel", "TypeScript"]
+recovery_complexity: "hours"
+deployment_risk: "low"
+time_to_detect: "Manual visual inspection post-deploy — build succeeded"
+repeat_risk: "medium"
 ---
+
+<FailureIntelligence
+  severity="medium"
+  recoveryComplexity="hours"
+  category="dependency"
+  deploymentRisk="low"
+  timeToDetect="Manual visual inspection post-deploy — build succeeded, TypeScript clean, HTTP 200s — only rendered content was empty"
+  repeatRisk="medium"
+  preventionPatterns={[
+    "Read full changelog before any MDX-related package upgrade — specifically look for new boolean options that default to restrictive behavior",
+    "After every dependency upgrade: open pages with every custom component type and visually verify content renders",
+    "Explicitly set blockJS: false in content-renderer.tsx for author-controlled MDX pipelines — and document why",
+    "Add a render smoke test to CI: assert that specific MDX component output text appears in the rendered HTML"
+  ]}
+  relatedFailures={[
+    { title: "Edge Runtime Deployment Failure", href: "/failures/edge-runtime-deployment-failure", relation: "same-category" }
+  ]}
+  ecosystemImpact={["All MDX content pages affected", "Components render structurally but with zero content — worse than a visible error because it passes all automated checks"]}
+/>
 
 <IncidentReport
   id="INC-002"

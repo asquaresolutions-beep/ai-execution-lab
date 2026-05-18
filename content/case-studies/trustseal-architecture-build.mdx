@@ -1,0 +1,230 @@
+---
+title: "TrustSeal: Building an AI Website Trust Verifier"
+description: "Architecture and build record for TrustSeal (trustseal.asquaresolution.com) — an AI-powered website trust verifier and fact-checker. React/Vite/Firebase/Gemini/Razorpay on GitHub Pages."
+date: "2026-05-15"
+tags: ["case-study", "trustseal", "firebase", "gemini", "razorpay", "github-pages", "react", "vite"]
+status: "published"
+impact: "Live AI trust verification tool at trustseal.asquaresolution.com with Firebase Auth, Gemini AI analysis, and Razorpay payment integration"
+stack: ["React", "Vite", "Tailwind CSS", "Firebase Auth", "Firestore", "Gemini AI", "Razorpay", "GitHub Pages"]
+duration: "6 weeks build + ongoing"
+---
+
+<CaseStudyMeta
+  dateRange="2026-Q1"
+  duration="6 weeks initial build"
+  difficulty="resolved"
+  stack={["React", "Vite", "Tailwind CSS", "Firebase Auth", "Firestore", "Gemini AI", "Razorpay", "GitHub Pages"]}
+  outcomes={[
+    { metric: "Product existence", before: "No AI trust verification product", after: "Live tool at trustseal.asquaresolution.com", delta: "live" },
+    { metric: "Analysis method", before: "Manual website trust assessment", after: "Automated Gemini AI analysis", delta: "automated" },
+    { metric: "Revenue model", before: "No payment system", after: "Razorpay premium tier integration", delta: "monetized" }
+  ]}
+/>
+
+TrustSeal is an AI-powered website trust verifier. A user submits a URL; the system fetches metadata, checks domain indicators, runs an SSL/HTTPS assessment, and feeds the collected data to Gemini AI for a structured trust verdict. The product is live at trustseal.asquaresolution.com, deployed via GitHub Pages, with Firebase Auth for user accounts and Razorpay for premium subscription tiers.
+
+This is a build record, not a launch announcement. It documents the architecture decisions, the deployment approach, the complications that came up, and what the monetization model looks like at the infrastructure level.
+
+---
+
+## Context
+
+**Property:** trustseal.asquaresolution.com
+
+**Stack:** React, Vite, Tailwind CSS, Firebase Auth, Firestore, Gemini AI (via Firebase Cloud Functions), Razorpay, GitHub Pages
+
+**Starting state:** No product. The market problem — users with no reliable quick-signal for whether a website is trustworthy — was identified from ScamCheck usage patterns. TrustSeal extends the scam detection concept to full website trust profiling rather than message/URL analysis.
+
+**Build duration:** 6 weeks for the initial release. Ongoing for feature additions and payment tier expansion.
+
+---
+
+## Product Concept
+
+The core user flow:
+
+1. User submits a URL
+2. System fetches: page title, meta description, SSL certificate status, domain registration age (via WHOIS-equivalent lookup), redirects and final URL, HTTP headers, known bad-actor domain list check
+3. Data is formatted into a structured prompt and sent to Gemini AI via a Firebase Cloud Function
+4. Gemini returns a structured trust verdict: **trust score** (0–100), **verdict label** (Verified / Caution / Suspicious / High Risk), **detected signals** (positive and negative), and **recommended action** for the user
+5. Result is stored in Firestore against the user's account for history and audit
+
+The AI layer is not doing web crawling or deep content analysis. It is interpreting a structured dataset of domain and security signals and applying pattern recognition across those signals. The prompt specifies what each signal means and what weight to apply. This is prompt engineering for structured output, not a general-purpose AI research task.
+
+---
+
+## Architecture
+
+### Frontend: React SPA via Vite
+
+Single-page application. Vite was chosen over Create React App for build speed (development HMR is noticeably faster on a low-spec machine) and for lighter output bundles. No server-side rendering is needed here — the app is session-gated by Firebase Auth, so SEO considerations are secondary to the authenticated user experience.
+
+Tailwind CSS handles styling. The UI surface area is larger than ScamCheck: URL input, trust verdict display, signal breakdown panel, user account dashboard, check history list, and subscription management. For a UI of this complexity, Tailwind's utility-first approach reduces the cognitive overhead of managing a custom CSS hierarchy.
+
+### Firebase Auth and Firestore
+
+Firebase Auth handles user accounts. The primary auth flow is email/password with Google OAuth as an option. No custom auth server is required — Firebase Auth's client SDK manages session persistence, token refresh, and cross-domain state automatically.
+
+Firestore stores:
+- `users/{uid}/checks` — each trust check result with full verdict, timestamp, and URL
+- `users/{uid}/quota` — check count for the current billing period, reset date, tier (free/premium)
+- `users/{uid}/subscription` — Razorpay subscription ID, status, current period end
+
+The Firestore security rules enforce that users can only read and write their own data. Cloud Functions execute with admin privileges and update quota atomically.
+
+### Gemini AI via Firebase Cloud Functions
+
+Gemini analysis does not run client-side. The Gemini API key is server-side only, held in Firebase Cloud Function environment variables. The client calls a Cloud Function, which:
+
+1. Receives the URL and collected signals from the client
+2. Checks the user's quota in Firestore (abort if exceeded)
+3. Formats the Gemini prompt with the signal data
+4. Calls the Gemini API (gemini-1.5-flash model for cost and speed)
+5. Parses the structured response
+6. Writes the result to Firestore
+7. Returns the verdict to the client
+
+The Cloud Function adds latency: cold start on the first call after a period of inactivity adds 1.5–3 seconds before the Gemini call even begins. For a trust verification tool where the user expects a few seconds of analysis time, this is acceptable. For a tool with sub-second expectations, it would not be.
+
+### Razorpay Integration
+
+Razorpay handles payment processing for the premium tier. The integration:
+
+1. Client initiates a subscription purchase, calls a Cloud Function
+2. Cloud Function creates a Razorpay subscription via the Razorpay API using the server-side API key
+3. Client receives the subscription ID and renders the Razorpay checkout modal
+4. On successful payment, Razorpay fires a webhook to a Cloud Function endpoint
+5. Webhook handler verifies the payment signature, updates `users/{uid}/subscription` and `users/{uid}/quota.tier` in Firestore
+6. Client's real-time Firestore listener picks up the quota update and unlocks premium features immediately
+
+Razorpay was chosen over Stripe for Indian payment rails. Indian users paying in INR through UPI, net banking, and Indian credit cards have significantly higher conversion rates on Razorpay than on Stripe's international gateway for the same payment methods.
+
+---
+
+## The GitHub Pages Deployment Pattern
+
+GitHub Pages does not natively serve SPAs — it serves static files. The routing problem: a user navigating directly to `trustseal.asquaresolution.com/dashboard` gets a 404 because there is no `dashboard/index.html` file on disk. GitHub Pages returns its own 404 page instead of routing to the SPA.
+
+**The 404 redirect pattern:**
+
+A `404.html` file in the repository root contains a script that reads `window.location.pathname`, encodes it as a query parameter, and redirects to `index.html?redirect=/dashboard`. The `index.html` contains a corresponding script that reads the redirect query parameter and uses `history.replaceState` to restore the original URL before React Router mounts. React Router then handles the route normally.
+
+This is not elegant, but it works and requires no server infrastructure.
+
+**The dist/.git worktree deployment pattern:**
+
+The `dist/` directory (Vite build output) is initialized as a separate Git repository pointing to the `gh-pages` branch of the same GitHub remote. The deployment sequence is:
+
+```bash
+npm run build           # Vite builds into /dist
+cd dist
+git add -A
+git commit -m "deploy"
+git push origin gh-pages
+```
+
+The `gh-pages` branch contains only the built files — no source code, no `node_modules`, no build tooling. GitHub Pages serves directly from this branch. The main branch holds the source code.
+
+Why not use `gh-pages` npm package or GitHub Actions? For a one-developer operation, the manual dist/.git approach has zero CI/CD configuration overhead and makes the deployment mechanism explicit. The tradeoff is that deployment is a manual step, not an automatic post-merge action. For the current operational cadence this is acceptable.
+
+**Base path configuration:**
+
+Vite must be told the base path of the deployment. If the app is deployed to `trustseal.asquaresolution.com` with a custom domain pointing to the GitHub Pages root, the base path is `/`. If it were deployed to a GitHub Pages subdirectory (e.g., `username.github.io/trustseal`), the base path would be `/trustseal/`. Getting this wrong causes all asset URLs to 404.
+
+```javascript
+// vite.config.ts
+export default defineConfig({
+  base: '/',   // custom domain at root — no path prefix needed
+  // ...
+})
+```
+
+---
+
+## Failures and Complications
+
+<Callout type="warn" title="SPA routing on GitHub Pages is not automatic">
+GitHub Pages serves static files. It does not have a catch-all route that serves index.html for all paths. Without the 404.html redirect pattern, any direct navigation to a non-root URL returns a GitHub Pages 404. Every React SPA deployed to GitHub Pages needs this pattern.
+</Callout>
+
+**Razorpay test vs. live mode key mismatch:** The Razorpay API key prefix determines the mode — `rzp_test_` keys call the test environment, `rzp_live_` keys call production. Mixing modes (test key on the client, live key on the server, or vice versa) causes silent failures: the checkout modal opens but payments fail with cryptic errors. The rule is: both the client-facing key and the server-side key must be from the same mode. Test during development with test mode, switch both keys simultaneously when going live.
+
+**Firebase Auth persistence across custom domain vs. GitHub Pages domain:** Firebase Auth's cookie-based session persistence requires the domain to match what is configured in the Firebase console's authorized domains list. When testing on `username.github.io/trustseal` before the custom domain was configured, auth sessions did not persist correctly. Fix: add both the GitHub Pages subdomain and the custom domain to the authorized domains list during development, or test only on the final custom domain from the start.
+
+**Cloud Function cold start latency on first analysis call:** The first Gemini analysis after a period of inactivity takes 3–5 seconds before the AI response begins, versus 1–2 seconds for warm calls. For the free tier, this is the normal experience. For premium users who may use the tool more frequently, warm Cloud Functions are more common. The UX mitigation is a loading state with a progress indicator that shows what the system is doing (collecting signals → analyzing → generating verdict), which makes the wait feel active rather than stalled.
+
+---
+
+<OperationalTimeline
+  events={[
+    { date: "2026-01-10", event: "Product concept defined — AI trust verifier as extension of ScamCheck to full website profiling", type: "milestone" },
+    { date: "2026-01-15", event: "React + Vite scaffold, Firebase project created, GitHub Pages repository set up with dist/.git worktree", type: "build" },
+    { date: "2026-01-22", event: "Firebase Auth and Firestore data model implemented — users, checks, quota collections", type: "build" },
+    { date: "2026-01-29", event: "Core trust check flow — URL input, signal collection, Gemini Cloud Function, verdict display", type: "build" },
+    { date: "2026-02-05", event: "First full analysis working end-to-end — URL submitted, Gemini verdict returned and displayed", type: "milestone" },
+    { date: "2026-02-10", event: "SPA routing failure on direct navigation — diagnosed and fixed with 404.html redirect pattern", type: "failure" },
+    { date: "2026-02-15", event: "Razorpay integration — Cloud Function subscription creation, checkout modal, webhook handler", type: "build" },
+    { date: "2026-02-20", event: "Razorpay test/live key mismatch discovered — both keys must be same mode, fixed", type: "failure" },
+    { date: "2026-02-28", event: "Free tier quota enforcement + premium tier unlock working end-to-end in test mode", type: "milestone" },
+    { date: "2026-03-05", event: "Firebase Auth authorized domain list updated for custom domain — auth persistence fixed", type: "fix" },
+    { date: "2026-03-10", event: "Razorpay keys switched to live mode — production payment flow verified with real transaction", type: "milestone" },
+    { date: "2026-03-15", event: "Custom domain configured — trustseal.asquaresolution.com live on GitHub Pages", type: "deploy" }
+  ]}
+/>
+
+---
+
+## Monetization Architecture
+
+**Free tier:** 10 trust checks per calendar month. Quota tracked in Firestore. On quota exhaustion, the check button is disabled and an upgrade prompt is shown. The free tier is functional — a user who wants to check a handful of sites per month has a usable product without payment.
+
+**Premium tier:** Unlimited checks per month. Monthly subscription via Razorpay. The subscription ID is stored in Firestore; the quota document's `tier` field is set to `premium` by the webhook handler on successful payment. The client reads the quota document in real-time via Firestore's `onSnapshot` listener — no page reload required when the tier upgrades.
+
+**Revenue flow:**
+1. User clicks "Upgrade to Premium"
+2. Cloud Function creates a Razorpay subscription, returns `subscription_id`
+3. Client opens Razorpay checkout modal with `subscription_id`
+4. User completes payment
+5. Razorpay fires `subscription.charged` webhook
+6. Webhook Cloud Function verifies signature, updates Firestore: `tier: 'premium'`, `subscriptionId: '...'`, `currentPeriodEnd: ...`
+7. Client's Firestore listener updates UI — check limit removed
+
+**Why Razorpay over Stripe:** Stripe processes Indian payments via a separate Stripe India entity with different settlement timelines and higher fees for UPI and net banking compared to Razorpay, which is purpose-built for the Indian market. For a product primarily targeting Indian users, Razorpay's conversion rates on the payment modal are meaningfully higher.
+
+---
+
+## Operational Lessons
+
+**GitHub Pages is viable for SPAs with two explicit solutions.** The 404 redirect pattern for routing and the dist/.git worktree for deployment are not intuitive, but they are stable. Document both in the project README before the next build session, because neither is obvious from the GitHub Pages documentation.
+
+**Firebase Cloud Functions add cold start latency that must be designed around.** For AI analysis tools where the user is already waiting for a meaningful result, 2–4 seconds of total latency (cold start + Gemini call) is acceptable with the right loading UX. For any tool where instant response is a product requirement, Firebase Functions are the wrong choice — use a pre-warmed compute option or a serverless platform with lower cold start characteristics.
+
+**Always test Razorpay in test mode with the official test cards before flipping to live keys.** The test environment catches webhook configuration errors, quota update timing issues, and subscription state machine edge cases (pause, cancel, resume) without real money changing hands. Razorpay provides test card numbers, test UPI IDs, and test net banking credentials specifically for this purpose. Do not skip test mode verification.
+
+**Firestore security rules are the last line of defense.** Cloud Functions run with admin privileges and bypass security rules. Client-side reads and writes are governed by security rules. Every collection that holds user data should have rules that enforce `request.auth.uid == userId` before the first user account is created. Retrofitting security rules after data exists is more error-prone than writing them first.
+
+---
+
+## What This Demonstrates
+
+TrustSeal demonstrates that a monetized, AI-powered SaaS tool can be built and deployed on effectively zero infrastructure cost using Firebase's free tier for auth and database, Gemini's free tier for AI analysis, GitHub Pages for hosting, and Razorpay's pay-per-transaction model for payments. The only fixed cost is the domain. The variable costs (Gemini API calls, Razorpay transaction fees) scale with usage. This is a viable architecture for a bootstrapped solo operator building a product with uncertain early traction.
+
+---
+
+## Repeatable Elements
+
+- [ ] Use the `dist/.git` worktree pattern for GitHub Pages SPA deployments — initialize `dist/` as a separate git repo pointing to `gh-pages` branch
+- [ ] Always include a `404.html` with the SPA redirect script for any React app on GitHub Pages
+- [ ] Set `base: '/'` in `vite.config.ts` when deploying to a custom domain at the root path
+- [ ] Add both the GitHub Pages domain and the custom domain to Firebase Auth's authorized domains list during development
+- [ ] Store Razorpay subscription state in Firestore and use `onSnapshot` for real-time tier updates — no page reload required
+- [ ] Never mix Razorpay test and live API keys — both the client key and the server key must be from the same mode
+- [ ] Design loading UX for Cloud Function AI calls to account for cold start — a multi-step progress indicator makes latency feel active
+
+---
+
+## Related
+
+- [ScamCheck: Building an AI Scam Detector](/case-studies/scamcheck-architecture-build)
+- [Vercel Deployment Pipeline](/lessons/claude-code-operator/vercel-deployment/deployment-pipeline)
+- [Firebase Auth Patterns](/lessons/claude-code-operator/wordpress-rest-api/wp-auth-patterns)

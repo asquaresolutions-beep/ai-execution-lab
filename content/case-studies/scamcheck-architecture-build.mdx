@@ -1,0 +1,303 @@
+---
+title: "ScamCheck: Building an AI Scam Detector"
+description: "Architecture and build record for ScamCheck (scamcheck.asquaresolution.com) — an AI-powered scam detection tool. React/Vite/Firebase/Gemini on GitHub Pages with plain CSS."
+date: "2026-05-14"
+tags: ["case-study", "scamcheck", "firebase", "gemini", "github-pages", "react", "vite", "ai-product"]
+status: "published"
+impact: "Live AI scam detection tool at scamcheck.asquaresolution.com with Firebase Auth, Gemini AI detection, and Firestore result storage"
+stack: ["React", "Vite", "Plain CSS", "Firebase Auth", "Firestore", "Gemini AI", "GitHub Pages"]
+duration: "4 weeks build + ongoing"
+---
+
+<CaseStudyMeta
+  dateRange="2026-Q1"
+  duration="4 weeks initial build"
+  difficulty="resolved"
+  stack={["React", "Vite", "Plain CSS", "Firebase Auth", "Firestore", "Gemini AI", "GitHub Pages"]}
+  outcomes={[
+    { metric: "Product existence", before: "No AI scam detection tool", after: "Live tool at scamcheck.asquaresolution.com", delta: "live" },
+    { metric: "Analysis method", before: "Manual scam pattern identification", after: "Automated Gemini AI pattern detection", delta: "automated" },
+    { metric: "Result persistence", before: "No check history", after: "Firestore result storage per user account", delta: "persistent" }
+  ]}
+/>
+
+ScamCheck is a scam detection tool that uses Gemini AI to analyze suspicious messages, URLs, and described scenarios. A user submits text — a message they received, a URL they are unsure about, a description of an interaction — and receives a structured verdict: scam probability, detected patterns, and a recommended action.
+
+The tool is live at scamcheck.asquaresolution.com, built on React, Vite, plain CSS, Firebase Auth, Firestore, and Gemini AI via Firebase Cloud Functions. GitHub Pages handles deployment using the same dist/.git worktree pattern as TrustSeal.
+
+This is a build record. What follows documents the architecture decisions, the CSS approach, the AI prompt structure, the deployment mechanics, and the failures encountered during the build.
+
+---
+
+## Context
+
+**Property:** scamcheck.asquaresolution.com
+
+**Stack:** React, Vite, Plain CSS (with CSS custom properties), Firebase Auth, Firestore, Gemini AI (via Firebase Cloud Functions), GitHub Pages
+
+**Starting state:** No product. The initial scam detection concept came from observing the volume of fraud incidents affecting users in Southeast Asia — messaging app scams, fake investment platforms, phishing URLs sent via SMS. These are users who may not have the technical vocabulary to identify scam patterns independently, and there was no simple, accessible analysis tool for their actual input format (message text or URL paste).
+
+**Build duration:** 4 weeks for the initial release, shorter than TrustSeal because the data model is simpler (text input only, no domain signal collection pipeline) and the absence of a payment layer reduces the integration surface area.
+
+---
+
+## Product Concept
+
+The user's input is unstructured: a message they received, a URL they want to check, a description of a phone call or online interaction. The AI layer must handle this ambiguity — the user is not always going to provide a cleanly formatted URL or message text.
+
+**What Gemini analyzes:**
+
+- Phishing indicators: domain spoofing, urgent action language, credential request patterns
+- Urgency and pressure language: "act now," "limited time," "your account will be closed"
+- Suspicious domain patterns: lookalike domains, recently registered domains, known short URL obfuscation
+- Financial request patterns: wire transfer instructions, gift card requests, cryptocurrency wallet addresses
+- Identity impersonation signals: claimed affiliation with banks, government agencies, tech companies
+- Logical inconsistencies: prize notifications for contests not entered, refunds for purchases not made
+
+**What the verdict includes:**
+
+- **Scam probability:** Percentage score (0–100%)
+- **Verdict label:** Safe / Probably Safe / Uncertain / Likely Scam / High Risk
+- **Detected patterns:** Specific signals found in the input, labeled by category
+- **Recommended action:** Plain-language advice (e.g., "Do not click any links in this message" or "This appears to be a legitimate service notification")
+
+The output is designed for users who are not technically sophisticated. The verdict label and recommended action are the primary elements; the detected patterns are secondary detail for users who want to understand the reasoning.
+
+---
+
+## Architecture Decisions
+
+### Plain CSS over Tailwind
+
+ScamCheck uses plain CSS with CSS custom properties for theming, not Tailwind. This is a deliberate choice, not a default.
+
+The UI surface area of ScamCheck is small:
+- Text input area
+- Submit button
+- Verdict display card (probability score, label, patterns, action)
+- Check history list
+- Login/signup form
+
+For a UI of this scope, Tailwind adds build complexity (PostCSS configuration, purge configuration, class naming overhead in JSX) without a proportional productivity benefit. With plain CSS and custom properties, the entire stylesheet for the application fits in one file under 400 lines. The theming is handled by CSS custom properties at `:root`:
+
+```css
+:root {
+  --color-bg: #0f1117;
+  --color-surface: #1a1d27;
+  --color-text: #e2e8f0;
+  --color-text-muted: #94a3b8;
+  --color-accent: #6366f1;
+  --color-danger: #ef4444;
+  --color-warn: #f59e0b;
+  --color-success: #22c55e;
+  --radius-card: 12px;
+  --radius-btn: 8px;
+}
+```
+
+Verdict label colors (green for Safe, red for High Risk) are applied by setting `--verdict-color` on the verdict card's root element based on the verdict value. No conditional class logic in JSX — the color mapping is in CSS.
+
+**Contrast with TrustSeal:** TrustSeal uses Tailwind because its UI is more complex — a signal breakdown panel, subscription management, account dashboard with multiple views. Tailwind's utility classes pay for themselves at higher UI complexity. For ScamCheck's simpler surface, plain CSS is the better fit.
+
+### Firebase Auth and Firestore
+
+Same Firebase project pattern as TrustSeal. Firebase Auth for user accounts (email/password, Google OAuth). Firestore for check results and user quota.
+
+Firestore data model for ScamCheck:
+
+```
+users/{uid}/
+  checks/                    # subcollection
+    {checkId}/
+      input: string          # the user's submitted text/URL
+      inputType: 'message' | 'url' | 'description'
+      verdict: {
+        probability: number,
+        label: string,
+        patterns: Array<{ category: string, description: string }>,
+        action: string
+      }
+      createdAt: timestamp
+  quota/
+    current/
+      checksThisMonth: number
+      resetDate: timestamp
+```
+
+The data model was defined before the UI was built. This is the correct order — it prevents the common mistake of building a UI and then discovering that the data structure does not support the history view, the quota enforcement, or the filtering the UI expects.
+
+### Gemini AI via Firebase Cloud Functions
+
+The AI analysis runs server-side in a Firebase Cloud Function. The prompt structure is the critical design decision in the entire AI layer.
+
+---
+
+## AI Prompt Engineering for Scam Detection
+
+The prompt sent to Gemini is structured in three parts:
+
+**Part 1: Role and task definition**
+
+```
+You are a scam detection expert. Analyze the following user-submitted content for scam indicators.
+The content may be a message, URL, or description of an interaction. 
+Return a structured JSON response with exactly this schema: [schema definition]
+```
+
+Including the JSON schema in the prompt with explicit field names, types, and example values dramatically improves structured output reliability. Without the schema, Gemini's formatting of the verdict varies across calls in ways that break the client-side parser.
+
+**Part 2: Signal categories to evaluate**
+
+The prompt lists the specific signal categories Gemini should check for, with a brief description of each. This is not asking Gemini to invent its own taxonomy — it is providing the taxonomy and asking Gemini to apply it. The categories are: phishing indicators, urgency language, domain patterns, financial requests, identity impersonation, and logical inconsistencies.
+
+Providing the taxonomy reduces false positives on legitimate messages that happen to contain one signal in isolation (e.g., a real bank notification that uses the word "urgent"). Gemini weighs the categories in combination, not in isolation.
+
+**Part 3: Edge case handling**
+
+```
+If the submitted content appears to be a legitimate service notification, news article, or clearly non-malicious content, return a probability of 0-20 with label "Safe" or "Probably Safe".
+Do not flag content as suspicious based solely on discussing scams (e.g., a user describing a scam they received to ask about it).
+```
+
+This third section handles the meta-case: users who submit a description of a scam they already identified, which would otherwise be flagged as a scam itself. Without this instruction, the prompt runs a false positive on its own input type.
+
+**Output parsing:**
+
+Gemini returns JSON. The Cloud Function uses `JSON.parse()` on the response, with a try/catch that returns a structured error verdict if parsing fails. The client handles both success and error verdicts — a parse failure returns a "Could not analyze" verdict rather than an empty state or an uncaught exception.
+
+---
+
+## The GitHub Pages Deployment Pattern
+
+Same as TrustSeal. Documented here with ScamCheck-specific details because this pattern is not obvious from documentation.
+
+**Repository structure:**
+- `main` branch: React source, `src/`, `public/`, `vite.config.ts`, `package.json`
+- `gh-pages` branch: built output only — `index.html`, `assets/`, `404.html`
+
+**The `dist/.git` setup (one-time):**
+
+```bash
+# From the project root
+npm run build              # creates dist/
+cd dist
+git init
+git remote add origin https://github.com/[user]/scamcheck.git
+git checkout -b gh-pages
+```
+
+After this setup, `dist/` has its own `.git` directory pointing at the `gh-pages` branch. `dist/` is in the main branch's `.gitignore` so the build output is not committed to source control.
+
+**Deployment (each release):**
+
+```bash
+npm run build
+cd dist
+git add -A
+git commit -m "deploy $(date +%Y-%m-%d)"
+git push origin gh-pages
+```
+
+GitHub Pages serves the `gh-pages` branch. Custom domain (`scamcheck.asquaresolution.com`) is set in the GitHub Pages settings with a `CNAME` file in the `dist/` directory so it survives each deployment.
+
+**The 404 redirect for SPA routing:**
+
+`dist/404.html` (committed to `dist/` so it deploys with every build):
+
+```html
+<script>
+  const path = window.location.pathname;
+  const search = window.location.search;
+  window.location.replace('/?redirect=' + encodeURIComponent(path + search));
+</script>
+```
+
+`public/index.html` contains the corresponding restore script that runs before React mounts:
+
+```html
+<script>
+  const redirect = new URLSearchParams(window.location.search).get('redirect');
+  if (redirect) {
+    window.history.replaceState(null, '', redirect);
+  }
+</script>
+```
+
+---
+
+## Failures and Complications
+
+<OperationalTimeline
+  events={[
+    { date: "2026-01-05", event: "Product concept defined — scam detection for message text and URLs, targeting non-technical users", type: "milestone" },
+    { date: "2026-01-08", event: "Firestore data model defined — checks subcollection, quota document, verdict schema", type: "build", note: "Data model first, UI second" },
+    { date: "2026-01-12", event: "React + Vite scaffold, plain CSS structure, Firebase project initialized", type: "build" },
+    { date: "2026-01-18", event: "Firebase Auth implemented — email/password, Google OAuth, session persistence", type: "build" },
+    { date: "2026-01-22", event: "Gemini Cloud Function first pass — basic prompt, unstructured output", type: "build" },
+    { date: "2026-01-25", event: "Prompt structured output iteration — added JSON schema to prompt, parse reliability improved", type: "build" },
+    { date: "2026-01-28", event: "CSS specificity conflict in verdict display — scam probability bar color overriding verdict label color", type: "failure" },
+    { date: "2026-01-29", event: "CSS specificity fix — moved probability bar color to inline style, verdict label color via CSS custom property on card root", type: "fix" },
+    { date: "2026-02-05", event: "GA4 cross-property tracking issue — shared cookie_domain across scamcheck and trustseal subdomains causing session bleed", type: "failure" },
+    { date: "2026-02-06", event: "GA4 fix — set cookie_domain explicitly to subdomain in gtag config for each property", type: "fix" },
+    { date: "2026-02-10", event: "Gemini rate limit hit on free tier — multiple analysis requests in quick succession return 429", type: "failure" },
+    { date: "2026-02-12", event: "Rate limit UX mitigation — disable submit button during in-flight request, show queue position message on 429", type: "fix" },
+    { date: "2026-02-18", event: "Full flow working end-to-end — submit, analyze, verdict display, history stored", type: "milestone" },
+    { date: "2026-02-22", event: "GitHub Pages deployment with dist/.git worktree and custom domain — scamcheck.asquaresolution.com live", type: "deploy" }
+  ]}
+/>
+
+**CSS specificity conflict in verdict display:** The scam probability bar used a class-based color system (`class="bar high-risk"`). The verdict card also used class-based colors for its border and background. When both classes applied to elements inside the same component, specificity conflicts caused the bar color to bleed into the card border color in some combinations. The fix was to separate the concerns: probability bar color is set via inline style (computed from the probability number), verdict card color is set via a CSS custom property on the card root element. No class-based color logic in either path — no specificity conflict possible.
+
+**Gemini API rate limits on the free tier:** The Gemini API free tier enforces a requests-per-minute limit. When a user submits multiple checks in rapid succession — which happens during testing and also during legitimate use by curious users — the Cloud Function returns a 429. The first version of the UI showed no feedback on a 429 and left the user staring at a loading spinner. The fix was: detect 429 in the Cloud Function response, return a structured `{ rateLimited: true }` response to the client, and display a "Rate limit reached — please wait a few seconds and try again" message instead of a spinner.
+
+**GA4 cross-property tracking cookie bleed:** Both ScamCheck and TrustSeal use the shared GA4 property `G-MPQVF41ZYM`. By default, `gtag.js` sets the GA4 cookie on `.asquaresolution.com` (the root domain), which means the cookie is shared across all subdomains. Sessions initiated on `scamcheck.asquaresolution.com` could bleed into `trustseal.asquaresolution.com` session counts because the same cookie was being read. The fix was to set `cookie_domain` explicitly in the gtag config for each property:
+
+```javascript
+gtag('config', 'G-MPQVF41ZYM', {
+  cookie_domain: 'scamcheck.asquaresolution.com'
+});
+```
+
+This scopes the cookie to the specific subdomain, preventing cross-property session contamination. All three properties (main site, ScamCheck, TrustSeal) need this configuration if accurate per-property metrics are required.
+
+**Firebase cold start on first analysis call:** Same issue as TrustSeal. The first Cloud Function invocation after an idle period adds 2–3 seconds before the Gemini call begins. The UX mitigation is a multi-stage loading indicator: "Analyzing input" → "Checking patterns" → "Generating verdict." This gives the user feedback that the system is working, which reduces the perceived wait time compared to an indeterminate spinner.
+
+---
+
+## Operational Lessons
+
+**Start with the data model before building UI.** The decision to define the Firestore schema (`checks` subcollection structure, `verdict` object shape, `quota` document fields) before writing a single React component paid off throughout the build. The history list, quota enforcement, and verdict display all derived their structure from the data model. Starting with the UI and retrofitting the data model is a common mistake that creates mismatches between what the UI expects and what the database can query efficiently.
+
+**AI prompt structure matters more than model choice for structured output.** Switching between Gemini models (1.5-flash vs 1.5-pro) had less impact on verdict quality than iterating on the prompt structure. The three-part prompt structure (role + task definition, signal taxonomy, edge case handling) with an explicit JSON schema embedded in the prompt produced reliably parseable output across both models. Spending time on prompt engineering is higher-leverage than spending time on model selection, at least within the Gemini family.
+
+**Plain CSS is underrated for small-scope SPAs.** The ScamCheck CSS is maintainable, fast to load, and requires no build tooling beyond what Vite provides by default. For teams defaulting to Tailwind for every project regardless of scope, consider whether the utility-first overhead is justified for the specific UI surface area. For a UI with fewer than 10 distinct component types, the argument for plain CSS with custom properties is strong.
+
+**Document the dist/.git worktree pattern in the project README immediately.** The pattern is not self-documenting. A fresh developer (or a future version of yourself returning to the project after months away) looking at the repository will not understand why `dist/` is in `.gitignore` and where deployments go. A three-line README section covering the setup and the deployment sequence saves diagnostic work on every return visit.
+
+---
+
+## What This Demonstrates
+
+ScamCheck demonstrates a complete AI product deployment on near-zero fixed infrastructure cost: Firebase free tier for auth and database, Gemini free tier (with rate limits) for AI, GitHub Pages for hosting. The only variable cost is Gemini API calls beyond the free tier limits, which scale with usage. For an early-stage product with unknown traffic, this is the right cost structure — zero burn before product-market fit is confirmed.
+
+The architecture decisions (plain CSS, Firestore data model first, structured Gemini prompt) reflect the specific constraints of a solo-developer operation: prioritize decisions that reduce long-term maintenance overhead, not decisions that optimize for team scalability that doesn't yet exist.
+
+---
+
+## Repeatable Elements
+
+- [ ] Define the Firestore data model (collection structure, document shape, index requirements) before building any UI that reads from it
+- [ ] Use a three-part Gemini prompt for structured output: role/task, taxonomy/signals, edge cases — always include the JSON schema in the prompt
+- [ ] Handle Gemini 429 rate limit responses explicitly — return a structured `rateLimited` response and display user-facing copy, not a hanging spinner
+- [ ] Set `cookie_domain` explicitly in `gtag('config', ...)` for each subdomain that uses a shared GA4 property
+- [ ] Plain CSS with CSS custom properties is the right choice for SPAs with fewer than ~10 distinct component types
+- [ ] Use inline styles for color values that are computed from data (probability scores, severity levels) to avoid CSS specificity conflicts
+- [ ] Deploy CNAME file to `dist/` (or `public/`) so the custom domain setting survives each Vite build
+
+---
+
+## Related
+
+- [TrustSeal: Building an AI Website Trust Verifier](/case-studies/trustseal-architecture-build)
+- [GitHub for Non-Developers](/lessons/ai-business-zero-budget/zero-budget-stack/github-for-non-developers)
+- [Free Tier Architecture](/lessons/ai-business-zero-budget/zero-budget-stack/free-tier-architecture)

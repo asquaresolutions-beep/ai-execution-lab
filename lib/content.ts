@@ -33,7 +33,7 @@ export interface ContentFrontmatter {
   // Failures-specific
   severity?: 'low' | 'medium' | 'high' | 'critical'
   failure_status?: 'open' | 'investigating' | 'resolved'
-  failure_type?: 'build' | 'runtime' | 'deployment' | 'data' | 'performance' | 'dependency'
+  failure_type?: 'build' | 'runtime' | 'deployment' | 'data' | 'performance' | 'dependency' | 'configuration' | 'authentication'
   project?: string
   resolution_time?: string
   // Logs-specific

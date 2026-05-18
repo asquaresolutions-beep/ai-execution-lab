@@ -1,0 +1,305 @@
+---
+title: "GEO Intelligence Architecture"
+description: "Design specification for AI search visibility tracking, citation opportunity mapping, entity coverage auditing, answerability scoring, retrieval optimization, and operational specificity scoring."
+date: "2026-05-18"
+tags: ["ops", "geo", "ai-search", "architecture", "intelligence", "visibility"]
+status: "published"
+---
+
+GEO — Generative Engine Optimization — is not a content marketing strategy. It is a measurement system. The question it answers is not "how do we rank?" but "which content is being cited by AI systems, why, and what is the exact gap between what we published and what would earn a citation?"
+
+This document specifies the intelligence architecture that answers those questions systematically. It covers six components: AI search visibility tracking, citation opportunity mapping, entity coverage auditing, answerability scoring, retrieval optimization, and operational specificity scoring. Each component has a defined measurement protocol, scoring rubric, and a clear path from current manual operations to Phase 2 automation.
+
+The primary AI search targets for this platform are Perplexity AI, ChatGPT search (web-browsing mode), Gemini Advanced, and Claude.ai. These four systems together represent the dominant AI-mediated search surface as of mid-2026. Perplexity is the primary test target because it renders source citations explicitly and consistently — the operator can see exactly which articles were cited and with what URL. ChatGPT and Gemini are secondary targets, tested quarterly rather than monthly, because their citation rendering is less consistent and harder to audit programmatically.
+
+---
+
+## What GEO Intelligence Is
+
+Standard SEO tells you where you rank on a SERP. GEO Intelligence tells you something different: whether an AI system retrieved your content when forming its answer, whether it cited you explicitly, and whether the specific paragraph that should have been cited was actually used.
+
+This is a harder measurement problem than SEO for three reasons. First, AI search results are non-deterministic — the same query can return different answers on different runs. Second, citation behavior depends not just on backlinks or domain authority but on content structure: answer-first sentences, named entities, specific version numbers, and self-contained paragraphs all affect whether a chunk gets retrieved. Third, there is no equivalent of Google Search Console for AI engines — measurement requires active testing protocols, not passive data collection.
+
+The GEO Intelligence layer exists to make this measurement systematic. It does not require Phase 2 automation to be useful. The manual protocol described in this document — 20 tracked queries, monthly Perplexity tests, a structured spreadsheet — provides actionable signal from day one.
+
+---
+
+## AI Search Visibility Tracking
+
+### The 20-Query Test Protocol
+
+The visibility tracking protocol centers on a set of 20 target queries, each mapped to a specific article on the platform. These are not generic topic queries — they are the specific questions that each article was written to answer.
+
+**Protocol:**
+1. Define 20 queries from the platform's top content, one query per article (more for high-priority articles)
+2. Test each query in Perplexity AI, using the standard web search mode (not Academic or Focus modes)
+3. Record the result in one of four categories: **cited** (source link shown pointing to this platform), **mentioned** (content paraphrased without a link), **not found** (no reference to this platform or article), **wrong content cited** (a different article from this platform was cited instead of the target)
+4. Repeat monthly
+
+**Tracking schema (Airtable or spreadsheet):**
+
+| Column | Type | Notes |
+|---|---|---|
+| query | text | Exact query string tested |
+| target_article | URL | The specific article this query should cite |
+| test_date | date | ISO date of test run |
+| result | enum | cited / mentioned / not_found / wrong_cited |
+| citation_url | URL | URL shown in Perplexity if cited |
+| perplexity_excerpt | text | Relevant excerpt from Perplexity's answer |
+| notes | text | Observation about why result changed from last month |
+
+**Why Perplexity is the primary test target:** Perplexity shows numbered source citations with visible URLs in every answer. The operator can see exactly which source was used, what URL was cited, and compare the Perplexity answer text against the cited source to assess whether the citation is accurate. ChatGPT web search also shows citations, but the display is less consistent and the results vary more significantly between sessions. Gemini shows citations inconsistently depending on query type.
+
+### What Changes Citation Status Over Time
+
+Citation status is not static. Tracking the same queries monthly reveals which changes to the platform's content actually affect AI citation behavior.
+
+**Factors that improve citation status:**
+- Increasing entity density in the target article (more specific version numbers, exact command outputs, named tools)
+- Restructuring the answer-first sentence at each H2 heading to match the likely query phrasing
+- Adding a numbered procedure to a section that was previously prose-only
+- Publishing a newer version of the article with updated specifics that make it fresher than competing sources
+
+**Factors that degrade citation status:**
+- Competing content published on other sites that is more specific or more recently updated
+- Structural changes to the article that bury the answer deeper in the section
+- Removing specific values that were cited (version numbers, exact error messages) and replacing with general descriptions
+
+The monthly test log should capture what changed between tests — not just the result, but the likely reason for the change. Over 6 months, this produces a pattern log that identifies which content improvements actually move citation metrics.
+
+---
+
+## Citation Opportunity Mapping
+
+### Identifying Insertion Opportunities
+
+A citation opportunity is a query where AI systems give incomplete, generic, or incorrect answers. These gaps are not failures — they are insertion points. If Perplexity answers "how do I set up WordPress Application Passwords?" with three generic steps and no specific platform reference, that is an opportunity: the platform's WordPress automation content can fill that gap with more specific, more operational detail.
+
+Opportunity identification process:
+1. Search Perplexity for the query
+2. Assess the answer quality: is it specific? Does it reference exact versions or exact configuration steps? Does it have gaps the platform's content could fill?
+3. Check whether the platform already has content that addresses the gap
+4. If yes: score the content and identify what improvements would make it citation-worthy
+5. If no: flag as a content creation opportunity
+
+### Query Taxonomy
+
+The platform's content spans four query types, each with different citation patterns:
+
+| Query Type | Example | Citation Signal | Win Condition |
+|---|---|---|---|
+| **Definitional** | "what is a RAG pipeline" | AI systems often cite authoritative explainers | Clear definition sentence in first 50 words + concrete example with specific tools |
+| **Procedural** | "how to rollback a Vercel deployment" | AI systems cite step-by-step guides with specific commands | Numbered procedure + exact commands + expected output |
+| **Diagnostic** | "why does Next.js build fail on edge runtime" | AI systems cite error-specific troubleshooting content | Exact error message in H2 or first sentence + root cause + one-command fix |
+| **Operational** | "how to set up WordPress Application Password" | AI systems cite operational references with exact configuration values | Specific field values, exact URLs, version numbers |
+
+Diagnostic queries have the highest citation win rate on this platform because the content is inherently specific: it either contains the exact error message or it does not.
+
+### Opportunity Scoring
+
+Prioritize citation opportunities using this formula:
+
+**Opportunity score = (query monthly volume estimate) × (citation gap multiplier) × (content quality score)**
+
+Where:
+- **Query monthly volume estimate:** based on keyword research or Perplexity frequency signals. Scale: 1–10 (1 = very niche, 10 = high-volume)
+- **Citation gap multiplier:** current citation status: 0 (cited, no opportunity), 0.5 (mentioned without link — upgrade opportunity), 1.0 (not found — full opportunity)
+- **Content quality score:** 1–10 based on the answerability and specificity scoring (see below)
+
+A query with volume score 7, citation gap 1.0, and content quality score 4 scores 28 — high enough to prioritize for content improvement. Raising the content quality score from 4 to 8 doubles the opportunity value, and is often more achievable than finding new high-volume queries.
+
+---
+
+## Entity Coverage Auditing
+
+### What an Entity Is
+
+An entity is a specifically named, verifiable thing. It has a unique name that distinguishes it from similar things. It can be looked up or verified independently.
+
+**Entities on this platform:**
+- Tool versions: "Next.js 15.5.18", "next-mdx-remote v6", "gray-matter v4.0.3"
+- Service plan names: "Vercel Hobby plan", "WordPress.com Business plan"
+- Exact commands: `tsc --noEmit`, `vercel build`, `npx next lint`
+- Specific error messages: "Module not found: Can't resolve 'fs' in edge runtime"
+- Configuration values: `export const runtime = 'edge'`, `images.domains` array in `next.config.js`
+- Company and product names when used in specific operational context: "Supabase Auth", "Cloudflare R2"
+
+**Not entities:** "a deployment tool", "the version you installed", "your configuration file", "a common error".
+
+### Entity Coverage Audit Protocol
+
+The platform's content quality standard requires ≥3 named entities per 500-word block. The entity coverage audit verifies compliance across all published content.
+
+**Manual audit method:**
+1. Export or read the text of a published article
+2. Divide into 500-word blocks
+3. Count named entities per block (using the entity definition above — version numbers, exact commands, specific error messages, named products with version or plan specificity)
+4. Record the count per block and compute the average per article
+
+**Programmatic audit method (Phase 2):**
+Scan all MDX files in `/content/lessons/` and `/content/docs/`. For each file, extract text content (stripping MDX components and frontmatter). Apply regex patterns to count:
+- Version number patterns: `/v\d+\.\d+(\.\d+)?/g` and `/\d+\.\d+\.\d+/g`
+- Exact command patterns: backtick-delimited strings of 3+ characters
+- Quoted configuration values: strings in double quotes inside code blocks
+- Named product + qualifier combinations: "Next.js" followed by version, "Vercel" followed by plan name
+
+### Entity Priority Hierarchy
+
+Not all entities carry equal citation weight. AI systems prioritize entities that are specific and verifiable. The priority order for entity investment:
+
+| Priority | Entity Type | Example | GEO Value |
+|---|---|---|---|
+| 1 | Tool name + version number | "next-mdx-remote v6.0.0" | Highest — uniquely identifies a state in time |
+| 2 | Named command with exact syntax | `` `npx create-next-app@latest --typescript` `` | High — directly executable and verifiable |
+| 3 | Specific error message | "Type error: Property 'params' does not exist" | High — matches query intent for diagnostic searches |
+| 4 | Exact configuration value | `runtime: 'edge'` in `vercel.json` | Medium-high — operational specificity |
+| 5 | Company/product name | "Vercel", "Supabase" | Medium — context only, insufficient alone |
+
+Increasing entity density of types 1–3 has the highest impact on citation rate for diagnostic and procedural queries.
+
+---
+
+## Answerability Scoring
+
+### What Answerability Measures
+
+An answerability score measures whether a specific section of content independently answers its implied query. A section that scores highly on answerability can be extracted, read cold, and understood without reading the rest of the article. This is the property AI retrieval systems optimize for.
+
+A section that introduces a concept but requires another section to complete the answer scores low. A section that starts with a direct answer, provides specific detail, and ends with a verifiable outcome scores high.
+
+### Scoring Dimensions
+
+Score each H2 section on four dimensions, each 0–2.5 points, for a maximum of 10:
+
+| Dimension | 0 | 1 | 2.5 | Weight |
+|---|---|---|---|---|
+| **Answer-first compliance** | First sentence does not answer the heading | First sentence partially answers the heading | First sentence directly and completely answers the heading | 25% |
+| **Completeness** | Section introduces the concept but delegates the full answer elsewhere | Section covers the main answer but omits edge cases | Section covers the full answer including common variations and edge cases | 25% |
+| **Specificity** | All claims are general — no specific values, versions, or measurements | Some specific values present but major claims are general | Most claims supported by specific values, commands, or verifiable measurements | 25% |
+| **Self-containedness** | Section requires previous sections to understand | Section is mostly self-contained but references earlier definitions | Section is fully self-contained — a reader with relevant context could act on it without reading the rest of the article | 25% |
+
+**Target: ≥7/10 per H2 section across all published content.**
+
+Sections scoring below 5 should not be published at the current status. Sections scoring 5–6.9 can be published but are flagged for improvement. Sections scoring 7+ meet the publication gate for GEO purposes.
+
+### Computing the Score
+
+**Phase 1 (manual):** Apply the 4-dimension rubric to each H2 section during the content review stage. Record scores in the frontmatter or a linked audit spreadsheet. The content author completes the initial score; a second reviewer applies the rubric independently for calibration.
+
+**Phase 2 (LLM-assisted):** Pass each H2 section to a Claude API call with the rubric as the system prompt. Return a structured score object with dimension scores and one-sentence justification per dimension. Aggregate scores by article, by track, and by content type to identify systemic gaps.
+
+---
+
+## Retrieval Optimization
+
+### How AI Systems Retrieve Content
+
+RAG-based AI systems — including Perplexity's web retrieval layer and any internal embedding-based search — work by chunking content, embedding it, and retrieving chunks by vector similarity to the query. A chunk is typically 256–512 tokens (~200–400 words). The retrieved chunks are what gets passed to the language model for answer synthesis.
+
+This has a direct implication for content structure: each chunk must be independently meaningful. A chunk that begins mid-explanation, references a previous step by number, or opens with "As mentioned above" is retrieval-unfriendly. The model receives the chunk without its surrounding context and cannot synthesize a useful answer from it.
+
+### The Chunk Independence Test
+
+Take any 300–500 word excerpt from a lesson. Read it with no prior knowledge of what came before it. Ask:
+- Does this excerpt answer a coherent question on its own?
+- Does it include at least one specific named entity?
+- Does it avoid backward references ("as described in the previous section", "step 3 above", "the config we set earlier")?
+- Could an AI system include this excerpt verbatim in a useful answer?
+
+If the answer to all four is yes, the excerpt is retrieval-friendly. If two or more are no, the excerpt needs structural revision.
+
+### Structural Patterns That Improve Retrieval
+
+| Pattern | Example | Why It Works |
+|---|---|---|
+| **Definition sentence** | "A RAG pipeline is a retrieval system that fetches relevant documents before generating a response." | Self-contained, embeds well, answers definitional queries |
+| **Numbered procedure** | "1. Run `vercel build` locally. 2. Check the output for function size warnings. 3. If size exceeds 50MB, identify which dependency is largest with `npx cost-of-modules`." | Each step is atomic; the chunk is coherent even if only steps 2–3 are retrieved |
+| **Comparison table** | Two-column table: Local vs. Production behavior for a specific configuration | Tables embed as self-contained units; their structure survives chunking |
+| **Specific measurement** | "The cold start time for a Vercel Edge Function is typically 0–5ms, vs. 100–500ms for a serverless Node.js function on the same platform." | Specific values anchor the chunk to verifiable claims |
+
+The structural anti-patterns to avoid: paragraphs that begin with "This is because...", sections that open with "As we saw...", and transitions that reference previous content rather than restating the essential context.
+
+---
+
+## Operational Specificity Scoring
+
+### The Generic-to-Specific Spectrum
+
+Every claim in a piece of content sits somewhere on the generic-to-specific spectrum. Generic claims are harder to cite because they are not uniquely attributable — any article could make the same claim. Specific claims are citation-friendly because they carry verifiable information that the AI system can attribute to the source.
+
+| Generic | Specific |
+|---|---|
+| "Vercel deployment can fail" | "Vercel build stage failures fall into 3 categories: TypeScript compilation errors, missing environment variables required at build time, and Edge Runtime API incompatibilities" |
+| "Environment variables need to be set" | "Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the Vercel dashboard under Settings → Environment Variables, with scope set to Production and Preview" |
+| "Next.js has two rendering modes" | "Next.js 15 defaults to static rendering for all routes unless a dynamic function (`cookies()`, `headers()`, `searchParams`) is called, which triggers dynamic rendering at the route level" |
+
+The operational specificity score measures the ratio of specific claims to total claims across an article.
+
+### Computing the Specificity Score
+
+**Specificity score = count of specific claims with verifiable supporting detail ÷ total claims × 100%**
+
+A "specific claim" is a claim that includes at least one of: a version number, an exact command, an exact configuration value, a measurement (time, size, count), a specific error message, or a named product with qualifying context.
+
+**Target: ≥60% of claims have specific, verifiable supporting detail.**
+
+An article with 20 claims and 14 specific ones scores 70% — above the target. An article with 20 claims and 8 specific ones scores 40% — below the target, and a priority for specificity revision.
+
+### The GEO Citation Test
+
+Before publishing an article, identify the most operationally important paragraph — the one that most directly answers the target query for this content. Paste that paragraph as a query into Perplexity AI. Does Perplexity cite the platform's article?
+
+If yes: the paragraph is specific enough to compete for citations. Publish.
+
+If no: the paragraph is not specific enough. Before publishing, increase the entity density, sharpen the answer-first sentence, and add at least one verifiable measurement or exact command. Then test again.
+
+This test is a pre-publication gate, not just a post-publication audit. A failed citation test before publication is far less costly than an article that sits uncited for three months before it gets revised.
+
+---
+
+## Phase 2 Intelligence Dashboard
+
+Phase 2 moves the GEO intelligence system from manual spreadsheets to automated measurement. The infrastructure requirements are low — the MDX files and existing build pipeline provide all the necessary inputs.
+
+### Automated Components
+
+**Perplexity test runner (batch API):** A Node.js script that reads the 20-query test sheet, submits each query to the Perplexity API in batch, parses the citation list from each response, and checks whether any citation URL matches a platform article URL. Output: a JSON result file that populates the visibility tracking spreadsheet automatically. Run weekly via a scheduled GitHub Actions job.
+
+**Entity coverage computation:** A build-time script (`scripts/audit-entity-coverage.ts`) that scans all MDX files in `/content/lessons/` and `/content/docs/`, applies entity detection patterns (version numbers, backtick-delimited commands, quoted configuration values), and outputs entity density per 500-word block per article. Fails the build if any published article falls below the 3-entity-per-500-word minimum.
+
+**Answerability score aggregation:** A structured table of answerability scores stored in frontmatter (`answerability_score: 7.2`) and aggregated at build time. The ops page (`/ops`) surfaces the bottom-10 sections by answerability score as a prioritized revision list.
+
+**Citation velocity tracking:** The monthly Perplexity test log, once stored in structured JSON, enables velocity calculation: which articles gained citations in the last 30 days, which lost citations, and which have been uncited for 90+ days. Citation velocity is the primary GEO performance metric.
+
+### The Intelligence Dashboard: Ops Page Addition
+
+The GEO intelligence dashboard is an addition to the existing `/ops` page (or a linked sub-page at `/ops/geo`). It displays:
+
+- **GEO health by track:** a table showing each track's average answerability score, average specificity score, and citation rate (cited articles ÷ tracked articles)
+- **Citation status heatmap:** a grid of articles × months showing citation status over time
+- **Top opportunity list:** the 5 highest-scoring citation opportunities (by the opportunity formula above) that currently have `not_found` or `mentioned` status
+- **Entity coverage alerts:** articles below the 3-entity-per-500-word threshold, sorted by lesson completion status (available lessons first)
+
+No external database is required for Phase 2. The MDX frontmatter is the data store. The build pipeline is the ETL.
+
+---
+
+## Immediate Operational Actions
+
+Before Phase 2 automation is built, the manual protocol provides the same signal at lower frequency. These are the actions to take now.
+
+**Step 1: Create the 20-query test sheet.**
+Copy the tracking schema from this document into a spreadsheet or Airtable base. Identify the 20 queries — one per top article — that represent the platform's highest-value content. Prioritize: lessons marked `status: "available"` over coming-soon lessons, diagnostic and procedural content over definitional content (higher citation win rate), and tracks with the most complete lesson coverage.
+
+**Step 2: Run Perplexity tests on the 5 highest-priority articles.**
+Don't wait for the full 20-query test to be set up. Start with the 5 articles the platform is most confident about — the ones with the highest entity density, the clearest answer-first structure, and the most operational specificity. Test each one in Perplexity. Record the result. This takes 30 minutes and immediately establishes a baseline.
+
+**Step 3: Identify the 3 articles most likely to win citations with minor improvements.**
+Look for articles that scored `mentioned` (paraphrase without link) — these are the highest-leverage targets. The content is being retrieved and used; the citation conversion requires either more specific entity density or better answer-first structure, not a content rewrite.
+
+**Step 4: Set a monthly GEO audit reminder.**
+A GEO audit that runs once is a baseline. A GEO audit that runs monthly for 6 months is a trend line. The trend line is the intelligence. Set a recurring reminder for the first Monday of each month: run the 20-query Perplexity test, update the tracking sheet, and identify one article to prioritize for improvement.
+
+---
+
+*GEO Intelligence Architecture v1.0 — 2026-05-18.*

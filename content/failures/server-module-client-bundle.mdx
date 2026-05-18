@@ -9,7 +9,30 @@ failure_status: resolved
 failure_type: build
 project: ai-execution-lab
 resolution_time: 18 minutes
+recovery_complexity: minutes
+deployment_risk: high
+time_to_detect: "Immediate — next build fails with Module not found"
+repeat_risk: medium
 ---
+
+<FailureIntelligence
+  severity="high"
+  recoveryComplexity="minutes"
+  category="build"
+  deploymentRisk="high"
+  timeToDetect="Immediate — next build fails with Module not found: Can't resolve 'fs'"
+  repeatRisk="medium"
+  preventionPatterns={[
+    "Name server-only files with .server.ts suffix to make the boundary explicit at a glance",
+    "Before adding any Node.js import to a shared lib file, check whether that file is in any client component's import chain",
+    "Run next build locally after adding any new imports to lib/ files — catches this before it reaches Vercel",
+    "Use Next.js server-only package ('import server-only') in files that must not be client-accessible"
+  ]}
+  relatedFailures={[
+    { title: "Edge Runtime Deployment Failure", href: "/failures/edge-runtime-deployment-failure", relation: "same-root" }
+  ]}
+  ecosystemImpact={["Entire Next.js build fails — no deployment possible", "All new features blocked until boundary is fixed"]}
+/>
 
 <IncidentReport
   severity="high"

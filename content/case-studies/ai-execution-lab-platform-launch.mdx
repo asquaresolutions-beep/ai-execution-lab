@@ -1,0 +1,228 @@
+---
+title: "Building AI Execution Lab: From Zero to Production"
+description: "End-to-end case study: launching lab.asquaresolution.com — a public AI engineering journal built on Next.js 15 App Router, MDX content pipeline, Vercel deployment, custom content sections, and an execution tracks system."
+date: "2026-05-18"
+tags: ["case-study", "next.js", "vercel", "mdx", "launch", "deployment", "platform-build"]
+status: "published"
+impact: "Public AI engineering journal live at lab.asquaresolution.com with 300+ static pages, 9 tracks, 135+ lessons, 7 content sections, and a Failure Archive"
+stack: ["Next.js 15", "Vercel", "MDX", "TypeScript", "Tailwind CSS", "next-mdx-remote", "gray-matter"]
+duration: "~3 weeks intensive build"
+---
+
+<CaseStudyMeta
+  dateRange="March–May 2026"
+  duration="3 weeks"
+  difficulty="resolved"
+  stack={["Next.js 15", "TypeScript", "Tailwind CSS", "MDX", "next-mdx-remote", "gray-matter", "Vercel"]}
+  outcomes={[
+    { metric: "Public pages", before: "No public AI engineering journal", after: "300+ live static pages", delta: "0 → 300+" },
+    { metric: "Deployment", before: "Vercel deploy unknown", after: "Production on lab.asquaresolution.com", delta: "live" },
+    { metric: "Content sections", before: "Zero MDX content pipeline", after: "7 content sections + lesson system", delta: "+7 sections" },
+    { metric: "Track system", before: "No track system", after: "9 tracks, 135+ lessons", delta: "+9 tracks" }
+  ]}
+/>
+
+A public operational record of AI-native systems work required a platform purpose-built for operational density — not a blog, not a Notion workspace, not a GitHub wiki. This case study documents how AI Execution Lab was designed, built, and shipped in roughly three weeks as a solo build.
+
+---
+
+## Context
+
+**Property:** lab.asquaresolution.com — AI Execution Lab
+
+**Stack:** Next.js 15 App Router, TypeScript, Tailwind CSS, MDX via next-mdx-remote, Vercel deployment
+
+**Starting state:** Zero. No platform, no content pipeline, no deployment target, no audience-facing presence for A Square Solutions' AI engineering work.
+
+**Objective:** Ship a public journal that records real AI engineering work at operational fidelity — not summarized blog posts, but the actual methods, failures, decisions, and outcomes from building AI-native products and systems.
+
+---
+
+## The Problem With Existing Options
+
+There was no shortage of off-the-shelf solutions. The problem was fit. Each standard option failed a specific requirement:
+
+**Standard blog (WordPress, Ghost):** Content is flat articles. The work being documented has structure — tracks, lessons, playbooks, failure reports, systems docs, execution logs. Flat articles cannot represent that hierarchy without significant templating overhead, and none have an operational MDX component system.
+
+**Notion:** Works well for private documentation. Not designed for a public-facing journal with custom rendering, SEO-grade metadata, static site performance, or structured content sections that can be queried programmatically.
+
+**GitHub wiki or static site generator (Astro, Hugo):** Closer, but the lesson/track system required dynamic route generation with `generateStaticParams`, custom MDX components with structured props, and a frontmatter-driven content model that needed code-level control over rendering.
+
+The decision was to build a purpose-built platform using Next.js 15 App Router with an MDX content pipeline. Build time: estimated 2–3 weeks. Actual: 3 weeks, including 3 documented build failures.
+
+---
+
+## Architecture Decisions
+
+### Next.js 15 App Router
+
+The App Router enables a clean split between Server Components (content loading, static generation) and Client Components (interactive UI — track navigation, clipboard, scroll behavior). `generateStaticParams` drives the lesson route system: every track, module, and lesson combination generates a static HTML page at build time.
+
+The result is a fully static site with dynamic-quality routing and zero JavaScript execution overhead per page for content reads. Vercel deploys this as static files with edge delivery.
+
+### MDX Content Pipeline
+
+MDX was chosen because the content requirements exceeded what plain Markdown can represent. The platform needed:
+
+- Custom components with structured props (`items={[...]}`, `outcomes={[...]}`, `events={[...]}`)
+- Operational content blocks like `<IncidentReport>`, `<ExecutionEvidence>`, `<Callout>`, `<OperationalTimeline>`
+- Structured frontmatter for content metadata (tags, stack, difficulty, status, dates)
+
+`next-mdx-remote` handles the MDX serialization and component injection. `gray-matter` parses frontmatter for content queries and metadata generation.
+
+### Content Section Infrastructure
+
+All seven content sections (docs, systems, labs, case-studies, playbooks, failures, logs) share the same content access pattern via `lib/content.ts`:
+
+- `getAllMeta(section)` — reads all MDX files in the section, returns sorted frontmatter
+- `getItem(section, slug)` — returns frontmatter + raw MDX source for a single item
+- `getNeighbors(section, slug)` — returns prev/next items for navigation
+
+This abstraction means every section index page and every content slug page follows the same data loading pattern. Adding a new content section requires one directory and one route pair.
+
+### Lesson and Track System
+
+The lesson system is managed by `lib/tracks.ts`, which holds the `TRACKS` registry — a typed array of track definitions, each with modules and lesson slugs. `generateStaticParams` iterates the registry to generate every `[track]/[module]/[lesson]` static route at build time.
+
+The server/client boundary here is non-trivial: `lib/tracks.ts` is imported by client components for track navigation. File reading (`getLessonContent`) lives in a separate server-only file, `lib/lesson-content.ts`. Getting this boundary wrong caused a build failure (see: server module in client bundle, below).
+
+### Tailwind CSS Dark Theme
+
+Dark theme as default. Tailwind with a dark-first configuration. The design intent was readability for operational content: high-contrast text, minimal decoration, structured layout. No hero sections, no marketing-style landing pages in the content sections. The homepage presents what the platform is; content pages focus on content.
+
+---
+
+## Build Phases
+
+<OperationalTimeline
+  events={[
+    { date: "2026-03-15", event: "Platform scaffolding — Next.js 15 App Router initialized, Tailwind configured, Vercel deployment target set", type: "build", note: "First successful Vercel deploy" },
+    { date: "2026-03-22", event: "Content section infrastructure built — lib/content.ts, getAllMeta/getItem/getNeighbors, 7 section routes wired", type: "build" },
+    { date: "2026-03-29", event: "MDX component system Phase 1 — Callout, Checkpoint, LessonObjectives, StepList, Checklist, CaseStudyMeta", type: "build" },
+    { date: "2026-04-05", event: "Lesson and track system — lib/tracks.ts TRACKS registry, generateStaticParams, 5 initial lesson routes", type: "build" },
+    { date: "2026-04-12", event: "First content batch — 8 lessons, 2 playbooks, 1 system doc published to production", type: "milestone" },
+    { date: "2026-04-20", event: "Homepage and ops dashboard — section count, page count, tracks summary, recent activity", type: "build" },
+    { date: "2026-05-10", event: "Edge runtime failure — export const runtime = 'edge' in opengraph-image.tsx blocks entire deploy for 23 minutes", type: "failure", evidence: "/failures/edge-runtime-deployment-failure" },
+    { date: "2026-05-10", event: "Edge runtime fix — removed runtime export from opengraph-image.tsx, deployment restored", type: "fix" },
+    { date: "2026-05-12", event: "next-mdx-remote v6 upgrade — blockJS: true default strips array props from all custom components, 41 minutes to diagnose", type: "failure", evidence: "/failures/next-mdx-remote-v6-blockjs" },
+    { date: "2026-05-12", event: "blockJS: false set in content-renderer.tsx, full MDX component rendering restored", type: "fix" },
+    { date: "2026-05-14", event: "Tracks Phase 4 + Failure Archive — 8-module Claude Code Operator track, Failure Archive section, 3 failure reports", type: "build" },
+    { date: "2026-05-14", event: "Server module in client bundle — fs import in lib/tracks.ts breaks build, 18 minutes to resolve via module split", type: "failure", evidence: "/failures/server-module-client-bundle" },
+    { date: "2026-05-17", event: "Launch stabilization — metadata audit, 7 section index pages OG/Twitter fixed, accessibility fixes, 3 operational docs", type: "milestone" },
+    { date: "2026-05-17", event: "149-page build passing, 0 TypeScript errors, platform declared production-ready", type: "measurement" },
+    { date: "2026-05-18", event: "Platform public — lab.asquaresolution.com live, sitemap submitted, first case studies published", type: "milestone" }
+  ]}
+/>
+
+---
+
+## Failures Encountered
+
+Three build failures occurred during the platform build. Each was documented as a first-class failure report with timeline, root cause, and prevention pattern. This is one of the platform's own features being used on itself.
+
+### 1. Edge Runtime Deployment Failure
+
+`export const runtime = 'edge'` was added to `app/opengraph-image.tsx` during a refactor pass on route handler patterns. The Edge Runtime does not support the Node.js `crypto` module, which `next/og` uses internally. The failure only surfaces on Vercel's actual edge workers, not in `next build` locally.
+
+**Impact:** Full deployment blocked for 23 minutes. Every push to main failed until the export was reverted.
+
+Full report: [Edge Runtime Deployment Failure](/failures/edge-runtime-deployment-failure)
+
+### 2. next-mdx-remote v6 blockJS Default
+
+Upgrading `next-mdx-remote` from v5 to v6 silently broke every MDX component that used array or object literal props. The v6 release introduced `blockJS: true` as a new default, activating the `removeJavaScriptExpressions` remark plugin. This plugin strips all JavaScript expressions from MDX source during serialization — including `items={['step one', 'step two']}` props.
+
+The failure was silent: the build compiled without errors, TypeScript passed, all pages returned HTTP 200. Components simply rendered empty. Detection required visual inspection of rendered pages.
+
+**Resolution:** Set `blockJS: false` in `compileMDX` options inside `content-renderer.tsx`. One line. The option is documented at the call site with an explanation of why the opt-out is intentional.
+
+Full report: [next-mdx-remote v6 blockJS Default](/failures/next-mdx-remote-v6-blockjs)
+
+### 3. Server Module in Client Bundle
+
+Adding `getLessonContent()` to `lib/tracks.ts` introduced `import fs from 'fs'` at the top level. `components/tracks/track-roadmap.tsx` is a `'use client'` component that imports from `lib/tracks.ts`. Next.js follows the full import chain when bundling client components — `fs` cannot be included in a browser bundle.
+
+**Impact:** `next build` failed immediately with `Module not found: Can't resolve 'fs'`. Entire deployment blocked.
+
+**Resolution:** Moved `getLessonContent()` to a new server-only file, `lib/lesson-content.ts`. Removed `fs` and `path` imports from `lib/tracks.ts`. The lesson page (a Server Component) imports from the new location. Build restored in 18 minutes.
+
+Full report: [Node.js fs Module Pulled into Client Bundle](/failures/server-module-client-bundle)
+
+---
+
+## Measurable Outcomes
+
+**At launch (2026-05-18):**
+
+| Metric | Value |
+|---|---|
+| Static pages generated | 300+ |
+| Build errors | 0 |
+| TypeScript errors | 0 |
+| Content sections | 7 (docs, systems, labs, case-studies, playbooks, failures, logs) |
+| Execution tracks | 9 |
+| Lesson types | 5 (lesson, playbook, lab, checkpoint, project) |
+| MDX components | 25+ |
+| Failure reports with full evidence | 3 |
+| Build time (Vercel) | ~45s |
+
+**Deployment:** Production on Vercel, custom domain `lab.asquaresolution.com` via Vercel nameserver delegation from Hostinger DNS.
+
+**SEO readiness:** All content pages have full OG article metadata, Twitter card, canonical URL, and dynamic OG image. All 7 section index pages have `buildSectionMetadata` with OG/Twitter/canonical. TechArticle and Article JSON-LD on content pages, WebSite + Organization schemas in layout.
+
+---
+
+## Operational Lessons
+
+**1. blockJS: false is the correct default for author-controlled MDX pipelines.**
+
+`next-mdx-remote` v6 ships `blockJS: true` for legitimate security reasons on platforms that accept user-submitted MDX. On a static site where the MDX is developer-authored and committed to a private repository, `blockJS: true` provides zero security value and breaks all components with structured props. Set `blockJS: false` explicitly and document why at the call site. This one default cost 41 minutes and would have cost the same time again in a future session without documentation.
+
+**2. CLAUDE.md architecture is critical for multi-session build continuity.**
+
+The platform was built across multiple Claude Code sessions. Without a maintained `CLAUDE.md` capturing the content model, component catalog, section structure, and file conventions, each session starts cold. The CLAUDE.md file is not documentation for humans first — it is operational context for the AI model. Treat it as infrastructure, not as an afterthought.
+
+**3. Test every lesson type after any MDX dependency upgrade.**
+
+The `blockJS` failure was invisible to build checks, TypeScript, and HTTP tests. Detection required visual inspection of a rendered page. The prevention pattern is a post-upgrade visual checklist: open one page of each component type (`StepList`, `Checklist`, `LessonObjectives`, `CaseStudyMeta`, `OperationalTimeline`) and verify content renders. This is not automatable without visual regression testing, which requires separate infrastructure. Manual spot checks are the practical mitigation.
+
+**4. The server/client boundary in Next.js is transitive and requires active management.**
+
+Any shared `lib/` file that grows to include server-only functionality (file system access, database calls, crypto operations) must be split if it is already imported by any client component. The error surfaces immediately in `next build` — but only then. Local `next dev` can be more lenient. The convention of naming server-only files `*.server.ts` makes the boundary visible at a glance.
+
+---
+
+## What Would Be Done Differently
+
+**Start with content quality standards defined.** The content model (frontmatter schema per section, component conventions, tone standards) was assembled incrementally. This created cleanup debt — older content had to be updated when conventions solidified. Defining the content quality standards in `CLAUDE.md` before writing the first piece of content would eliminate this.
+
+**Build the ops page earlier.** The platform's homepage metrics (page count, track count, section count) were added late. Having a live page count display earlier would have surfaced build regressions faster and provided a useful indicator of platform progress.
+
+**Define the lesson frontmatter schema before writing content.** The `difficulty`, `type`, `duration`, and `status` fields on lessons were added iteratively. Lessons written early in the build had incomplete frontmatter that had to be backfilled. A one-page frontmatter reference written before the first lesson would have prevented this.
+
+---
+
+## What This Demonstrates
+
+Building a production-quality MDX platform in three weeks as a solo operator is achievable with Next.js 15 App Router and Vercel, provided the architecture decisions (server/client boundary, content abstraction layer, MDX pipeline configuration) are resolved before content volume accumulates. The failures that occurred — edge runtime, blockJS default, server module boundary — are each a one-time tax that, once resolved and documented, do not recur. The documentation infrastructure (Failure Archive, operational logs, this case study) is the mechanism by which one-time failures stay one-time.
+
+---
+
+## Repeatable Elements
+
+- [ ] Use `lib/content.ts` with `getAllMeta/getItem/getNeighbors` as the content access abstraction for every section
+- [ ] Set `blockJS: false` in `compileMDX` options for any author-controlled MDX pipeline using `next-mdx-remote`
+- [ ] Split server-only functions into `*.server.ts` files before any `lib/` file is imported by client components
+- [ ] Never add `export const runtime = 'edge'` to any route that uses `next/og`, `sharp`, or any Node.js built-in
+- [ ] Verify all MDX component types render correctly after any dependency upgrade — visual inspection, not just build status
+- [ ] Use `generateStaticParams` for any route system with a known-at-build-time parameter set
+
+---
+
+## Related
+
+- [Edge Runtime Deployment Failure](/failures/edge-runtime-deployment-failure)
+- [next-mdx-remote v6 blockJS Default](/failures/next-mdx-remote-v6-blockjs)
+- [Node.js fs Module Pulled into Client Bundle](/failures/server-module-client-bundle)
+- [Tracks Phase 4 + Failure Archive Build](/logs/2026-05-14-tracks-failure-archive-build)
+- [Launch Stabilization — Production Audit](/logs/2026-05-17-launch-stabilization-audit)

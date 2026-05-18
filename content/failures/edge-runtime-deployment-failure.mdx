@@ -9,6 +9,10 @@ failure_status: resolved
 failure_type: deployment
 project: ai-execution-lab
 resolution_time: 23 minutes
+recovery_complexity: minutes
+deployment_risk: high
+time_to_detect: "2 minutes — next push after the change"
+repeat_risk: low
 ---
 
 <IncidentReport
@@ -18,6 +22,25 @@ resolution_time: 23 minutes
   rootCause="app/opengraph-image.tsx had export const runtime = 'edge' added during a refactor. The Edge Runtime does not support the Node.js crypto module, which next/og uses internally for image generation. Vercel's build succeeded locally (Node.js runtime) but failed on the edge worker."
   resolution="Removed the runtime export from opengraph-image.tsx. Next.js defaults OG image routes to the Node.js runtime, which is correct for next/og. The edge export was unnecessary and incorrect."
   prevention="Never add export const runtime = 'edge' to opengraph-image.tsx or route.ts files that use next/og or any Node.js built-ins. The edge runtime supports a restricted API surface — check the Vercel edge compatibility table before adding this export to any file."
+/>
+
+<FailureIntelligence
+  severity="high"
+  recoveryComplexity="minutes"
+  category="deployment"
+  deploymentRisk="high"
+  timeToDetect="2 minutes — next push after the change"
+  repeatRisk="low"
+  preventionPatterns={[
+    "Never add export const runtime = 'edge' to files that use next/og, sharp, or any Node.js crypto/fs/path APIs",
+    "Check the Vercel edge runtime compatibility table before adding the edge export to any new file",
+    "Run next build locally after adding any runtime export — the error surfaces during static page generation",
+    "Maintain a per-file comment: '// Do not add edge runtime — uses next/og (Node.js only)'"
+  ]}
+  relatedFailures={[
+    { title: "Node.js fs Module Pulled into Client Bundle", href: "/failures/server-module-client-bundle", relation: "same-category" }
+  ]}
+  ecosystemImpact={["Blocks all Vercel deployments until resolved", "Production site freezes at last successful deploy"]}
 />
 
 <ExecutionEvidence

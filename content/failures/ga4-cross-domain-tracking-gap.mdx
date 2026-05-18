@@ -1,0 +1,129 @@
+---
+title: "GA4 Cross-Domain Tracking Not Unified Across Subdomains"
+description: "GA4 was tracking asquaresolution.com, lab.asquaresolution.com, trustseal.asquaresolution.com, and scamcheck.asquaresolution.com as separate sessions when users crossed subdomains. Caused inflated session counts and broken user journeys."
+date: "2026-04-20"
+tags: ["ga4", "analytics", "cross-domain", "tracking", "subdomains"]
+status: published
+severity: low
+failure_status: resolved
+failure_type: configuration
+project: asquaresolution-ecosystem
+resolution_time: 2 hours
+recovery_complexity: hours
+deployment_risk: low
+time_to_detect: "Noticed in GA4 reports — unusually high new session rate for direct traffic"
+repeat_risk: medium
+---
+
+<IncidentReport
+  severity="low"
+  status="resolved"
+  impact="User journeys across the A Square Solutions property ecosystem were fragmented in GA4. A user who visited asquaresolution.com and then navigated to scamcheck.asquaresolution.com appeared as two separate users in two separate sessions. Session counts were inflated, direct traffic attribution was overstated, and funnel analysis across properties was unreliable."
+  rootCause="GA4 treats different hostnames as different domains by default, even when they share a parent domain. The GA4 cookie is set for the specific hostname, not the parent domain. Navigating from asquaresolution.com to lab.asquaresolution.com causes the browser to make a fresh request with no GA4 session cookie, starting a new session attributed to direct traffic."
+  resolution="Configured cross-domain measurement in GA4 Admin → Data Streams → Configure Tag Settings → Configure your domains. Added asquaresolution.com as a cross-domain target (which covers all subdomains). Updated the gtag configuration on all four properties to set cookie_domain: 'asquaresolution.com'. Verified in Realtime that subdomain navigation shows as one continuous session."
+  prevention="Configure cross-domain measurement as part of the initial GA4 setup — before any property in the ecosystem goes live. Never launch a multi-subdomain product without verifying that GA4 treats navigation between subdomains as a single session."
+/>
+
+<FailureIntelligence
+  severity="low"
+  recoveryComplexity="hours"
+  category="configuration"
+  deploymentRisk="low"
+  timeToDetect="Noticed in GA4 reports — unusually high new session rate for direct traffic"
+  repeatRisk="medium"
+  preventionPatterns={[
+    "Configure GA4 cross-domain measurement before the first property in any multi-subdomain ecosystem goes live",
+    "Add cross-domain setup to the analytics configuration checklist alongside GA4 tag installation",
+    "Verify subdomain tracking in GA4 Realtime immediately after configuring — navigate between subdomains and confirm one session",
+    "Set cookie_domain to the parent domain in all gtag configurations across the ecosystem",
+    "Review GA4 Acquisition reports in the first week after launch — unusually high direct traffic is a signal that session stitching is broken"
+  ]}
+  relatedFailures={[
+    { title: "Missing Production Environment Variable Caused Silent Feature Failure", href: "/failures/environment-variable-missing-production", relation: "same-category" }
+  ]}
+  ecosystemImpact={["Session counts inflated across all properties", "Cross-property user journey analysis is unreliable", "Direct traffic attribution overstated — actual referral sources masked"]}
+/>
+
+## What Happened
+
+All four A Square Solutions properties share one GA4 property (G-MPQVF41ZYM) and had the tracking tag installed correctly on each:
+
+- asquaresolution.com (WordPress)
+- lab.asquaresolution.com (AI Execution Lab)
+- trustseal.asquaresolution.com (TrustSeal app)
+- scamcheck.asquaresolution.com (ScamCheck app)
+
+The GA4 tag was working — pageviews were being recorded on every property. The problem was identified while reviewing the Acquisition report: direct traffic numbers were unusually high relative to expected referral patterns. The session count per page was also higher than the pageview-to-session ratio should be.
+
+The signal that revealed the issue: a test navigation from asquaresolution.com to scamcheck.asquaresolution.com, checked in GA4 Realtime, showed two separate active users — not one.
+
+## Why GA4 Breaks Sessions Across Subdomains
+
+GA4 sets a first-party cookie (`_ga`) on the user's browser to maintain session and user identity. By default, this cookie is scoped to the exact hostname — `asquaresolution.com` sets a cookie for `asquaresolution.com`, and `scamcheck.asquaresolution.com` sets a different cookie for `scamcheck.asquaresolution.com`.
+
+When a user navigates from one subdomain to another:
+
+1. The browser leaves the first domain — GA4 session ends
+2. The browser arrives at the second domain — GA4 finds no cookie, starts a new session
+3. The new session is attributed to "direct" because there is no referrer (or the referrer is filtered out as same-domain)
+
+The result: one user journey appears as two or more sessions, each starting from "direct."
+
+<Callout type="info" title="This is a configuration issue, not a data quality guarantee">
+Fixing cross-domain tracking going forward does not retroactively correct historical data. Sessions recorded before the fix are already fragmented in GA4. Plan for a 2-4 week window after the fix before cross-property analysis is reliable.
+</Callout>
+
+## The Fix
+
+**Step 1: Configure cross-domain measurement in GA4**
+
+GA4 Admin → Data Streams → Web stream → Configure Tag Settings → Configure your domains.
+
+Add: `asquaresolution.com`
+
+GA4 automatically includes all subdomains when the parent domain is configured. This tells GA4 to pass session information via URL parameters when navigating between these domains.
+
+**Step 2: Update gtag configuration on all properties**
+
+For each property's GA4 tag installation, add `cookie_domain`:
+
+```javascript
+gtag('config', 'G-MPQVF41ZYM', {
+  cookie_domain: 'asquaresolution.com'
+});
+```
+
+Setting `cookie_domain` to the parent domain means the `_ga` cookie is set at `asquaresolution.com` level — accessible to all subdomains. A user's identity persists as they navigate across the ecosystem.
+
+For the WordPress main site (asquaresolution.com), the gtag config is managed through the GA4 WordPress plugin settings or directly in the theme's header template. For the React/Vite apps (TrustSeal, ScamCheck), the gtag snippet is in `index.html`.
+
+## Verifying the Fix
+
+Two verification steps:
+
+**Realtime check:** Open GA4 → Reports → Realtime. Open a browser and navigate from asquaresolution.com to scamcheck.asquaresolution.com. The Realtime report should show one active user, not two. The session should continue without a gap.
+
+**Acquisition report:** Check the Acquisition → Traffic Acquisition report after a week of normal traffic. Cross-subdomain navigation should appear as an internal referral or — better — not appear as a new session at all. If direct traffic drops noticeably after the fix is applied, that confirms the previous inflation was caused by broken session stitching.
+
+## The Shared GA4 Property Approach
+
+Using one GA4 property (G-MPQVF41ZYM) across all four subdomains is the correct architecture for measuring ecosystem-wide behavior. Each subdomain is configured as a separate data stream within the same property, which means:
+
+- Cross-property user journeys are tracked as one session
+- Each stream still reports its own pageviews and events independently
+- The combined property view shows aggregate ecosystem behavior
+- Individual stream filters allow per-subdomain analysis when needed
+
+The alternative — separate GA4 properties per subdomain — would make cross-property analysis permanently difficult and require data blending to reconstruct user journeys.
+
+## Prevention Pattern
+
+For any future multi-subdomain product:
+
+1. Install the GA4 tag on all properties before any goes live
+2. Configure cross-domain measurement in GA4 Admin before the first property is publicly accessible
+3. Set `cookie_domain` to the parent domain in every gtag config call
+4. Test with the Realtime report immediately — navigate between subdomains, confirm one session
+5. Add cross-domain measurement to the analytics setup checklist as a required step, not an optional one
+
+The fix takes under 30 minutes to configure. The inflated data it prevents is worth far more than that in reliable analysis.

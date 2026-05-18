@@ -1,0 +1,145 @@
+---
+title: "Missing Production Environment Variable Caused Silent Feature Failure"
+description: "A new Gemini API key environment variable was added to .env.local but not to Vercel production. Feature worked locally and in dev but silently returned undefined in production. Root cause: variable scoped to Development only."
+date: "2026-04-05"
+tags: ["environment-variables", "vercel", "gemini", "production", "debugging"]
+status: published
+severity: high
+failure_status: resolved
+failure_type: configuration
+project: ai-execution-lab
+resolution_time: 52 minutes
+recovery_complexity: minutes
+deployment_risk: high
+time_to_detect: "Found after user testing in production — feature appeared to work in dev"
+repeat_risk: high
+---
+
+<IncidentReport
+  severity="high"
+  status="resolved"
+  impact="The Gemini-powered feature was completely non-functional in production. Users received a generic error message with no actionable information. The feature appeared fully working in all local and preview testing. The gap between apparent readiness and actual production state was invisible until end-to-end user testing."
+  rootCause="GEMINI_API_KEY was added to .env.local for local development. When added to the Vercel dashboard, only the Development scope was checked — not Production or Preview. process.env.GEMINI_API_KEY returned undefined in all production builds. The error handling caught the resulting API failure but swallowed the specific cause, surfacing only a generic 'Something went wrong' message."
+  resolution="Updated the GEMINI_API_KEY variable in Vercel dashboard to include the Production scope. Triggered a redeploy. Feature worked immediately. Added explicit env var validation at startup to fail loudly if required variables are absent."
+  prevention="After deploying any feature that depends on a new environment variable, verify the variable exists in Vercel Production scope before marking the feature as ready. Add startup validation that throws an explicit error for any missing required variable."
+/>
+
+<FailureIntelligence
+  severity="high"
+  recoveryComplexity="minutes"
+  category="configuration"
+  deploymentRisk="high"
+  timeToDetect="Found after user testing in production — feature appeared to work in dev"
+  repeatRisk="high"
+  preventionPatterns={[
+    "After adding any new env var locally, immediately add it to Vercel Production scope before deploying",
+    "Add a startup env validation function that throws explicitly for each required variable",
+    "Create a .env.example file listing all required variables — diff it against Vercel dashboard before each deploy",
+    "Check Vercel deployment logs for 'undefined' warnings after every deploy that introduces a new env var",
+    "Never catch API errors with a generic handler alone — always log the specific error cause even if the user message is generic"
+  ]}
+  relatedFailures={[
+    { title: "WordPress REST API Authentication Failure", href: "/failures/wordpress-rest-api-auth-failure", relation: "same-category" }
+  ]}
+  ecosystemImpact={["Feature silently non-functional in production while appearing to work in development", "No build error, no TypeScript error, no deployment warning — failure is invisible until runtime"]}
+/>
+
+## What Happened
+
+A new feature was built using the Gemini API. The API key was added to `.env.local` for local development. The feature was tested thoroughly — multiple input types, edge cases, error states. Everything worked. The feature was deployed to Vercel.
+
+In production, the feature returned a generic error message on every attempt. No specifics, no hint of what failed. The build had succeeded. TypeScript reported no errors. The deployment logs looked clean.
+
+The feature was broken in production from the moment it was deployed and would have stayed broken indefinitely without explicit user-facing testing.
+
+## The Root Cause
+
+Vercel environment variables have scope settings:
+
+- **Development** — available in `vercel dev` (local development server)
+- **Preview** — available in preview deployments (pull request branches)
+- **Production** — available in production builds
+
+When `GEMINI_API_KEY` was added to the Vercel dashboard, only the Development scope was checked. The variable existed for local dev but was absent from every production build.
+
+`process.env.GEMINI_API_KEY` returned `undefined` in production. The code passed `undefined` as the API key to the Gemini client, which threw an authentication error. That error was caught by a generic catch block:
+
+```typescript
+try {
+  const result = await callGemini(prompt)
+  return result
+} catch (error) {
+  return { error: 'Something went wrong.' }
+}
+```
+
+The specific error — "API key is required" or "Invalid API key" — was discarded. The user saw a useless message. The developer saw no trace of the actual failure.
+
+<Callout type="danger" title="Vercel scope is not intuitive">
+Adding a variable to Vercel with Development scope does not make it available in production. The scopes are independent checkboxes. A variable added for local dev is invisible to production builds unless Production is explicitly checked.
+</Callout>
+
+## The Diagnostic Path
+
+The path from "something went wrong" to "missing production env var":
+
+1. Checked browser network tab — API route returned 500
+2. Checked Vercel deployment logs for the specific API route invocation — found the generic error string, no stack trace
+3. Added temporary logging to the catch block to surface the actual error (deployed a debug build)
+4. Log showed: `Error: GEMINI_API_KEY is not defined`
+5. Checked Vercel dashboard → Project → Settings → Environment Variables
+6. Found `GEMINI_API_KEY` listed with scope: Development only
+7. Updated scope to include Production
+8. Triggered redeploy — feature worked immediately
+
+Total time: 52 minutes. Most of it spent on steps 1-4 because the error was swallowed at the source.
+
+## The Fail-Loudly Pattern
+
+The fix to prevent this class of failure from being silent: validate required environment variables at module load time and throw explicitly.
+
+```typescript
+// lib/gemini.ts
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? (() => {
+  throw new Error('GEMINI_API_KEY is required but not set in the environment')
+})()
+```
+
+With this pattern, a missing variable throws at import time — not buried inside a user-facing try/catch. The error surfaces in Vercel's function logs immediately on the first invocation, with a clear message pointing directly at the cause.
+
+For a startup validation function across all required variables:
+
+```typescript
+// lib/env.ts
+export function validateEnv() {
+  const required = ['GEMINI_API_KEY', 'NEXT_PUBLIC_BASE_URL']
+  const missing = required.filter(key => !process.env[key])
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
+  }
+}
+```
+
+Call `validateEnv()` in the top-level server entry point or in API route handlers that depend on those variables.
+
+## The `.env.example` Discipline
+
+Maintaining a `.env.example` file with all required variable names (values omitted) serves as a diff target before any deployment:
+
+```bash
+# .env.example
+GEMINI_API_KEY=
+NEXT_PUBLIC_BASE_URL=
+```
+
+Before deploying a feature that adds a new env var: compare `.env.example` against the Vercel dashboard variable list. If a variable is in `.env.example` and not in Vercel Production scope, the deployment should be blocked.
+
+## Prevention Pattern
+
+The three-step sequence for any feature that requires a new environment variable:
+
+1. Add the variable to `.env.local` for local development
+2. Immediately add the variable to Vercel with all required scopes (Development, Preview, Production) — do this before the first deployment
+3. Add the variable name to `.env.example`
+
+The mistake is treating step 1 and step 2 as the same step. They are not. `.env.local` is local only. Vercel requires explicit configuration for each deployment environment.

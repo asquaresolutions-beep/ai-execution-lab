@@ -1,0 +1,110 @@
+---
+title: "Subdomain DNS Propagation Delay Blocked Deployment Testing"
+description: "New subdomain scamcheck.asquaresolution.com propagated in some regions after 20 minutes but took 4 hours to fully propagate globally. Caused inconsistent test results and premature go-live."
+date: "2026-03-22"
+tags: ["dns", "subdomain", "propagation", "deployment", "github-pages", "vercel"]
+status: published
+severity: medium
+failure_status: resolved
+failure_type: deployment
+project: scamcheck
+resolution_time: "4 hours (propagation wait)"
+recovery_complexity: hours
+deployment_risk: medium
+time_to_detect: "Appears resolved after 20 minutes, fails for other regions/users"
+repeat_risk: high
+---
+
+<IncidentReport
+  severity="medium"
+  status="resolved"
+  impact="scamcheck.asquaresolution.com was announced as live after 20 minutes but remained inaccessible to users on resolvers that had not yet propagated the new CNAME record. Reports of 404 and 'site not found' from some users while others had it working. Inconsistent behavior continued for approximately 4 hours after the DNS record was created."
+  rootCause="DNS propagation is not instantaneous or globally uniform. Different resolvers (ISPs, Google 8.8.8.8, Cloudflare 1.1.1.1) cache records with different TTLs and refresh at different intervals. The CNAME record had propagated to local resolvers within 20 minutes, which made the site appear live locally. Other global resolvers had not yet picked up the change."
+  resolution="Waited for full propagation. Verified using dnschecker.org before confirming the domain as live. Used whatsmydns.net to check CNAME resolution from multiple global server locations. Established a minimum 2-hour wait policy before marking any new DNS record as fully live."
+  prevention="After creating a DNS record, check propagation using dnschecker.org or whatsmydns.net — do not rely on your own browser. Wait until at least 90% of checked locations show the correct record before announcing the domain as live. Add an additional 15-30 minutes for GitHub Pages HTTPS certificate provisioning after DNS propagates."
+/>
+
+<FailureIntelligence
+  severity="medium"
+  recoveryComplexity="hours"
+  category="deployment"
+  deploymentRisk="medium"
+  timeToDetect="Appears resolved after 20 minutes, fails for other regions/users"
+  repeatRisk="high"
+  preventionPatterns={[
+    "Use dnschecker.org or whatsmydns.net to verify global propagation — never rely on your local browser alone",
+    "Wait a minimum of 2 hours after creating a DNS record before marking a domain as live",
+    "Check GitHub Pages 'Enforce HTTPS' availability as a proxy for full propagation — it only becomes available after DNS is complete",
+    "Add DNS propagation wait to the deployment checklist so it is never skipped under time pressure",
+    "Set low TTL values (300s) on DNS records before making changes to reduce future propagation windows"
+  ]}
+  relatedFailures={[
+    { title: "Vite SPA Routing on GitHub Pages 404s on Refresh", href: "/failures/vite-github-pages-spa-routing", relation: "same-category" }
+  ]}
+  ecosystemImpact={["Inconsistent site availability across user geographies", "GitHub Pages HTTPS certificate cannot be provisioned until DNS propagates — users see certificate errors", "Premature go-live announcements create support confusion"]}
+/>
+
+## What Happened
+
+ScamCheck was ready to go live at scamcheck.asquaresolution.com. The GitHub Pages deployment was complete, the CNAME file was in the repository, and the DNS record was created: a CNAME pointing `scamcheck.asquaresolution.com` to `asquaresolutions-beep.github.io`.
+
+Twenty minutes after creating the record, the subdomain loaded correctly in the local browser. The deployment was announced as live.
+
+Within the hour, reports came back: some users were seeing "site not found," others a 404, and some had it working fine. The same URL, different results depending on who was asking.
+
+## Why DNS Propagation Is Not Instant or Uniform
+
+When a DNS record is created or changed, the update does not instantly broadcast to every DNS server on the internet. Instead:
+
+1. The authoritative nameserver (the DNS provider) holds the new record immediately
+2. Recursive resolvers (Google 8.8.8.8, Cloudflare 1.1.1.1, your ISP's resolver) query the authoritative server on their own schedule
+3. Each resolver caches records for the duration of the TTL (Time to Live) set on the record
+4. Until a resolver's cache expires and it re-queries, it serves the old (or non-existent) record
+
+TTLs vary. A record with a 3600s TTL can sit stale in a resolver's cache for up to an hour. Lower-TTL records propagate faster. The record that was created had a TTL of 3600 — meaning some resolvers could hold an empty cache for up to an hour before checking for the new record.
+
+The result: the domain works for users on resolvers that have already queried and cached the new record, and fails for users on resolvers that haven't. Twenty minutes is enough time for local and some major resolvers. Full global coverage typically requires 2-4 hours, sometimes longer.
+
+<Callout type="warn" title="Your browser is not a reliable propagation check">
+Your local DNS resolver is often one of the fastest to pick up new records — especially if you use Google or Cloudflare as your resolver. Seeing the site load locally after 20 minutes tells you your resolver has the record. It says nothing about the rest of the world.
+</Callout>
+
+## How to Verify Propagation Properly
+
+Two tools that check a DNS record from multiple global server locations simultaneously:
+
+- **dnschecker.org** — visual map, shows pass/fail per location
+- **whatsmydns.net** — text results with IP addresses, good for CNAME verification
+
+The workflow:
+
+1. Create the DNS record
+2. Wait 20-30 minutes
+3. Check dnschecker.org for the CNAME record
+4. Wait until 90%+ of locations show the correct value
+5. Verify the GitHub Pages custom domain setting shows the domain without an error flag
+6. Wait for the "Enforce HTTPS" checkbox in GitHub Pages settings to become available (not greyed out) — this confirms the Let's Encrypt certificate has been issued
+7. Mark as live
+
+## The GitHub Pages HTTPS Certificate Dependency
+
+There is a second time-gate that compounds the propagation delay: the HTTPS certificate.
+
+GitHub Pages provisions Let's Encrypt certificates automatically for custom domains. This process cannot begin until DNS propagation is sufficiently complete — GitHub's servers need to be able to resolve the domain and verify ownership. Certificate issuance typically adds 15-30 minutes after DNS propagates.
+
+Until the certificate is issued, the domain serves over HTTP only, or shows a certificate error in browsers that enforce HTTPS. The GitHub Pages settings page shows the HTTPS status clearly: the "Enforce HTTPS" checkbox is greyed out until the certificate is ready.
+
+Both conditions must be met before the domain is truly live:
+1. DNS propagated (check with dnschecker.org)
+2. HTTPS certificate provisioned (check GitHub Pages settings)
+
+## Prevention Pattern
+
+After creating any new DNS record:
+
+1. Wait a minimum of 2 hours before considering the domain live
+2. Verify with dnschecker.org — do not rely on local browser testing
+3. Confirm GitHub Pages shows "Enforce HTTPS" as available before any announcement
+4. If the domain needs to go live quickly: set the DNS record TTL to 300 seconds (5 minutes) *before* making the change — this reduces how long stale records persist in caches
+
+The 2-hour wait feels slow. Announcing 4 hours late because of inconsistent user reports feels slower.
