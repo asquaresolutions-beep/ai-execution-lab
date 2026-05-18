@@ -1,0 +1,266 @@
+---
+title: "Rollback Strategies"
+description: "Instant rollback patterns when a deployment breaks production — Vercel deployment history, git revert, and the decision tree for choosing the right recovery path."
+date: "2026-05-18"
+tags: ["deployment", "vercel", "rollback", "recovery", "production", "claude-code"]
+status: "published"
+---
+
+Production is broken. The first question is not "what caused it" — that's the second question. The first question is: what is the fastest path to a working site? That answer determines everything you do in the next 60 seconds. The decision tree below exists so you don't have to think it through under pressure.
+
+<LessonMeta
+  difficulty="operator"
+  implementationTime="30 minutes (read and practice rollback steps before you need them)"
+  evidence="Documented from a real production failure: deploy → broken checkout flow → Vercel rollback executed → site restored but feature still broken due to env var mismatch → second step required. Full failure analysis at the end of this lesson."
+/>
+
+<LessonObjectives items={[
+  "Select the correct rollback strategy within 30 seconds of a production failure",
+  "Execute a Vercel instant rollback from both dashboard and CLI",
+  "Run git revert correctly for production without rewriting shared history",
+  "Use git bisect to identify which commit caused a subtle regression",
+  "Understand what rollback does NOT fix — and what requires manual intervention"
+]} />
+
+---
+
+## The rollback decision tree
+
+Four scenarios. Each has one correct first move.
+
+**Scenario A: Deployment just went out and the site is broken**
+
+The most recent deploy is the problem. Code change introduced a bug, or a new dependency broke something.
+
+→ **Vercel instant rollback.** Promotes the previous deployment to production without a new build. Fastest path — takes about 60 seconds.
+
+**Scenario B: Deployment looks fine but something changed recently that broke it**
+
+A configuration change caused the problem — env var was added/removed/changed, Vercel project settings were modified, or a domain configuration changed. The code itself may be fine.
+
+→ **Revert the configuration change.** Check Vercel's environment variables, check DNS/domain settings. A Vercel rollback will not help here — you'd roll back to the same code running against the same broken configuration.
+
+**Scenario C: Deployment succeeded and the build is fine, but a specific feature is wrong**
+
+The feature is broken in production but was working before. The code change that caused it may not be in the most recent commit — it could have been introduced several commits ago and only became visible now.
+
+→ **git revert + new deploy.** Find the commit that introduced the regression, revert it cleanly, push to trigger a new Vercel deployment.
+
+**Scenario D: Multiple commits since the last known-good state, broken state is not obvious**
+
+You don't know which commit caused the problem. The symptoms could point to any of several recent changes.
+
+→ **git bisect first.** Identify the culprit commit with binary search, then revert that specific commit. Rolling back blindly risks reverting work that wasn't the problem.
+
+---
+
+## Vercel instant rollback
+
+Every Vercel deployment gets a unique URL and is preserved in your deployment history. Promoting a previous deployment to production is instantaneous — Vercel just changes which deployment the production domain points to. No rebuild required.
+
+**Via Vercel dashboard:**
+
+1. Open your project in the Vercel dashboard
+2. Click the **Deployments** tab
+3. Find the last known-good deployment (the one before the broken one)
+4. Click the three-dot menu (⋯) on that deployment
+5. Click **Promote to Production**
+6. Confirm — production traffic switches immediately
+
+The broken deployment stays in history. You're not deleting anything. You can re-promote it later if needed.
+
+**Via Vercel CLI:**
+
+```bash
+# List recent deployments to find the URL you want to roll back to
+vercel ls
+
+# Roll back to a specific deployment
+vercel rollback <deployment-url>
+
+# Example
+vercel rollback my-project-abc123xyz.vercel.app
+```
+
+**What it takes:** Roughly 60 seconds from clicking Promote to the production domain serving the previous build.
+
+**What Vercel rollback does NOT revert:**
+
+- Environment variable changes — if you added or modified env vars alongside the code change, those are still active
+- Database schema migrations — if the deploy ran migrations, those are still applied
+- External API state — webhooks that fired, emails that sent, third-party records that were created
+- S3 or file storage changes — files uploaded or deleted by the deployment are not restored
+
+Vercel rollback is a code rollback only. Everything else is your responsibility.
+
+---
+
+## Git revert: the correct approach for production
+
+`git revert` creates a new commit that undoes the changes from a previous commit. It does not rewrite history. That distinction matters when you're working with a shared remote repository.
+
+```bash
+# Step 1: Find the commit you want to undo
+git log --oneline -10
+# Output:
+# a3f9c21 (HEAD -> main) fix: update checkout flow validation
+# 7b2e14d feat: add discount code support
+# c891a03 fix: correct tax calculation rounding
+# 4d12f8a feat: add stripe webhook handler
+# ...
+
+# Step 2: Revert the specific bad commit
+git revert a3f9c21
+# Opens your editor for the commit message — or use --no-edit to accept default
+git revert a3f9c21 --no-edit
+
+# Step 3: Push — this triggers a new Vercel deployment
+git push
+
+# Vercel picks up the new commit, builds, and deploys
+# The bad change is undone; git history is intact
+```
+
+**Why not `git reset --hard`?**
+
+```bash
+# DO NOT do this for a shared production branch:
+git reset --hard <previous-commit-hash>
+git push --force
+
+# Why it's wrong:
+# 1. Rewrites history — anyone who pulled after your bad commit now has
+#    diverged history. Their next push or pull will be broken.
+# 2. The force push destroys the bad commit on the remote — you lose
+#    the record of what happened, which you need for post-mortems.
+# 3. Vercel deployment history may reference the deleted commit.
+
+# git reset --hard is safe only on commits you haven't pushed yet.
+# For anything already pushed to a shared branch: always git revert.
+```
+
+**Reverting a merge commit:**
+
+```bash
+# Merge commits require specifying the mainline parent
+git revert -m 1 <merge-commit-hash>
+```
+
+The `-m 1` flag tells git to revert to the first parent (the branch you merged into). This is the correct option when reverting a feature branch merge.
+
+---
+
+## Finding the bad commit with git bisect
+
+When multiple commits have gone out and the broken state isn't obviously tied to one change, `git bisect` performs a binary search through your commit history to find the exact commit that introduced the problem.
+
+```bash
+# Step 1: Start bisect
+git bisect start
+
+# Step 2: Mark the current state as bad
+git bisect bad
+
+# Step 3: Mark a known-good commit
+# Find a commit hash you know was working — yesterday's deploy, last week's tag
+git bisect good 4d12f8a
+
+# Git now checks out the commit halfway between good and bad
+# Test the site or run the affected code path
+
+# Step 4: Mark each checkout as good or bad
+git bisect good   # if this state works
+# or
+git bisect bad    # if this state is broken
+
+# Git keeps narrowing — typically 4-6 steps for 50 commits
+# When bisect is done, it prints:
+# a3f9c21 is the first bad commit
+
+# Step 5: Exit bisect (returns you to HEAD)
+git bisect reset
+
+# Step 6: Now you know exactly what to revert
+git revert a3f9c21 --no-edit
+git push
+```
+
+Bisect is most useful when the failure is subtle — a feature that's wrong, not a crash. For crashes that are obviously tied to the most recent deploy, don't bisect — just rollback directly.
+
+---
+
+## What rollback does not fix
+
+This is the part that will burn you if you don't internalize it.
+
+**Database schema changes:** If your deployment ran a migration that added or dropped columns, Vercel rollback does not reverse those migrations. Rolling back the code while the database schema has moved forward will either cause runtime errors (code references a column that no longer exists) or behave unpredictably (code doesn't know about a new column the schema added).
+
+Discipline: Do not run irreversible database migrations and feature code in the same deployment. Separate them. Add the column first with a backward-compatible migration, deploy the code that uses it, then optionally remove the old column in a later deploy.
+
+**External API calls that already executed:** If your code sent emails, charged cards, created records in Stripe or Salesforce, or triggered any third-party webhook — those happened. Rolling back your code doesn't undo them. You will need to handle these manually.
+
+**S3 and file storage:** Files uploaded, moved, or deleted during the deployment window are not restored by a Vercel rollback.
+
+**Email and notifications:** Already sent. Rollback does nothing here.
+
+The summary: Vercel rollback is a traffic routing change. It moves your production domain from pointing at deployment A to pointing at deployment B. That's it. Anything that happened in the world while deployment A was live — database writes, external API calls, user-visible side effects — those are permanent.
+
+---
+
+## Pre-deployment rollback preparation
+
+Before any significant deployment, note these so you can execute a rollback without having to look things up under pressure:
+
+```bash
+# Note the current production deployment URL
+vercel ls
+# Copy the URL of the current production deployment — not your domain, the *.vercel.app URL
+# Example: my-project-git-main-yourname.vercel.app
+
+# Note the last known-good git hash
+git log --oneline -3
+# Copy the hash of HEAD (the commit you're about to deploy from)
+
+# If this deployment changes env vars, note the current values
+vercel env ls
+# Screenshot or copy the current variable values before changing them
+
+# If this deployment runs migrations, document the reverse migration
+# before deploying — not after
+```
+
+This takes 2 minutes. Skipping it means a rollback that should take 60 seconds takes 10 minutes because you're searching for the right deployment URL while production is down.
+
+<Callout type="info" title="Vercel retains 100 deployments on the Hobby plan">
+Vercel's deployment history is not infinite. The Hobby plan retains the 100 most recent deployments. For a project with active development, that's weeks of history — but if you need to reference a specific deployment from 3 months ago, it may be gone. Before a major release or risky deployment, note the exact deployment URL of your current stable build in your project notes or a commit message. Do not assume Vercel history will always have it.
+</Callout>
+
+---
+
+<FailureAnalysis title="Rollback that looked like it worked but didn't">
+
+Production checkout flow broke immediately after a deploy. Symptoms: Stripe payment form loaded but submitting it returned a 500 error. The error was `Cannot read properties of undefined (reading 'secretKey')`.
+
+**First response:** Vercel instant rollback. Promoted the previous deployment to production. Deployment showed "Ready." Tested checkout. Still broken.
+
+This was confusing — the Vercel rollback had clearly succeeded, the old code was running, but the same error persisted.
+
+**What was missed:** The deploy that broke production had also included an environment variable change. A variable had been renamed from `STRIPE_SECRET_KEY` to `STRIPE_API_KEY` in both the code and Vercel. Rolling back the code restored the version that referenced `STRIPE_SECRET_KEY` — but the Vercel environment variable had already been renamed to `STRIPE_API_KEY`. The old code was looking for a variable that no longer existed by that name.
+
+**Resolution:** After diagnosing the mismatch (10 minutes lost to confusion), added back `STRIPE_SECRET_KEY` in Vercel environment variables with the same value. Redeployed. Checkout worked.
+
+**The lesson:** Vercel rollback reverts code. It does not revert environment variable changes. When a deployment includes both code changes and env var changes, rollback is two operations: promote the old deployment AND restore the old env var state. If you changed env var names, you need to restore the old names. Check Vercel's audit log (Project → Settings → Audit Log) to see what env var changes were made and when.
+
+</FailureAnalysis>
+
+---
+
+<Checkpoint title="Rollback is operational when:">
+  <CheckItem>You can navigate to the Vercel deployment history and promote a previous deployment to production in under 2 minutes</CheckItem>
+  <CheckItem>You know the `vercel rollback` CLI command and can execute it without looking it up</CheckItem>
+  <CheckItem>You've run `git revert` on a test commit and confirmed it creates a new commit rather than rewriting history</CheckItem>
+  <CheckItem>You can explain why `git reset --hard` is wrong for a shared production branch and `git revert` is right</CheckItem>
+  <CheckItem>Before your next significant deployment, you've noted the current production deployment URL and last-good git hash somewhere you can access under pressure</CheckItem>
+  <CheckItem>You can list at least three things that Vercel rollback does NOT fix — database changes, external API calls, and env var changes</CheckItem>
+  <CheckItem>If your deployment will include env var changes alongside code changes, you have a plan for reverting both independently if needed</CheckItem>
+</Checkpoint>

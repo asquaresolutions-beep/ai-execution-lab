@@ -1,0 +1,267 @@
+---
+title: "Content Quality Standards — The Platform Constitution"
+description: "Hard quality standards for all AI Execution Lab content. Minimum implementation density, prohibited patterns, GEO rules, evidence standards, and the test every lesson must pass before publication."
+date: "2026-05-18"
+tags: ["ops", "quality", "standards", "editorial", "constitution", "publishing"]
+status: "published"
+---
+
+This document is the editorial constitution for AI Execution Lab. Every piece of content published on the platform — lesson, failure report, playbook, case study, execution log — must pass the standards defined here.
+
+This is not a style guide. It is a quality gate.
+
+---
+
+## The Core Test
+
+Before any content is published, ask:
+
+> **Can someone who reads this implement what it describes, without reading anything else?**
+
+If the answer is no, the content is not ready. A lesson can explain, contextualize, and connect — but its primary output must be implementation capability. Not awareness. Not understanding in the abstract. Capability.
+
+---
+
+## Mandatory Elements by Content Type
+
+### Lessons
+
+| Element | Required | Standard |
+|---|---|---|
+| `LessonMeta` component | Yes | Difficulty, implementationTime, evidence fields populated |
+| `LessonObjectives` | Yes | 4–6 items; each must be a specific, verifiable outcome |
+| Opening paragraph | Yes | Must be a direct operational claim, not "this lesson covers..." |
+| Implementation content | Yes | At least one section with concrete commands, configs, or procedures |
+| Failure or error handling | Yes | At least one failure pattern or what-goes-wrong scenario |
+| `Checkpoint` component | Yes | 6–10 items; each must be independently verifiable |
+| Cross-links to related content | Yes | At minimum: one link to a related failure or playbook if one exists |
+| Word count | 1,200–3,500 words | Under 1,200 is too thin; over 3,500 needs decomposition |
+
+### Failure Reports
+
+| Element | Required | Standard |
+|---|---|---|
+| Exact error message | Yes | Verbatim, in a code block |
+| Environment/version context | Yes | OS, framework version, package version, deployment platform |
+| Root cause | Yes | One precise sentence: "X failed because Y" |
+| Reproduction conditions | Yes | Exact state required to reproduce the failure |
+| Fix | Yes | Exact steps, commands, or config changes |
+| Prevention | Yes | What to do to avoid this failure in future |
+| Time-to-diagnose | Yes | Honest estimate of how long this took to find |
+
+### Playbooks
+
+| Element | Required | Standard |
+|---|---|---|
+| Pattern name | Yes | The procedure must have a nameable pattern |
+| Pre-conditions | Yes | What must be true before starting |
+| Steps | Yes | Numbered, each atomic, each verifiable |
+| Verification at each step | Yes | How to confirm the step succeeded before proceeding |
+| Failure scenarios | Yes | What goes wrong at each step and how to recover |
+| Post-conditions | Yes | What must be true after completion |
+
+### Case Studies
+
+| Element | Required | Standard |
+|---|---|---|
+| Problem statement | Yes | Specific, not general; dated |
+| Technical context | Yes | Exact tools, versions, environment |
+| What was tried first | Yes | Include failed approaches — not just the solution |
+| Solution | Yes | Exact implementation details |
+| Outcome evidence | Yes | Measurable result; not "it worked" |
+| Generalizable lesson | Yes | What can be applied to similar problems |
+
+---
+
+## Minimum Implementation Density
+
+Implementation density = the ratio of actionable content to explanatory content.
+
+**Minimum standard:** At least 40% of a lesson's content must be directly actionable — commands, configurations, code blocks, step sequences, decision criteria, or specific values.
+
+**Measurement (rough):** Count the H2 sections. At least 4 of every 10 H2 sections must be procedural (do this, not know this).
+
+**Examples of implementation-dense content:**
+- `git revert <hash>` is actionable
+- "You should understand how git works" is not
+- A 5-step procedure with exact commands is actionable
+- "Consider the implications of your approach" is not
+- A table of `NEXT_PUBLIC_` prefix rules with consequences is actionable
+- "Environment variables are important in production" is not
+
+---
+
+## Prohibited Patterns
+
+These patterns disqualify content from publication without revision.
+
+### Language patterns
+
+| Pattern | Example | Why prohibited |
+|---|---|---|
+| "This lesson will teach you..." | "This lesson will teach you how to deploy..." | States the lesson goal, not an operational claim |
+| "It's important to..." | "It's important to test your changes..." | States importance without demonstrating it |
+| "As we all know..." | "As we all know, AI is changing..." | Assumes shared knowledge, signals theory-mode |
+| "Simply..." or "just..." | "Simply add the env var and..." | Minimizes complexity that may not be minimal |
+| "In today's world..." | "In today's AI-driven world..." | Generic framing with zero information content |
+| Prediction without evidence | "AI will soon replace..." | Unverifiable claim stated as fact |
+| Unquantified improvement | "This will significantly improve..." | "Significantly" requires a number |
+| Generic advice | "Make sure to test your code" | No specificity about what to test or how |
+
+### Structure patterns
+
+| Pattern | Why prohibited |
+|---|---|
+| Section with no actionable content | Every section must have something to do or implement |
+| Introduction longer than 3 paragraphs before first technical content | Delays value delivery |
+| Conclusion that restates what was in the lesson | Redundant; use the Checkpoint component instead |
+| "Summary" section at the end | Replace with Checkpoint |
+| Numbered lists of advice without implementation detail | Lists of nouns are not procedures |
+| Screenshots without alt text explaining the specific element | Screenshots without annotation are decoration |
+
+---
+
+## GEO Optimization Standards
+
+Every lesson must be optimized for AI search citation from the moment of publication.
+
+### Entity density requirement
+
+**Minimum:** 3 named, specific entities per 500 words. Entities include: named tools with version numbers, named companies, specific commands, exact error messages, specific configuration values.
+
+**Test:** Read a 500-word block from your lesson. Can you list 3 specific, verifiable entities? If not, the block is too generic.
+
+### Answer-first paragraph rule
+
+Every H2 section must begin with a sentence that answers the question its heading implies.
+
+**Test:** Read only the first sentence of each H2 section. Without the rest of the content, do those first sentences form a complete operational answer to the section's topic? If yes, the content is correctly structured for chunk retrieval.
+
+### FAQ / definition sections
+
+Every lesson should contain at least one of:
+- A definition sentence ("X is Y") that is self-contained and quotable
+- A comparison table (X vs Y on dimensions A, B, C)
+- A numbered procedure with exact steps
+
+These are the content formats with the highest citation probability in RAG systems.
+
+### Specificity standard
+
+**Before:** "Vercel deployment can fail for various reasons."  
+**After:** "Vercel deployment fails at the build stage for three categories of reasons: TypeScript type errors, missing environment variables, and edge runtime incompatibilities."
+
+The second version is citable. The first version is not.
+
+---
+
+## Evidence Standards
+
+### What counts as evidence
+
+1. **Direct production observation** — "This is the behavior we observed when running X on Y at date Z"
+2. **Exact error reproduction** — verbatim error output in a code block
+3. **Measurement** — specific numbers (RPM, time, count, percentage) with source
+4. **Dated execution** — reference to a specific execution log or case study
+5. **Cited external source** — specific documentation page, commit, or dated source
+
+### What does not count as evidence
+
+- "In our experience..." without a specific reference
+- "Many developers have found..." without a specific source
+- "It is generally accepted that..." — this is consensus, not evidence
+- Inferences stated as observations
+
+### The LessonMeta evidence field
+
+The `evidence` field in `LessonMeta` must state specific evidence for the lesson's operational claims. Acceptable:
+- "Running in production at A Square Solutions across three live properties since 2025"
+- "Documented from 47 Claude Code sessions, January–May 2026"
+- "Based on the edge-runtime-deployment-failure incident, 2026-04-12"
+
+Not acceptable:
+- "Based on experience"
+- "Tested and verified"
+- "Observed in production"
+
+---
+
+## Screenshot and Diagram Standards
+
+### When screenshots are required
+
+- Any UI workflow where the exact element location matters (e.g., WordPress admin → Users → Application Passwords)
+- Any error message that appears in a specific UI context (e.g., Vercel build error display)
+- Any before/after visual state where the change is more efficiently shown than described
+
+### Screenshot specifications
+
+- **Minimum resolution:** 1280×720
+- **Format:** PNG (not JPEG for UI/text screenshots)
+- **File location:** `public/evidence/[content-slug]/[descriptive-name].png`
+- **Alt text:** Must describe the specific element, not just the page (e.g., `alt="Vercel dashboard showing deployment error panel with 'Function exceeded maximum duration' message"`)
+- **Annotation:** Use red/yellow arrows or boxes to highlight the specific element if the screenshot contains many elements
+
+### Diagram requirements
+
+- **Architecture diagrams:** Must show data flow direction, not just component names
+- **Workflow diagrams:** Must show decision points (diamond shapes or equivalent)
+- **Format:** SVG preferred; PNG acceptable if SVG not feasible
+- **Tool:** Any tool, but the source file must be preserved for updates
+
+### The "no decoration" rule
+
+Screenshots that show general UI state without highlighting a specific element are decoration, not evidence. Either annotate the relevant element or don't include the screenshot.
+
+---
+
+## Lesson Depth Requirements by Level
+
+| Level | Minimum Sections | Required Includes | Failure Content |
+|---|---|---|---|
+| beginner | 5 H2 sections | One complete step-by-step procedure | At least 1 common beginner mistake |
+| intermediate | 6 H2 sections | One implementation procedure + one verification procedure | At least 2 failure patterns |
+| advanced | 7 H2 sections | Multiple procedures with decision logic | At least 3 failure patterns with root causes |
+| operator | 8 H2 sections | System-level procedures with edge cases | At least 4 failure patterns; post-failure recovery procedures |
+
+---
+
+## The Publication Gate
+
+Before any lesson is marked `status: "published"` in frontmatter:
+
+```
+[ ] Core test: reader can implement without reading anything else
+[ ] LessonMeta populated with specific evidence
+[ ] LessonObjectives: all items are specific and verifiable
+[ ] Opening paragraph makes a direct operational claim
+[ ] At least one complete implementation procedure
+[ ] At least one failure pattern with root cause
+[ ] Checkpoint: all items independently verifiable
+[ ] No prohibited language patterns
+[ ] No prohibited structure patterns
+[ ] At least 3 entities per 500 words
+[ ] Every H2 section begins with an answer-first sentence
+[ ] Word count: 1,200–3,500
+[ ] Cross-links to related failures or playbooks where they exist
+[ ] Tags accurate and complete
+[ ] frontmatter date set to publication date
+```
+
+If any gate fails, the lesson is `status: "coming-soon"` until it passes.
+
+---
+
+## Revision Standards for Existing Content
+
+Existing lessons that don't pass the full publication gate are still published — retroactive application would remove too much content. Instead:
+
+1. Tag them internally as `needs-audit` in a tracking doc
+2. On first meaningful edit, bring to full standard
+3. Priority for audit: lessons in the audit top-5 from `track-audit-2026-05.mdx`
+
+New content must pass the full gate from day one.
+
+---
+
+*Platform constitution v1.0 — 2026-05-18. Amendments require explicit versioning and dated change notes.*

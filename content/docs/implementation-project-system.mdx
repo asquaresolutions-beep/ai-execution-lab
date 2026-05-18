@@ -1,0 +1,227 @@
+---
+title: "Implementation Project System"
+description: "Architecture for the implementation project layer across flagship tracks — milestone projects, capstone projects, operational exercises, and production-readiness criteria."
+date: "2026-05-18"
+tags: ["ops", "projects", "tracks", "milestones", "implementation", "curriculum"]
+status: "published"
+---
+
+This document defines the project layer for all flagship tracks. Projects are not homework. They are operational work with production criteria — the same standards applied to real deployments.
+
+---
+
+## Project Philosophy
+
+**The test for every project:** Could A Square Solutions use this output to operate a real system?
+
+If the project produces a document, system, or artifact that would be operationally useful in a real context — it's a real project. If it's an exercise designed to demonstrate understanding — it's homework. Homework doesn't belong here.
+
+**Project outputs are evidence.** A completed project produces an artifact that the operator can:
+1. Show to others as demonstrated capability
+2. Actually use in their own production work
+3. Cite as a reference when similar problems arise
+
+**Projects are not graded.** The completion criteria are binary — either the artifact meets the specification or it doesn't. There's no partial credit rubric. The operator verifies their own completion against the published criteria.
+
+---
+
+## Project Types
+
+### Type 1: Milestone Project
+
+Caps a module. Integrates all lessons in the module into one operational output.
+
+**Duration:** 30–60 minutes  
+**Output:** One document, configuration, or procedure that could be deployed immediately  
+**Verification:** Checklist of production-readiness criteria
+
+---
+
+### Type 2: Capstone Project
+
+Caps a track. Integrates all modules into a comprehensive operational system.
+
+**Duration:** 90–180 minutes  
+**Output:** A complete operational artifact: a system, playbook suite, or documented implementation  
+**Verification:** Multi-step production-readiness checklist + peer comparison criteria
+
+---
+
+### Type 3: Operational Exercise
+
+Mid-module. Applies a specific lesson's technique to a real scenario.
+
+**Duration:** 15–30 minutes  
+**Output:** A verified, working implementation of the lesson's technique  
+**Verification:** Specific functional test (not just "did you try it")
+
+---
+
+## Project Layer by Track
+
+### Claude Code Operator
+
+**Module 1 (Foundations) — Milestone Project: Production Environment Audit**
+
+*Output:* A one-page Architecture Decision Record (ADR) for your AI engineering stack. Covers: tool selection with rationale, CLAUDE.md structure, permission configuration, version specifications, and the 3 failure patterns you've guarded against in your setup.
+
+*Production-readiness criteria:*
+- ADR covers all 8 stack components with explicit rationale
+- CLAUDE.md has at least: stack versions, project structure, task patterns, what not to do
+- `.claude/settings.json` has explicit allow/deny lists (not defaults)
+- Running `claude --version` returns expected version
+- First agentic task was run and output was verified
+
+---
+
+**Module 2 (Prompt Engineering) — Milestone Project: Prompt Pattern Library**
+
+*Output:* A personal prompt pattern library — a reference document containing your 5 most common task types with their production-ready prompt templates, failure guards, and verification steps.
+
+*Production-readiness criteria:*
+- Each pattern includes: context-loading approach, scope boundaries, DONE WHEN criteria
+- Each pattern has been tested against a real task (not hypothetical)
+- At least 2 patterns include explicit failure mode guards from the 8 patterns taxonomy
+
+---
+
+**Module 3 (GitHub Workflows) — Milestone Project: Git Recovery Playbook**
+
+*Output:* A personal git recovery playbook: the exact commands for your 3 most likely git failure scenarios with pre-conditions, recovery steps, and verification.
+
+*Production-readiness criteria:*
+- Covers at minimum: wrong files staged, broken code committed, bad merge
+- Commands tested against a real repository (not written from memory)
+- Recovery steps include verification that the recovery worked
+
+---
+
+**Module 4 (Vercel Deployment) — Milestone Project: Deployment Safety Checklist**
+
+*Output:* A pre-deployment checklist for your specific project. Not a generic template — your actual deployment dependencies, env vars, build commands, and rollback plan.
+
+*Production-readiness criteria:*
+- Lists every env var your project requires and which Vercel scope it's in
+- Documents the rollback procedure for your specific project
+- Has been run against one real deployment from start to finish
+
+---
+
+**Module 5 (WordPress REST API) — Milestone Project: WP Automation Playbook**
+
+*Output:* A content operation playbook for one specific automation you run against your WordPress site. Documents: auth setup, the exact script/command sequence, dry-run output, verification procedure, rollback procedure.
+
+*Production-readiness criteria:*
+- Authentication tested and documented (exact header format)
+- Dry-run mode is implemented and tested before any writes
+- Rollback procedure is documented (how to reverse the operation)
+- At least one actual operation completed against a real WP installation
+
+---
+
+**Track Capstone: Your Personal AI Operator Playbook**
+
+*Output:* A complete operational reference for your AI-assisted engineering practice. Includes: stack ADR, CLAUDE.md, top-5 prompt patterns, git playbook, deployment checklist, and documentation of one production operation you've completed.
+
+*Duration:* 90–180 minutes to compile and verify  
+*Production-readiness criteria:* All 5 module milestone projects completed and integrated into one coherent reference document
+
+---
+
+### AI Business Zero Budget
+
+**Module 1 (Zero Budget Stack) — Milestone Project: Business Infrastructure Audit**
+
+*Output:* A verified infrastructure audit document for your actual AI business or planned project. Covers: current tool stack (with monthly costs), infrastructure architecture (GitHub + Vercel or WordPress), Analytics and GSC setup confirmation, and your 90-day traffic projection based on the organic traffic framework.
+
+*Production-readiness criteria:*
+- Total tool spend documented and under $40/month
+- At least one page live and indexed in Google Search Console
+- GA4 tracking verified (Realtime shows your own session)
+- .gitignore includes .env file
+- Custom domain live with SSL (not a Vercel subdomain)
+- Monthly audit reminder set
+
+*This milestone replaces the final "review" lesson. If the infrastructure isn't set up for real, the module isn't complete.*
+
+---
+
+**Module 2 (First Product) — Milestone Project: Launched and Indexed**
+
+*Output:* Evidence that your first product or piece of content is live, indexed, and has received at least one organic visit.
+
+*Production-readiness criteria:*
+- URL appears in Google Search Console coverage report (not just submitted — indexed)
+- GA4 shows at least one Organic Search session
+- Landing page passes Google's Core Web Vitals thresholds
+- AdSense application either approved or in review (if monetization is the goal)
+
+---
+
+**Track Capstone: AI Business Launch Dossier**
+
+*Output:* A complete launch dossier: infrastructure audit, product description, distribution channels with evidence, monetization status, and 30-day operating plan.
+
+*Duration:* Compile from milestone outputs — 60 minutes  
+
+---
+
+### GEO + AI Search Systems
+
+**Module 1 (AI Search Mechanics) — Milestone Project: GEO Baseline Audit**
+
+*Output:* A baseline audit of one piece of existing content against GEO citation standards. Documents: entity density count per 500 words, answer-first compliance per H2 section, schema markup status, and Perplexity citation test result.
+
+*Production-readiness criteria:*
+- Audit covers at least 1,000 words of real content
+- Perplexity test run with results documented (cited / mentioned / not found)
+- Entity density measured (specific number, not "needs improvement")
+- At least 3 specific improvements identified with implementation plan
+
+---
+
+**Module 2 (Content Architecture) — Milestone Project: GEO-Optimized Content Piece**
+
+*Output:* One piece of content (minimum 1,000 words) written to GEO standards: answer-first structure, entity-dense, schema-marked, with verifiable Perplexity citation within 4 weeks of publication.
+
+*Production-readiness criteria:*
+- Answer-first test: first sentence of each H2 section independently answers its heading
+- Entity density: ≥3 named entities per 500 words
+- JSON-LD schema implemented (Article or HowTo type)
+- Perplexity test run at 4 weeks post-publication with result documented
+
+---
+
+**Track Capstone: Full GEO Audit + 90-Day Strategy**
+
+*Output:* A complete GEO audit of one site with a 90-day implementation strategy. Includes: baseline citation rate, identified high-value content gaps, 12 specific articles to publish, and measurement plan.
+
+---
+
+## Production-Readiness Criteria Principles
+
+Every project's criteria follow these principles:
+
+**1. Binary, not gradable.** Each criterion is a yes/no check, not a quality assessment. "Analytics is configured" is valid. "Analytics is well-configured" is not.
+
+**2. Evidence-based.** Where possible, criteria require a specific URL, screenshot, measurement, or output — not a self-report.
+
+**3. Failure-tested.** Projects that involve deployment or automation must include evidence that a failure scenario was tested (dry-run was run, rollback was verified).
+
+**4. Date-stamped.** Completed projects should include the date of completion in the artifact. Systems change; completion evidence needs to be dated.
+
+---
+
+## Integration with Lesson Pages
+
+Projects appear in tracks as `type: 'project'` lessons with `status: 'available'` once written. The lesson page for a project contains:
+- The project brief (what to produce)
+- The production-readiness criteria checklist
+- Links to all module lessons it integrates
+- An evidence submission note (for when auth is available)
+
+Progress tracking for projects works the same as lessons — CompleteButton marks completion locally. When auth is added, project completion requires evidence submission (artifact link or description).
+
+---
+
+*Implementation project system v1.0 — 2026-05-18.*

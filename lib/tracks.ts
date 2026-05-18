@@ -86,7 +86,7 @@ export const TRACKS: Track[] = [
       {
         id: 'zero-budget-stack',
         title: 'Zero-Budget AI Stack',
-        description: 'Build a complete AI business infrastructure for under ₹3000/month — tools, hosting, analytics, and your first organic traffic system.',
+        description: 'Build a complete AI business infrastructure for under $40/month — tools, hosting, analytics, and your first organic traffic system.',
         lessons: [
           { id: 'choosing-your-product',          title: 'Choosing Your First AI Product',           type: 'lesson',  duration: '20 min', description: 'How to evaluate product-market fit for AI tools without running ads.',                               status: 'available' },
           { id: 'ai-tool-stack-budget',            title: 'AI Tool Stack Under $40/Month',            type: 'lesson',  duration: '25 min', description: 'The exact tools to pay for, what to use free, and the rule for when to add anything new.',          status: 'available' },
@@ -194,7 +194,7 @@ export const TRACKS: Track[] = [
           { id: 'production-prompt-anatomy',    title: 'Anatomy of a Production Prompt',   type: 'lesson',   duration: '30 min', description: 'The 6-part framework for prompts that work reliably in production codebases.',              status: 'available' },
           { id: 'context-loading-strategies',   title: 'Context Loading Strategies',        type: 'lesson',   duration: '25 min', description: 'How to front-load the right context so Claude produces correct output from message one.', status: 'available' },
           { id: 'task-decomposition',           title: 'Task Decomposition for Agents',     type: 'lesson',   duration: '30 min', description: 'Break complex goals into atomic tasks Claude can execute without losing scope.',           status: 'available' },
-          { id: 'prompt-failure-patterns',      title: 'Prompt Failure Patterns',           type: 'lesson',   duration: '20 min', description: 'The 8 most common prompt failures — and the exact fix for each.',                         status: 'coming-soon' },
+          { id: 'prompt-failure-patterns',      title: 'Prompt Failure Patterns',           type: 'lesson',   duration: '20 min', description: 'The 8 most common prompt failures — and the exact fix for each.',                         status: 'available' },
         ],
       },
       // ── Module 3 ─────────────────────────────────────────
@@ -217,8 +217,8 @@ export const TRACKS: Track[] = [
         lessons: [
           { id: 'deployment-pipeline',      title: 'Deployment Pipeline Setup',        type: 'lesson',   duration: '25 min', description: 'Build the local→build→push→verify loop that catches failures before Vercel does.',      status: 'available' },
           { id: 'build-failure-diagnosis',  title: 'Build Failure Diagnosis',          type: 'playbook', duration: '35 min', description: 'Read Vercel logs systematically, categorize errors, and fix locally before re-pushing.', status: 'available' },
-          { id: 'env-vars-secrets',         title: 'Environment Variables & Secrets',  type: 'lesson',   duration: '20 min', description: 'Manage .env files, Vercel environment variables, and secret rotation safely.',           status: 'coming-soon' },
-          { id: 'rollback-strategies',      title: 'Rollback Strategies',              type: 'playbook', duration: '25 min', description: 'Instant rollback patterns when a deployment breaks production.',                         status: 'coming-soon' },
+          { id: 'env-vars-secrets',         title: 'Environment Variables & Secrets',  type: 'lesson',   duration: '20 min', description: 'Manage .env files, Vercel environment variables, and secret rotation safely.',           status: 'available' },
+          { id: 'rollback-strategies',      title: 'Rollback Strategies',              type: 'playbook', duration: '25 min', description: 'Instant rollback patterns when a deployment breaks production.',                         status: 'available' },
         ],
       },
       // ── Module 5 ─────────────────────────────────────────
@@ -303,8 +303,8 @@ export const TRACKS: Track[] = [
         description: 'Understand the systems before optimizing for them.',
         lessons: [
           { id: 'geo-vs-seo', title: 'GEO vs SEO: What Actually Changed', type: 'lesson', duration: '20 min', description: 'Why traditional SEO thinking fails in AI search and what replaces it.', status: 'available' },
-          { id: 'rag-pipeline', title: 'Understanding RAG Pipelines', type: 'lesson', duration: '25 min', description: 'How retrieval-augmented generation decides what sources to use.', status: 'coming-soon' },
-          { id: 'citation-signals', title: 'What Makes a Source Citable', type: 'lesson', duration: '20 min', description: 'The content and authority signals that determine AI citation probability.', status: 'coming-soon' },
+          { id: 'rag-pipeline', title: 'Understanding RAG Pipelines', type: 'lesson', duration: '25 min', description: 'How retrieval-augmented generation decides what sources to use.', status: 'available' },
+          { id: 'citation-signals', title: 'What Makes a Source Citable', type: 'lesson', duration: '20 min', description: 'The content and authority signals that determine AI citation probability.', status: 'available' },
         ],
       },
       {

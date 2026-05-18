@@ -1,0 +1,381 @@
+---
+title: "Execution Artifacts Architecture"
+description: "Design specification for the evidence layer — how screenshots, deployment logs, command histories, debugging records, and operational timelines integrate into tracks, failures, playbooks, case studies, and labs."
+date: "2026-05-18"
+tags: ["ops", "architecture", "evidence", "artifacts", "documentation", "platform"]
+status: "published"
+---
+
+This document defines the artifact system for AI Execution Lab. An artifact is any durable, specific piece of evidence produced by real execution. The platform's authority depends on artifacts — without them, content is theory. With them, content is operational record.
+
+The artifact architecture answers: what types of evidence exist, where they live, what format they take, and how they connect to the content layer.
+
+---
+
+## Why an Artifact System
+
+The platform's claim — "operational record of real AI-native systems work" — is only as credible as the evidence it produces. Text descriptions of what happened are not evidence. The evidence is:
+
+- The screenshot of the exact error message
+- The build log with the failing command output
+- The terminal session showing the command sequence that fixed it
+- The GA4 graph showing traffic growth from a specific date
+- The before/after diff that shows what changed
+
+Every piece of published content should link to or embed at least one artifact. Content without artifacts is content that could have been written without doing the thing.
+
+---
+
+## Artifact Taxonomy
+
+### Type 1: Screenshot Evidence
+
+**Definition:** A PNG image capturing a specific UI state, error, or before/after comparison.
+
+**Required fields:**
+- `alt` text: describes the specific element, not just the page context
+- Annotation: red/yellow arrow or box marking the specific element if the screenshot contains many elements
+- Date: embedded in filename
+- Source: the URL or tool where the screenshot was taken
+
+**File naming convention:**
+```
+public/evidence/[content-slug]/[descriptor]-[YYYY-MM-DD].png
+
+Examples:
+public/evidence/env-vars-secrets/vercel-dashboard-env-scope-2026-05-18.png
+public/evidence/build-failure-diagnosis/typescript-error-edge-runtime-2026-04-12.png
+public/evidence/adsense-approval-reality/adsense-rpm-screenshot-2026-03-15.png
+```
+
+**When required:**
+- Any UI workflow where element location matters (WordPress admin navigation, Vercel dashboard)
+- Any error message that appears in a specific UI context
+- Any before/after visual state where the change is more efficiently shown than described
+- Any metric or stat claimed in the content (GA4 session count, GSC impression graph)
+
+**When not sufficient:**
+- Screenshots alone cannot serve as the primary artifact for a failure report — the error message must also appear verbatim in a code block within the text
+- Screenshots of code or config are supplementary — the actual code/config must appear in the text as a copyable block
+
+---
+
+### Type 2: Command History / Terminal Evidence
+
+**Definition:** The actual terminal output from running a command sequence, preserved in a code block.
+
+**Format:** Always a fenced code block with the appropriate language hint:
+
+````
+```bash
+$ git revert HEAD --no-edit
+[main a3f92b1] Revert "add broken deployment config"
+ 1 file changed, 3 insertions(+), 5 deletions(-)
+
+$ git push origin main
+Enumerating objects: 5, done.
+...
+To github.com:org/repo.git
+   b8a3d2c..a3f92b1  main -> main
+```
+````
+
+**Authenticity rule:** Command history must be real output, not reconstructed. If you reconstruct (because you forgot to copy the output), mark it as `# reconstructed from session notes` in a comment.
+
+**Common uses:**
+- Vercel CLI output: deployment logs, rollback commands, environment variable listings
+- Git operation sequences: the exact commands and their outputs during a recovery procedure
+- Node.js build output: the exact error messages that triggered a failure investigation
+- Curl/API calls: authentication tests against WordPress REST API
+- TypeScript compiler output: `tsc --noEmit` error listings
+
+---
+
+### Type 3: Deployment Evidence
+
+**Definition:** A verifiable record that a deployment happened, what it contained, and whether it succeeded.
+
+**Components:**
+
+```
+Deployment record:
+- Date and time (UTC)
+- Commit SHA: [40-char hash]
+- Deployment URL: [Vercel deployment URL, not production alias]
+- Build time: [n] seconds
+- Result: Success / Failed
+- Build log excerpt: [relevant lines if the story requires them]
+```
+
+**Where it appears:** In Failure Archive entries (documenting what was deployed when a failure occurred), in deployment-related playbooks (showing what a successful deployment record looks like), and in case studies (as part of the before/after operational timeline).
+
+**Vercel-specific evidence:** The Vercel dashboard URL for a specific deployment is permanent and can be linked to directly. When documenting a specific deployment event, include the full Vercel deployment URL — not just the production alias.
+
+---
+
+### Type 4: Execution Logs
+
+**Definition:** A structured record of a work session — what was attempted, what tools were used, what happened, and what was produced.
+
+**Format:**
+
+```
+## Execution Log: [Operation name]
+**Date:** YYYY-MM-DD
+**Duration:** [n] hours
+**Environment:** [OS, tool versions, project context]
+**Objective:** [One sentence: what was being accomplished]
+
+### Session sequence
+1. [Action]: [Tool/command] → [Result]
+2. [Action]: [Tool/command] → [Result]
+...
+
+### Output artifacts produced
+- [List of files created or modified]
+- [Screenshots taken]
+- [Measurements recorded]
+
+### Failures encountered
+- [Failure description] → [Root cause] → [Resolution]
+
+### What would be done differently
+- [Specific change to approach or tooling]
+```
+
+**Where it appears:** As standalone `type: 'log'` content items, embedded in case studies to provide session-level evidence, and in Lab content where the log is the primary deliverable.
+
+**Relationship to case studies:** A case study synthesizes evidence from one or more execution logs. The execution log is the raw record; the case study is the structured analysis. Both can exist as separate published content items.
+
+---
+
+### Type 5: Debugging Evidence
+
+**Definition:** The complete evidence record from a debugging session, structured for reproduction and future reference.
+
+**Required components:**
+
+```
+Error record:
+- Exact error message (verbatim, in a code block)
+- Error class: Build / Runtime / Type / Logic / Authentication / Rate-limit / Other
+- Stack trace (if available)
+- First occurrence: date, environment, operation being performed
+
+Reproduction conditions:
+- Exact state required to trigger: file content, env var values (redacted), command sequence
+- Whether it reproduces consistently or intermittently
+- Whether it reproduces only in specific environments (local / preview / production)
+
+Diagnosis sequence:
+- What was checked first (and why)
+- What was ruled out (and the evidence that ruled it out)
+- What the root cause turned out to be
+
+Fix:
+- Exact file changes (diff or code block)
+- Command sequence to verify fix applied
+- Verification that the error no longer occurs
+
+Time-to-diagnose: [n] hours / minutes — honest estimate
+```
+
+**Where it appears:** As the primary structure for `type: 'failure'` content in the Failure Archive. Referenced from lesson content when a lesson covers a topic where a specific failure case study exists.
+
+---
+
+### Type 6: Before/After Comparisons
+
+**Definition:** A structured comparison of system state before and after an operation, showing exactly what changed.
+
+**Format options:**
+
+*For code changes:*
+````
+**Before** (`src/components/nav.tsx`, line 23–31):
+```tsx
+// original code block
+```
+
+**After**:
+```tsx
+// modified code block
+```
+````
+
+*For configuration changes:*
+```
+Before (vercel.json):
+{
+  "framework": "nextjs"
+}
+
+After (vercel.json):
+{
+  "framework": "nextjs",
+  "headers": [...]
+}
+```
+
+*For metric changes (use a table):*
+
+| Metric | Before | After | Date of change |
+|---|---|---|---|
+| Lighthouse Performance | 61 | 89 | 2026-04-15 |
+| Build time | 47s | 23s | 2026-04-15 |
+| TypeScript error count | 14 | 0 | 2026-04-14 |
+
+**Where it appears:** In failure reports (the fix), in playbooks (the expected state change), in case studies (the outcome measurement), and in deployment-related content where configuration changes need illustration.
+
+---
+
+### Type 7: Analytics Snapshots
+
+**Definition:** A dated screenshot or data export from an analytics system (GA4, GSC, AdSense, Vercel Analytics) used as evidence for a specific claim.
+
+**Requirements:**
+- **Date visible in the snapshot:** The date range must be visible in the screenshot. Crop to include the date range selector.
+- **Metric specific:** The snapshot must show the specific metric being claimed. Don't screenshot a dashboard when only one chart matters — screenshot the chart.
+- **Context:** Include the property name or URL in the crop so the snapshot can't be confused with a different property.
+
+**Data claims that require snapshot evidence:**
+- "Traffic grew from X to Y" → GA4 sessions chart over the relevant date range
+- "Page ranks #[n] for [keyword]" → GSC Performance report filtered to that URL + keyword
+- "Average RPM is $[n]" → AdSense earnings report (redact total earnings if preferred; RPM is the claim)
+- "Build time improved from Xs to Ys" → Vercel deployment history showing two deployments
+
+**Where it appears:** In the AI Business Zero Budget track (confirming operational results), in case studies (outcome evidence), and in the Failure Archive where performance regressions need documentation.
+
+---
+
+### Type 8: Operational Timelines
+
+**Definition:** A chronological record of events in a system's history, used to establish what happened and when.
+
+**Format:**
+
+```
+## Timeline: [System or operation name]
+
+| Date | Event | Evidence |
+|---|---|---|
+| 2026-03-01 | Property created on Vercel | Deployment log: [URL] |
+| 2026-03-03 | Custom domain configured | Screenshot: custom-domain-setup-2026-03-03.png |
+| 2026-03-15 | First organic session | GA4 snapshot: first-organic-session-2026-03-15.png |
+| 2026-04-12 | Edge runtime failure | Failure report: edge-runtime-crypto-failure |
+| 2026-04-12 | Failure resolved | Deployment log: fix-commit SHA |
+| 2026-05-01 | 1,000 sessions milestone | GA4 snapshot: 1000-sessions-milestone.png |
+```
+
+**Where it appears:** In case studies that cover multi-month operations, in the platform's own operational documentation (for transparency about when content was built vs. documented), and in failure reports where the timeline of the failure matters to understanding the root cause.
+
+---
+
+## How Artifacts Integrate with Content Types
+
+### Tracks / Lessons
+
+Lessons reference artifacts, they don't contain raw evidence. A lesson about environment variable management should link to or embed a specific screenshot showing the Vercel env scope UI — but the lesson's job is to explain the procedure, not to present raw session logs.
+
+**Integration pattern:**
+- `LessonMeta.evidence` field: cites the specific evidence base for the lesson's claims
+- Code blocks: contain real command output (Type 2), labeled with real context
+- Inline screenshots: PNG files from `public/evidence/[lesson-id]/`
+- Cross-links: "See the [failure report] for the exact error output if this goes wrong"
+
+### Failure Archive
+
+Failure reports are the primary home of Type 5 (Debugging Evidence). Every failure report is structured debugging evidence.
+
+**Required artifacts:**
+- Type 2: Exact error message in a code block
+- Type 2 or 6: The fix (exact commands or diff)
+- Optional Type 1: Screenshot if the error appears in a specific UI context
+
+### Playbooks
+
+Playbooks document procedures. Artifacts in playbooks show what correct execution looks like.
+
+**Required artifacts:**
+- Type 2: The command sequence, with real output from at least one execution
+- Type 6: Before/after state where the procedure changes configuration
+- Optional Type 1: Screenshots of UI steps where element location matters
+
+### Case Studies
+
+Case studies require the most artifact density. A case study without evidence artifacts is a narrative, not a case study.
+
+**Required artifacts:**
+- Type 3: Deployment evidence if the case study involves a deployment
+- Type 6: Before/after comparison for the main change
+- Type 7: Analytics snapshot if the outcome is measured in traffic, revenue, or performance
+- Type 8: Operational timeline if the case study covers a multi-day or multi-week operation
+
+### Labs
+
+Labs produce artifacts as their primary output. The completion criterion for a lab is having produced specific artifacts.
+
+**Required artifacts:**
+- Type 4: An execution log documenting the lab session
+- Type 2: Terminal output from the lab commands
+- Type 1: Screenshot of the completed state (if the lab has a visible output)
+
+---
+
+## Evidence File Organization
+
+```
+public/
+  evidence/
+    [content-slug]/           ← one directory per piece of content
+      [descriptor]-[date].png
+      [descriptor]-[date].png
+    shared/                   ← evidence used by multiple pieces
+      [descriptor]-[date].png
+```
+
+**Naming rules:**
+- All lowercase, hyphens for spaces
+- Date format: YYYY-MM-DD
+- Descriptor is specific enough that the file is self-explanatory without opening it
+- No spaces, no underscores
+
+**Source preservation:**
+- For each screenshot, a corresponding `.txt` file documents the URL and context:
+  ```
+  Source: https://vercel.com/dashboard/[project]/deployments/[id]
+  Date: 2026-04-12
+  Context: Deployment failure in env-vars-secrets lesson evidence
+  ```
+  This ensures screenshots can be re-taken if the source changes.
+
+---
+
+## The Minimum Artifact Requirement
+
+Every piece of published content must include at least one artifact. The artifact standard by content type:
+
+| Content Type | Minimum Artifact | Preferred |
+|---|---|---|
+| Lesson | One real command block with actual output | + One screenshot of UI step |
+| Failure Report | Verbatim error message in code block + fix steps | + Stack trace + reproduction conditions |
+| Playbook | Command sequence with real output | + Before/after state |
+| Case Study | Before/after comparison + one measurement | + Operational timeline + analytics snapshot |
+| Lab | Execution log + terminal output | + Screenshot of completed state |
+| Project | Evidence of completion artifact | + Linked to relevant track content |
+
+**The no-decoration rule:** An artifact that doesn't add evidence doesn't belong. A screenshot of a UI state that could have been described in one sentence is decoration. Include it only if the visual state is more informative than prose.
+
+---
+
+## Phase 1 vs. Phase 2 Artifact Infrastructure
+
+**Phase 1 (current):** Artifacts live as static files in `public/evidence/`, referenced from MDX content. No database, no upload system. This scales to ~500 pieces of content with manageable directory structure.
+
+**Phase 2 (when auth is stable):** Artifacts become their own content objects with metadata — date, tool, operation, related content. An operator can submit their own execution evidence to a lesson. Analytics snapshots can be verified via OAuth-linked GA4 queries. This requires the Supabase infrastructure outlined in `platform-vision-architecture.mdx`.
+
+The Phase 1 static approach is intentional — it keeps the content system simple and the artifacts tied directly to the content that references them. Phase 2 adds queryability, not production-readiness.
+
+---
+
+*Execution artifacts architecture v1.0 — 2026-05-18.*

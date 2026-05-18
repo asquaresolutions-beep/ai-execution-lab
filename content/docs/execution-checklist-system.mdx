@@ -1,0 +1,444 @@
+---
+title: "Execution Checklist System"
+description: "Reusable operational checklists for every major workflow in AI-native production work — deployment, publishing, analytics, WordPress, GEO, debugging, monetization, and launch."
+date: "2026-05-18"
+tags: ["ops", "checklists", "deployment", "publishing", "workflows", "operational"]
+status: "published"
+---
+
+This document is the master checklist registry for AI Execution Lab. Every major operational workflow has a corresponding checklist here. These are not reminders — they are production gates. A step without a verifiable output is not a step.
+
+**How to use:** Copy the relevant checklist into your notes before starting the operation. Check items only when you have specific evidence, not when you believe the thing is probably done.
+
+---
+
+## Checklist Design Principles
+
+Every checklist here follows these rules:
+
+1. **Binary items only.** Every item is a yes/no gate, not a quality assessment. "Build output has zero TypeScript errors" is a valid item. "Code quality is acceptable" is not.
+
+2. **Evidence anchored.** Where possible, items specify the evidence: a command output, a URL, a specific number, a dashboard state — not your belief about the state.
+
+3. **Failure items included.** Every checklist includes at least one item that tests a failure scenario, not just the happy path.
+
+4. **Ordered by dependency.** Items appear in the order they must be completed. Don't skip ahead.
+
+---
+
+## 1. Deployment Checklist (Vercel + Next.js)
+
+**When to use:** Before every push to `main` that will trigger a production deployment.
+
+**Pre-deployment (local)**
+
+```
+[ ] Run `node node_modules/next/dist/bin/next build` locally — zero errors
+[ ] Run `tsc --noEmit` — zero type errors
+[ ] All required env vars set in .env.local — confirmed by checking process.env in a test file if needed
+[ ] No hardcoded secrets in the diff (`git diff main | grep -i "api_key\|secret\|password"`)
+[ ] `git status` shows only intended files staged
+[ ] Commit message describes what changed, not just "update"
+```
+
+**Post-push verification (Vercel)**
+
+```
+[ ] Vercel build log shows: Build Completed, no warnings treated as errors
+[ ] Preview deployment URL loads without console errors
+[ ] All routes that the change touches load and render correctly
+[ ] If env var added: variable confirmed in Vercel dashboard under correct scope (Production/Preview/Development)
+[ ] Performance: Lighthouse score not significantly degraded from baseline
+```
+
+**Failure gate**
+
+```
+[ ] Know the rollback command before deploying: `vercel rollback [deployment-url]` or Vercel dashboard → Deployments → Promote previous
+[ ] If deployment broke something: rollback initiated within 5 minutes of detecting failure
+```
+
+---
+
+## 2. Content Publishing Checklist
+
+**When to use:** Before every lesson, failure report, playbook, or case study is set to `status: "published"`.
+
+**Content completeness**
+
+```
+[ ] Passes the core test: a reader can implement what it describes without reading anything else
+[ ] Word count: 1,200–3,500 words (confirmed, not estimated)
+[ ] All H2 sections begin with an answer-first sentence
+[ ] At least one complete implementation procedure (numbered steps with commands)
+[ ] At least one failure pattern or what-goes-wrong section
+[ ] No prohibited language patterns ("this lesson will teach you...", "it's important to...", "simply...")
+```
+
+**MDX frontmatter and components**
+
+```
+[ ] `status: "published"` (not "coming-soon" or "draft")
+[ ] `date:` set to today's publish date
+[ ] `tags:` accurate and complete
+[ ] `LessonMeta` component: difficulty, implementationTime, evidence fields all populated with specific values
+[ ] `LessonObjectives` component: 4–6 items, each a specific verifiable outcome
+[ ] `Checkpoint` component: 6–10 items, each independently verifiable
+```
+
+**GEO optimization**
+
+```
+[ ] Entity density: ≥3 named entities (tools with version numbers, commands, specific values) per 500-word block
+[ ] At least one definition sentence ("X is Y") that is self-contained and quotable
+[ ] At least one numbered procedure or comparison table
+[ ] Cross-links: at least one link to a related failure or playbook if one exists in lib/related-content.ts
+```
+
+**Status in tracks.ts**
+
+```
+[ ] Lesson `status` in lib/tracks.ts set to `'available'`
+[ ] MDX file path matches exactly: content/lessons/[track-id]/[module-id]/[lesson-id].mdx
+[ ] Build passes locally after status change
+```
+
+---
+
+## 3. Analytics Setup Checklist
+
+**When to use:** When setting up GA4 and Google Search Console for a new property.
+
+**Google Search Console**
+
+```
+[ ] Property created for exact domain (with www or without — match your canonical)
+[ ] Ownership verified via DNS TXT record or HTML file (DNS preferred for permanence)
+[ ] Sitemap submitted: [domain]/sitemap.xml
+[ ] Sitemap shows in GSC "Sitemaps" report as "Success"
+[ ] At least 3 URLs appear in Coverage report within 48 hours of submission
+[ ] URL Inspection tool: test one known page and confirm "URL is on Google" or "URL is on Google — with caveats" 
+```
+
+**Google Analytics 4**
+
+```
+[ ] GA4 property created (not UA — Universal Analytics is dead)
+[ ] Measurement ID (G-XXXXXXXXXX) added to site configuration
+[ ] GA4 Realtime report: your own test session appears within 60 seconds of page load
+[ ] Event tracking: "page_view" event fires on each page navigation (confirm in Realtime → Events)
+[ ] Conversion event (if applicable): at minimum "first_visit" is marked as a key event
+[ ] Filters: internal traffic filter created using your IP address (Admin → Data Streams → Configure Tag Settings → Define Internal Traffic)
+[ ] Data retention set to 14 months (Admin → Data Settings → Data Retention)
+```
+
+**Cross-property verification**
+
+```
+[ ] GSC and GA4 linked (Admin → Product Links → Search Console Linking)
+[ ] GSC data appears in GA4 under Reports → Acquisition → Traffic Acquisition → Source = google / organic
+[ ] Both properties tracking the same canonical URL (not mixing www and non-www)
+```
+
+---
+
+## 4. WordPress Operations Checklist
+
+**When to use:** Before any automation script runs against a WordPress installation.
+
+**Authentication verification**
+
+```
+[ ] Application Password generated: Dashboard → Users → Profile → Application Passwords
+[ ] Auth tested manually: `curl -u "username:app-password" https://domain.com/wp-json/wp/v2/users/me` returns 200 with user data
+[ ] Correct header format confirmed: `Authorization: Basic base64(username:app-password)`
+[ ] Script uses the Application Password, NOT the account login password
+```
+
+**Dry-run gate**
+
+```
+[ ] Script has a --dry-run flag implemented
+[ ] Dry-run executed against production data before any write operation
+[ ] Dry-run output reviewed: correct posts targeted, correct transformation applied
+[ ] Number of posts to be modified confirmed (not "should be about 50" — exact number)
+```
+
+**Backup state**
+
+```
+[ ] Most recent backup exists and is dated within 24 hours
+[ ] Backup includes both database and uploaded files
+[ ] Backup location confirmed (not just on the server being backed up)
+```
+
+**Execute and verify**
+
+```
+[ ] Script run against a single post first (batch size = 1) before full run
+[ ] Single post result verified in WordPress admin: correct, no corruption
+[ ] Full batch run with progress logging enabled
+[ ] Post-run audit: random sample of 5 modified posts inspected in admin
+[ ] Post count matches expected: [n] posts modified, [0] errors
+```
+
+**Rollback procedure confirmed**
+
+```
+[ ] Rollback plan documented before running: database restore command ready
+[ ] If content-patching: original values preserved in script output (not just "applied")
+```
+
+---
+
+## 5. GEO Optimization Checklist
+
+**When to use:** When publishing or updating a piece of content intended for AI search citation.
+
+**Entity and structure**
+
+```
+[ ] Entity count: 3+ named entities (tools, companies, commands, specific values) per 500-word block
+[ ] Answer-first paragraphs: first sentence of each H2 section answers its heading independently
+[ ] At least one of: definition sentence / comparison table / numbered procedure with exact steps
+[ ] Specificity test: every claim has a number, version, or specific detail attached
+```
+
+**Schema markup**
+
+```
+[ ] JSON-LD schema block present in page head or MDX body
+[ ] Schema type matches content: Article for lessons, HowTo for procedures, FAQPage for Q&A blocks
+[ ] Schema validated with Google's Rich Results Test tool (no errors, at least 1 rich result detected)
+[ ] `datePublished` and `dateModified` in schema match frontmatter dates
+```
+
+**Perplexity citation test**
+
+```
+[ ] Query run in Perplexity matching the article's primary keyword
+[ ] Result documented: cited / mentioned / not found / requires time
+[ ] Test date recorded in lesson evidence field
+[ ] If not cited at 4 weeks post-publication: content reviewed against this checklist for gaps
+```
+
+**Internal linking**
+
+```
+[ ] Article linked from at least one related lesson or failure report
+[ ] Article links to at least one related piece in the same cluster
+[ ] lib/related-content.ts updated with this article's relationships
+```
+
+---
+
+## 6. AI Workflow Setup Checklist
+
+**When to use:** When setting up Claude Code for a new project or onboarding a new codebase.
+
+**CLAUDE.md**
+
+```
+[ ] CLAUDE.md exists at project root
+[ ] Stack versions explicitly stated (Next.js version, React version, key library versions)
+[ ] Project structure documented: key directories and what they contain
+[ ] Task patterns included: examples of how to frame common tasks for this project
+[ ] Explicit "do not" list: things Claude should not change (files, patterns, conventions)
+[ ] Common failure modes documented: known issues Claude has caused in this codebase before
+```
+
+**Project settings**
+
+```
+[ ] .claude/settings.json exists with explicit allow/deny lists (not defaults)
+[ ] Allowed tools: only tools this project actually needs
+[ ] Denied patterns: paths that should never be touched (e.g., database migrations, config files)
+[ ] Tested: ran `claude --version` and confirmed expected version
+```
+
+**First task verification**
+
+```
+[ ] First agentic task was scoped, not open-ended
+[ ] Task included explicit SCOPE: and DONE WHEN: sections
+[ ] Output verified against criteria before accepting
+[ ] Tool use log reviewed: Claude used the expected tools, no unexpected file modifications
+```
+
+---
+
+## 7. Debugging Checklist
+
+**When to use:** When a failure needs diagnosis — not random patching.
+
+**Reproduce first**
+
+```
+[ ] Failure reproduced locally (not just "it happens sometimes in production")
+[ ] Exact reproduction steps documented: what triggers the failure, every time
+[ ] Failure is isolated: confirmed which component, route, or function produces it
+[ ] Minimal reproduction: can the failure be triggered with the smallest possible input?
+```
+
+**Evidence collection**
+
+```
+[ ] Exact error message copied verbatim (not paraphrased)
+[ ] Stack trace captured with line numbers
+[ ] Environment documented: OS, Node version, framework version, deployment platform
+[ ] Diff captured: what changed between the last working state and the failing state
+```
+
+**Root cause**
+
+```
+[ ] Root cause stated in one sentence: "X failed because Y"
+[ ] Root cause is the actual cause, not the symptom ("Missing env var" not "Build failed")
+[ ] Root cause verified: does fixing it actually fix the problem, not just mask it?
+```
+
+**Fix and verify**
+
+```
+[ ] Fix applied and tested locally against exact reproduction conditions
+[ ] Regression check: other related functionality still works
+[ ] Fix committed with a message describing what was wrong and why the fix works
+[ ] If production failure: post-mortem note created (even a single paragraph)
+```
+
+---
+
+## 8. Monetization Launch Checklist
+
+**When to use:** Before activating any monetization path (AdSense, affiliate, product, subscription).
+
+**AdSense**
+
+```
+[ ] Site has at least 15–20 indexed pages of original content
+[ ] Privacy Policy page exists with AdSense disclosure language
+[ ] No prohibited content on any indexed page (check AdSense policy list)
+[ ] Application submitted and status tracked (not assumed)
+[ ] If approved: ad units placed and displaying in Realtime (not just "code added")
+[ ] First RPM data point recorded after 48 hours of live ads
+```
+
+**Affiliate**
+
+```
+[ ] Affiliate disclosure present on every page/post with affiliate links
+[ ] Disclosure language approved by applicable law (FTC disclosure for US audience)
+[ ] Every affiliate link uses correct tracking ID (test a link → check dashboard → confirm click recorded)
+[ ] Links tested: all affiliate links load and redirect correctly (no 404s, no broken tracking)
+[ ] Disclosure link visible without scrolling on at least 50% of pages with affiliate content
+```
+
+**Product / Digital Download**
+
+```
+[ ] Stripe account connected and in live mode (not test mode)
+[ ] Successful test purchase completed (real $1 charge, real receipt, real download/access)
+[ ] Webhook configured and tested: payment → fulfillment flow runs end-to-end
+[ ] Refund process tested: can refund within Stripe and access is revoked correctly
+[ ] Product page passes Core Web Vitals
+[ ] Tax handling confirmed: Stripe Tax enabled or manual tax approach documented
+```
+
+---
+
+## 9. AI Business Launch Checklist
+
+**When to use:** Before announcing or driving traffic to a new AI-powered product or content business.
+
+**Infrastructure**
+
+```
+[ ] Custom domain live with SSL (not a Vercel subdomain, not a .netlify.app URL)
+[ ] Google Search Console property created and verified
+[ ] GA4 tracking active: Realtime shows your own session
+[ ] .gitignore includes .env files and any sensitive configurations
+[ ] Total tool spend under $40/month and documented
+```
+
+**Content readiness**
+
+```
+[ ] At least 5 pages of substantive content indexed (not just homepage + about)
+[ ] Core Web Vitals: LCP < 2.5s, CLS < 0.1, FID/INP < 200ms (verify via PageSpeed Insights)
+[ ] All internal links resolve (no 404s on indexed pages)
+[ ] Sitemap is accurate and submitted
+[ ] robots.txt is not blocking any important content
+```
+
+**Monetization**
+
+```
+[ ] Monetization path identified (even if not yet active)
+[ ] If AdSense: applied or in review
+[ ] If product: at least one person has seen the sales page who isn't you
+[ ] If affiliate: first affiliate program approved
+```
+
+**Operations**
+
+```
+[ ] Content publishing schedule documented (not just "I'll write when I feel like it")
+[ ] Monthly operations review scheduled (calendar reminder set)
+[ ] Backup procedure exists and has been run at least once
+```
+
+---
+
+## 10. Content Distribution Checklist
+
+**When to use:** Immediately after publishing any lesson, failure report, or playbook.
+
+**Indexing**
+
+```
+[ ] URL submitted to Google Search Console via URL Inspection → Request Indexing
+[ ] Page appears in GSC Coverage within 72 hours (not required immediately, but monitor)
+[ ] Internal links to this page updated in related content (lib/related-content.ts)
+[ ] Sitemap regenerated (if using static sitemap: `node node_modules/next/dist/bin/next build` regenerates it)
+```
+
+**Distribution channels (activate relevant ones)**
+
+```
+[ ] Shared to any existing email list with direct link
+[ ] Social post created: one concrete takeaway + link (not "new post!")
+[ ] If relevant to a community: posted in 1–2 specific communities where this solves a real question someone asked
+[ ] If the content references tools: check if those tools have newsletters/community roundups that accept submissions
+```
+
+**Cross-platform republishing (if applicable)**
+
+```
+[ ] If republishing to Medium, Dev.to, or similar: canonical URL set to original URL
+[ ] Republish happens 2–4 weeks after original publication (not same day)
+[ ] Republished version links back to original
+```
+
+**Performance baseline**
+
+```
+[ ] First-week stats recorded: organic impressions, clicks, position in GSC
+[ ] Perplexity test run at publish: cited / mentioned / not found (record result)
+[ ] 30-day review scheduled: set calendar reminder to check performance and update if needed
+```
+
+---
+
+## Using This Document Operationally
+
+**Storing checklists:** Keep a copy of this file or relevant sections in your project's `docs/` or `ops/` directory. Don't rely on remembering to find it.
+
+**Adapting checklists:** These are starting points. Add project-specific items where your environment differs. Remove items that don't apply. The principle is binary verification, not ritual checkbox-ticking.
+
+**When a checklist item fails:** Stop. Don't proceed to the next item. The item failed because the state isn't ready for the next step. Fix the item before continuing.
+
+**Checklist versioning:** When you discover a failure mode not covered by a checklist, add it. Date the addition. Checklists should get more complete over time, not stay static.
+
+---
+
+*Execution checklist system v1.0 — 2026-05-18.*

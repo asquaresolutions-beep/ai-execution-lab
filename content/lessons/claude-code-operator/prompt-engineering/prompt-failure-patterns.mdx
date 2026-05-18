@@ -1,0 +1,287 @@
+---
+title: "Prompt Failure Patterns"
+description: "The 8 most common prompt failures in production Claude Code work — each with the exact symptom, root cause, and fix."
+date: "2026-05-18"
+tags: ["prompt-engineering", "claude-code", "debugging", "production", "failures", "operator"]
+status: "published"
+---
+
+<LessonMeta
+  difficulty="operator"
+  implementationTime="30 min (review + apply to your current prompts)"
+  evidence="Patterns documented from daily Claude Code production use at A Square Solutions across three live properties"
+/>
+
+<LessonObjectives items={[
+  "Recognize each of the 8 failure patterns by symptom before diagnosing root cause",
+  "Fix existing prompts that are producing inconsistent or wrong output",
+  "Build prompts that avoid these patterns from the start",
+  "Know when a failure is a prompt problem vs. a context problem vs. a task decomposition problem",
+  "Apply pattern recognition to new failures you haven't seen before",
+]} />
+
+Most prompt failures in production aren't mysterious. They're the same eight patterns, appearing in different costumes. Once you can name the pattern, fixing it takes minutes. Without the taxonomy, you iterate randomly until something works — or doesn't.
+
+This lesson is a failure taxonomy, not a theory of prompting. Each pattern has a specific symptom, a specific root cause, and a specific fix.
+
+---
+
+## Pattern 1: Context Collapse
+
+**Symptom:** Claude starts a task correctly but diverges midway — correct first 30%, wrong last 70%. Or produces output that's correct for a different version of the codebase than the one you're working on.
+
+**Root cause:** The task required information that wasn't in the initial context, and Claude inferred it incorrectly rather than stopping to ask.
+
+**How it compounds:** Claude doesn't tell you it's inferring. It produces confident-looking output based on assumptions that were wrong from the start.
+
+**Fix:**
+
+Front-load everything the task requires. Before writing the task description, ask: what does Claude need to know that it cannot find by reading files? That information goes at the top of the prompt.
+
+```
+CURRENT STATE:
+- File: src/components/nav.tsx
+- Current behavior: static links, no active state
+- Framework: Next.js 15 App Router (not Pages Router)
+- Styling: Tailwind CSS — no styled-components, no CSS modules
+
+TASK:
+Add active state highlighting to the nav links...
+```
+
+Without the explicit "App Router not Pages Router" note, Claude may write the solution for Pages Router if similar files in the project suggest that pattern.
+
+**Detection test:** Read your prompt without looking at your codebase. Does it contain everything needed to complete the task? If you had to re-read a file to understand what you're asking, Claude will too — but it may read the wrong file, or infer rather than read.
+
+---
+
+## Pattern 2: Scope Ambiguity
+
+**Symptom:** Claude changes more than you asked it to. Files you didn't mention get modified. Existing patterns get "improved" without request. Working code gets refactored alongside the requested change.
+
+**Root cause:** The prompt described an outcome without specifying scope boundaries. Claude optimized for the stated outcome, which included changes you didn't intend.
+
+**Example:**
+
+```
+// Problematic:
+"Fix the nav component so the active link is highlighted"
+
+// Claude may: fix the active state AND refactor the component structure
+// AND rename variables AND add TypeScript types you didn't ask for
+```
+
+**Fix:**
+
+Explicit scope boundaries in every prompt that touches existing files.
+
+```
+SCOPE:
+- Modify ONLY: src/components/nav.tsx
+- Do NOT modify: any other file
+- Do NOT refactor existing code
+- Do NOT add TypeScript types beyond what's needed for the change
+- Do NOT change the component structure
+
+CHANGE:
+Add active state detection using usePathname()...
+```
+
+**Note:** "Only change what I asked" is not sufficient. Claude interprets "only" relative to its understanding of the task, not yours. Be explicit about what NOT to change.
+
+---
+
+## Pattern 3: Stale Mental Model
+
+**Symptom:** Claude produces output that was correct for an older version of a library, API, or framework. Output looks plausible but fails with unexpected errors — often errors that don't make sense given what Claude produced.
+
+**Root cause:** Claude's training data contains documentation for older versions. Without explicit version information in context, Claude defaults to the most common version in its training data — which may not be what you're running.
+
+**Common triggers:**
+
+- Next.js: App Router vs Pages Router patterns
+- `next-mdx-remote`: v4 vs v6 API (different imports, different component registration)
+- React: class components pattern bleeding into functional component context
+- Vercel config: older `vercel.json` schema vs current one
+- Tailwind: v3 vs v4 class changes
+
+**Fix:**
+
+State exact versions explicitly in your prompt or CLAUDE.md:
+
+```
+STACK:
+- Next.js: 15.5.18 (App Router — not Pages Router)
+- next-mdx-remote: 5.x (NOT v4 or v6)
+- React: 19.x
+- Tailwind: 3.4.x
+```
+
+And — when Claude produces output for a new dependency — immediately verify it against the current docs before running it. Don't assume Claude knows the current API.
+
+**Verification prompt:** After Claude writes code using a library, ask: "Is this the current v[X] API for [library]? What changed between [older version] and [current version] that might affect this?"
+
+---
+
+## Pattern 4: Over-Confirmation Drift
+
+**Symptom:** Claude asks clarifying questions in the middle of a task. Or worse: completes a task, asks if it looks right, you say "yes," and Claude re-does parts of what it already did.
+
+**Root cause:** The task lacked a defined end state. Without a clear completion condition, Claude enters a validation loop.
+
+**Fix:**
+
+Define completion criteria explicitly in the prompt:
+
+```
+DONE WHEN:
+- The nav links show `text-brand-500` when the path matches
+- The behavior works with next/navigation usePathname()
+- No TypeScript errors when running `tsc --noEmit`
+- No other files modified
+
+Do not ask for confirmation. Complete the task and stop.
+```
+
+The "do not ask for confirmation" instruction matters. Claude defaults to checking in on ambiguous tasks. If you want autonomous execution, state it.
+
+---
+
+## Pattern 5: Hallucinated File Paths
+
+**Symptom:** Claude references files that don't exist, imports from paths that aren't in the project, or creates files in the wrong location. The code looks correct in isolation but fails with `Module not found` or similar.
+
+**Root cause:** Claude inferred file locations from naming patterns rather than reading the actual directory structure.
+
+**How to trigger it:** Any task that involves creating a new file or importing from a new path, without first reading the actual directory structure.
+
+**Fix:**
+
+Before any task that involves file creation or new imports, have Claude read the directory structure first:
+
+```
+Before starting: read the src/ directory structure and confirm 
+where new components should be placed based on the existing pattern.
+```
+
+Or include the relevant structure in your prompt:
+
+```
+PROJECT STRUCTURE:
+src/
+  app/
+    layout.tsx
+    page.tsx
+  components/
+    layout/
+      sidebar.tsx     ← related component
+    ui/
+      badge.tsx       ← example component for reference
+  lib/
+    utils.ts
+```
+
+**Detection:** After Claude creates or imports a file, check: does the path it used actually exist in your project? Don't wait for the build error.
+
+---
+
+## Pattern 6: Instruction Decay
+
+**Symptom:** A long agentic task follows your instructions for the first few steps but gradually deviates — using different naming conventions, ignoring constraints you stated at the start, reverting to defaults.
+
+**Root cause:** Long context windows have diminishing attention toward the beginning of the prompt. Instructions given at the top of a very long task gradually lose priority as the conversation gets longer.
+
+**Fix:**
+
+For long tasks, repeat critical constraints at each major step:
+
+```
+REMINDER FOR THIS STEP:
+- Use kebab-case for file names (not camelCase)
+- All components must be client components (add 'use client')
+- Do not modify lib/utils.ts
+```
+
+Or better: break the long task into smaller tasks where each prompt restates only the constraints relevant to that step. This is the argument for task decomposition — not just for clarity, but for instruction fidelity.
+
+**Warning sign:** If you're writing a prompt longer than 400 words to describe a single task, you're probably describing multiple tasks. Split it.
+
+---
+
+## Pattern 7: Confidence Without Verification
+
+**Symptom:** Claude produces output with confident, declarative summaries ("Done — I've updated all three files"). On inspection, the changes are incomplete, partially implemented, or contain logical errors that didn't trigger compilation failures.
+
+**Root cause:** Claude summarizes what it intended to do, not necessarily what it did. Compilation success is not the same as correctness.
+
+**This is the most dangerous pattern** because it mimics successful completion.
+
+**Fix:**
+
+Build verification steps into every task:
+
+```
+AFTER COMPLETING:
+1. Run `tsc --noEmit` and show me the output
+2. Read the modified file and confirm the change is present
+3. List every file you modified
+```
+
+And add your own verification layer — don't trust Claude's "Done" summary. Read the files Claude modified. Check that the business logic is correct, not just that it compiled.
+
+**The discipline:** Treat Claude's completion summary like a PR description — it tells you what was intended, not necessarily what the diff contains.
+
+---
+
+## Pattern 8: Context Window Overreach
+
+**Symptom:** On a large codebase task, Claude reads many files, takes a long time, then produces output that has inconsistencies — some files updated correctly, others partially, some not at all. Or Claude "forgets" a constraint it acknowledged 30 messages ago.
+
+**Root cause:** The task required more context than can be maintained coherently within a single context window. Claude loses track of earlier state.
+
+**Fix:**
+
+This is a task decomposition failure. Split into subtasks that each fit within a coherent context window. Each subtask should:
+- Have a defined input (what files/context it needs)
+- Have a defined output (exactly what it produces)
+- Be independently verifiable
+
+**The orchestrator pattern from Module 8 (Multi-Agent Orchestration)** is the systematic solution. But even without orchestration, the principle holds: tasks that require simultaneous awareness of 15+ files should be split into tasks that require awareness of 3-5 files each.
+
+**Diagnostic question:** Before starting a task, count the files it requires understanding. If it's more than 5-7, decompose.
+
+---
+
+## Applying the Taxonomy to New Failures
+
+When you encounter a prompt failure not in this list, ask:
+
+1. **What was the symptom?** What did Claude produce vs. what you expected?
+2. **At what point did it diverge?** Beginning, middle, or end of the task?
+3. **What information was missing from the prompt?** What did Claude have to infer?
+4. **What scope boundary was unclear?** What could Claude have reasonably interpreted as in-scope?
+5. **Was this a single-context or multi-context task?** Did it require more state than one context window handles reliably?
+
+Most failures map to one of these dimensions. Identify which dimension failed, and the fix becomes obvious.
+
+---
+
+<Callout type="warn" title="Prompt iteration without a taxonomy is expensive">
+Fixing a prompt by guessing takes 5-10 iterations. Fixing it by identifying which pattern failed takes 1-2. The discipline of naming the pattern before attempting the fix is the leverage point. "It just didn't do what I wanted" is not a diagnosis.
+</Callout>
+
+<Callout type="info" title="Pattern 7 is the one that ships bugs">
+Every other pattern produces obvious failures — wrong output, build errors, missing files. Pattern 7 (Confidence Without Verification) produces outputs that look correct until they're in production. Build verification steps into your workflow before this pattern costs you a production incident.
+</Callout>
+
+---
+
+<Checkpoint items={[
+  "Can name all 8 patterns from their symptoms without referencing this document",
+  "Have audited 2-3 existing prompts from your workflow and identified which patterns they're vulnerable to",
+  "CLAUDE.md contains explicit version information for your stack (Pattern 3 defense)",
+  "At least one recurring task in your workflow now has explicit scope boundaries (Pattern 2 defense)",
+  "At least one multi-step task now has DONE WHEN criteria (Pattern 4 defense)",
+  "Workflow includes file verification after any task that creates or modifies files (Pattern 7 defense)",
+  "Know which of your recurring tasks are large enough to need decomposition (Pattern 8 assessment)",
+]} />

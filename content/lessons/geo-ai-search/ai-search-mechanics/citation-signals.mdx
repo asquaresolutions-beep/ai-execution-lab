@@ -1,0 +1,171 @@
+---
+title: "What Makes a Source Citable"
+description: "The specific content and authority signals that determine AI citation probability — entity recognition, specificity signals, structural patterns, and what you can change today."
+date: "2026-05-18"
+tags: ["geo", "citation", "ai-search", "authority", "entity", "content-signals"]
+status: "published"
+---
+
+<LessonMeta difficulty="intermediate" updated="2026-05-18" />
+
+<LessonObjectives items={[
+  "Identify entity recognition signals in content and rewrite generic references as named, specific entities",
+  "Apply specificity scoring to content — distinguishing between citable and non-citable versions of the same information",
+  "Audit an existing article using the 5-step citation signal audit process",
+  "Explain which traditional SEO authority signals still affect AI citation via the reranking stage",
+  "Place your content type in the citation hierarchy and identify the improvement path for each type"
+]} />
+
+AI search systems don't cite sources randomly. They cite sources whose content chunks match queries semantically, pass reranking quality filters, and contain recognizable entities. Each of these conditions is engineered — not stumbled into — and each maps to specific, changeable properties of your content.
+
+## Category 1: Entity Recognition Signals
+
+AI models carry trained knowledge of named entities: specific tools, organizations, people, techniques, and products. When a retrieved chunk contains entities the model recognizes, the reranker treats the chunk as more credible — because the model can cross-reference the claim against its training knowledge rather than treating it as an unverifiable assertion.
+
+The practical distinction is between named references and generic references:
+
+| Generic (low entity signal) | Named (high entity signal) |
+|---|---|
+| "an AI language model" | "Claude 3.7 Sonnet" |
+| "a deployment platform" | "Vercel Hobby plan" |
+| "a popular JavaScript framework" | "Next.js 15" |
+| "a content management system" | "WordPress 6.5 with the Gutenberg editor" |
+| "a research technique" | "Retrieval-Augmented Generation (Lewis et al., 2020)" |
+| "the latest version" | "version 4.2.1, released March 2026" |
+| "a well-known company" | "Cloudflare Workers (Cloudflare, Inc.)" |
+
+The mechanism: when the reranker scores a chunk containing "Claude 3.7 Sonnet", it can verify that this is a real, recognized entity with known properties. A chunk containing "an AI language model" provides no anchor point for cross-referencing — it's semantically valid but authority-less.
+
+Specific version numbers, release dates, and pricing tiers are particularly high-value entity signals because they anchor the content in verifiable, time-specific reality. A chunk that says "the GPT-4o API costs $5 per million input tokens as of April 2024" is more citable than "the API has competitive pricing" — not just because it's more useful, but because it contains verifiable specifics the model can score for coherence.
+
+Named techniques with attributable origins perform especially well. "Retrieval-Augmented Generation (Lewis et al., 2020)" signals that you are referencing a specific, traceable research contribution — the model knows this paper, knows its authors, and can confirm the technique is real. Unnamed concepts ("a technique that combines retrieval with generation") get no such confirmation.
+
+## Category 2: Specificity Signals
+
+Reranking models score for specificity. A chunk that contains an exact answer — a command, a value, an error message — scores higher than a chunk that describes the general territory of an answer. This is because the model is optimizing for chunks that can directly answer the user's query, and specific content directly answers specific queries.
+
+The specificity hierarchy, from highest to lowest citation probability:
+
+1. Exact error messages and their solutions
+2. Specific commands with exact syntax
+3. Measured or numbered outcomes
+4. Step sequences with exact values
+5. Named comparisons with criteria
+6. General process descriptions
+7. Conceptual explanations without specific examples
+
+The rewrite test: take any paragraph from your content and ask whether a user who received only that paragraph would know exactly what to do, or would still need to look something up. If they would still need to look something up, the specificity is insufficient for high citation probability.
+
+**Before and after — same information, different specificity:**
+
+| Low Specificity | High Specificity |
+|---|---|
+| "The build process can fail for various reasons related to environment configuration." | "Vercel build failures with exit code 1 and the message `Cannot find module` are caused by a missing dependency in `package.json` that exists locally but wasn't committed." |
+| "Improve your Core Web Vitals by optimizing images." | "Replacing `<img>` tags with Next.js `<Image>` components reduced LCP from 4.2s to 1.8s on a product listing page with 12 above-the-fold images." |
+| "Authentication errors are common when setting up OAuth." | "GitHub OAuth returns a `redirect_uri_mismatch` error when the callback URL in your OAuth app settings doesn't exactly match the `NEXTAUTH_URL` environment variable, including trailing slashes." |
+| "The process takes a few steps." | "The process has 4 steps and takes approximately 8 minutes on a standard Hobby plan build." |
+| "Results improved significantly." | "Organic sessions increased 34% over 60 days after implementing FAQ schema on 12 high-traffic pages." |
+
+The pattern is consistent: specificity means a number, a name, a command, or a measured outcome. "Significantly better," "various reasons," and "a few steps" are specificity voids. Every such phrase is a location where a citation is being lost to a competitor who wrote the specific version.
+
+## Category 3: Answer-First Structural Patterns
+
+The RAG pipeline retrieves chunks, not pages. The chunk that directly answers a query is the chunk that gets cited. This means structural patterns that concentrate the answer at the beginning of a chunk have higher citation probability than patterns that build to an answer.
+
+Three high-citation structural patterns:
+
+**Answer-First paragraphs**: The first sentence of each H2 section states the direct answer to the implied question. The supporting explanation follows. A user who reads only the first sentence of each section should walk away with the core answer — because that first sentence is what the RAG system is most likely to retrieve and use.
+
+**FAQ sections**: FAQ content has the highest structural citation probability of any content format because it explicitly co-locates the question and the answer in the same chunk. The query matches the question; the answer is immediately present. The chunk requires no inference. Every FAQ entry is a pre-optimized retrieval unit.
+
+**Definition sentences**: "X is [specific definition]" sentences are highly citable because they are self-contained assertions. "Retrieval-augmented generation is a technique that supplements a language model's static training knowledge with dynamically retrieved documents at inference time" is a single sentence that fully answers "what is RAG?" — and it retrieves for that query regardless of what surrounds it.
+
+**Tables**: Tables are chunked and cited directly. A comparison table with named tools, specific criteria, and concrete values is a dense retrieval target — it contains multiple entity signals and specificity signals in a compact format. A comparison table with 5 named tools and 6 specific criteria is equivalent to 30 entity-rich data points in a single chunk.
+
+Do not bury the answer. The structural pattern of saving the conclusion for the end — common in essay writing and academic content — is directly opposed to how RAG retrieval works. The system retrieves based on the semantic content of the chunk, and a chunk that spends its first three sentences establishing context before arriving at the answer scores lower than a chunk that leads with the answer.
+
+## Category 4: Authority Signals That Still Matter
+
+Traditional SEO authority signals do not affect retrieval (vector similarity search doesn't know about your domain age). They affect reranking. The reranker scores retrieved chunks for both relevance and source quality — and source quality is informed by signals the indexing system has stored about the source domain.
+
+Signals with observable effect on reranking:
+
+**Domain age and crawl history**: A domain that has been crawled consistently for 3+ years has an established quality baseline in the index. A new domain has no such baseline. This does not mean new domains cannot be cited — it means they need to compensate with higher content specificity to overcome the authority deficit.
+
+**Inbound links from recognized domains**: Five high-quality inbound links from domains the model's training data treated as authoritative have more reranking impact than fifty links from unknown sites. The mechanism is not PageRank directly — it's that recognized linking domains correlate with the indexed domain being treated as a real, established web presence rather than a content farm.
+
+**Schema.org structured data**: The Article, HowTo, and FAQPage schema types have direct relevance to AI search reranking. FAQPage schema, in particular, signals that the page contains structured question-answer pairs — which aligns precisely with how RAG systems want to use content. Implementing FAQPage schema on pages that already contain FAQ content is one of the few technical changes that affects both traditional search ranking and AI citation probability.
+
+**Author entity recognition**: Content published under a consistent author identity that has its own web presence (Wikipedia article, Google Knowledge Panel, professional website, bylines on recognized publications) scores higher than anonymous content. The reranker can cross-reference the author as a real entity with credentials.
+
+**Temporal signals in markup**: Published date and last-updated date visible in structured markup (via `datePublished` and `dateModified` in Article schema) signal that the content is actively maintained. Stale content from 2019 with no update signal loses to equivalent 2025 content for most technical queries.
+
+## What Doesn't Matter (Or Matters Less Than Assumed)
+
+| Signal | Reality |
+|---|---|
+| **Keyword density** | Semantic embedding doesn't count keyword occurrences. Exact phrase repetition has no retrieval advantage. |
+| **Meta description keyword stuffing** | Meta descriptions are not passed to the embedding model as a separate authority signal. They affect click behavior in traditional SERPs, not AI retrieval. |
+| **Article length** | No length threshold improves citation probability. A 600-word article with 3 specific chunks outperforms a 3,000-word article with 3 vague chunks. |
+| **Social share counts** | Not accessible to retrieval or reranking systems. No pathway from social engagement to citation probability. |
+| **Time on page / engagement rate** | Retrieval systems don't have access to your analytics data. GA4 metrics have no direct pathway to reranking scores. |
+| **Outbound link count** | Marginal effect at best. Linking to authoritative sources may weakly correlate with content quality but is not a meaningful lever. |
+| **H1 tag keyword inclusion** | H1 content affects how your page is described in the index, not how individual chunks retrieve. Focus on H2 and H3 clarity instead — these create chunk boundaries. |
+
+## Practical Audit: 5 Steps
+
+Apply this process to any piece of existing content before deciding whether to publish, update, or redirect it.
+
+**Step 1: Count entity references per 500 words**
+
+Scan the content for named, specific entities: product names with version numbers, named techniques with sources, specific organizations, exact commands, measured values. Count them. A target of 6-10 verifiable entity references per 500 words indicates adequate entity density for technical content. Below 3 suggests the content is operating at a generic level that will lose to more specific competitors.
+
+**Step 2: Test every H2 heading**
+
+Read each H2 heading as a question. Then read only the first sentence of that section. Does the first sentence answer the question? If not, the section is not Answer-First. Rewrite the opening sentence to lead with the direct answer. Do this for every H2 in the document.
+
+**Step 3: Count specific commands/values vs. general descriptions**
+
+Highlight every sentence that contains an exact value, command, error message, or measured outcome. Highlight in a different color every sentence that describes a process generally without a specific anchor. The ratio should favor specific over general for technical content. A document with 20 general sentences and 3 specific ones will underperform a document with 8 general and 12 specific sentences.
+
+**Step 4: Check schema markup**
+
+Use Google's Rich Results Test (search.google.com/test/rich-results) to verify your structured data. Confirm that Article schema is present with `datePublished` and `dateModified`. If the page contains FAQ content, confirm FAQPage schema is implemented. If the page contains step-by-step instructions, confirm HowTo schema covers the steps. Missing schema on qualifying content is a fixable authority deficit.
+
+**Step 5: Run the Perplexity retrieval test**
+
+From the RAG pipeline lesson: use the prompt `What does [your domain] say about [specific topic]?` in Perplexity All mode. Do this for 3-5 topics the audited content covers. Document whether you get direct citation, mention-without-citation, or no mention for each. This test tells you whether the content's current state is retrieving — and the audit steps above tell you which signals to improve if it isn't.
+
+## The Citation Hierarchy
+
+Content types, ordered by observed citation frequency in AI search systems:
+
+1. **Official documentation** — tool docs, API references, spec documents. The model's training data treats these as ground truth. Citation probability is highest for content that resembles documentation in structure and specificity.
+
+2. **Technical articles with specific error messages or solutions** — because they exactly match the query pattern of someone with a specific technical problem. The error message itself is a high-specificity entity that retrieves with high precision.
+
+3. **Comparison articles with named tools and specific data** — the combination of multiple named entities and comparative data points creates a high-density retrieval target. "Vercel vs. Netlify on cold start latency" with actual measured times is extremely citable.
+
+4. **How-to content with specific step sequences** — step-by-step content with exact commands, values, and expected outputs. The specificity per step determines citation probability; generic steps reduce it.
+
+5. **Opinion and analysis with named claims and cited evidence** — analysis that names specific sources, quotes specific data, and attributes specific claims. Anonymous analysis with vague references scores poorly.
+
+6. **General information and explainers** — the lowest citation probability category, because they are the most competed-for content type and typically the least specific. An explainer that reaches the specificity level of Category 2 or 3 gets promoted to that category's citation probability.
+
+This platform's Failure Archive — documented, specific failures with named tools, exact error outputs, and identified root causes — sits at Category 2. That is the correct position: the specific error message pattern means Failure Archive posts retrieve with high precision when someone searches for that exact failure. The trade-off is that they retrieve for narrow queries, not broad ones. This is the correct trade-off for a technical knowledge base: precision citation on specific queries is more valuable than low-probability citation on broad queries.
+
+<Callout type="warn" title="Entity stuffing doesn't work">
+Adding more named entities without meaningful context does not increase citation probability — it degrades it. A chunk containing fifteen product names mentioned without explanation creates an incoherent semantic embedding that retrieves poorly and scores low in reranking. Entity density should emerge from genuine specificity: you mention Next.js 15 because you are writing specifically about Next.js 15, not because you are inserting brand names to game retrieval. The reranker is a quality model, and quality models penalize incoherence. Write with genuine specificity; the entity signals follow naturally.
+</Callout>
+
+## Checkpoint
+
+<Checkpoint items={[
+  "You can identify 3 generic entity references in a piece of your existing content and rewrite each as a named, specific entity with version or context",
+  "You can explain why exact error messages have higher citation probability than described error symptoms, using the specificity scoring mechanism as the explanation",
+  "You have applied the Answer-First test to every H2 heading in at least one existing piece of content and identified which sections fail it",
+  "You can explain which category of the citation hierarchy your most-published content type falls into, and what the next step up in the hierarchy requires",
+  "You have run the 5-step citation audit on at least one piece of content and documented the output of each step",
+  "You can explain why social share counts and time-on-page don't affect AI citation probability — specifically which stage of the RAG pipeline they would need to influence to matter",
+  "You can describe the difference between being mentioned-without-citation vs. directly-cited in a Perplexity result, and explain what content change addresses each failure mode"
+]} />

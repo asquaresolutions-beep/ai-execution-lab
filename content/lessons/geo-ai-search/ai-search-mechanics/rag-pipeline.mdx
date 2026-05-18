@@ -1,0 +1,154 @@
+---
+title: "Understanding RAG Pipelines"
+description: "How retrieval-augmented generation actually works — the indexing, retrieval, and generation stages that determine which sources AI search systems use in their answers."
+date: "2026-05-18"
+tags: ["geo", "rag", "ai-search", "perplexity", "retrieval", "citation"]
+status: "published"
+---
+
+<LessonMeta difficulty="intermediate" updated="2026-05-18" />
+
+<LessonObjectives items={[
+  "Describe the four stages of a RAG pipeline and what happens at each stage",
+  "Explain why keyword density is irrelevant for AI citation and what matters instead",
+  "Apply the Answer-First paragraph pattern to existing content sections",
+  "Test whether specific content is being retrieved by Perplexity using a repeatable prompt structure",
+  "Identify which content architecture decisions affect retrieval probability at each pipeline stage"
+]} />
+
+RAG (retrieval-augmented generation) is the reason AI search behaves differently from keyword search — and understanding its pipeline tells you exactly why specific content decisions increase citation probability. This is not a conceptual model; it is the operational mechanism that Perplexity, ChatGPT with browsing, and Gemini with Search are running every time they answer a query.
+
+## What RAG Is
+
+RAG combines a retrieval system with a generation model. The retrieval system finds relevant source content; the generation model writes the answer using that content as context. The retrieval stage does not use keyword matching. It uses vector embeddings — chunks of text that have been converted into numerical representations capturing their semantic meaning. When a query arrives, it is embedded as a vector, and the system finds chunks whose vectors are mathematically close to the query vector. This is why exact keyword density is largely irrelevant for AI citation. A page that never uses the phrase "machine learning inference cost" but clearly explains the concept of paying per compute cycle will retrieve for that query. A page stuffed with the phrase but without coherent explanation may not.
+
+## The Four Stages of a RAG Pipeline
+
+| Stage | What Happens | What You Can Affect |
+|---|---|---|
+| **Crawl + Index** | Crawler fetches content, extracts text, splits into ~512-token chunks, embeds each chunk as a vector stored in a vector database | Page crawlability, clean HTML extraction, chunk-level content quality |
+| **Query Processing** | User query is embedded as a vector; similarity search returns the most semantically close chunks from the index | How semantically specific your content is to real queries people ask |
+| **Reranking** | A second model scores retrieved chunks for relevance, quality, and authority before passing them to the LLM | Domain authority, entity signals, structural quality |
+| **Generation** | The LLM uses the top-ranked chunks as context to write its answer; it cites sources where chunks directly contributed | Whether individual sentences are specific and quotable enough to be pulled directly |
+
+### Stage 1: Crawl and Index
+
+Web crawlers fetch your page and pass it through a text extraction pipeline. The extracted text is split into chunks — typically around 512 tokens, roughly 350-400 words — and each chunk is converted into a vector by an embedding model (such as OpenAI's text-embedding-ada-002 or a comparable model). Those vectors are stored in a vector database alongside metadata about the source URL and chunk position.
+
+Two failure points exist here. First, JavaScript-rendered content may not be extracted if the crawler does not execute JS — meaning entire sections of pages built with client-side rendering may never make it into the index. Second, dense technical jargon or malformed HTML can reduce embedding quality because the embedding model struggles to assign clear semantic meaning to incoherent text.
+
+### Stage 2: Query Processing and Chunk Retrieval
+
+When a user submits a query, the RAG system embeds that query and runs a similarity search against the vector database. The result is a ranked list of chunks — not pages — whose embeddings are closest to the query embedding. A single page may contribute zero, one, or many chunks to the retrieval results for a given query.
+
+This is the stage most content operators misunderstand. The unit of retrieval is the chunk, not the article. An article structured as one long argument that requires full reading to make sense will have chunks that are individually incoherent. An article structured so that each section is self-contained will have chunks that independently answer specific questions — and each of those chunks competes independently in similarity search.
+
+### Stage 3: Reranking
+
+Retrieved chunks are passed to a reranker — typically a cross-encoder model that scores each chunk specifically against the query. Reranking is where authority signals enter the picture. A chunk from a domain with strong inbound links, established crawl history, and recognized entity mentions will score higher than an equally specific chunk from an unknown domain. This is the mechanism by which traditional SEO signals still matter for AI search: not in retrieval, but in reranking.
+
+Rerankers also score for quality signals — coherence, specificity, and whether the chunk contains a direct answer rather than a reference to an answer elsewhere. "See our full guide for details" is a low-quality chunk. "The default timeout is 30 seconds, configurable via the `request_timeout` parameter" is a high-quality chunk.
+
+### Stage 4: Generation
+
+The LLM receives the top-ranked chunks as context and generates an answer. It does not summarize your entire article — it uses the specific chunks it received. When it cites a source, it is citing the source of a chunk it directly used. The implication: a specific, quotable sentence in a chunk increases citation probability. A vague paragraph that paraphrases an idea without a concrete claim does not.
+
+## What This Means for Content Decisions
+
+### Crawl + Index Stage
+
+Content must be crawlable, extractable, and semantically coherent at the chunk level. Practical requirements:
+
+- Render critical content server-side or ensure your framework produces static HTML that crawlers can parse without JS execution
+- Use clean heading structure (H2, H3) — these create natural chunk boundaries and signal topic transitions to embedding models
+- Avoid walls of jargon without explanation — dense acronym sequences produce low-quality embeddings
+
+### Chunk Retrieval Stage
+
+Each ~512-token chunk should be independently valuable. The test: take any 400-word section of your article and ask whether it answers a specific question without requiring the reader to have read anything else. If it requires context from earlier sections, it will underperform in retrieval.
+
+The Answer-First pattern directly addresses this: every H2 section answers its own implied question in the first 2-3 sentences, then elaborates. The first sentences of each section form the highest-value part of that chunk because they establish the semantic anchor the embedding model uses to represent the entire chunk.
+
+### Reranking Stage
+
+Authority signals affect reranking scores. The signals with the most observable effect:
+
+- Domain age and established crawl frequency
+- Inbound links from domains the model recognizes as authoritative
+- Entity recognition — content that mentions named tools, organizations, people, and techniques that the model has seen frequently during training
+- Schema.org markup (Article, HowTo, FAQPage types) — not because crawlers parse it differently, but because it correlates with structured, high-quality content
+
+### Generation Stage
+
+The LLM cites chunks it directly used. Specific, assertive sentences get pulled into answers; hedged or vague sentences do not. Compare:
+
+- Weak: "There are various approaches to handling authentication in Next.js, and developers have different preferences."
+- Citable: "Next.js 15 recommends using the `auth()` helper from `next-auth/server` for server-side session validation in Route Handlers."
+
+The second sentence contains a version number, a named framework, a specific function name, and an exact use case. It is semantically dense, verifiable, and directly answerable to a query.
+
+## How Different AI Search Systems Implement RAG
+
+| System | Real-Time Retrieval | Explicit Citations | Observable Retrieval Behavior | Notes |
+|---|---|---|---|---|
+| **Perplexity** | Yes — retrieves at query time | Yes — numbered citations with source URLs | Retrieves 5-10 chunks per query; tends to prefer recency for news queries, authority for technical queries | Most transparent RAG implementation for testing purposes |
+| **ChatGPT (web browsing)** | Yes — Bing-powered web retrieval | Yes — inline citations | Appears to retrieve fewer sources per query than Perplexity; strong preference for established domains | Browsing behavior varies by query type; not always triggered |
+| **Gemini (with Search)** | Yes — Google Search integration | Yes — cited sources panel | Leverages Google's existing index; structured data and established rankings have more influence | Benefits from Google's full link graph in reranking |
+| **Claude (with search)** | Yes — when search tool is enabled | Yes — cites retrieved sources | Conservative retrieval; tends to cite fewer sources but with higher specificity match | Tool-use architecture differs from native RAG |
+
+### How to Test Whether Your Content Is Being Retrieved
+
+Use this exact prompt structure in Perplexity (set to "All" mode, not focused):
+
+```
+What does [your domain name] say about [specific topic you have published content on]?
+```
+
+Example: `What does failarchive.dev say about Vercel deployment cold start causes?`
+
+Interpret results as follows:
+
+- **Direct citation with quote**: Your content was retrieved and used in generation. The chunk containing that content is being indexed and retrieves for this topic.
+- **Mentioned as a source without direct quote**: Your domain appeared in retrieval but the specific content wasn't pulled into the answer. The domain has authority recognition but the relevant chunk may be losing to higher-specificity competitors.
+- **Not mentioned**: Either the content isn't indexed, the crawler hasn't reached it, or competing chunks are scoring significantly higher in similarity search. Check crawlability first, then audit chunk specificity.
+
+Run this test for 3-5 topics you have published on. The pattern across tests tells you whether you have a crawlability problem (nothing gets retrieved), an authority problem (you're mentioned but not cited), or a specificity problem (you're not mentioned at all on topics you should own).
+
+## The Content Architecture Implication
+
+The specific writing pattern that maximizes chunk retrieval across all four pipeline stages is Answer-First paragraphs:
+
+1. Every H2 section heading implies a question
+2. The first sentence answers that question directly
+3. Sentences 2-3 provide the essential supporting context
+4. The remainder of the section elaborates, gives examples, or handles edge cases
+
+An article with 8 H2 sections written this way has 8 independently retrievable chunks, each of which can place in similarity search for a different query. An article with 8 sections written as a flowing narrative has 8 chunks that are contextually dependent on each other and retrieve poorly in isolation.
+
+This is not a stylistic preference. It is a structural adaptation to how the retrieval unit works.
+
+## What RAG Doesn't Use
+
+These are common assumptions that do not hold for AI search citation:
+
+- **Keyword density**: Semantic embedding does not count keyword occurrences. A page optimized for a 2% keyword density has no advantage over a page that never uses the exact phrase but covers the topic with higher specificity.
+- **Meta tags directly**: The meta description is not passed to the embedding model as a separate signal. However, meta tags affect which pages get crawled and how — so they affect whether content enters the index at all.
+- **Social shares or engagement metrics**: Retrieval systems don't have access to social engagement data. Rerankers use domain-level authority signals, not per-page engagement.
+- **Content length per se**: A 4,000-word article is not advantaged over an 800-word article. What matters is the quality of information per chunk. A 4,000-word article with 8 dense, specific chunks outperforms an 800-word article with 2 vague chunks — but a 1,200-word article with 3 highly specific chunks may outperform the 4,000-word article.
+
+<Callout type="info" title="Chunk size varies by system">
+Different RAG implementations use different chunk sizes and embedding models. The 512-token figure is representative, not universal — some systems use 256-token chunks, others use larger windows, and some use overlapping chunks to preserve context at boundaries. The underlying pattern holds regardless: self-contained, specific, Answer-First paragraphs retrieve better than narrative prose that requires context from surrounding sections. Design for chunk independence, not for a specific token count.
+</Callout>
+
+## Verification Test
+
+To confirm your understanding of the RAG pipeline before moving to the citation signals lesson, verify you can answer the following without referring back:
+
+<Checkpoint items={[
+  "You can name the four stages of a RAG pipeline and describe what happens at each stage in one sentence",
+  "You can explain why keyword density doesn't affect semantic retrieval, using the vector embedding mechanism as the explanation",
+  "You have identified at least one piece of existing content you own where sections are not self-contained at the chunk level",
+  "You can write the exact Perplexity prompt to test whether your domain is being retrieved for a specific topic",
+  "You can distinguish between a citation failure caused by crawlability vs. authority vs. specificity based on the test output patterns",
+  "You can rewrite a vague section opening into an Answer-First sentence that contains a specific, verifiable claim"
+]} />
