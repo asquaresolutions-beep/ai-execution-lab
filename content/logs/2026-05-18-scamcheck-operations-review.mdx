@@ -1,0 +1,183 @@
+---
+title: "ScamCheck Operations Review — Gemini API Usage & UX Audit"
+date: "2026-05-18"
+tags: ["scamcheck", "gemini", "firebase", "operations", "analytics", "github-pages"]
+status: published
+log_type: "operations"
+duration: "1h 40m"
+outcome: "Reviewed Gemini API usage patterns, identified one UX friction point in the scan flow, confirmed Firebase auth working correctly, noted 2 improvements for next sprint."
+---
+
+<LessonMeta
+  duration="1h 40m"
+  difficulty="intermediate"
+  tools={["Google AI Studio", "Firebase Console", "GA4", "GitHub Actions"]}
+  outcome="Reviewed Gemini API usage patterns, identified one UX friction point in the scan flow, confirmed Firebase auth working correctly, noted 2 improvements for next sprint."
+/>
+
+Monthly operational review for ScamCheck — the URL, email, and text scam analysis app running on scamcheck.asquaresolutions.com. No new features this session. Objective: verify API quota health, review auth logs, walk the scan flow manually to catch UX regressions, review GA4 data, and confirm deployment pipeline is clean. Platform-first, then UX, then analytics.
+
+---
+
+## Session Context
+
+**App:** scamcheck.asquaresolutions.com
+**Stack:** React + Vite + Gemini API (Google AI Studio) + Firebase Auth (email/password + anonymous) + GitHub Pages deployment
+**Session type:** Monthly operational review
+**Tools opened:** Google AI Studio dashboard, Firebase Console, GA4 (ScamCheck property), GitHub Actions workflow history
+
+ScamCheck allows users to paste a URL, email message, or freeform text and receive a structured Gemini AI analysis: likelihood of scam, contributing signals, confidence score, and recommended action. Scan-without-login is supported via Firebase anonymous auth; logged-in users get scan history.
+
+---
+
+## Gemini API Usage Review
+
+Opened Google AI Studio and navigated to the API usage dashboard for the project connected to ScamCheck.
+
+**Quota status:** Within free tier. No approaching limits, no throttling events in the review period. Usage pattern is consistent with organic growth — gradual week-over-week increase in request volume, no spikes that would suggest bot traffic or abuse.
+
+**Observation 1: Request timeouts**
+
+A subset of requests were timing out at greater than 10 seconds. Gemini API calls normally complete in 2–4 seconds for typical ScamCheck inputs (a URL, a short email snippet). Timeout-range requests correlated with larger text inputs — users pasting full email bodies or lengthy web page content rather than isolated URLs or short message excerpts.
+
+This is not a quota issue. The Gemini API does not rate-limit by input length; the latency is a function of the model processing a larger context window. The problem is that a 10-second response window creates a poor UX and risks users abandoning the session before results load.
+
+**Root cause confirmed:** No server-side input validation currently caps text input length. The scan form accepts any length input, so unusually large pastes go directly to the API.
+
+**Planned fix:** Add client-side input length validation — maximum 2,000 characters for the text input field. This covers the realistic use case (users scanning a suspicious message or URL) without preventing legitimate inputs. A character counter and a soft warning at 1,500 characters before a hard cap at 2,000 will give users feedback without a hard wall.
+
+<Callout type="warn" title="Client-side length limits don't replace server-side validation">
+The 2,000-character cap will be implemented client-side for immediate UX feedback. A server-side check should also be added to the API route to prevent large inputs from being submitted even if the client-side limit is bypassed. Both are needed; the client-side fix is the sprint-1 priority.
+</Callout>
+
+**Observation 2: JSON parsing working correctly**
+
+All responses from the Gemini API were returning structured JSON as expected. The JSON parsing logic added in the previous sprint — which moved from freeform prose parsing to a structured prompt with an explicit JSON schema — is holding correctly. Zero parse errors in the review period. This is a confirmed stable improvement.
+
+<Callout type="success" title="Structured JSON responses confirmed stable">
+The structured prompt + JSON schema approach introduced last sprint has eliminated parse errors. Gemini is returning consistent result objects: scam_likelihood, confidence_score, signals array, and recommended_action. Parsing logic in the React client is handling the schema correctly.
+</Callout>
+
+---
+
+## Firebase Auth Review
+
+Opened Firebase Console → Authentication → Users and Auth Logs.
+
+**User growth:** Organic, gradual. No unusual spike in new signups, no mass-account-creation pattern that would suggest bot registration. Anonymous auth sessions (used for scan-without-login) show consistent volume.
+
+**Auth log review:** One email/password login failure visible in the auth event log. Investigated: the event showed a standard `auth/wrong-password` error code, consistent with a user typing an incorrect password — not a credential stuffing attempt (which would show multiple failures from the same IP across different accounts in rapid succession) or a system-side issue.
+
+No follow-up action required.
+
+**Firestore security rules:** Reviewed the current ruleset. Rules follow the established pattern: users can read and write only their own scan history documents (`/users/{userId}/scans/{scanId}`), no cross-user reads, no unauthenticated writes to user collections. Anonymous users have no write access to persistent storage. No unexpected permissions found.
+
+<Callout type="info" title="Anonymous auth and Firestore permissions">
+Anonymous Firebase auth sessions can be granted scoped Firestore read access if needed, but ScamCheck's current architecture doesn't persist anonymous scan results — the results display in the session and are not saved. This keeps Firestore rules simpler and avoids orphaned anonymous user documents accumulating in the database.
+</Callout>
+
+---
+
+## UX Friction Audit
+
+Walked through the complete scan flow manually, simulating a first-time user arriving from an organic search.
+
+**Step 1 — Landing page to scan form**
+
+Load time: fast. The page renders the scan form above the fold on desktop. Navigation is minimal — deliberate, keeps the focus on the scan CTA. No issues.
+
+**Step 2 — Text input to submit**
+
+Pasted a test input (a simulated phishing email) and clicked Scan. The Gemini API call initiated. Observation: there is a 2-second delay before the loading spinner appears. The button click registers immediately (no double-click, no frozen state), but the visual feedback — the spinner — only appears after a brief lag.
+
+Investigated: this is Gemini API latency, not a UI bug. The spinner renders when the API response promise is in-flight, but the first 1–2 seconds of the call don't surface a loading state because the component state update is tied to the promise rather than the button click event itself.
+
+The behavior is not broken, but the absence of immediate visual feedback after clicking "Scan" creates perceived sluggishness. Users who have clicked and see no immediate response may click again or assume the page is unresponsive. The fix is to set loading state on the button click event itself, before the API call begins, rather than waiting for the promise to be in-flight.
+
+This is a frontend timing issue, not an API issue. Noted as a sprint improvement — low effort, noticeable UX improvement.
+
+**Step 3 — Results display**
+
+Scan result cards rendered correctly. Confidence score badge displayed with correct color coding (green for low scam likelihood, amber for moderate, red for high). Signal list items were readable. Recommended action text was clear and appropriately direct.
+
+**Step 4 — "Scan Another" button placement**
+
+Critical issue found: on mobile viewport (tested at 390px width, iPhone 14 equivalent), the "Scan Another" button appears below the fold on the results page. The scan result card is tall enough that the call-to-action to start a new scan is not visible without scrolling.
+
+Impact: users who complete a scan may not realize the option to scan another item is immediately available. The session may end not because the user is done, but because they don't see the next step. Given that the app's core loop is repeat scans (scan one suspicious link, then scan another from the same phishing attempt), burying the re-scan CTA on mobile interrupts the natural use pattern.
+
+**Fix for next sprint:** Move the "Scan Another" button above the fold on mobile results view. Options: a sticky button at the bottom of the viewport, or repositioning the result card layout to surface the CTA before the signal list detail.
+
+<Callout type="warn" title="Mobile below-the-fold CTAs — quantified impact">
+The bounce rate on ScamCheck's results page when the verdict is Likely Safe is already high (reviewed in GA4, noted below) — users get the answer and leave. But when the verdict is Possibly Scam or Likely Scam, users often want to scan a related URL or email to cross-check. If the Scan Another button isn't visible, that follow-up scan doesn't happen. This is a retention and engagement issue on the sessions that matter most.
+</Callout>
+
+---
+
+## GA4 Review
+
+Opened GA4 for the ScamCheck property. Cross-domain tracking (configured in a prior session to attribute traffic correctly across the asquaresolutions.com ecosystem) was functioning correctly — sessions from scamcheck.asquaresolutions.com are attributed to the ScamCheck property and not double-counted against the main site property.
+
+**Session metrics:** Session counts consistent with the organic growth pattern visible in Firebase Auth. No unusual anomalies in the acquisition data.
+
+**Bounce rate on results page:** High when the scan verdict is "Likely Safe." Users scan, receive a clean result, and leave. This is expected behavior for a single-purpose utility — the visit intent (verify a suspicious link or email) is fulfilled. A high bounce rate on a resolved-intent page does not indicate a UX problem.
+
+**Average session duration:** Approximately 45 seconds. Consistent with a focused task: arrive, paste input, receive result, leave. Reasonable for a utility app with no social or browsing loop.
+
+**Scan funnel:** Traffic arriving on the landing page, proceeding to scan form, completing a scan — funnel is intact. No major drop-off between landing and scan completion that would suggest a form friction issue beyond what was already identified in the UX audit.
+
+<Callout type="lab" title="Interpreting bounce rate for utility apps">
+Standard bounce rate benchmarks (lower is better) don't apply cleanly to single-purpose utility tools. A user who arrives, scans, sees the result, and leaves has completed the full intended session. The signal to watch is whether users who get a Possibly Scam or Likely Scam verdict bounce at the same rate as Likely Safe verdicts — if they do, the results page isn't converting uncertainty into action, which is a different problem.
+</Callout>
+
+---
+
+## GitHub Pages Deployment Check
+
+Opened the GitHub Actions workflow history for the ScamCheck repository.
+
+**Last 3 deployment runs:** All green. No failed builds in the review period. The Vite build step and gh-pages deployment action are running cleanly.
+
+**gh-pages branch:** Current and matches the expected HEAD of the deployment output. No drift between the branch content and what's live.
+
+**Custom domain (CNAME):** Intact. CNAME file present in the gh-pages branch, custom domain configuration confirmed in the repository settings.
+
+**HTTPS certificate:** Valid. GitHub Pages' automatic Let's Encrypt certificate is current. No certificate expiry warnings.
+
+No deployment-related actions required.
+
+---
+
+## Identified Improvements for Next Sprint
+
+Two items identified and added to ScamCheck's operational improvement queue:
+
+**Sprint item 1 — Input length limit**
+Add client-side character limit of 2,000 characters to the text scan input. Include character counter (visible from 1,500 chars), soft warning at 1,800, hard cap at 2,000. Prevents timeout-prone large-input requests to the Gemini API. Complements with a server-side check on the API route.
+
+**Sprint item 2 — Mobile results CTA placement**
+Move the "Scan Another" button above the fold on mobile viewport (target: 390px baseline). Options: sticky footer button on the results page, or restructured result card layout with CTA before the signal detail list. Evaluate which approach preserves the result card's information hierarchy while surfacing the re-scan action.
+
+---
+
+## Outcome
+
+No critical issues identified. Gemini API quota is healthy with no risk of hitting limits at current growth rate. Firebase auth is functioning correctly with no system-side errors. The JSON parsing refactor from last sprint continues to hold. Two UX improvements identified — neither is a bug, both are friction points that reduce the quality of the experience on the sessions that matter most. Platform is operationally stable.
+
+---
+
+## Next Steps
+
+- [ ] Sprint: implement 2,000-character client-side input limit with character counter
+- [ ] Sprint: resolve "Scan Another" below-fold issue on mobile results view
+- [ ] Sprint: add server-side input length validation to API route (complements client-side cap)
+- [ ] 30-day check: review GA4 to confirm session duration and funnel metrics after UX changes
+- [ ] Monitor: watch for timeout rate change after input limit is deployed
+
+---
+
+## Notes
+
+The Gemini API timeout issue is a good example of a problem that doesn't show up in error logs until it's investigated — the requests don't fail with an error code, they just take longer than expected. Monitoring for p95 and p99 latency on API calls, not just error rates, would catch this pattern earlier. Worth considering a lightweight API monitoring setup (even a simple Cloudflare Worker or GA4 custom event on long-duration scans) for the next infrastructure review.
+
+The UX audit cadence of walking through the full scan flow manually every month is paying off. The "Scan Another" button placement issue would not have surfaced in analytics data alone — the bounce rate signal is ambiguous, and only a manual walkthrough on a real mobile viewport made the problem obvious.

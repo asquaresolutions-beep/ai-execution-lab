@@ -1,0 +1,303 @@
+---
+title: "Operational Publishing Workflow"
+description: "The exact workflow for converting any operational experience — debugging session, deployment, SEO change, analytics finding — into a published piece of operational intelligence within 30 minutes."
+date: "2026-05-18"
+tags: ["publishing", "workflow", "ops", "content", "execution", "playbook"]
+status: published
+goal: "Convert a raw operational experience to a published, evidence-backed piece of content in under 30 minutes."
+prerequisites:
+  - "Git access to the platform repository"
+  - "VS Code or equivalent editor"
+  - "The operational experience is still fresh (ideally within 24 hours of the session)"
+---
+
+## Overview
+
+This playbook defines the exact process for converting operational work — a deployment, a debugging session, a failure, an SEO change, an analytics finding — into a published, evidence-backed content piece on AI Execution Lab. It is not a guide to writing. It is a guide to capturing, structuring, and shipping.
+
+The goal is a single number: under 30 minutes from open editor to `git push`. After that, Vercel deploys in approximately 2 minutes. The content is live.
+
+---
+
+## The Capture-First Principle
+
+Don't wait until an experience is "interesting enough" to document. Capture first, decide later.
+
+The most common reason operational intelligence goes unpublished is self-selection: a session happens, the operator decides it wasn't significant enough to write up, and the experience evaporates. This is exactly backwards. The decision to document should not require the experience to meet a significance threshold. Capture it. The threshold question comes later, when you're looking at the template and deciding which sections to fill.
+
+A failure that took 3 minutes to fix is often more valuable to document than one that took 3 hours — if the 3-minute failure has a crisp, reproducible root cause and the exact error message. A future operator searching for that error message will find the 3-minute fix in 30 seconds. The 3-hour failure, if its root cause is diffuse or environment-specific, may help no one.
+
+Evidence degrades fast. Within 24 hours you lose:
+
+- The exact text of the error message (paraphrase creep begins immediately)
+- The specific sequence of debugging steps that led to the fix
+- The commands you ran and what their output said
+- The mental state that made a particular decision make sense at the time
+
+After 48 hours, most of the operational specificity is gone. What remains is a summary: "I fixed a build error related to edge runtime." That is not a failure report. That is a sentence.
+
+<Callout type="info" title="The capture window">
+The best time to open the template is immediately after the session ends — before you close the terminal, while the browser tabs are still open, while the error message is still in your clipboard. The second best time is within the same day. After that, the evidence starts to degrade and the capture time increases.
+</Callout>
+
+**Capture-first does not mean publish-everything.** It means open the template, fill what you know, and then decide. A file with frontmatter and three bullets of incomplete content is better than no file. You can always complete a draft. You cannot reconstruct a forgotten session.
+
+---
+
+## Choosing the Right Content Type
+
+The content type determines which template to use and what the minimum bar for publication is. Choosing wrong wastes time — a case study written about something that should have been an execution log is ten times harder to write and provides no additional value.
+
+| Content Type | Use When | Minimum Bar | Estimated Capture Time |
+|---|---|---|---|
+| **Failure Report** | Production incident with an identifiable root cause | Exact error message + root cause statement + resolution confirmed | 15–25 min |
+| **Execution Log** | A session, deployment, or multi-step work block completed | Session duration + outcome stated | 10–20 min |
+| **Case Study** | Complete arc: problem → decision → build → outcome, with meaningful before/after | Before-state documented, after-state verified with evidence | 45–90 min |
+| **Playbook** | A procedure you've executed at least twice and expect to execute again | Step list verified end-to-end + verification step | 30–60 min |
+| **Doc** | Architectural decision or system design that needs to be referenced later | Decision stated + rationale in one paragraph | 20–40 min |
+
+**Decision logic:**
+
+- Something broke and you fixed it → **Failure Report**
+- You did a session of work and it's done → **Execution Log**
+- A meaningful project reached completion with measurable outcome → **Case Study**
+- You have a repeatable procedure → **Playbook**
+- You made a design or architectural decision → **Doc**
+
+When in doubt between a Case Study and an Execution Log, ask: is there a before-state and after-state that can be compared? If yes, Case Study. If it's just "here's what I did," Execution Log.
+
+<Callout type="warn" title="Don't write a Case Study when an Execution Log suffices">
+Case studies require documented before/after states, a clear arc, and outcome evidence. If you don't have those, you don't have a case study — you have an execution log with ambitions. Write the execution log. You can always upgrade it later if the outcomes become measurable.
+</Callout>
+
+---
+
+## The 30-Minute Capture Workflow
+
+This is the core of the playbook. Each step has a fixed time budget. The total is 32 minutes — 30 for content, 2 for Vercel to deploy.
+
+### Step 1 — Open the template (5 min)
+
+Navigate to `/templates/` in the repository root. Copy the file that matches your content type to the correct directory:
+
+```
+content/failures/[descriptive-slug].mdx     # Failure Report
+content/logs/YYYY-MM-DD-[short-slug].mdx    # Execution Log
+content/case-studies/[descriptive-slug].mdx # Case Study
+content/playbooks/[descriptive-slug].mdx    # Playbook
+content/docs/[descriptive-slug].mdx         # Doc
+```
+
+Slug conventions: lowercase, hyphen-separated, specific. `edge-runtime-deployment-failure` not `build-error`. `wp-rest-api-auth-failure` not `api-issue`. The slug becomes the URL path and the evidence directory name — make it specific enough to be self-describing.
+
+### Step 2 — Fill in frontmatter (10 min)
+
+The frontmatter is mandatory. Do not skip fields — incomplete frontmatter blocks the content from appearing in the platform's indexes and dashboards.
+
+**For all content types, required fields:**
+- `title` — sentence case, specific. Not "Build Error" — "Edge Runtime Crypto Module Error on Vercel Deployment."
+- `description` — one sentence. What happened and why it matters to someone else.
+- `date` — today's date in `YYYY-MM-DD` format. Do not leave this blank.
+- `tags` — minimum 3, maximum 8. Include the stack, the category, and the platform/property affected.
+- `status` — `published` when ready to ship. Use `draft` only if you must stop mid-capture.
+
+**For Failure Reports, additional required fields:**
+- `severity` — `low`, `medium`, `high`, or `critical`
+- `failure_status` — `resolved`, `open`, or `investigating`
+- `failure_type` — `build`, `runtime`, `config`, `dependency`, `logic`, or `deployment`
+- `resolution_time` — actual time in minutes or hours (e.g., `"12m"`, `"1h 30m"`)
+- `project` — which system was affected
+
+<Callout type="danger" title="Never publish a Failure Report without resolution_time and severity">
+These fields feed the platform's failure intelligence dashboards and the confidence scoring system. A failure report without them is structurally incomplete — it cannot be aggregated, cannot appear in severity-filtered views, and cannot contribute to the platform's pattern library. Fill them every time.
+</Callout>
+
+### Step 3 — Write the core narrative (10 min)
+
+Each template has pre-structured sections. Do not edit for polish. Write for accuracy. The audience is a future operator — possibly you, 6 months from now — who has just hit the same problem or is making the same decision.
+
+Rules for this step:
+
+- **Exact over approximate.** Copy error messages from the terminal, not from memory. Paste the exact command, not a paraphrase.
+- **Chronological over logical.** Write what happened in the order it happened. Do not reorganize into a cleaner narrative at this stage.
+- **Specific over general.** "The `NEXT_PUBLIC_GA4_ID` variable was missing from the Vercel production environment" is useful. "There was a configuration issue" is not.
+- **Short sentences.** You are capturing, not crafting. A bullet list of what you did is better than two paragraphs reconstructing what happened.
+
+The templates have placeholder text in each section. Replace it. If a section is genuinely not applicable, delete it. Do not leave placeholder text in a published file.
+
+### Step 4 — Attach evidence (5 min)
+
+Evidence is what converts a claim into a verifiable record. At minimum, every published piece needs one evidence reference.
+
+**What counts as evidence:**
+- A screenshot stored at `/public/evidence/[slug]/[NNN]-[descriptor]-[YYYY-MM-DD].png`
+- A terminal output block (paste directly into a `TerminalBlock` component or a fenced code block)
+- A commit reference (via `ExecutionEvidence` component)
+- A Vercel build log excerpt (pasted into a `DeploymentLog` component)
+
+**Evidence that does not require a file:**
+- An inline code block with the exact error message
+- A commit SHA referenced inline: "Fixed in commit `a3f7d12`"
+- A before/after description with specific metrics: "14 posts patched, 0 failures, confirmed via re-fetch"
+
+If you took screenshots during the session, move them to the correct evidence directory now. If you did not take screenshots, note what evidence you have (terminal output, commit ref) and use that. Do not wait to take new screenshots if the session is over.
+
+<Callout type="warn" title="Screenshot the error state, not just the fix">
+The most common evidence gap: screenshots only of the resolved state. A screenshot of a working deployment dashboard is useful context. A screenshot of the build log showing the error is the evidence. Capture the error state while it is still visible — before you push the fix.
+</Callout>
+
+### Step 5 — Commit and push (2 min)
+
+```bash
+git add content/[type]/[slug].mdx
+git add public/evidence/[slug]/          # if evidence files were added
+git commit -m "content: failure report — [slug]"
+git push
+```
+
+Vercel picks up the push and deploys in approximately 2 minutes. The content is live at `lab.asquaresolution.com/failures/[slug]` (or the equivalent path for other content types).
+
+<Callout type="success" title="The deploy is the publication">
+There is no separate publication step. Pushing a file with `status: published` to the main branch is the act of publication. Vercel auto-deploys. The content goes live without any manual trigger. If you need to hold a piece back, set `status: draft` — it will build but not appear in public indexes.
+</Callout>
+
+---
+
+## Evidence Requirements by Content Type
+
+The minimum evidence bar differs by content type. These are requirements, not suggestions.
+
+### Failure Reports
+
+| Evidence Item | Requirement |
+|---|---|
+| Error message | Exact text, copied from terminal or log — not paraphrased |
+| Resolution timeline | Actual time in minutes (the `resolution_time` frontmatter field) |
+| Root cause statement | One sentence. Technically accurate. |
+| Prevention steps | 3–5 bullets covering how to avoid or detect this failure in future |
+| Fix reference | At minimum an inline description of the fix; ideally a commit ref via `ExecutionEvidence` |
+
+A failure report without the exact error message is not a failure report. It is a summary. If you do not have the exact error message, note the closest approximation you have and mark it as approximate.
+
+### Execution Logs
+
+| Evidence Item | Requirement |
+|---|---|
+| Session duration | Approximate time spent (frontmatter or first section) |
+| Tools used | List the tools, versions where relevant |
+| Key commands or decisions | At least 3 specific items — what you ran, what you changed, what you chose |
+| Outcome | Stated clearly: what is different now vs. before the session |
+
+### Case Studies
+
+| Evidence Item | Requirement |
+|---|---|
+| Before-state | Documented specifically — what was the problem, measured or described |
+| After-state | Documented specifically — what changed, ideally with a number |
+| Timeline | Start date, end date, key milestones |
+| Evidence of outcome | Screenshot, analytics snapshot, or commit range that verifies the claimed result |
+
+### Playbooks
+
+| Evidence Item | Requirement |
+|---|---|
+| Trigger conditions | When to use this playbook — specific, not vague |
+| Step list | Numbered, executable steps — each step should be a single action |
+| Verification step | How to confirm the playbook succeeded |
+| Failure modes | At least 2 common failure modes and their fixes |
+
+---
+
+## Commit Message Conventions
+
+All content commits follow a consistent format. The format serves two purposes: it makes the git log readable as an operational record, and it produces slugs that work as both filenames and URL paths.
+
+**Format:**
+
+```
+content: [type] — [slug]
+```
+
+**Examples:**
+
+```
+content: failure report — edge-runtime-deployment-failure
+content: execution log — 2026-05-18-wp-rest-api-patching-session
+content: case study — ga4-cross-domain-tracking-fix
+content: playbook — operational-publishing-workflow
+content: doc — content-velocity-system
+```
+
+**Slug construction rules:**
+
+1. Lowercase only — no uppercase, no mixed case
+2. Hyphens as separators — no underscores, no spaces
+3. Include the key noun that makes it searchable: `edge-runtime`, `wp-rest-api`, `ga4`, not just `build-error` or `api-issue`
+4. For execution logs, prefix with the date: `2026-05-18-[short-descriptor]`
+5. The slug must match the filename: `edge-runtime-deployment-failure.mdx` → commit message ends in `edge-runtime-deployment-failure`
+
+**What not to do in commit messages:**
+
+- `content: new post` — no slug, not useful in git log
+- `content: fixed failure report` — implies the file is being corrected, not published
+- `update: failure report` — wrong verb; use `content:` for all content publications
+- `content: failure-report` — the slug should be the specific article slug, not the type name
+
+---
+
+## What Not to Do
+
+These are the most common capture failures that result in degraded operational intelligence or wasted time.
+
+**Don't wait to take screenshots.** The error state exists during the session. After you push the fix, the error is gone. Take the screenshot before you apply the fix. For build errors, screenshot the Vercel build log. For runtime errors, screenshot the console. For state before/after changes, capture both.
+
+**Don't skip the `date` field.** A piece with no date cannot be placed in the operational timeline. It cannot be cross-referenced with other events. It degrades from a record to an undated note.
+
+**Don't publish a failure report without `resolution_time` or `severity`.** These feed the failure intelligence system. Without them, the failure is invisible to aggregation queries. Every failure report, regardless of severity, must have both fields.
+
+**Don't write a case study when an execution log suffices.** A case study requires a complete arc and measurable before/after. If you don't have both, write the execution log. Do not inflate the content type to make the work feel more significant.
+
+**Don't polish prose at the expense of accuracy.** A technically accurate failure report with plain sentences is worth more than a beautifully written failure report with paraphrased error messages. Accuracy is the quality standard. Readability is a secondary concern.
+
+**Don't leave templates open as drafts for more than 24 hours.** A draft that sits open for two days will never be published. If you opened a template and ran out of time, fill in the minimum required fields, set `status: draft`, commit it, and complete it at the next session. A committed draft can be found. A file in your working directory may not be.
+
+---
+
+## Backlog Drain via Operational Debt
+
+The platform tracks operational debt items in `lib/ecosystem.ts` — tasks with priority labels (`P1`, `P2`, `P3`) that represent known issues, pending improvements, or unresolved questions across the A Square Solutions ecosystem.
+
+Each P1 and P2 debt item that gets resolved should generate at least one content piece when completed. The resolution of a debt item is an operational experience. It has a before-state (the debt), a decision, an action, and an outcome. That is the structure of either an execution log or a case study.
+
+**Debt-to-content mapping:**
+
+| Debt item type | Content type on resolution |
+|---|---|
+| Build or deployment failure | Failure report |
+| SEO configuration change | Execution log or doc |
+| Analytics tracking fix | Failure report or execution log |
+| Architecture decision made | Doc |
+| Automation or script built | Playbook (if reusable) or execution log |
+| Integration completed | Case study (if before/after is meaningful) or execution log |
+
+When you resolve a P1 or P2 debt item, open the template immediately. The resolution is still fresh. The debt item itself serves as the before-state description. Write the after-state from what you just did. Commit both the code change and the content piece in the same session.
+
+<Callout type="lab" title="The debt backlog is a publishing backlog">
+Every unresolved P1 debt item in the ecosystem is a future content piece. When the item gets resolved, the operational experience of resolving it — the debugging, the decision, the fix — is the content. The debt backlog is not just a task list. It is a pre-populated list of future publication topics, sorted by priority.
+</Callout>
+
+P3 debt items are lower priority and not required to generate content on resolution. If the resolution took more than 30 minutes or surfaced a non-obvious technical detail, write an execution log. Otherwise, skip it.
+
+---
+
+## Quick Reference
+
+<WorkflowBlock title="30-minute capture workflow">
+  <WorkflowStep n={1} title="Open template (5 min)" desc="Copy the right template from /templates/ to the correct content directory with a specific slug" />
+  <WorkflowStep n={2} title="Fill frontmatter (10 min)" desc="Title, description, date, tags, status — and severity/resolution_time for failure reports" />
+  <WorkflowStep n={3} title="Write core narrative (10 min)" desc="Accuracy over polish — exact error messages, specific commands, chronological order" />
+  <WorkflowStep n={4} title="Attach evidence (5 min)" desc="Screenshot filenames, terminal output blocks, commit refs — at least one per piece" />
+  <WorkflowStep n={5} title="Commit and push (2 min)" desc="git add → git commit -m 'content: [type] — [slug]' → git push → Vercel deploys in ~2 min" />
+</WorkflowBlock>
+
+See also: [Evidence Framework](/docs/evidence-framework) for naming conventions and storage rules. [Content Velocity System](/docs/content-velocity-system) for the publishing velocity architecture and cadence targets.

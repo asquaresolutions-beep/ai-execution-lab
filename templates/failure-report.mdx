@@ -1,0 +1,108 @@
+---
+# ─── REQUIRED ────────────────────────────────────────────────
+title: "FAILURE TITLE — What Broke and Where"
+description: "One sentence: what failed, what it cost, and how it was resolved."
+date: "YYYY-MM-DD"
+tags: ["tag1", "tag2", "tag3"]
+status: published
+
+# ─── FAILURE METADATA ────────────────────────────────────────
+# failure_type: build | runtime | deployment | data | performance | dependency | configuration | authentication
+failure_type: deployment
+# severity: low | medium | high | critical
+severity: high
+# failure_status: open | investigating | resolved
+failure_status: resolved
+project: "Project name — context"
+# How long from first symptom to confirmed fix
+resolution_time: "XX min"
+impact: "One sentence: what was blocked, what data was lost, what was visible to users."
+---
+
+<FailureIntelligence
+  severity="high"
+  recoveryComplexity="moderate"
+  riskScore={6}
+  debuggingComplexity="moderate"
+  preventionPatterns={[
+    "Specific prevention step 1 — actionable, not generic",
+    "Specific prevention step 2",
+    "Specific prevention step 3",
+    "Specific prevention step 4",
+  ]}
+  relatedFailures={[
+    { slug: "related-failure-slug", title: "Related Failure Title" },
+  ]}
+  ecosystemImpact="What this failure blocked or damaged in the broader A Square Solutions ecosystem."
+/>
+
+<!-- DELETE this callout when publishing -->
+<callout type="warn" title="Template — replace all placeholders">
+This is a template. Replace all UPPERCASE placeholders. Remove this callout before committing.
+Commit message: `content: failure report — [slug]`
+</callout>
+
+## What Happened
+
+<!-- Describe the failure from the operator's perspective. When did it appear, what was the first symptom, what were you doing when it broke? -->
+
+On [DATE], during [WHAT YOU WERE DOING], [SYSTEM/TOOL] produced [SYMPTOM]. The failure manifested as [SPECIFIC ERROR OR BEHAVIOR].
+
+Timeline:
+- **[HH:MM]** — First symptom observed: [describe]
+- **[HH:MM]** — Initial hypothesis: [describe]
+- **[HH:MM]** — [Investigation step]
+- **[HH:MM]** — Root cause identified: [describe]
+- **[HH:MM]** — Fix applied: [describe]
+- **[HH:MM]** — Confirmed resolved: [how you verified]
+
+**Total resolution time:** XX minutes
+
+## Root Cause
+
+<!-- One paragraph, maximum 3 sentences. Be specific. "Environment variable missing" is not a root cause. "NEXT_PUBLIC_GA_ID scoped to Development only in Vercel dashboard — Production checkbox not enabled" is a root cause. -->
+
+[Specific root cause in 2-3 sentences.]
+
+## What I Tried First (That Didn't Work)
+
+<!-- This section is optional but high-value — documents the elimination path so others can skip dead ends. -->
+
+1. **[First hypothesis]** — Checked [where], found [what]. This was not the cause because [why].
+2. **[Second hypothesis]** — Tried [what], result was [what]. Ruled out because [why].
+
+## The Fix
+
+<!-- Exact steps. If there was a code change, show it. If there was a config change, show the before/after. -->
+
+1. [Specific step 1]
+2. [Specific step 2]
+3. Verified by: [how you confirmed the fix worked]
+
+```bash
+# If relevant — the exact command(s) that fixed it
+```
+
+## Why This Happened
+
+<!-- One level deeper than root cause. Why was the system in a state where this failure was possible? What was the underlying condition? -->
+
+[Structural explanation — not just "I forgot to check X" but why the system made it easy to forget.]
+
+## Prevention
+
+<!-- Be specific. "Test more carefully" is not a prevention step. "Run `next build` locally before pushing to Vercel" is a prevention step. -->
+
+Going forward:
+
+- **[Specific step]** — [Why this prevents the failure]
+- **[Specific step]** — [Why this prevents the failure]
+- **[Specific step]** — [Why this prevents the failure]
+
+<callout type="success" title="Verified fix">
+[One sentence confirming the fix worked and has not recurred, with evidence if available.]
+</callout>
+
+---
+
+*Failure documented [DATE]. [X] minutes from first symptom to confirmed fix.*

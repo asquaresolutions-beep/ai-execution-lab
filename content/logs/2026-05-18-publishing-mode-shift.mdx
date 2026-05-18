@@ -1,0 +1,135 @@
+---
+title: "Publishing Mode Shift — From Infrastructure to Live Operations"
+date: "2026-05-18"
+tags: ["publishing", "strategy", "platform", "ops", "content-velocity"]
+status: published
+log_type: operations
+duration: "1h 30m"
+outcome: "Publishing infrastructure complete: 6 content templates, lib/content-templates.ts, /publish hub page, operational publishing playbook, content velocity system doc. Platform now operationally ready for live publishing mode."
+---
+
+<LessonMeta
+  duration="1h 30m"
+  difficulty="intermediate"
+  tools={["Claude Code", "Next.js", "TypeScript", "MDX"]}
+  outcome="Full publishing infrastructure in place. The platform now supports rapid operational capture: templates, workflow, hub page, and documentation."
+/>
+
+The Operational Intelligence Layer is complete. The infrastructure is now mature enough that building more systems returns diminishing value compared to populating the platform with real operational intelligence from live execution.
+
+This session marks the deliberate shift from architecture-first to publishing-first.
+
+---
+
+## Strategic Shift Rationale
+
+Three sessions of infrastructure work produced:
+
+- 406 pages generated at build time
+- 8 documented failure reports with confidence scoring
+- 32 typed entity relationships in the operational memory graph
+- 5 named failure patterns with prevention checklists
+- 5 execution pathways through the operational graph
+- 40+ GEO entities, 21 query taxonomy entries
+- Ops dashboard with ecosystem observability
+
+That infrastructure is now a liability if it isn't populated with real operational intelligence. An entity graph with 8 failures and 32 relationships is a proof of concept. An entity graph with 40 failures and 200 relationships is a genuine debugging intelligence system.
+
+The shift: every session from here builds the archive, not the architecture.
+
+---
+
+## What Was Built This Session
+
+### Content Templates (Phase 2 — Rapid Publishing UX)
+
+Six MDX template stubs created in `/templates/`:
+
+| Template | Section | Capture Target |
+|----------|---------|---------------|
+| `failure-report.mdx` | failures | 30 min |
+| `execution-log.mdx` | logs | 20 min |
+| `deployment-journal.mdx` | logs | 15 min |
+| `seo-experiment.mdx` | labs | 45 min |
+| `case-study.mdx` | case-studies | 2 h |
+| `ai-workflow.mdx` | docs | 60 min |
+
+Each template has:
+- Complete frontmatter with all required fields + inline comments explaining each
+- Pre-populated component structure with real component names (FailureIntelligence, EvidenceBlock, LessonMeta, etc.)
+- Minimum bar checklist — what must be true before committing
+- Commit message pattern
+- Section guide for content placement
+
+### lib/content-templates.ts
+
+Template registry with full metadata. Functions: `getCapturePriorityOrder()`, `getTemplateById()`, `getTemplatesBySection()`. Priority order intentionally puts failure-report and execution-log first — these have the highest time-sensitivity and lowest capture friction.
+
+### /publish Page
+
+Publishing workflow hub at `app/publish/page.tsx`. Shows:
+- All 6 templates with minimum bar and commit patterns
+- 30-minute capture workflow step-by-step
+- Recently published content across all sections
+- Publishing links
+- Capture principles
+
+This page is the operational entry point for publishing. It replaces the need to remember template locations, commit conventions, or section paths.
+
+### /publish Link in Ops Navigation
+
+Added `/publish` to the ops page Quick Actions navigation cluster.
+
+### Background Content (Parallel Agents)
+
+Three background agents produced new real operational content:
+- Publishing playbook (`content/playbooks/operational-publishing-workflow.mdx`)
+- Content velocity system doc (`content/docs/content-velocity-system.mdx`)
+- Two new failure reports (Claude Code context exhaustion, GSC index coverage drop)
+- Two new execution logs (WordPress SEO operations, ScamCheck operations review)
+
+---
+
+## Publishing Mode Operating Principles
+
+**Capture first, edit never.**
+The biggest enemy of operational publishing is perfectionism. Publish an accurate 300-word failure report the day it happens over a polished 1,500-word write-up three weeks later.
+
+**Every session generates a log.**
+Sessions over 1 hour get a log entry. Sessions with an incident get a failure report. Sessions that ship something meaningful get a deployment journal or case study.
+
+**The ecosystem is the content source.**
+WordPress SEO work → doc or log. TrustSeal deployment → deployment journal. ScamCheck bug → failure report. Lab build → execution log. The four ecosystem properties are a continuous source of real operational intelligence.
+
+**Evidence degrades in 24 hours.**
+The exact error message, the Vercel build log, the GSC screenshot — all of it fades. Capture immediately after the session ends, not when you "have time."
+
+**30 minutes is the cap.**
+If a content piece takes more than 30 minutes to write, it's a sign of over-polishing. The template structure is designed to constrain the time investment. Use the structure.
+
+---
+
+## Next Publishing Priorities
+
+Based on current operational state:
+
+1. **Deployment journals** — document recent Vercel deployments (three major sessions in May 2026)
+2. **WordPress operations** — monthly SEO audit log (already partially written this session)
+3. **ScamCheck operations** — monthly review log (written this session)
+4. **GSC experiment** — document the entity density / answerability scoring rollout as a GEO experiment
+5. **TrustSeal case study** — full build arc for the payment integration
+6. **AI-assisted publishing workflow** — the Claude Code publishing pattern as a reusable workflow doc
+
+---
+
+## Platform State After This Session
+
+- **406 pages** at build time
+- **6 content templates** in `/templates/`
+- **`/publish` hub** at `/publish`
+- **Publishing playbook** at `/docs/operational-publishing-workflow`
+- **Velocity system doc** at `/docs/content-velocity-system`
+- **2 new failure reports** (claude-code-context-exhaustion, gsc-index-coverage-drop)
+- **2 new ecosystem logs** (wordpress-seo-operations, scamcheck-operations-review)
+
+The infrastructure work is complete. The real work starts now.

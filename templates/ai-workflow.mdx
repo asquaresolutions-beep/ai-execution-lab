@@ -1,0 +1,89 @@
+---
+# ─── REQUIRED ────────────────────────────────────────────────
+title: "AI Workflow — [Workflow Name]"
+description: "One sentence: what this workflow does, what AI tools are involved, and what output it produces."
+date: "YYYY-MM-DD"
+tags: ["ai-workflow", "claude-code", "automation", "tag4"]
+status: published
+stack: ["Claude Code", "Tool2", "Tool3"]
+goal: "The specific repeatable outcome this workflow produces."
+---
+
+<!-- DELETE this callout when publishing -->
+<callout type="warn" title="Template — replace all placeholders">
+Remove this callout before committing. Commit: `content: ai workflow — [slug]`
+</callout>
+
+## What This Workflow Does
+
+**Input:** [What you feed into the workflow — files, context, instructions]  
+**Output:** [What comes out — code, content, analysis, decisions]  
+**Frequency:** [How often you run this — daily, per-deployment, per-session]  
+**Time saved:** [Estimated time this saves vs. manual approach]
+
+---
+
+## When to Use This Workflow
+
+- [Trigger condition 1]
+- [Trigger condition 2]
+- [Trigger condition 3]
+
+**Not appropriate for:**
+- [Anti-use-case 1]
+- [Anti-use-case 2]
+
+---
+
+## The Workflow
+
+<WorkflowBlock title="[Workflow Name]">
+  <WorkflowStep number={1} title="[Step 1 Title]" duration="~X min">
+    [Description of step 1 — what you do, what you tell the AI, what context you provide]
+  </WorkflowStep>
+  <WorkflowStep number={2} title="[Step 2 Title]" duration="~X min">
+    [Step 2]
+  </WorkflowStep>
+  <WorkflowStep number={3} title="[Step 3 Title]" duration="~X min">
+    [Step 3]
+  </WorkflowStep>
+</WorkflowBlock>
+
+---
+
+## Prompt Templates
+
+### [Step 1 Prompt]
+
+<PromptBlock title="[Step 1 Prompt Name]" model="claude-4-5">
+[The exact prompt you use, with [PLACEHOLDERS] for variable parts]
+</PromptBlock>
+
+---
+
+## Evidence
+
+<EvidenceBlock type="terminal" title="Example workflow execution" quality="verified">
+[Paste terminal output or example here]
+</EvidenceBlock>
+
+---
+
+## Failure Modes
+
+| What Can Go Wrong | Why It Happens | How to Recover |
+|-------------------|---------------|----------------|
+| [Failure mode 1] | [Cause] | [Recovery step] |
+| [Failure mode 2] | [Cause] | [Recovery step] |
+
+---
+
+## Operational Notes
+
+<callout type="info" title="[Key operational insight]">
+[One paragraph on the most important thing to know about operating this workflow — what trips people up, what the non-obvious constraint is.]
+</callout>
+
+---
+
+*Workflow documented: [DATE] · Validated: [DATE]*

@@ -1,0 +1,90 @@
+---
+# ─── REQUIRED ────────────────────────────────────────────────
+title: "Deployment Journal — YYYY-MM-DD"
+description: "One sentence describing what was deployed and the deployment outcome."
+date: "YYYY-MM-DD"
+tags: ["deployment", "vercel", "tag3"]
+status: published
+log_type: deployment
+duration: "X h Y m"
+outcome: "What was deployed, whether it succeeded, and any incidents encountered."
+---
+
+<!-- DELETE this callout when publishing -->
+<callout type="warn" title="Template — replace all placeholders">
+Remove this callout before committing. Commit: `content: deployment journal — YYYY-MM-DD`
+</callout>
+
+## Pre-Deployment Checklist
+
+Before pushing to production, the following were verified:
+
+- [ ] `next build` ran clean locally
+- [ ] All required env vars confirmed in Vercel dashboard (Production checked)
+- [ ] No `export const runtime = 'edge'` on routes using Node-only APIs
+- [ ] No dependency major version upgrades without changelog review
+- [ ] DNS/domain configuration unchanged (or changes documented)
+
+---
+
+## What Was Deployed
+
+**Commit:** `[COMMIT_HASH]` — [commit message]  
+**Branch:** main → production  
+**Vercel project:** [project name]  
+**Deploy triggered:** [YYYY-MM-DD HH:MM]
+
+**Changes:**
+- [File/change 1]
+- [File/change 2]
+- [File/change 3]
+
+---
+
+<DeploymentLog
+  environment="production"
+  platform="vercel"
+  status="success"
+  duration="X m XX s"
+  commitRef="[COMMIT_HASH]"
+  notes="[Any build notes, warnings, or observations from the Vercel build log]"
+/>
+
+---
+
+## Build Log Summary
+
+**Build duration:** [X minutes Y seconds]  
+**Pages generated:** [N]  
+**Warnings:** [None / list any]  
+**Errors:** [None / list any]
+
+---
+
+## Post-Deploy Verification
+
+After deployment, the following were verified:
+
+- [ ] Site loads at production URL
+- [ ] Recent content visible and rendering correctly
+- [ ] No 500 errors in Vercel function logs
+- [ ] Analytics firing (GA4/Plausible)
+- [ ] [Any feature-specific verification]
+
+---
+
+## Incidents
+
+<!-- If the deployment triggered an incident or revealed an issue, document it here. -->
+
+[No incidents — deployment clean. OR describe any incident that occurred.]
+
+---
+
+## Notes for Next Deployment
+
+[Anything to remember or change for the next deployment cycle.]
+
+---
+
+*Deployed: [DATE] · [DURATION] build · [N] pages*

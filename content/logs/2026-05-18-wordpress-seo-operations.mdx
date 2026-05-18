@@ -1,0 +1,173 @@
+---
+title: "WordPress SEO Operations — Site Health & Schema Audit"
+date: "2026-05-18"
+tags: ["wordpress", "seo", "schema", "site-health", "yoast", "google-search-console"]
+status: published
+log_type: "operations"
+duration: "2h 15m"
+outcome: "Resolved 3 WordPress site health warnings, updated Organization schema, corrected 2 internal link anchor texts, identified 4 GSC coverage gaps for manual review."
+---
+
+<LessonMeta
+  duration="2h 15m"
+  difficulty="intermediate"
+  tools={["WordPress Admin", "Yoast SEO", "Google Search Console", "Google Rich Results Test"]}
+  outcome="Resolved 3 WordPress site health warnings, updated Organization schema, corrected 2 internal link anchor texts, identified 4 GSC coverage gaps for manual review."
+/>
+
+Monthly SEO health audit for asquaresolutions.com. Objective: review WordPress site health score, validate schema markup, audit GSC coverage status, and check internal link quality on top-traffic pages. No new features — operational hygiene only.
+
+---
+
+## Session Context
+
+**Site:** asquaresolutions.com (WordPress)
+**Session type:** Monthly operational audit
+**Tools opened:** WordPress Admin → Site Health, Yoast SEO dashboard, Google Search Console (asquaresolutions.com property), Google Rich Results Test
+
+The audit follows a fixed sequence each month: site health first (server and application layer), then structured data, then GSC coverage, then internal linking. Working top-down means indexing and crawl issues surface before link quality — if a page isn't indexed, anchor text doesn't matter.
+
+---
+
+## Site Health Audit
+
+Opened **WordPress Admin → Tools → Site Health**. Status tab loaded with 3 warnings and no critical errors. Passed tests included: HTTPS active, REST API reachable, scheduled events running, loopback requests passing.
+
+**Warning 1: Background updates for minor releases disabled**
+
+WordPress minor releases (security patches, maintenance updates) were not set to auto-update. This is a configuration choice that was made at setup — manually managing all updates — but the default recommendation is to allow minor auto-updates. For a production site without a dedicated staging pipeline for every minor patch, the risk of a silent minor update breaking something is low relative to the risk of staying on a known-vulnerable minor release.
+
+Resolution: Enabled automatic background updates for minor releases via `wp-config.php` constant. Set `define('WP_AUTO_UPDATE_CORE', 'minor');`. This covers security patches without enabling major version auto-upgrades.
+
+<Callout type="info" title="Minor vs major auto-updates">
+WordPress distinguishes between minor releases (e.g., 6.5.3 → 6.5.4) and major releases (6.5 → 6.6). Setting auto-updates to `minor` handles security patches without triggering potentially breaking major upgrades. Major upgrades remain manual.
+</Callout>
+
+**Warning 2: Plugin with no updates in 12+ months**
+
+One installed plugin — a legacy contact form — had not received an update in over a year. WordPress Site Health flags this as a warning because abandoned plugins are a common attack surface. Security scan (run via Wordfence, not part of this session but reviewed in the last run) showed no known vulnerabilities for this plugin version.
+
+Resolution: No immediate action. Logged the plugin for replacement during next quarter's technical debt review. The plugin handles a simple contact form; replacing it requires selecting an alternative, verifying field parity, and testing mail delivery — a 30–45 minute task that belongs in a planned sprint, not an impromptu audit.
+
+<Callout type="warn" title="Outdated plugins and the vulnerability window">
+An outdated plugin without known vulnerabilities is still a lower-priority risk than one with a published CVE — but the window between vulnerability discovery and public disclosure can be short. The correct response is a scheduled replacement, not indefinite deferral. Noted for Q3 technical debt sprint.
+</Callout>
+
+**Warning 3: PHP version note**
+
+Current PHP version noted with a recommendation to plan an upgrade. This was flagged as informational rather than critical — the installed version remains in active support. No plugins reported compatibility concerns with the recommended target version.
+
+Resolution: Acknowledged. PHP upgrades require staging verification because theme functions and plugin compatibility aren't always obvious from changelogs. Added to infrastructure planning notes for the next maintenance window — target: upgrade within 60 days.
+
+---
+
+## Schema Markup Review
+
+Reviewed the Organization schema currently deployed on asquaresolutions.com. The schema correctly identified the organization name, URL, logo, and contact information. One gap identified: the `sameAs` property was absent.
+
+The A Square Solutions ecosystem runs across three properties:
+- `asquaresolutions.com` — main WordPress site
+- `scamcheck.asquaresolutions.com` — ScamCheck app
+- `trustseal.asquaresolutions.com` — TrustSeal app
+
+Without `sameAs` linking these, search engines and AI systems treat them as independent entities rather than recognizing them as properties of the same organization. For AI-powered search specifically (where entity disambiguation is part of the retrieval process), this matters more than it did in traditional web search.
+
+**Action taken:** Added `sameAs` array to the Organization schema with all three property URLs. Schema block now reads:
+
+```json
+{
+  "@type": "Organization",
+  "name": "A Square Solutions",
+  "url": "https://asquaresolutions.com",
+  "sameAs": [
+    "https://asquaresolutions.com",
+    "https://scamcheck.asquaresolutions.com",
+    "https://trustseal.asquaresolutions.com"
+  ]
+}
+```
+
+**Validation:** Pasted the updated schema into Google Rich Results Test. Result: passed. No errors, no warnings. The tool confirmed the Organization type was parsed correctly and all fields recognized.
+
+<Callout type="success" title="Rich Results Test passed">
+Google Rich Results Test confirmed the updated Organization schema — including the sameAs array — parses without errors. Cross-domain entity linking is now explicit in the structured data layer.
+</Callout>
+
+<Callout type="lab" title="sameAs and AI search entity recognition">
+AI-powered search systems (Perplexity, Google AI Overview, ChatGPT web browsing) use entity graphs to disambiguate organizations. The sameAs property is one of the clearest signals that multiple URLs belong to the same entity. Without it, scamcheck.asquaresolutions.com and trustseal.asquaresolutions.com may not be attributed to A Square Solutions in AI-generated answers even when they're cited.
+</Callout>
+
+---
+
+## GSC Coverage Review
+
+Opened Google Search Console for the asquaresolutions.com property. Navigated to **Indexing → Pages** and reviewed the "Not indexed" breakdown.
+
+Total URLs reviewed: 4 in "Crawled — currently not indexed" state.
+
+**3 paginated archive pages** — `/category/[name]/page/2`, `/category/[name]/page/3`, similar patterns. These are standard WordPress pagination for blog category archives. Google frequently crawls paginated archive pages but does not index them — this is expected behavior. No action taken.
+
+**1 service page** — A page in the services section was in "Crawled — currently not indexed" state. Unlike the archive pages, this page should be indexed. The page has original content, is not noindexed, and is linked from the site navigation.
+
+Possible causes: thin content signal, insufficient inbound links at crawl time, or simply waiting in Google's indexing queue. The page content was reviewed quickly in the admin — word count adequate, no obvious thin content issues. Most likely cause: insufficient page authority at time of crawl.
+
+**Action taken:** Opened the URL Inspection tool in GSC for the service page. Confirmed: last crawl was 11 days ago, status "Crawled — currently not indexed." Clicked "Request Indexing." GSC confirmed the request was queued.
+
+Set a 7-day reminder to re-check indexing status via URL Inspection.
+
+<Callout type="info" title="Requesting re-indexing doesn't guarantee immediate results">
+GSC's "Request Indexing" submits the URL to Google's priority crawl queue — it does not guarantee indexing within any specific timeframe. For pages with low inbound authority, building internal links to the page is often more effective than repeated re-indexing requests. Both actions were taken here.
+</Callout>
+
+---
+
+## Internal Link Audit
+
+Used Yoast SEO's **Internal Linking Suggestions** feature alongside a manual review of the top 5 pages by organic traffic (identified from GSC performance data).
+
+**Anchor text issues found:**
+
+Two instances of generic "click here" anchor text in the services section — one in a CTA block, one in body copy. These provide no topical signal to crawlers and no context to users scanning the page.
+
+Corrections made:
+- "click here" → "view ScamCheck pricing" (contextually appropriate for the linked page)
+- "click here" → "see how TrustSeal works" (descriptive, matches destination content)
+
+**Orphaned page identified:**
+
+One published page had zero internal links pointing to it. The page existed in the sitemap and was accessible via direct URL but was not linked from any other page on the site. This creates a crawl accessibility problem — Google can find it via sitemap but assigns lower priority to pages with no contextual endorsement from other site content.
+
+Resolution: Added one contextual internal link from the most topically relevant service page. The link placement was in body copy, not a sidebar widget — body copy links carry more weight in most crawlers' link graph analysis.
+
+<Callout type="warn" title="Orphaned pages and crawl priority">
+A page in the sitemap with no internal links will still be crawled, but the absence of internal linking signals low editorial importance. For service pages that should be converting, this is a real SEO cost — not just a theoretical one.
+</Callout>
+
+---
+
+## Outcome
+
+**Site Health:** All 3 warnings resolved or formally triaged. Minor update auto-updates now enabled. Legacy plugin queued for Q3 replacement. PHP upgrade documented in infrastructure planning.
+
+**Schema:** Organization schema updated with `sameAs` array across all three ecosystem properties. Validated in Google Rich Results Test. Cross-domain entity recognition now explicit in structured data.
+
+**GSC Coverage:** 4 URLs reviewed. 3 archive paginations confirmed expected non-indexed status. 1 service page re-indexing requested via URL Inspection tool. 7-day follow-up reminder set.
+
+**Internal Linking:** 2 "click here" anchor texts corrected to descriptive text. 1 orphaned page resolved with contextual internal link from relevant service page.
+
+---
+
+## Next Steps
+
+- [ ] Check GSC indexing status of the service page in 7 days via URL Inspection
+- [ ] Q3 technical debt sprint: evaluate legacy contact form plugin replacement
+- [ ] Infrastructure planning: PHP version upgrade within 60-day window
+- [ ] Follow-up: run GSC Performance report in 30 days to check if service page appears in impressions
+
+---
+
+## Notes
+
+The `sameAs` schema update is the highest-impact change from this session relative to effort. It took under 10 minutes to implement and validate, but the entity graph implications — particularly for AI search attribution — are significant as the ecosystem grows. The ScamCheck and TrustSeal apps are increasingly the primary traffic entry points; ensuring they're recognized as A Square Solutions properties in structured data is foundational.
+
+The orphaned page finding was unexpected. Monthly internal link audits should include a quick orphaned page check — this isn't covered by Yoast's suggestions UI (which only shows outbound linking opportunities) and requires manually cross-referencing pages against inbound link counts.

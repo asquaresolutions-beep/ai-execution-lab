@@ -1,0 +1,239 @@
+---
+title: "Google Search Console Index Coverage Drop After Noindex Rollout"
+description: "After programmatically adding noindex:true to 8 internal planning documents, Google Search Console showed a drop in indexed pages and a spike in 'Excluded by noindex tag' entries, triggering an audit to verify no production content had been accidentally excluded."
+date: "2026-05-18"
+tags: ["google-search-console", "noindex", "seo", "indexing", "metadata"]
+status: published
+failure_type: "configuration"
+severity: "low"
+failure_status: "resolved"
+project: "AI Execution Lab — SEO architecture"
+resolution_time: "25 min"
+impact: "Temporary alarm when GSC showed indexed page count dropping from ~370 to ~340 across a 3-day crawl window. Audit confirmed all excluded pages were intentional (internal planning docs, thin-tag pages). No production content was accidentally deindexed."
+recovery_complexity: "minutes"
+deployment_risk: "low"
+time_to_detect: "3 days post-deployment — visible in GSC Coverage report on next crawl cycle"
+repeat_risk: "medium"
+---
+
+<FailureIntelligence
+  severity="low"
+  recoveryComplexity="minutes"
+  category="configuration"
+  deploymentRisk="low"
+  timeToDetect="3 days post-deployment — GSC Coverage report on next crawl cycle"
+  repeatRisk="medium"
+  riskScore={2}
+  debuggingComplexity="trivial"
+  preventionPatterns={[
+    "Before any noindex rollout, document the exact URLs being excluded and their expected GSC treatment — one list, one commit message note, or one log entry",
+    "After a noindex rollout, record the expected post-change indexed page count in the deployment commit message or ops log so future GSC drops have a baseline to compare against",
+    "Set a 7-day calendar reminder after any noindex deployment to check GSC Coverage report and confirm the exclusion count matches expectations",
+    "Maintain a running tally of intentionally excluded pages in lib/ecosystem.ts or operational documentation — separated by category (planning docs, thin-tag pages, staging content)",
+    "Use the noindex frontmatter field consistently across all content — never add robots meta tags directly in layout HTML, which creates an invisible second exclusion mechanism"
+  ]}
+  ecosystemImpact={[
+    "GSC indexed page count dropped ~30 pages over 3 days — within expected range but visually alarming without documented baseline",
+    "'Excluded by noindex tag' count spiked in Coverage report — correct behavior, but triggered unnecessary audit time",
+    "SEO monitoring workflow needs a post-noindex verification step to distinguish intentional exclusions from accidental ones"
+  ]}
+/>
+
+<IncidentReport
+  severity="low"
+  status="resolved"
+  impact="Google Search Console showed a drop of approximately 30 indexed pages over a 3-day crawl window after a noindex rollout. The Coverage report showed a spike in 'Excluded by noindex tag.' This triggered a 25-minute audit to confirm that no production content (failure reports, lessons, case studies, docs) had been accidentally excluded. The audit confirmed all excluded pages were intentional. No code changes were required."
+  rootCause="Working as intended — but without pre-rollout baseline documentation of which URLs were being intentionally excluded, the GSC drop looked identical to an accidental deindexing event. The monitoring gap was the absence of an expected-exclusion record attached to the deployment."
+  resolution="Cross-referenced all URLs in GSC's 'Excluded by noindex tag' list against the 8 planning documents and thin-tag pages that had been intentionally noindexed. Every excluded URL matched an intentional exclusion. Documented the post-rollout baseline: approximately 370 indexed production pages, 8 planning docs excluded, approximately 40 thin-tag pages excluded. Added a GSC verification step to the operational runbook for any future noindex deployment."
+  prevention="Before any noindex rollout: list the exact URLs being excluded. After the rollout: note the expected GSC behavior in the deployment commit message or ops log. Check GSC Coverage 7 days later and confirm the exclusion count matches the pre-documented expectation."
+/>
+
+## What Happened
+
+The platform maturity hardening session added `noindex: true` to eight internal planning documents that had been inadvertently crawlable. These documents were part of the content architecture but were never intended for search indexing — they contained in-progress thinking, structural outlines, and planning notes rather than finished content:
+
+- `community-model-architecture`
+- `platform-vision-architecture`
+- `operator-experience-architecture`
+- `productization-architecture`
+- `track-audit-2026-05`
+- `track-design-v2`
+- `content-expansion-roadmap`
+- `wordpress-rollout-assets`
+
+In the same session, tag pages with fewer than 3 associated content items were given `robots: { index: false, follow: true }` via the Next.js metadata API. These thin-tag pages had been indexed but provided no value to search users — a tag page with one or two items is not a useful search result.
+
+Both changes were correct SEO decisions. Neither was accidental. The problem came three days later.
+
+<EvidenceBlock
+  type="search-console"
+  date="2026-05-18"
+  context="GSC Coverage report 3 days after noindex rollout — Excluded by noindex tag spike"
+  quality="approximate"
+>
+
+```
+Coverage report summary (approximate, from GSC dashboard):
+  Valid pages:              ~340   (down from ~370, 3 days prior)
+  Excluded by noindex tag:  ~48    (up from ~0)
+  Crawled - not indexed:    ~12    (unchanged)
+  Discovered - not indexed: ~6     (unchanged)
+
+Noindex exclusions breakdown (from URL inspection):
+  Planning docs:  8 URLs   (/planning/community-model-architecture, etc.)
+  Thin tag pages: ~40 URLs (/tags/[tag] with <3 items)
+```
+
+</EvidenceBlock>
+
+When GSC showed the Coverage report with the drop in valid pages and the spike in noindex exclusions, the immediate interpretation was: something may have been accidentally excluded. A drop of 30 indexed pages in 3 days is not a small event. Without a record of which pages had been intentionally noindexed and when, distinguishing an intentional exclusion from an accidental one required an audit.
+
+## Why the Alarm Was Reasonable
+
+A 30-page drop in indexed content within a 3-day crawl window is a legitimate SEO signal. In the absence of a documented noindex deployment, it would indicate one of several possible problems:
+
+- A robots.txt change that blocked crawling on a section
+- A layout-level `noindex` meta tag applied too broadly
+- A Next.js metadata function returning the wrong robots object for production
+- A Vercel deployment that introduced a header-level `X-Robots-Tag: noindex`
+
+All of these have happened on production sites. The fact that this particular drop was intentional was not self-evident from the GSC report alone — the Coverage report shows what happened, not why. The audit was the right response. It just should not have been necessary.
+
+<Callout type="info" title="GSC crawl delay means noindex changes are not immediately visible">
+Google typically recrawls and reprocesses pages within a few days of a change, but the Coverage report reflects crawl data, not deployment data. A noindex tag deployed on day 1 will not appear in the Coverage report until Google recrawls those URLs — which can take anywhere from 1 to 7 days depending on crawl frequency and site size. The 3-day gap between deployment and the Coverage report update is normal, not a sign of a problem.
+</Callout>
+
+## The Audit Process
+
+The audit took 25 minutes and followed a straightforward verification path:
+
+**Step 1: Export the excluded URLs from GSC.**
+
+GSC Coverage report → "Excluded by noindex tag" → Export. This produces a CSV of all URLs currently excluded by a noindex signal. The export contained 48 URLs.
+
+**Step 2: Cross-reference against known intentional exclusions.**
+
+The 8 planning document slugs were known from the deployment. The thin-tag pages were identifiable by URL pattern (`/tags/[tag]`). Every URL in the export matched one of these two categories.
+
+**Step 3: Spot-check production content types.**
+
+Manually checked that no failure reports (`/failures/`), lessons (`/lessons/`), case studies, or documentation pages appeared in the excluded list. None did.
+
+**Step 4: Verify robots metadata in code.**
+
+Checked `app/[content-type]/[slug]/page.tsx` for each major content type to confirm that `robots: { index: true }` was set (or that the default — which is indexable — was in effect). No production content type had accidentally inherited a noindex signal.
+
+<EvidenceBlock
+  type="debugging"
+  date="2026-05-18"
+  context="Verification check — production content types confirmed indexable"
+  quality="reconstructed"
+>
+
+```
+Content types verified as indexable:
+  /failures/[slug]     → robots: default (index: true)   ✓
+  /lessons/[slug]      → robots: default (index: true)   ✓
+  /docs/[slug]         → robots: default (index: true)   ✓
+  /playbooks/[slug]    → robots: default (index: true)   ✓
+  /logs/[slug]         → robots: default (index: true)   ✓
+  /tags/[tag]          → robots conditionally set:
+                          ≥3 items: index: true           ✓
+                          <3 items: index: false          ✓ (intentional)
+
+Planning docs excluded:
+  8 slugs confirmed in GSC export — all match intentional noindex list ✓
+```
+
+</EvidenceBlock>
+
+**Step 5: Document the post-rollout baseline.**
+
+With the audit complete, a baseline was recorded for future reference: approximately 370 intentionally indexed pages, 8 planning docs excluded, approximately 40 thin-tag pages excluded. This baseline is the comparison point for any future Coverage report drop.
+
+## The Noindex Implementation
+
+Both noindex signals were applied correctly. For the planning documents, the frontmatter field:
+
+```yaml
+noindex: true
+```
+
+...is read by the content page component and passed to Next.js's `generateMetadata` function, which sets the appropriate robots meta tag in the page `<head>`:
+
+```typescript
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const content = await getContent(params.slug)
+  return {
+    // ...
+    robots: content.noindex
+      ? { index: false, follow: false }
+      : { index: true, follow: true },
+  }
+}
+```
+
+For thin-tag pages, the metadata function checks item count:
+
+```typescript
+robots: tagItems.length >= 3
+  ? { index: true, follow: true }
+  : { index: false, follow: true }
+```
+
+The `follow: true` on thin-tag pages is intentional — even if a tag page is not worth indexing, its internal links should still be followed. This is standard SEO practice for thin pages.
+
+<Callout type="success" title="The noindex rollout was technically correct — the gap was documentation">
+Both noindex implementations were accurate and performed exactly as intended. Google excluded the right pages. The Coverage report reflected the actual state of the site. The only problem was the absence of a pre-rollout record that would have made the 3-day-later audit unnecessary. The fix was operational, not technical.
+</Callout>
+
+## The Monitoring Gap
+
+This failure class — intentional change triggers alarming-looking metric, audit required to confirm it was intentional — is common in SEO work because the tools that show you what happened (GSC) do not show you why it happened or whether it was planned.
+
+The pattern appears in several forms:
+
+- Noindex rollout → indexed page count drops → audit to confirm nothing was accidentally excluded
+- Disavow file update → referring domain count drops → audit to confirm no valuable links were removed
+- Canonical tag restructure → impression count shifts → audit to confirm no pages were accidentally canonicalized to lower-value URLs
+
+In every case, the alarm is caused by a change that was made correctly but not documented in a way that makes the corresponding metric movement immediately legible.
+
+The fix is not to avoid making these changes — noindexing planning documents is correct SEO hygiene. The fix is to make the documentation of the change visible in the same workflow that produces the metric change.
+
+## The Operational Runbook Addition
+
+After the audit, the following note was added to the deployment runbook for noindex changes:
+
+```
+NOINDEX DEPLOYMENT CHECKLIST
+Before deploy:
+  □ List exact URLs being excluded (slug and full path)
+  □ Record current GSC indexed page count as baseline
+  □ Note expected post-change indexed count
+
+In commit message:
+  → noindex: [n] pages excluded — [planning docs / thin-tag / staging]
+  → Expected GSC indexed pages after crawl: ~[number]
+
+7 days after deploy:
+  □ Check GSC Coverage → Excluded by noindex tag
+  □ Confirm excluded count matches expected count
+  □ Confirm no production content types appear in excluded list
+```
+
+This takes two minutes before deployment and eliminates the need for a 25-minute reactive audit.
+
+## Prevention Pattern
+
+For any future noindex rollout on the AI Execution Lab platform or the A Square Solutions ecosystem:
+
+1. **Document before you deploy.** List the exact slugs being excluded, their URL patterns, and the reason they are being noindexed. This list becomes the verification checklist after GSC updates.
+
+2. **Put the expected count in the commit message.** "noindex: 8 planning docs + ~40 thin tags — expected indexed pages ~370 after crawl" is a 10-second addition to a commit message that makes any future GSC drop immediately interpretable.
+
+3. **Set the 7-day reminder.** GSC crawl cycles mean the change will not appear in the Coverage report immediately. A reminder to check 7 days out closes the loop — either the counts match expectations (good), or they do not (investigate).
+
+4. **Keep a running exclusion inventory.** A comment in `lib/ecosystem.ts` or a note in the operational memory noting the intentional exclusion categories and approximate counts serves as a durable reference that survives across sessions and collaborators.
+
+5. **Standardize on frontmatter, not inline HTML.** The `noindex: true` frontmatter field is the single source of truth for page-level noindex signals. Adding `<meta name="robots" content="noindex">` directly in layout HTML creates an invisible second mechanism that can conflict with or override the frontmatter-driven metadata. One mechanism, one place to audit.

@@ -1,0 +1,198 @@
+---
+title: "Claude Code Context Window Exhaustion Mid-Session"
+description: "A multi-hour Claude Code session reached context capacity mid-execution, losing all in-session state: partial code changes uncommitted, agent task references orphaned, and operational memory of earlier decisions wiped."
+date: "2026-05-18"
+tags: ["claude-code", "context", "workflow", "ai-assisted", "session-management"]
+status: published
+failure_type: "configuration"
+severity: "medium"
+failure_status: "resolved"
+project: "AI Execution Lab — publishing infrastructure"
+resolution_time: "45 min"
+impact: "Lost session context for 3 uncommitted file changes and 2 background agent references. Required re-reading 6 files and reconstructing the operational state from git diff and agent output files."
+recovery_complexity: "moderate"
+deployment_risk: "low"
+time_to_detect: "At context limit — Claude Code surfaced a continuation summary instead of continuing"
+repeat_risk: "high"
+---
+
+<FailureIntelligence
+  severity="medium"
+  recoveryComplexity="hours"
+  category="configuration"
+  deploymentRisk="low"
+  timeToDetect="At context limit — Claude Code surfaced a continuation summary instead of continuing"
+  repeatRisk="high"
+  riskScore={4}
+  debuggingComplexity="trivial"
+  recurringPattern="session-state-management"
+  preventionPatterns={[
+    "Commit work every 45–60 minutes during long sessions, not just at phase boundaries — treat commits as session checkpoints, not just logical milestones",
+    "When spawning background agents, immediately log their task IDs and expected output file paths in a todo item before continuing other work",
+    "Before any session that is likely to run 3+ hours, create a structured checkpoint: commit pending work, write a brief state summary, note which files are in-flight",
+    "Use the MEMORY.md system in .claude/ at natural phase boundaries — it is specifically designed for cross-session state persistence",
+    "When a context limit is approaching (responses getting shorter, Claude starts summarizing rather than executing), stop and commit everything before the limit hits"
+  ]}
+  ecosystemImpact={[
+    "Three files written but uncommitted — changes temporarily orphaned from git history",
+    "Background agent task IDs referenced in todo but output unread — results inaccessible until manually located",
+    "Operational decisions made earlier in the session (architecture choices, naming conventions, file structure rationale) lost and had to be reconstructed from code inspection"
+  ]}
+/>
+
+<IncidentReport
+  severity="medium"
+  status="resolved"
+  impact="Claude Code session building the operational intelligence layer reached context capacity mid-execution. Three files had been written but not committed. Two background agent task IDs were in the todo list but their output had not been read. All in-session memory of earlier decisions — architecture choices, the reasoning behind specific implementations, naming conventions established in the first two hours — was unavailable in the continuation."
+  rootCause="Long agentic sessions accumulate context from every tool call result: file reads, write confirmations, bash command results, agent outputs, todo updates. A 4-hour session building across multiple interconnected files (lib/operational-memory.ts, lib/failure-memory.ts, app/ops/page.tsx) had generated 12+ file reads, 8 file write confirmations, and 2 background agent results, filling the context window. No interim commits had been made — all work was staged only in Claude's context."
+  resolution="Read git diff to surface the 3 uncommitted files. Located background agent output files by path from task notification history. Reconstructed operational state from git log and git status. Committed all pending work. Restarted with a structured state-reconstruction prompt carrying forward the critical context."
+  prevention="Treat commits as context checkpoints, not just logical milestones. Every 45-60 minutes in a long session: commit whatever is in a committable state, note current status, log any active agent task IDs to a file or todo with output paths. The MEMORY.md file in .claude/ exists precisely for this — update it at the end of each phase so the next session inherits operational context rather than starting blind."
+/>
+
+<Callout type="info" title="session-state-management is a new failure pattern type">
+The `recurringPattern` field above uses `session-state-management` — a pattern type not previously documented in this platform's failure library. The existing pattern `runtime-environment-scope-drift` describes how runtime context gets lost at environment boundaries. This failure is a variant at the AI session layer: operational state accumulated in a Claude Code session is not persisted outside that session's context window, and long sessions will exhaust that window. The pattern is: **scope boundaries exist at the session level, and state must be explicitly checkpointed to cross them**.
+</Callout>
+
+## What Happened
+
+The operational intelligence layer for the AI Execution Lab was being built in a single Claude Code session: `lib/operational-memory.ts`, `lib/failure-memory.ts`, a reorganized `app/ops/page.tsx`, and supporting type definitions. The session had been running for approximately four hours.
+
+By the time the third infrastructure file was complete, the session had accumulated:
+
+- 12+ file reads (reading existing components, understanding type interfaces, checking imports)
+- 8 file write confirmations (each write result is echoed back into context)
+- 2 background agents spawned to handle parallel work: one indexing failure patterns, one auditing the content directory structure
+- A running todo list with 7 items, several of which referenced the agent task IDs
+- Inline bash results from `git status`, `grep`, and `ls` commands
+
+Context exhaustion hit mid-way through implementing the `getFailureMemory()` function. The session did not crash or error — Claude Code surfaced a continuation summary and asked to proceed. That summary described the general shape of what had been done but lacked the specifics that mattered: the exact interfaces established, why certain implementation decisions had been made, and which of the two agent tasks had completed versus was still running.
+
+Three files had been written to disk but not committed. Both agent task IDs were referenced in the todo list but neither agent's output had been read into context — the results existed in output files somewhere in the project, but the paths were not in the current context window.
+
+<EvidenceBlock
+  type="terminal"
+  date="2026-05-18"
+  context="git diff output after context exhaustion — three files modified but not committed"
+  quality="reconstructed"
+>
+
+```
+$ git diff --name-only HEAD
+lib/operational-memory.ts
+lib/failure-memory.ts
+app/ops/page.tsx
+```
+
+</EvidenceBlock>
+
+## Why Context Accumulates Faster in Agentic Sessions
+
+A straightforward coding session where you read files and write code accumulates context at a predictable rate. Agentic sessions — where you spawn background tasks, run bash commands, read agent outputs, and maintain a running todo list — accumulate context faster for several reasons:
+
+**Every tool call result is context.** File reads include the full file content. Write confirmations echo back what was written. Bash results include full command output. In a 4-hour session with a dozen file reads, a significant portion of the context window is filled with content that was relevant earlier but is no longer actively needed.
+
+**Background agents add two context events per task.** Spawning an agent adds the spawn confirmation. When the agent completes and you read the output, the full output is loaded into context. Two agents with substantial output can fill a meaningful portion of the window.
+
+**Todo list state is re-rendered repeatedly.** Each todo update echoes the full current state back. After 7 items with multiple status updates, the cumulative todo context is non-trivial.
+
+None of these are avoidable individually — they are how the tools work. The issue is the absence of any mechanism to prune or checkpoint state during the session.
+
+<Callout type="warn" title="Context exhaustion is not a crash — it is a silent state boundary">
+When Claude Code hits the context limit, execution does not stop with an error. A continuation summary is generated from the conversation. That summary captures the surface-level state but loses the depth: the reasoning behind decisions, the exact state of in-progress work, the specific values and references that were being held in context. Treating the continuation as seamless is a mistake — it is a new session with degraded state.
+</Callout>
+
+## The Recovery Process
+
+**Step 1: Establish what changed.**
+
+```bash
+git diff --name-only HEAD
+git status
+```
+
+This immediately surfaced the three modified files: `lib/operational-memory.ts`, `lib/failure-memory.ts`, and `app/ops/page.tsx`. The changes were on disk — nothing was lost, only untracked by git.
+
+**Step 2: Read what was written.**
+
+Each of the three files was read to reconstruct what had been implemented. This is the expensive step: reading three files of moderate size to understand implementation decisions that had been made during the session. Approximately 20 minutes of the 45-minute recovery was spent on this.
+
+**Step 3: Locate agent output.**
+
+The todo list referenced two agent task IDs. Task notifications in the session history (visible in the conversation summary) included the output file paths. Both output files were located under `.claude/tasks/` and read directly. One agent had completed successfully and its output was clean. The second had completed with a partial result — the directory audit had stopped at the content subdirectory and had not covered the components directory.
+
+**Step 4: Commit before continuing.**
+
+```bash
+git add lib/operational-memory.ts lib/failure-memory.ts app/ops/page.tsx
+git commit -m "feat: operational memory infrastructure — failure-memory and ops page restructure"
+```
+
+**Step 5: Restart with structured state.**
+
+The continuation session was started with a structured prompt that explicitly listed: what had been committed, what was incomplete, what the second agent had missed, and what the immediate next task was. This took about five minutes to write but made the continuation session function as if state had been cleanly handed off.
+
+<EvidenceBlock
+  type="debugging"
+  date="2026-05-18"
+  context="Recovery sequence — reconstructing session state from git and agent output files"
+  quality="reconstructed"
+>
+
+```
+Recovery steps taken:
+1. git diff --name-only HEAD          → 3 files identified
+2. Read lib/operational-memory.ts     → implementation current
+3. Read lib/failure-memory.ts         → implementation current
+4. Read app/ops/page.tsx              → implementation current
+5. Read .claude/tasks/[task-id-1]     → agent output clean, indexing complete
+6. Read .claude/tasks/[task-id-2]     → partial — stopped at content/, did not cover components/
+7. git add + git commit               → work committed, state preserved
+8. Restart session with state summary → continuation functional
+Total recovery time: ~45 minutes
+```
+
+</EvidenceBlock>
+
+## The MEMORY.md System and Why It Matters Here
+
+The `.claude/projects/[path]/memory/` directory structure is specifically designed for cross-session state persistence. The MEMORY.md index and per-topic memory files (project_asquare.md, feedback_build_deploy.md, user_role.md) persist across sessions and are loaded as context at the start of each conversation.
+
+This failure would have been significantly less disruptive if the operational state had been written to a memory file at the end of each major phase. A memory entry like:
+
+```markdown
+## Operational Memory Build (2026-05-18)
+- lib/operational-memory.ts: complete, exports getOperationalMemory()
+- lib/failure-memory.ts: complete, exports getFailureMemory(), getRecurringPatterns()
+- app/ops/page.tsx: in-progress, failure intelligence section not yet wired to getFailureMemory()
+- Agent task IDs: [id1] (complete, output at .claude/tasks/[id1]), [id2] (partial)
+```
+
+...would have made the continuation session immediate rather than requiring 45 minutes of reconstruction.
+
+<Callout type="success" title="What worked — the continuation mechanism did not lose disk state">
+The critical thing to understand about context exhaustion: changes written to disk survive. The three files were intact and complete. Nothing was corrupted. The loss was purely in-memory: the session's knowledge of what had been done, what decisions had been made, and what was still pending. Disk is durable. Session context is ephemeral. Design accordingly.
+</Callout>
+
+## What Not To Do
+
+Do not try to recover from context exhaustion by writing a very long continuation prompt that tries to re-establish all session context in one message. This approach:
+
+1. Consumes a large chunk of the fresh context window immediately
+2. Requires you to accurately reconstruct state that you may not fully remember
+3. Creates a session that starts at reduced capacity
+
+The session summary mechanism is specifically designed for continuation. Use it deliberately: read git diff, read the relevant files, write a clean structured state summary, and start fresh. A 45-minute recovery that produces a clean continuation is better than a 5-minute continuation that runs into incomplete state halfway through the next task.
+
+## Prevention Pattern
+
+For any Claude Code session expected to run longer than 2 hours:
+
+1. **Set a commit cadence.** Every 45–60 minutes: commit whatever is in a committable state. If the work-in-progress is not clean enough to commit, use `git stash` with a descriptive message. The goal is to ensure that at any context limit, git diff shows the actual current state, not a mix of old and new.
+
+2. **Log agent task IDs immediately.** When a background agent is spawned, the first next action is to write its task ID and expected output path to the todo list or a scratch note. Do not rely on being able to find the output later from the task notification history.
+
+3. **Update MEMORY.md at phase boundaries.** When completing a coherent unit of work (a file, a feature, a refactor pass), write the current state to memory. This takes two minutes and converts ephemeral session context into durable cross-session state.
+
+4. **Checkpoint before long agent waits.** If spawning an agent for a task that will take several minutes, use that wait time to commit current work rather than continuing to accumulate more context.
+
+5. **Read the continuation summary critically.** When a context limit is hit and a summary is generated, treat it as a degraded handoff. Verify the summary against `git status` before trusting it. The summary is accurate about broad strokes; it loses the specifics.

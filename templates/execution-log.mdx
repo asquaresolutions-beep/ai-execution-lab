@@ -1,0 +1,84 @@
+---
+# ─── REQUIRED ────────────────────────────────────────────────
+title: "YYYY-MM-DD — Session Title"
+date: "YYYY-MM-DD"
+tags: ["tag1", "tag2", "tag3"]
+status: published
+
+# ─── LOG METADATA ────────────────────────────────────────────
+# log_type: build | operations | research | deployment | experiment | debugging
+log_type: operations
+duration: "X h Y m"
+outcome: "One sentence: what was shipped, resolved, or decided."
+---
+
+<LessonMeta
+  duration="X h Y m"
+  difficulty="intermediate"
+  tools={["Tool1", "Tool2", "Tool3"]}
+  outcome="What you could do after this session that you couldn't before."
+/>
+
+<!-- DELETE this callout when publishing -->
+<callout type="warn" title="Template — replace all placeholders">
+This is a template. Replace all UPPERCASE placeholders. Remove this callout before committing.
+Commit message: `content: execution log — YYYY-MM-DD`
+</callout>
+
+## Session Context
+
+**Objective:** [What you were trying to accomplish]  
+**Starting state:** [Where things stood before this session]  
+**Environment:** [Tools, platforms, services involved]
+
+---
+
+## [Phase 1 — First Major Work Block]
+
+[Describe what you did, what decisions you made, what tools you used. Be specific about commands, config changes, and observations. No need to polish — operational accuracy over prose quality.]
+
+Key decisions:
+- **[Decision]** — [Rationale]
+- **[Decision]** — [Rationale]
+
+---
+
+## [Phase 2 — Second Major Work Block]
+
+[Continue with the next logical phase of the session.]
+
+---
+
+## Issues Encountered
+
+<!-- Document any friction, errors, or unexpected behavior — even minor ones. These compound into failure reports and playbooks. -->
+
+| Issue | How Resolved | Time Cost |
+|-------|-------------|-----------|
+| [Issue description] | [Fix] | [X min] |
+
+---
+
+## Key Decisions
+
+| Decision | Option Chosen | Rationale |
+|----------|--------------|-----------|
+| [Decision] | [What you chose] | [Why] |
+
+---
+
+## Outcome
+
+**Shipped:**
+- [Item 1]
+- [Item 2]
+
+**Left open:**
+- [Item 1] — [Why deferred]
+
+**Next session:**
+- [Next action]
+
+---
+
+*Session: [DURATION] · [DATE]*

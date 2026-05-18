@@ -1,0 +1,279 @@
+---
+title: "Content Velocity System"
+description: "Design for the operational publishing velocity system: template architecture, capture friction reduction, evidence ingestion, and publishing acceleration across the A Square Solutions ecosystem."
+date: "2026-05-18"
+tags: ["content", "velocity", "publishing", "ops", "architecture", "platform"]
+status: published
+noindex: true
+---
+
+The Content Velocity System is the set of structures, conventions, and targets that govern how quickly operational experience becomes published intelligence on AI Execution Lab. This document defines the system's design: why velocity matters, where it breaks down, how the template architecture reduces friction, and what the publishing cadence targets are.
+
+---
+
+## Why Velocity Matters for Operational Intelligence
+
+An operational intelligence platform is only as valuable as its currency. A failure report published six months after the incident has lost most of its operational value — not because the technical content has changed, but because the evidence has degraded, the context is reconstructed rather than primary, and the operator reading it cannot trust that the details are exact.
+
+A deployment log written the day of the deploy is a primary source. The error message is copied directly from the terminal. The debugging sequence reflects what actually happened, not a reconstructed approximation. The commit reference points to the actual fix. This is the difference between a document and a record.
+
+Velocity is not about quantity. Publishing ten low-quality, evidence-light pieces per week does not create an operational intelligence platform — it creates a blog. The velocity goal is specifically about minimizing the lag between experience and publication while maintaining the evidence standard. A single, evidence-backed failure report published within 24 hours of an incident is worth more to this platform than ten failure reports published from memory three weeks later.
+
+The compounding argument for velocity is structural: the faster experiences are captured, the denser the platform's operational record becomes. Each piece that exists is cross-referenceable, pattern-detectable, and citable by AI search systems. Each piece that is never published is a gap in that record — permanently.
+
+---
+
+## The Lag Problem
+
+Current operational pattern without a velocity system: something happens, documentation is noted as a future task, the task is deferred, and the experience degrades until it is either captured as a vague summary or lost entirely.
+
+The degradation timeline is specific and measurable:
+
+| Time since incident | What you lose |
+|---|---|
+| Within 1 hour | Nothing. All details are present. |
+| 1–6 hours | Exact terminal output starts to blur. Debugging sequence order may be uncertain. |
+| 6–24 hours | Error message may be paraphrased rather than exact. Command sequence requires reconstruction. |
+| 24–48 hours | Root cause may be correctly remembered but support details are approximate. |
+| After 48 hours | Summary remains. Specific operational details — the kind that make a failure report actually useful — are largely gone. |
+
+Each day of lag converts a primary record into a secondary summary. Each day of lag means the failure report, when eventually published, carries implicit uncertainty: "I believe the error message was approximately..." instead of "The exact error was."
+
+The velocity system's goal is to reduce average lag to under 24 hours for failure reports and under 48 hours for case studies. Execution logs should be published same-day — they are the lowest friction content type and the one most dependent on immediate capture.
+
+<Callout type="info" title="Why 24 hours is the target, not same-day">
+Same-day publication is ideal but not always feasible. The 24-hour window acknowledges that sessions often happen late, are followed by other work, and require a minimum block of capture time. The 24-hour window is the outer boundary of useful primary-source capture for failure reports. After that, the evidence standard starts to require explicit acknowledgment of reconstruction.
+</Callout>
+
+---
+
+## Template Architecture
+
+Templates are the primary friction-reduction tool. The alternative to templates is an empty file and a decision about structure. The decision about structure is the bottleneck — it adds cognitive load at exactly the moment when the operator's primary task is to capture, not to design.
+
+Each template in `/templates/` is a fully structured MDX file with:
+
+- Complete frontmatter with inline comments explaining each field
+- Pre-populated component structure for that content type
+- Evidence placeholder sections with correct component syntax
+- A commit message suggestion in a comment at the top of the file
+
+**Six template types:**
+
+| Template | Filename | Used for |
+|---|---|---|
+| Failure Report | `failure-report.mdx` | Production incidents with a root cause |
+| Deployment Journal | `deployment-journal.mdx` | Significant deployments with configuration changes |
+| Execution Log | `execution-log.mdx` | Sessions, automation runs, multi-step work |
+| SEO Experiment | `seo-experiment.mdx` | Search Console findings, on-page changes, ranking observations |
+| Case Study | `case-study.mdx` | Complete arcs with before/after and measurable outcome |
+| AI Workflow | `ai-workflow.mdx` | Claude Code sessions, AI-assisted operations, prompt patterns |
+
+Templates are not suggestions. They are the contract between the operator and the platform. A content file that does not derive from a template may be missing required frontmatter fields, may use incorrect component syntax, and will require additional review time to correct before publication.
+
+<Callout type="lab" title="Templates encode institutional knowledge">
+Each template section exists because a previous attempt without that section produced a weaker document. The Evidence section exists because undocumented failures were published without proof. The Prevention section exists because failure reports without prevention guidance repeat as incidents. The templates are not bureaucratic structure — they are the accumulated result of knowing what makes a content piece useful versus merely present.
+</Callout>
+
+**Template maintenance rule:** When a section is consistently skipped across multiple content pieces, either the section is wrong and should be removed, or the section is right and the skip is a capture quality issue. Templates are living documents — update them when the platform's evidence of what works changes.
+
+---
+
+## Evidence Ingestion
+
+Evidence is what converts an operational claim into a verifiable record. The evidence ingestion system defines how evidence files are captured, named, stored, and referenced in content.
+
+### Screenshot naming convention
+
+All screenshots follow a single pattern:
+
+```
+YYYY-MM-DD-[slug]-[descriptor].png
+```
+
+Stored at: `/public/evidence/[content-slug]/`
+
+The date in the filename is the capture date — when the screenshot was taken, not when the content was published. The slug matches the content piece slug exactly. The descriptor is specific and describes what is shown: `vercel-build-log-edge-crypto-error`, not `screenshot1`.
+
+**Why this convention:**
+
+Screenshots stored without the capture date become temporally ambiguous. A screenshot named `error.png` in an evidence directory is not self-describing when viewed in isolation — in a PR diff, in a log, or when referenced across content pieces. The filename encodes the minimum necessary metadata.
+
+### Terminal output capture
+
+Terminal output should never be captured as a screenshot. Paste it as text.
+
+The correct method:
+
+```mdx
+```bash
+next build
+Error: Module not found: Can't resolve 'fs'
+Import trace for requested module:
+  ./lib/content.ts
+  ./app/failures/page.tsx
+```
+```
+
+Or, for longer output, use the `TerminalBlock` component with a label.
+
+Plain text is searchable, copyable, indexable, and renders cleanly on all screen sizes. A screenshot of a terminal window fails all four of these properties. The only reason to screenshot terminal output is if the visual formatting is itself part of the evidence (rare).
+
+### Commit reference inclusion
+
+Every failure report that has a committed fix must include the commit reference. The commit reference is the verification link between the documented resolution and the actual codebase change.
+
+Use the `ExecutionEvidence` component:
+
+```mdx
+<ExecutionEvidence
+  commitRef="fix: remove edge runtime from opengraph-image"
+  date="2026-05-10"
+  repo="ai-execution-lab"
+  context="Fix deployed to production — confirmed working in Vercel dashboard"
+/>
+```
+
+For execution logs and case studies, note the commit range or the relevant commit SHA inline. It does not need a dedicated component — a parenthetical "(commit `a3f7d12`)" in the narrative is sufficient.
+
+### Build log capture
+
+Vercel build output is the primary evidence source for deployment failures. Paste the relevant section into a `DeploymentLog` component rather than as a raw code block. The `DeploymentLog` component renders with level-coded entries (error, warning, info) and a structured header showing deployment context.
+
+For long build logs, include the beginning (showing the build command and environment) and the section containing the error. Do not include the full log if it is hundreds of lines — context matters, not completeness.
+
+---
+
+## The Content Velocity Dashboard
+
+The platform's ops section surfaces publishing velocity signals. These signals indicate whether the platform is accumulating operational intelligence at a useful rate or falling behind.
+
+**Velocity metrics tracked:**
+
+- **Items per month, per section** — failure reports, execution logs, case studies. The goal is not a fixed number — it is proportionality to operational activity.
+- **Days since last publish per section** — how long since the last content piece was published in each content type. A long gap in failure reports may mean no failures occurred, or may mean failures occurred but weren't documented.
+- **Draft backlog count** — files with `status: draft`. A growing draft backlog is a velocity warning. Drafts that age beyond 7 days have low completion probability.
+- **High-priority unpublished experiences** — a manually maintained list of sessions that happened and haven't been captured yet.
+
+**Velocity signal thresholds:**
+
+| Signal | Green | Yellow | Red |
+|---|---|---|---|
+| Days since last failure report | 0–14 | 15–30 | 30+ |
+| Days since last execution log | 0–7 | 8–14 | 14+ |
+| Draft backlog count | 0–2 | 3–5 | 5+ |
+| Case study lag (experience to publish) | 0–7 days | 8–14 days | 14+ days |
+
+<Callout type="warn" title="Red is not a failure — it is a signal">
+A red velocity signal on failure reports may mean zero failures occurred in 30 days. That is a good outcome, not a publishing problem. Velocity signals are interpreted in context. A yellow or red signal on execution logs during an active development period is a capture gap. The same signal during a maintenance period may be correct.
+</Callout>
+
+---
+
+## Ecosystem as Content Source
+
+Every meaningful operation across the A Square Solutions ecosystem is a potential content piece. The three properties — the main WordPress site, ScamCheck, and TrustSeal — generate operational experiences continuously. The Lab platform itself generates operational experiences through its own development and deployment.
+
+**Content source mapping:**
+
+| Ecosystem event | Likely content type | Section |
+|---|---|---|
+| WordPress SEO change (heading styles, schema, internal links) | Execution log or doc | Logs or Docs |
+| TrustSeal payment flow bug | Failure report | Failures |
+| TrustSeal deployment failure | Failure report or deployment journal | Failures |
+| ScamCheck Gemini API error | Failure report or AI workflow doc | Failures or Docs |
+| ScamCheck feature implementation | Execution log or case study | Logs or Case Studies |
+| Lab platform deployment | Deployment journal | Logs |
+| Lab platform architecture decision | Doc | Docs |
+| GSC ranking change or anomaly | SEO experiment or execution log | Logs |
+| Analytics tracking configuration change | Execution log or failure report (if it was broken) | Logs or Failures |
+| Claude Code session completing significant work | Execution log or AI workflow doc | Logs |
+
+The ecosystem-to-content mapping is not prescriptive. The operator decides which events warrant documentation. The purpose of the mapping is to make visible what is otherwise invisible: every operational event has a potential content form, and the decision to not document it is an active choice that reduces the platform's intelligence density.
+
+<Callout type="info" title="Cross-property failure reports have compound value">
+A failure that affects both TrustSeal and ScamCheck — for example, a shared dependency version conflict — is worth documenting as a single failure report that references both properties. These cross-property failures have higher GEO value because they demonstrate the operational reality of running multiple products on a shared stack. They also prevent the same failure from being investigated twice.
+</Callout>
+
+---
+
+## Publishing Cadence Targets
+
+These are targets, not gates. A content piece that does not meet the cadence target is still worth publishing — the target is a guideline for prioritization, not a deadline that invalidates late content.
+
+| Content type | Target publication lag | Why this target |
+|---|---|---|
+| Failure Report | Within 24 hours of incident resolution | Evidence degrades fastest for failures; exact error messages are most critical |
+| Execution Log | Same day | Logs are the lowest friction type; same-day capture is achievable |
+| Case Study | Within 1 week of project completion | Case studies require more structure; a week allows outcome verification |
+| Doc (architectural decision) | Within 48 hours of decision | Decisions made without a record get re-litigated; 48h keeps the rationale fresh |
+| Playbook | Within 1 week of procedure stabilization | Playbooks require verification that the procedure works end-to-end |
+| SEO Experiment | Within 48 hours of completing the change | Before/after state evidence is most accurate within 48 hours |
+
+**Partial captures are better than no captures.** A failure report with frontmatter and a one-paragraph description of the error — published the same day — is more valuable than a complete failure report published three weeks later. The partial capture establishes the event as documented. It can be completed later. An event that was never captured cannot be recovered.
+
+The publishing cadence targets are inputs to the velocity dashboard. When the dashboard shows a yellow or red signal, the first question is not "how do we publish more?" — it is "what happened in the last 14 days that should have been documented?"
+
+---
+
+## Content Quality Gate
+
+Publication requires meeting a minimum bar. The quality gate is not a word count, a readability score, or an editorial review. It is a structural completeness check.
+
+**Minimum bar for publication — all content types:**
+
+| Requirement | Check |
+|---|---|
+| Frontmatter complete | title, description, date, tags, status — all present |
+| At least one evidence reference | Even if approximate (e.g., "terminal output showed...") |
+| Root cause stated | For failures — one sentence, technically accurate |
+| Outcome stated | For logs and case studies — what is different now |
+
+**What is explicitly not required:**
+
+- Minimum word count — a 200-word failure report with a crisp root cause and verified fix is more valuable than a 2,000-word essay with vague insights
+- Polished prose — accuracy over style, every time
+- Multiple evidence items — one is the minimum; more is better but not required
+- Formal structure beyond the template sections — fill what is applicable, skip what is not
+
+<Callout type="success" title="Short and accurate beats long and vague">
+The platform's value comes from the precision of its operational records, not their length. A failure report that states the exact error message, the exact root cause in one sentence, and the exact fix verified in production is complete. It does not need to be longer. The confidence scoring system weights precision — exact error messages, commit references, verified outcomes — not word count.
+</Callout>
+
+**Hard blockers to publication:**
+
+- Missing `date` field — the piece cannot be placed in the operational timeline
+- Missing `severity` or `resolution_time` on failure reports — breaks the failure intelligence dashboards
+- `status` not set to `published` — the piece will not appear in public indexes
+- Evidence paths that reference files that do not exist — broken images and 404s degrade the reader's trust in the record
+
+---
+
+## Long-Term Compounding
+
+The velocity system's primary near-term goal is reducing lag. Its long-term value is the compounding effect of a dense operational record.
+
+Each published piece adds to the platform's operational graph:
+
+- **Failures** contribute to the pattern library. The platform currently tracks 8 documented failures across 5 identified patterns. Each new failure either confirms an existing pattern or introduces a new one. At sufficient density, the pattern library becomes predictive — certain stack configurations have known failure modes.
+
+- **Case studies** build GEO authority. The platform's indexable page count is currently 392–406 published pieces. Each case study is a high-value, evidence-dense node in the content graph. AI search systems prioritize content that contains primary evidence, specific outcomes, and cross-references to related operational records.
+
+- **Playbooks** accelerate future resolution. A playbook published from one instance of a procedure means the next instance of that procedure takes a fraction of the time. The compounding effect is operational: each playbook reduces the time cost of its own re-execution.
+
+- **Execution logs** establish temporal credibility. A continuous record of operational sessions — deployments, automation runs, content operations — demonstrates that the platform is active, current, and maintained. AI search systems use recency and activity signals to assess the authority of operational content.
+
+The velocity system's long-term architecture is a network, not a list. Each piece cross-references related pieces. Each failure points to its pattern. Each case study links to the logs and failures that preceded it. Each playbook references the failure that motivated its creation. The compounding effect is not linear — it is the increasing density of a graph where each new node adds value to every other node that references it.
+
+<Callout type="lab" title="The graph is the product">
+The individual pieces are not the product. The operational graph — failures connected to patterns, case studies connected to decisions, playbooks connected to incidents — is the product. Velocity matters because each additional piece increases the density of the graph. A platform with 50 highly interconnected operational records is more valuable as an intelligence source than a platform with 500 disconnected summaries. Capture first. Connect as you publish. The compounding is automatic.
+</Callout>
+
+---
+
+## Related
+
+- [Evidence Framework](/docs/evidence-framework) — naming conventions, storage organization, component integration
+- [Operational Publishing Workflow](/playbooks/operational-publishing-workflow) — the 30-minute capture workflow
+- [Publishing Cadence](/docs/publishing-cadence) — weekly rhythm, failure report workflow, review checklists
+- [Frontmatter Reference](/docs/frontmatter-reference) — all frontmatter fields by content type
