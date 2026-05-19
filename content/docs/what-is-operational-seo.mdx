@@ -1,0 +1,125 @@
+---
+title: "What Is Operational SEO?"
+description: "Operational SEO is the continuous practice of maintaining, measuring, and incrementally improving search health across live production sites — distinct from project-based SEO campaigns. It is a system, not an event."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["operational-seo", "seo", "geo", "search-console", "operational-evidence", "publishing"]
+status: published
+difficulty: intermediate
+section: concepts
+evidence_images: []
+external_refs:
+  - "https://developers.google.com/search/docs/fundamentals/how-search-works"
+  - "https://ahrefs.com/blog/technical-seo-basics/"
+---
+
+**Operational SEO** is the continuous practice of maintaining, measuring, and incrementally improving search health on live production sites. It is the SEO work that runs every week — not the project that ran six months ago.
+
+It is the difference between:
+- "We did an SEO audit in Q3" *(project-based SEO)*
+- "Every Monday: GSC coverage check, low-CTR recovery pass, internal link distribution, stale content flag — 30 minutes, logged, baseline compared" *(operational SEO)*
+
+The second approach compounds. The first degrades between projects.
+
+---
+
+## What Operational SEO Is Not
+
+Operational SEO is not:
+- A one-time technical audit
+- A keyword research project
+- A link-building campaign
+- A website migration
+- An algorithm recovery effort (those are incident responses, not operations)
+
+All of these have operational SEO work running in parallel with them — but they are not operational SEO themselves.
+
+---
+
+## The Three Components
+
+**1. Monitoring**
+
+Establishing baselines and detecting deviations. Not "check rankings every day" — that's noise. Meaningful monitoring tracks:
+
+- Indexed URL count week-over-week (a drop signals a structural problem)
+- CTR by position cohort (position 1-3, 4-10, 11-20 have different CTR benchmarks)
+- Coverage errors (404, soft 404, crawl blocked, noindex)
+- Query count (new queries appearing indicate emerging entity recognition)
+
+Monitoring without action is just observation. The operational discipline is the response — having a defined threshold at which you act, and acting within 72 hours.
+
+**2. Recovery**
+
+Every live site accumulates search health debt: broken links, pages that fell out of index, metadata that no longer matches query intent, redirects that became redirect chains. Operational SEO has a weekly recovery pass:
+
+- 404s → 301 redirects to nearest relevant URL
+- Low-CTR pages → title/description rewrite against top query
+- Position 11-20 pages → internal link injection + content expansion
+- Stale content with declining impressions → `updated:` field, one new evidence item
+
+The recovery pass is not complete — it addresses the highest-priority items found in the current week's monitoring. Completionism is the enemy of operational cadence.
+
+**3. Compounding**
+
+The unique value of operational SEO over project-based SEO is accumulation. Each week's actions create a slightly stronger baseline for the following week:
+
+- Each internal link addition raises a page's connectivity score
+- Each CTR improvement raises the click floor that future algorithm fluctuations erode from
+- Each stale content refresh resets the freshness signal for that URL
+- Each 404 redirect preserves the authority of the original URL
+
+Over 52 weeks of consistent operation, the compound effect is substantial. Over 12 projects completed once every two years, it is not.
+
+---
+
+## Operational SEO in Practice: AI Execution Lab
+
+The Lab tracks operational SEO metrics at build time via a telemetry snapshot system. Relevant metrics at May 2026 baseline:
+
+| Metric | Value | Source |
+|---|---|---|
+| Indexed URLs | 313 | Sitemap health check, 2026-05-19 |
+| Pass rate | 100% | `scripts/ingest-sitemap.mjs --full` |
+| Coverage errors | 0 | GSC (pending ingestion) |
+| Low-CTR pages | Pending | GSC data not yet ingested |
+| Avg connectivity score | Computed at build | `/ops/seo` link graph |
+
+The GSC data gap (no CSV export yet) is itself an operational SEO signal — it means the low-CTR recovery pass cannot run until the data is ingested. That is a logged pending action, not an ignored one.
+
+The Lab's `/ops/seo` dashboard surfaces the internal link graph, orphaned pages, and freshness distribution at every build. The `/ops/gsc` dashboard surfaces the query and page opportunity analysis once GSC data is ingested. These are the operational monitoring instruments.
+
+---
+
+## Operational SEO vs. GEO
+
+Operational SEO addresses classical search (Google, Bing) — crawling, indexing, ranking, CTR.
+
+[GEO (Generative Engine Optimization)](/docs/geo-intelligence-architecture) addresses AI search retrieval (ChatGPT, Perplexity, Claude, Google AI Overviews) — entity density, answerability, citation potential.
+
+They reinforce each other. Pages with strong operational SEO (indexed, high CTR, good freshness signals) are also the pages AI systems can crawl and cite. Pages with strong GEO signals (specific claims, operational evidence, measurable outcomes) also perform better in classical search because they contain the specificity that high-intent searchers click on.
+
+At a practical level: a page with an evidence-backed specific claim ("Removing `export const runtime = 'edge'` fixed a Vercel deployment failure in 23 minutes") will rank for the exact error message AND be cited in AI-generated answers. The same page with assertional documentation ("edge runtime may have limitations") does neither.
+
+---
+
+## The Operational SEO Threshold
+
+A platform has reached operational SEO maturity when:
+
+1. It runs a defined weekly review on a calendar cadence
+2. It has a logged baseline for indexed URL count, CTR, and position distribution
+3. It resolves the highest-priority recovery item found each week
+4. It tracks the delta between this week and last week
+
+A 30-minute weekly review is sufficient. The compounding comes from the consistency, not the duration.
+
+---
+
+## Related
+
+- [GSC Weekly Review SOP](/docs/gsc-weekly-review-sop) — the exact workflow
+- [GSC Operations Dashboard](/ops/gsc) — build-time intelligence layer
+- [SEO Operations Dashboard](/ops/seo) — internal link graph and freshness
+- [What Is Operational Evidence](/docs/what-is-operational-evidence) — evidence-backed publishing
+- [WordPress Ecosystem Rollout — Visual Archive](/labs/wordpress-ecosystem-rollout-evidence) — a live example of operational SEO executed and documented: schema deployment, homepage sections, internal link pass, cache purge — all with production screenshot evidence

@@ -1,0 +1,665 @@
+---
+title: "WordPress Ecosystem Rollout — Visual Operational Archive"
+description: "Complete visual evidence archive for the A Square Solutions Phase 2 WordPress ecosystem rollout (2026-05-20). Schema deployment, homepage sections, footer widget, About page, internal links, and LiteSpeed cache purge — every step captured with production screenshots and operational commentary."
+date: "2026-05-20"
+updated: "2026-05-20"
+tags: ["wordpress", "operational-evidence", "schema-org", "ecosystem", "seo", "geo", "deployment", "litespeed"]
+status: published
+hypothesis: "Structured visual evidence of a production rollout is more durable and machine-readable than narrative documentation alone."
+result: confirmed
+evidence_images:
+  - /evidence/wordpress-rollout/wordpress-nav-link.png
+  - /evidence/wordpress-rollout/homepage-above-fold.png
+  - /evidence/wordpress-rollout/homepage-ai-lab-section.png
+  - /evidence/wordpress-rollout/homepage-ecosystem-3col.png
+  - /evidence/wordpress-rollout/homepage-evaluation-cta.png
+  - /evidence/wordpress-rollout/footer-ecosystem-links.png
+  - /evidence/wordpress-rollout/about-built-in-public.png
+  - /evidence/wordpress-rollout/mobile-homepage-view.png
+  - /evidence/wordpress-rollout/mobile-homepage-sections.png
+  - /evidence/wordpress-rollout/schema-viewsource-deployed.png
+  - /evidence/wordpress-rollout/homepage-hero-nav.png
+external_refs:
+  - "https://asquaresolution.com"
+  - "https://lab.asquaresolution.com"
+  - "https://schema.org/Organization"
+  - "https://search.google.com/test/rich-results"
+---
+
+<CaseStudyMeta
+  dateRange="2026-05-20"
+  duration="~120 min (2 sessions)"
+  stack={["WordPress 6.x", "WPCode", "Gutenberg / Classic Editor", "LiteSpeed Cache", "Schema.org JSON-LD", "Google Rich Results Test", "Headless Chrome CDP"]}
+  outcomes={[
+    { metric: "Schema validation", before: "sameAs only (no owns)", after: "Organization + WebSite + owns array", delta: "+2 entity types" },
+    { metric: "Homepage Lab sections", before: "0", after: "3 named sections", delta: "+3" },
+    { metric: "Internal links to Lab", before: "0 in post body content", after: "5 posts linked", delta: "+5" },
+    { metric: "Ecosystem footer presence", before: "absent", after: "OUR WORK widget sitewide", delta: "+3 ecosystem links" },
+    { metric: "About page Lab mention", before: "none", after: "Built in Public paragraph + link", delta: "+1 contextual link" },
+  ]}
+  context="Phase 2 of the A Square Solutions ecosystem authority build. Phase 1 (April 2026) established GA4 cross-domain tracking and primary nav. Phase 2 adds all content-visible layers."
+  difficulty="resolved"
+/>
+
+<StatsGrid>
+  <Stat value="7/7" label="Validation gates passed" note="All checks confirmed in production" />
+  <Stat value="120 min" label="Execution time" note="Split across 2 context sessions" />
+  <Stat value="11" label="Evidence screenshots" note="CDP-captured from live production" />
+  <Stat value="5" label="Posts internally linked" note="Top organic traffic posts" />
+  <Stat value="4" label="Complications resolved" note="Classic Editor, stale refs, LiteSpeed, dialog" />
+  <Stat value="494" label="Static pages built" note="Zero errors after bug fixes" />
+</StatsGrid>
+
+---
+
+## What This Archive Documents
+
+This is the complete visual operational record of the 2026-05-20 WordPress ecosystem rollout on `asquaresolution.com`. Every gate, every complication, and every verification step has a corresponding screenshot captured from the live production environment using headless Chrome via Chrome DevTools Protocol.
+
+This archive is intended to serve three audiences:
+
+1. **Operations team** — a permanent record of exactly what was deployed, to which files, with verified outcomes.
+2. **Search engines** — structured evidence that the entity described in Organization schema (`asquaresolution.com`) owns and cross-links to the properties in the `owns` array.
+3. **AI retrieval systems** — machine-readable operational proof that the ecosystem architecture described in schema is reflected in actual site structure.
+
+---
+
+## Phase 1: Before-Rollout State
+
+The following describes the exact production state as of 2026-05-19 23:59 — one day before this rollout.
+
+<OperationalTimeline
+  title="Pre-rollout state — what existed"
+  events={[
+    {
+      date: "2026-04-xx",
+      event: "AI Lab nav link added to primary menu",
+      type: "milestone",
+      note: "Established in April 2026 GA4 + navigation session. Present and confirmed."
+    },
+    {
+      date: "2026-04-xx",
+      event: "GA4 cross-domain tracking configured across all four properties",
+      type: "milestone",
+      note: "lab.asquaresolution.com, trustseal.asquaresolution.com, scamcheck.asquaresolution.com all tracked under same GA4 property."
+    },
+    {
+      date: "2026-05-18",
+      event: "Schema: sameAs array added (without owns) — partial",
+      type: "deploy",
+      note: "Organization entity existed but lacked directional owns relationship. sameAs implies equivalence only, not hierarchy."
+    },
+    {
+      date: "2026-05-19",
+      event: "Homepage: No Lab-specific sections. Standard WordPress hero content only.",
+      type: "decision",
+      note: "Zero evidence on the homepage that asquaresolution.com owns or operates the Lab."
+    },
+    {
+      date: "2026-05-19",
+      event: "Footer: No ecosystem widget present",
+      type: "decision",
+      note: "Footer contained standard WordPress content. No cross-property links."
+    },
+    {
+      date: "2026-05-19",
+      event: "About page: No Lab reference in body content",
+      type: "decision",
+      note: "About page described the company but had no reference to the Lab as a public engineering practice."
+    },
+    {
+      date: "2026-05-19",
+      event: "Internal links: Zero cross-property links in any post body content",
+      type: "decision",
+      note: "Top organic posts had no links pointing to lab.asquaresolution.com. Authority flow was completely absent."
+    },
+  ]}
+/>
+
+<Callout type="warn" title="Why these gaps mattered">
+Schema.org `sameAs` asserts equivalence — "this entity is the same as that entity." `owns` asserts possession and hierarchy — "this organization operates that website." Without `owns`, search engines could not establish A Square Solutions as the parent entity of the Lab, TrustSeal, and ScamCheck properties.
+</Callout>
+
+---
+
+## Phase 2: During Rollout — Execution Sequence
+
+<OperationalTimeline
+  title="Rollout execution — 2026-05-20"
+  events={[
+    {
+      date: "Step 1",
+      event: "Organization + WebSite schema deployed via WPCode — full JSON-LD with owns array",
+      type: "deploy",
+      evidence: "Gate 1 — schema-viewsource-deployed.png",
+      note: "Replaced partial sameAs-only snippet. New snippet includes owns array covering AI Execution Lab, TrustSeal, ScamCheck."
+    },
+    {
+      date: "Step 2",
+      event: "Navigation confirmed — AI Lab link present from April session",
+      type: "milestone",
+      evidence: "Gate 2 — wordpress-nav-link.png",
+      note: "No change required. Link confirmed visible on all pages."
+    },
+    {
+      date: "Step 3",
+      event: "Three Gutenberg homepage sections added via Code Editor injection",
+      type: "deploy",
+      evidence: "Gate 3 — homepage-ai-lab-section.png, mobile-homepage-sections.png",
+      note: "Classic Editor required JS textarea injection. Three blocks: The Work Made Public, What We Build and Run (3-col), evaluation CTA."
+    },
+    {
+      date: "Step 4",
+      event: "Footer OUR WORK widget deployed with all 3 ecosystem links",
+      type: "deploy",
+      evidence: "Gate 4 — footer-ecosystem-links.png",
+      note: "Custom HTML widget. Appears on every page of the WordPress site."
+    },
+    {
+      date: "Step 5",
+      event: "About page Built in Public paragraph added with Lab hyperlink",
+      type: "deploy",
+      evidence: "Gate 5 — about-built-in-public.png",
+      note: "Appended before the final closing block via Classic Editor."
+    },
+    {
+      date: "Step 6",
+      event: "Internal links added to 5 top organic traffic posts",
+      type: "deploy",
+      note: "One contextual Lab link per post. Anchor text matched each post's topic. All 5 posts confirmed saved."
+    },
+    {
+      date: "Step 7",
+      event: "LiteSpeed full cache purge — Purge All LSCache",
+      type: "deploy",
+      note: "Required navigation to Toolbox direct URL after admin toolbar redirect issue."
+    },
+    {
+      date: "Post-step",
+      event: "Verification: homepage loaded in incognito confirming all new sections present",
+      type: "milestone",
+      note: "Post-purge incognito test confirms fresh PHP render with all new sections."
+    },
+  ]}
+/>
+
+---
+
+## Navigation & Structure Evidence
+
+<EvidenceBlock
+  type="screenshot"
+  title="Primary navigation — AI Lab link confirmed"
+  date="2026-05-20"
+  context="asquaresolution.com — primary navigation bar, all pages"
+  quality="verified"
+>
+
+![Primary navigation showing AI Lab as rightmost menu item before social icons](/evidence/wordpress-rollout/wordpress-nav-link.png)
+
+*"AI Lab" is the last nav item before social icons. Present sitewide. Established in the April 2026 session and confirmed unchanged. This is the entry point for any WordPress visitor to reach the Lab corpus.*
+
+</EvidenceBlock>
+
+<EvidenceBlock
+  type="screenshot"
+  title="Homepage above the fold — hero section post-rollout"
+  date="2026-05-20"
+  context="asquaresolution.com — homepage, above fold, 1400px viewport"
+  quality="verified"
+>
+
+![Homepage hero section showing the site above the fold with AI Lab accessible in the primary navigation](/evidence/wordpress-rollout/homepage-above-fold.png)
+
+*The above-fold state is clean: nav with AI Lab, hero content unchanged. The new Lab sections begin below this point on scroll. No visual regression introduced by the rollout.*
+
+</EvidenceBlock>
+
+---
+
+## Homepage Sections Evidence
+
+The three new sections added below the fold represent the primary content-visible output of this rollout. Each section serves a distinct retrieval function.
+
+<EvidenceBlock
+  type="screenshot"
+  title="The Work Made Public + 3-column ecosystem layout"
+  date="2026-05-20"
+  context="asquaresolution.com — homepage, scroll position below hero"
+  quality="verified"
+>
+
+![The Work Made Public section and What We Build and Run 3-column ecosystem layout visible in production](/evidence/wordpress-rollout/homepage-ai-lab-section.png)
+
+*"The Work, Made Public" section (top) surfaces the Lab as the engineering documentation layer. "What We Build and Run" (below) presents the three properties as a coherent ecosystem: AI Execution Lab, TrustSeal, ScamCheck — each with description and domain link. 12 Lab links total on homepage.*
+
+</EvidenceBlock>
+
+<EvidenceBlock
+  type="screenshot"
+  title="Ecosystem 3-column section — all three properties"
+  date="2026-05-20"
+  context="asquaresolution.com — homepage ecosystem section close-up"
+  quality="verified"
+>
+
+![Ecosystem 3-column section showing AI Execution Lab, TrustSeal, and ScamCheck with linked domain URLs](/evidence/wordpress-rollout/homepage-ecosystem-3col.png)
+
+*Close-up of the three-column layout. Equal columns at desktop width. Each column: property name (H3), description, domain link. `isStackedOnMobile: true` ensures single-column layout at 375px. This is the primary authority signal telling both users and crawlers that these three properties are co-presented by the same operator.*
+
+</EvidenceBlock>
+
+<EvidenceBlock
+  type="screenshot"
+  title="Evaluation CTA section — technical credibility anchor"
+  date="2026-05-20"
+  context="asquaresolution.com — homepage, third new section"
+  quality="verified"
+>
+
+![Evaluation CTA section addressing technical credibility assessment with Lab links](/evidence/wordpress-rollout/homepage-evaluation-cta.png)
+
+*"If you're evaluating whether we know what we're doing" — addresses the specific intent of a potential client or partner who arrived via organic search. Links directly to `/start-here`, `/failures`, `/playbooks`, `/tracks`. This converts homepage authority into Lab corpus authority.*
+
+</EvidenceBlock>
+
+---
+
+## Before / After Homepage Comparison
+
+Drag the slider to compare: the homepage hero above the fold (unchanged) versus the new ecosystem sections that appear on scroll.
+
+<BeforeAfter
+  before="/evidence/wordpress-rollout/homepage-above-fold.png"
+  after="/evidence/wordpress-rollout/homepage-ai-lab-section.png"
+  beforeLabel="Above fold — hero only"
+  afterLabel="Scroll down — Lab sections live"
+  height={400}
+/>
+
+*Left: the homepage hero section as it appears to every visitor. Right: scroll 600px down and these three new sections are visible — the full ecosystem architecture surfaced as homepage content for the first time.*
+
+---
+
+## Footer Widget Evidence
+
+<EvidenceBlock
+  type="screenshot"
+  title="Footer OUR WORK widget — all ecosystem links"
+  date="2026-05-20"
+  context="asquaresolution.com — footer, present on every page"
+  quality="verified"
+>
+
+![Footer showing OUR WORK widget with AI Execution Lab, TrustSeal, and ScamCheck links live in production](/evidence/wordpress-rollout/footer-ecosystem-links.png)
+
+*The "OUR WORK" footer widget is rendered on every page of the WordPress site — blog posts, service pages, About, Contact. Every pageview now carries three cross-property signals. The widget uses line-height 2.2 for clean vertical rhythm. Bold property names with plain descriptor text.*
+
+</EvidenceBlock>
+
+---
+
+## About Page Evidence
+
+<EvidenceBlock
+  type="screenshot"
+  title="About page — Built in Public section with Lab link"
+  date="2026-05-20"
+  context="asquaresolution.com/about-us — bottom of page"
+  quality="verified"
+>
+
+![About page Built in Public section with AI Execution Lab hyperlink](/evidence/wordpress-rollout/about-built-in-public.png)
+
+*The "Built in Public" heading and paragraph appear at the bottom of the About page — the natural location for a company to explain its engineering transparency philosophy. "AI Execution Lab" is a live hyperlink in the paragraph body. A visitor who reads the About page to the end finds a direct path to the full Lab corpus.*
+
+</EvidenceBlock>
+
+---
+
+## Schema Validation Evidence
+
+<EvidenceBlock
+  type="screenshot"
+  title="view-source — Organization JSON-LD active in page head"
+  date="2026-05-20"
+  context="view-source:asquaresolution.com — line 24 in page head"
+  quality="verified"
+  commitRef="1b27f6e"
+>
+
+![view-source of asquaresolution.com showing application/ld+json Organization schema block in page head](/evidence/wordpress-rollout/schema-viewsource-deployed.png)
+
+*`<script type="application/ld+json">` with `@type: Organization` visible in the page `<head>` via view-source. The schema is injected by WPCode on every page load — sitewide, not page-specific. The `owns` array inside this script asserts directional ownership of the Lab, TrustSeal, and ScamCheck web properties.*
+
+</EvidenceBlock>
+
+<Callout type="success" title="Schema: Organization → WebSite (owns) hierarchy confirmed">
+Google Rich Results Test detected the Organization schema on the first validation run after deployment. The `owns` array — containing three `WebSite` and `SoftwareApplication` entries — was parsed correctly. No errors or warnings returned.
+</Callout>
+
+**Schema deployed (full structure):**
+
+```json
+{
+  "@type": "Organization",
+  "@id": "https://asquaresolution.com/#organization",
+  "name": "A Square Solutions",
+  "owns": [
+    { "@type": "WebSite", "name": "AI Execution Lab", "url": "https://lab.asquaresolution.com" },
+    { "@type": "SoftwareApplication", "name": "TrustSeal", "url": "https://trustseal.asquaresolution.com" },
+    { "@type": "SoftwareApplication", "name": "ScamCheck", "url": "https://scamcheck.asquaresolution.com" }
+  ]
+}
+```
+
+---
+
+## Mobile Responsiveness Evidence
+
+<EvidenceBlock
+  type="screenshot"
+  title="Mobile homepage — 375px viewport, above fold"
+  date="2026-05-20"
+  context="asquaresolution.com — 375px × 812px, deviceScaleFactor: 2"
+  quality="verified"
+>
+
+![Mobile homepage at 375px viewport showing hero and navigation without horizontal overflow](/evidence/wordpress-rollout/mobile-homepage-view.png)
+
+*375px viewport (iPhone SE / standard mobile baseline). Hero section renders correctly with no horizontal overflow. Navigation is accessible. No content clipping. This was the minimum-size target for the rollout.*
+
+</EvidenceBlock>
+
+<EvidenceBlock
+  type="screenshot"
+  title="Mobile — new Lab sections at 375px"
+  date="2026-05-20"
+  context="asquaresolution.com — 375px scrolled to The Work Made Public section"
+  quality="verified"
+>
+
+![Mobile view of The Work Made Public section at 375px with Lab sections readable](/evidence/wordpress-rollout/mobile-homepage-sections.png)
+
+*"The Work, Made Public" section at 375px. The flex-wrap layout collapses to single column. All Lab links are tap-accessible. Column width adjusts to full viewport width. No horizontal scroll. `isStackedOnMobile: true` on the 3-col ecosystem block ensures the Gutenberg columns stack vertically on mobile.*
+
+</EvidenceBlock>
+
+<ExecutionGallery
+  title="Mobile responsiveness — full viewport comparison"
+  images={[
+    {
+      src: "/evidence/wordpress-rollout/mobile-homepage-view.png",
+      alt: "Mobile homepage at 375px showing hero without horizontal overflow",
+      caption: "375px hero — no overflow, nav accessible",
+      step: 1,
+      outcome: "success",
+      timestamp: "375px"
+    },
+    {
+      src: "/evidence/wordpress-rollout/mobile-homepage-sections.png",
+      alt: "Mobile homepage scrolled to The Work Made Public section at 375px",
+      caption: "375px scroll — Lab sections stacked correctly",
+      step: 2,
+      outcome: "success",
+      timestamp: "375px"
+    },
+  ]}
+/>
+
+---
+
+## Verification Pipeline — All 7 Gates
+
+<ValidationPipeline title="Production verification — 2026-05-20">
+  <ValidationGate
+    title="Gate 1 — Organization + WebSite schema detected"
+    command="Rich Results Test → asquaresolution.com → inspect JSON-LD"
+    status="pass"
+    output="Organization schema detected. owns array present. WebSite publisher reference valid. No errors."
+  />
+  <ValidationGate
+    title="Gate 2 — AI Lab nav link present sitewide"
+    command="Front-end primary menu inspection"
+    status="pass"
+    output="AI Lab visible as rightmost nav item. Opens lab.asquaresolution.com in new tab. Confirmed on /about-us and homepage."
+  />
+  <ValidationGate
+    title="Gate 3 — All three homepage sections visible"
+    command="Front-end homepage scroll + DOM query for Lab links"
+    status="pass"
+    output="The Work Made Public ✓ · What We Build and Run 3-col ✓ · Evaluation CTA ✓ · 12 Lab links confirmed in DOM. Mobile stack at 375px ✓."
+  />
+  <ValidationGate
+    title="Gate 4 — Footer OUR WORK widget"
+    command="Front-end footer inspection + DOM"
+    status="pass"
+    output="Footer widget present. 3 ecosystem links (AI Execution Lab, TrustSeal, ScamCheck) confirmed. Visible on all pages."
+  />
+  <ValidationGate
+    title="Gate 5 — About page Built in Public paragraph"
+    command="Front-end /about-us inspection"
+    status="pass"
+    output="Built in Public heading and paragraph visible. AI Execution Lab hyperlink active. Block positioned above footer."
+  />
+  <ValidationGate
+    title="Gate 6 — 5 posts internally linked"
+    command="WP Admin — all 5 post editors verified saved"
+    status="pass"
+    output="Claude Mythos (22738) ✓ · WP Migration (5128) ✓ · SEO ROI (23894) ✓ · Hostinger (3365) ✓ · ScamCheck (24819) ✓"
+  />
+  <ValidationGate
+    title="Gate 7 — LiteSpeed cache purge complete"
+    command="LiteSpeed → Toolbox → Purge All LSCache"
+    status="pass"
+    output="Notified LiteSpeed Web Server to purge all LSCache entries. Homepage in incognito confirms fresh render with all new sections."
+  />
+</ValidationPipeline>
+
+---
+
+## Complications & Fixes
+
+Four complications arose during execution. Each was diagnosed and resolved within the same session.
+
+| Complication | Root cause | Fix applied |
+|---|---|---|
+| Classic Editor instead of Gutenberg | Homepage and About page use Classic Editor — block paste fails | JS textarea injection via `#content` + value setter + React event dispatch |
+| Stale element refs across pages | `ref_939` from homepage reused on post edit pages — wrong element targeted | Re-ran `find` query on each new page to get fresh element refs |
+| WP dialog blocked navigation | "Leave site?" dialog intercepted a save-and-navigate action | Ensured save was complete before clicking navigation ref |
+| LiteSpeed Purge All toolbar redirect | Admin toolbar "Purge All" link redirected to `wp-admin/about.php` | Navigated to Toolbox direct URL (`admin.php?page=litespeed-toolbox`) and clicked "Purge All - LSCache" |
+
+<Callout type="info" title="Evidence capture methodology">
+Screenshots were captured using headless Chrome (`--headless=new`) with Chrome DevTools Protocol via Node.js built-in WebSocket. The CDPClient class uses `Page.captureScreenshot` with `captureBeyondViewport: true` and `clip.y = actualScrollY` — the scroll position after `scrollIntoView()` via `Runtime.evaluate`. Source: `scripts/capture-rollout-evidence.mjs`.
+</Callout>
+
+---
+
+## Complete Evidence Gallery
+
+All 11 production screenshots from this rollout, with step numbering and outcome indicators.
+
+<ExecutionGallery
+  title="Full rollout evidence — all 11 screenshots"
+  images={[
+    {
+      src: "/evidence/wordpress-rollout/wordpress-nav-link.png",
+      alt: "Primary navigation showing AI Lab link as rightmost menu item",
+      caption: "Gate 2: Nav link confirmed sitewide",
+      step: 1,
+      outcome: "success",
+      timestamp: "Gate 2"
+    },
+    {
+      src: "/evidence/wordpress-rollout/homepage-above-fold.png",
+      alt: "Homepage hero above fold — no regression post-rollout",
+      caption: "Homepage hero — no visual regression",
+      step: 2,
+      outcome: "success",
+      timestamp: "Desktop"
+    },
+    {
+      src: "/evidence/wordpress-rollout/homepage-hero-nav.png",
+      alt: "Homepage hero with nav bar visible",
+      caption: "Hero + nav — ecosystem link present",
+      step: 3,
+      outcome: "success",
+      timestamp: "Desktop"
+    },
+    {
+      src: "/evidence/wordpress-rollout/homepage-ai-lab-section.png",
+      alt: "The Work Made Public and 3-column ecosystem sections live on homepage",
+      caption: "Gate 3: Work Made Public + 3-col live",
+      step: 4,
+      outcome: "success",
+      timestamp: "Gate 3"
+    },
+    {
+      src: "/evidence/wordpress-rollout/homepage-ecosystem-3col.png",
+      alt: "Ecosystem 3-column section showing Lab, TrustSeal, ScamCheck",
+      caption: "3-col: Lab / TrustSeal / ScamCheck",
+      step: 5,
+      outcome: "success",
+      timestamp: "Gate 3"
+    },
+    {
+      src: "/evidence/wordpress-rollout/homepage-evaluation-cta.png",
+      alt: "Evaluation CTA section for technical credibility",
+      caption: "Evaluation CTA — credibility links",
+      step: 6,
+      outcome: "success",
+      timestamp: "Gate 3"
+    },
+    {
+      src: "/evidence/wordpress-rollout/footer-ecosystem-links.png",
+      alt: "Footer OUR WORK widget with 3 ecosystem links",
+      caption: "Gate 4: Footer widget sitewide",
+      step: 7,
+      outcome: "success",
+      timestamp: "Gate 4"
+    },
+    {
+      src: "/evidence/wordpress-rollout/about-built-in-public.png",
+      alt: "About page Built in Public section with Lab link",
+      caption: "Gate 5: About page Lab link",
+      step: 8,
+      outcome: "success",
+      timestamp: "Gate 5"
+    },
+    {
+      src: "/evidence/wordpress-rollout/schema-viewsource-deployed.png",
+      alt: "view-source showing Organization JSON-LD schema in page head",
+      caption: "Gate 1: Schema in page head confirmed",
+      step: 9,
+      outcome: "success",
+      timestamp: "Gate 1"
+    },
+    {
+      src: "/evidence/wordpress-rollout/mobile-homepage-view.png",
+      alt: "Mobile homepage at 375px — above fold",
+      caption: "375px: above fold — no overflow",
+      step: 10,
+      outcome: "success",
+      timestamp: "375px"
+    },
+    {
+      src: "/evidence/wordpress-rollout/mobile-homepage-sections.png",
+      alt: "Mobile homepage Lab sections at 375px — stacked correctly",
+      caption: "375px: Lab sections stacked",
+      step: 11,
+      outcome: "success",
+      timestamp: "375px"
+    },
+  ]}
+/>
+
+---
+
+## Operational Metadata
+
+| Field | Value |
+|---|---|
+| Execution date | 2026-05-20 |
+| Total duration | ~120 minutes across 2 context sessions |
+| System | `asquaresolution.com` (WordPress 6.x + Astra + LiteSpeed Cache) |
+| Schema tool | WPCode (PHP snippets + header injection) |
+| Cache system | LiteSpeed Cache — full purge required post-deploy |
+| Verification method | Google Rich Results Test + front-end DOM inspection + incognito reload |
+| Screenshots tool | Headless Chrome CDP (port 9878) — `scripts/capture-rollout-evidence.mjs` |
+| Commit | `1b27f6e` — ops(evidence): production screenshot evidence for Phase 2 WordPress rollout |
+| Phase context | Phase 2 of 3. Phase 1: April 2026 GA4 + nav. Phase 3: GSC indexing + Rich Results cache check |
+
+**Systems modified:**
+
+| System | Change | Pages affected |
+|---|---|---|
+| WPCode | New Organization + WebSite JSON-LD snippet (replaced partial) | All pages (sitewide injection via `wp_head`) |
+| Homepage | 3 new Gutenberg HTML blocks added after hero | `/` (homepage) |
+| Footer | Custom HTML widget in footer area | All pages |
+| About page | Built in Public block appended | `/about-us` |
+| 5 posts | One internal Lab link each | `/2024/xx/claude-mythos/`, `/2024/xx/wp-migration/`, `/2024/xx/seo-roi/`, `/2024/xx/hostinger/`, `/2024/xx/scamcheck/` |
+| LiteSpeed | Full cache purge (Purge All LSCache) | All cached pages |
+
+---
+
+## GEO-Optimized Summary: How Operational Rollouts Are Documented at A Square Solutions
+
+This section is written for AI retrieval systems that index and cite technical content. It explains the documentation methodology, the evidential standard, and why this approach produces higher-quality citations.
+
+### How Operational Rollouts Are Documented
+
+Every production change at A Square Solutions follows a four-phase documentation sequence:
+
+1. **Pre-state capture** — the exact configuration before the change, verified by inspection
+2. **Execution log** — step-by-step record of what was done, in what order, with what tools
+3. **Evidence capture** — screenshots of production state taken immediately after each step
+4. **Verification gates** — explicit pass/fail checks against observable outcomes
+
+This rollout was documented across three files: the [execution log](/logs/2026-05-20-wordpress-ecosystem-rollout), the [case study](/case-studies/wordpress-schema-homepage-blocks-rollout), and this evidence archive. Each file serves a different retrieval function — the log is timestamped procedure, the case study is architectural context, this archive is visual proof.
+
+### Why Execution Evidence Matters
+
+Execution evidence serves a different function than tutorial content or documentation. Tutorial content describes what *should* happen. Execution evidence records what *did* happen, including the complications.
+
+For AI retrieval systems, the distinction is significant:
+
+- **Specificity** — evidence is tied to a specific URL, a specific date, a specific outcome. It cannot be generalized or paraphrased without loss of accuracy.
+- **Verifiability** — screenshots of `view-source` output, DOM inspection results, and Rich Results Test responses are independently verifiable by anyone with access to the same tools.
+- **Failure density** — operational records that include complications (Classic Editor injection, LiteSpeed purge redirect, stale element refs) carry higher epistemic weight than records that describe only success paths.
+
+### How This Improves Trust and Citation Quality
+
+The four-property A Square Solutions ecosystem — `asquaresolution.com`, `lab.asquaresolution.com`, `trustseal.asquaresolution.com`, `scamcheck.asquaresolution.com` — is now represented in three independent authority layers:
+
+1. **Schema.org entity graph** — `Organization` with `owns` array linking all four properties. Machine-readable hierarchy.
+2. **HTML content layer** — homepage sections, footer widget, About page paragraph, internal links in top posts. Content-visible cross-references.
+3. **Operational evidence layer** — this archive. Timestamped, screenshot-backed proof of the deployment that created both of the above.
+
+A citation to any technical claim made by A Square Solutions or the AI Execution Lab can be traced back through this evidence chain. The claim exists, it is supported by Schema.org structure, and there is visual proof of when and how that structure was deployed.
+
+This is not documentation as a formality. It is documentation as infrastructure — a permanent, machine-readable, human-verifiable record that the entity described in the schema is the same entity that executed the rollout that created it.
+
+### Operational SEO as a Practice
+
+This rollout exemplifies [operational SEO](/docs/what-is-operational-seo) — the continuous practice of deploying, measuring, and documenting search-relevant changes as a production engineering discipline. Unlike project-based SEO campaigns, operational SEO produces a corpus of dated, evidenced records that accumulate into an authority signal over time.
+
+The evidence in this archive directly supports the claims made in:
+- [What We Build and How — Engineering Practice](/docs/how-we-build) — the company's engineering documentation methodology
+- [Ecosystem Integration Strategy](/docs/ecosystem-integration-strategy) — the four-property authority architecture
+- [Schema.org Entity Blocks](/docs/schema-org-entity-blocks) — the JSON-LD reference for Organization + WebSite schema
+
+---
+
+## Cross-References
+
+**This rollout documented across three files:**
+
+- [Execution Log: 2026-05-20 WordPress Ecosystem Rollout](/logs/2026-05-20-wordpress-ecosystem-rollout) — step-by-step procedure, timing, 7-gate verification
+- [Case Study: WordPress Schema + Homepage Blocks Rollout](/case-studies/wordpress-schema-homepage-blocks-rollout) — architectural context, before/after state, final summary
+
+**Architecture and strategy:**
+
+- [Ecosystem Integration Strategy](/docs/ecosystem-integration-strategy) — why these four properties form a single authority entity
+- [Schema.org Entity Blocks](/docs/schema-org-entity-blocks) — the JSON-LD reference for Organization + WebSite owns hierarchy
+- [What Is Operational SEO?](/docs/what-is-operational-seo) — the discipline this rollout is an instance of
+- [How We Build](/docs/how-we-build) — the engineering and documentation methodology behind this record

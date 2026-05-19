@@ -1,0 +1,160 @@
+---
+title: "How We Build — The A Square Solutions Engineering Practice"
+description: "How A Square Solutions builds production AI systems: the production-first philosophy, failure indexing methodology, evidence-backed documentation practice, and Claude Code operational workflow. Not a methodology document — an engineering record."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["operational-evidence", "claude-code", "geo", "production", "methodology", "ecosystem"]
+status: published
+difficulty: intermediate
+section: concepts
+evidence_images: []
+external_refs:
+  - "https://lab.asquaresolution.com/failures"
+  - "https://lab.asquaresolution.com/playbooks"
+  - "https://martinfowler.com/bliki/AgileVersusLean.html"
+---
+
+This is not a methodology document. It is a description of how this practice actually operates, extracted from two years of daily production engineering work.
+
+A Square Solutions builds and runs four production systems — `asquaresolution.com` (WordPress), `lab.asquaresolution.com` (Next.js), `trustseal.asquaresolution.com` (React/Firebase), and `scamcheck.asquaresolution.com` (React/Gemini). Every engineering decision made on these systems is either in production, in the [failure archive](/failures), or in the [execution tracks](/tracks).
+
+---
+
+## The Build Sequence
+
+Production first. Documentation second. Never the reverse.
+
+Every system component follows this order:
+
+1. **Ship** — get it live, imperfect
+2. **Observe** — watch it break
+3. **Resolve** — fix the specific failure
+4. **Document** — record the state before and after, with timing
+
+Step 4 is the operational discipline. Without it, the organization re-solves the same problems on a recurring basis. With it, each failure becomes infrastructure — a permanent, searchable record that compounds over time.
+
+The [AI Execution Lab failure archive](/failures) contains 12 scored production failures as of May 2026. Each entry has: severity, estimated resolution time, before/after observable state, root cause classification, and verified fix. Not "this might work" — "this worked, in this context, on this date, in this time."
+
+---
+
+## Failure Indexing
+
+Every production incident gets a failure MDX file. The file has a standard structure:
+
+```
+slug: the specific failure identifier
+severity: low | medium | high | critical
+resolution_time: measured in production
+failure_type: build | runtime | deployment | configuration | ...
+verifiedFix: exact string of what fixed it
+instanceCount: 1 (updated if recurs)
+```
+
+The data feeds two systems:
+1. **Failure archive** — publicly indexed at `/failures`
+2. **Failure memory layer** (`lib/failure-memory.ts`) — confidence-scored, with pattern detection and prevention steps
+
+The output is institutional memory. When the same failure occurs again — same error message, same stack, different date — the playbook is already written. Resolution drops from hours to minutes.
+
+Two real examples:
+
+**LiteSpeed cache bypass failure** (2026-05-19, 15 minutes):
+- Error: PHP snippet deployed, live URL showing stale content
+- Root cause: LiteSpeed full-page cache ignores client `Cache-Control: no-cache` headers
+- Fix: WP Admin → LiteSpeed → Purge All
+- Documentation: [`/failures/litespeed-client-cache-bypass-ignored`](/failures/litespeed-client-cache-bypass-ignored)
+
+**Vercel edge runtime deployment failure** (2026-05-10, 23 minutes):
+- Error: `The Edge Runtime does not support Node.js 'crypto' module`
+- Root cause: `export const runtime = 'edge'` in `opengraph-image.tsx` — crypto is Node.js-only
+- Fix: Remove edge runtime export
+- Documentation: [`/failures/edge-runtime-deployment-failure`](/failures/edge-runtime-deployment-failure)
+
+Both are now resolved in under 3 minutes if they recur. The documentation is the acceleration.
+
+---
+
+## Claude Code Operations
+
+Claude Code (`claude-code`) is the primary development and content operations tool. It runs as a terminal agent with persistent context across sessions.
+
+What Claude Code does in this practice:
+
+- **Content generation** — MDX files from operational context. Not "write a blog post about X" — "document this deployment decision we just made, including the exact error message and resolution time"
+- **Code modification** — targeted file edits with context from real compiler errors and test failures
+- **Failure documentation** — after an incident is resolved, Claude drafts the failure MDX while the context is fresh
+- **Signal analysis** — reading across the full content corpus to detect operational gaps, weak content clusters, and GEO coverage holes
+
+What Claude Code does NOT do in this practice:
+- Write speculative content about things that haven't happened
+- Generate documentation for systems that don't exist yet
+- Replace engineering judgment with AI output
+
+The distinction is between *operational augmentation* (Claude accelerating documented real work) and *synthetic content generation* (Claude producing plausible but unverified content). The Lab publishes the first. The second has no value in an evidence-based publishing model.
+
+---
+
+## Evidence-Backed Publishing
+
+Every piece of content in the Lab is either:
+
+1. **Operational evidence** — documenting something that happened, with time, version, error, fix, and outcome
+2. **Concept documentation** — explaining a concept that emerged from operational experience
+
+There is no content category for "here is how this probably works" or "here is what you should generally do."
+
+The evidence threshold for publication is:
+- One version or timestamp
+- One measurable outcome
+- One executable step
+
+A 200-word failure report that hits these three criteria is more operationally valuable than a 3,000-word guide that hits none.
+
+This publishing model is the foundation of the Lab's [GEO strategy](/docs/geo-intelligence-architecture). AI search systems — Perplexity, ChatGPT, Google AI Overviews, Claude — favor content that answers the reliability question: *did this work in production, or is this theoretical advice?* Operational evidence answers that question directly.
+
+---
+
+## The Products as Engineering Evidence
+
+TrustSeal and ScamCheck are not separate from the Lab's documentation. They are the evidence base.
+
+- [TrustSeal](https://trustseal.asquaresolution.com) is a live AI trust verification product. Its Firebase Auth integration, Razorpay subscription flow, and real-time trust assessment system are production deployments, not demos. The engineering decisions that shaped it are documented in the Lab's case studies.
+
+- [ScamCheck](https://scamcheck.asquaresolution.com) is a live AI scam detection tool. Its Gemini 1.5 Flash integration, rate limit handling, and cross-domain GA4 analytics configuration are all real production problems solved and documented.
+
+When the Lab documents "how to configure GA4 cross-domain tracking," it is documenting a specific fix applied to ScamCheck, not an abstract tutorial. The product is the experiment. The Lab is the record.
+
+---
+
+## What This Practice Looks Like Over Time
+
+At May 2026 baseline:
+
+| Metric | Value |
+|---|---|
+| Published content items | 91 |
+| Failure reports (scored) | 12/12 (100%) |
+| Evidence coverage | 3/91 (3.4%) — primary gap |
+| Publishing velocity | ~10 items/day during build sprint |
+| GEO query coverage | ~60% (13/21 queries with content targets) |
+| Ecosystem uptime | 5/5 (100%) |
+| Sitemap health | 313/313 URLs passing |
+
+Evidence coverage is the most actionable gap. Most content meets the publication threshold but lacks the `evidence_images` or `external_refs` frontmatter fields that make it machine-readable for GEO scoring.
+
+The compounding effect is in the evidence density. Each new piece of operational evidence adds to a corpus that AI search systems read as an authoritative practice record — not a content site, but a documented engineering operation.
+
+---
+
+## Related
+
+- [What Is Operational Evidence](/docs/what-is-operational-evidence) — the formal definition
+- [Failure Archive](/failures) — operational evidence in practice
+- [Execution Tracks](/tracks) — structured learning built from this practice
+- [Platform Metrics Baseline](/docs/platform-metrics-baseline-2026-05) — the numbers
+- [WordPress Ecosystem Rollout — Visual Archive](/labs/wordpress-ecosystem-rollout-evidence) — a complete worked example: 11 CDP screenshots, 7-gate validation pipeline, before/after comparison, and GEO summary for a full production deployment
+
+---
+
+*A Square Solutions — asquaresolution.com*
+*AI Execution Lab — lab.asquaresolution.com*
