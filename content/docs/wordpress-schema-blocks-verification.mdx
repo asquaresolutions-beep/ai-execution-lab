@@ -1,0 +1,192 @@
+---
+title: "WordPress Rollout Verification Checklist — Schema + Homepage Blocks"
+description: "Single-page verification checklist for the 2026-05-20 WordPress ecosystem rollout. Seven binary gates covering schema, navigation, homepage blocks, footer, About page, internal links, and cache state. Pass/fail format — no explanations."
+date: "2026-05-20"
+updated: "2026-05-20"
+tags: ["wordpress", "verification", "schema", "ecosystem", "ops", "checklist"]
+status: published
+difficulty: beginner
+section: operations
+evidence_images: []
+external_refs:
+  - "https://search.google.com/test/rich-results"
+  - "https://asquaresolution.com"
+---
+
+Run this after executing the full WordPress ecosystem rollout. Each gate is binary. A FAIL stops the session until resolved — do not proceed to the next gate on a FAIL.
+
+**Total time:** 10–15 minutes
+**Browser needed:** Chrome, logged-out test window (incognito), DevTools
+
+---
+
+## Gate 1 — Schema Detected
+
+**Tool:** [Rich Results Test](https://search.google.com/test/rich-results)
+**Input:** `https://asquaresolution.com`
+
+| Check | Expected | Result |
+|---|---|---|
+| Organization type detected | Yes | ☐ |
+| `@id` = `https://asquaresolution.com/#organization` | Yes | ☐ |
+| `sameAs` array present | 3 URLs | ☐ |
+| `owns` array present | 3 objects | ☐ |
+| WebSite type detected | Yes | ☐ |
+| Zero errors in validator | Yes | ☐ |
+
+**FAIL resolution:** Go to WPCode → confirm snippet is Active → paste JSON into jsonlint.com to check syntax → check for duplicate Organization snippets (deactivate any prior version).
+
+---
+
+## Gate 2 — Navigation
+
+**Tool:** Front-end desktop + mobile views
+
+| Check | Expected | Result |
+|---|---|---|
+| "AI Lab" item visible in primary nav | Yes | ☐ |
+| Clicking "AI Lab" opens `lab.asquaresolution.com` | New tab | ☐ |
+| Hamburger menu on mobile shows "AI Lab" | Yes | ☐ |
+
+**FAIL resolution:** WP Admin → Appearance → Menus → verify custom link item exists with URL `https://lab.asquaresolution.com` and label `AI Lab` → Save Menu.
+
+---
+
+## Gate 3 — Homepage Sections
+
+**Tool:** Front-end homepage (logged-out, incognito window)
+
+| Check | Expected | Result |
+|---|---|---|
+| "The Work, Made Public" H2 visible | Yes | ☐ |
+| "What We Build and Run" H2 visible | Yes | ☐ |
+| 3-column layout: Lab / TrustSeal / ScamCheck | Yes | ☐ |
+| "If you're evaluating whether we know what we're doing" H2 visible | Yes | ☐ |
+| "Read the Lab →" link opens Lab | `lab.asquaresolution.com` | ☐ |
+| "Failure archive" link opens | `.../failures` | ☐ |
+| "Playbooks" link opens | `.../playbooks` | ☐ |
+| "Execution tracks" link opens | `.../tracks` | ☐ |
+| "Start here →" link opens | `.../start-here` | ☐ |
+
+**Mobile check (DevTools → 375px):**
+| Check | Expected | Result |
+|---|---|---|
+| 3 columns stack vertically | Yes | ☐ |
+| No horizontal overflow | No scroll | ☐ |
+
+**FAIL resolution:** Switch to Code Editor → check for unclosed `<!-- /wp:column -->` or `<!-- /wp:columns -->` tags → validate block structure → re-save.
+
+---
+
+## Gate 4 — Footer Widget
+
+**Tool:** Front-end footer (any page)
+
+| Check | Expected | Result |
+|---|---|---|
+| Widget section with title "Our Work" visible | Yes | ☐ |
+| "AI Execution Lab" link present | Yes | ☐ |
+| "TrustSeal" link present | Yes | ☐ |
+| "ScamCheck" link present | Yes | ☐ |
+| All 3 links open correct URLs | New tabs | ☐ |
+
+**FAIL resolution:** WP Admin → Appearance → Widgets → confirm Custom HTML widget in footer area with correct content → Save.
+
+---
+
+## Gate 5 — About Page
+
+**Tool:** Front-end `/about`
+
+| Check | Expected | Result |
+|---|---|---|
+| "Built in Public" H3 heading visible | Yes | ☐ |
+| Paragraph text visible below heading | Yes | ☐ |
+| "AI Execution Lab" link in paragraph opens Lab | Yes | ☐ |
+| Horizontal rule / top border visible above section | Yes | ☐ |
+
+**FAIL resolution:** WP Admin → Pages → About → Edit → Code Editor → confirm the `wp:group` block with border-top was saved correctly before the final closing tag.
+
+---
+
+## Gate 6 — Internal Links (5 Posts)
+
+**Tool:** Front-end view of each updated post
+
+| Post title | Lab link | Anchor text | Result |
+|---|---|---|---|
+| [Post 1] | [URL] | [Text] | ☐ |
+| [Post 2] | [URL] | [Text] | ☐ |
+| [Post 3] | [URL] | [Text] | ☐ |
+| [Post 4] | [URL] | [Text] | ☐ |
+| [Post 5] | [URL] | [Text] | ☐ |
+
+Fill in the table as you update each post. Verify each link opens the correct Lab URL.
+
+**Rule:** Max 1 Lab link per post. Anchor text must be descriptive (never "click here", "read more").
+
+---
+
+## Gate 7 — LiteSpeed Cache Purge + Logged-Out State
+
+**Tool:** Incognito window (ensures no admin cookie bypass)
+
+| Check | Expected | Result |
+|---|---|---|
+| LiteSpeed Purge All completed | Yes | ☐ |
+| Homepage loaded in incognito shows new sections | Yes | ☐ |
+| No old/cached version served | New sections visible | ☐ |
+| Page loads without console errors | DevTools → Console → no red errors | ☐ |
+
+**Page weight check:**
+| Metric | Pre-rollout | Post-rollout | Delta |
+|---|---|---|---|
+| Total page size (KB) | ___ KB | ___ KB | ___ KB |
+| Total requests | ___ | ___ | ___ |
+
+Acceptable: ≤ +10 KB total. No new external scripts. No new fonts loaded.
+
+**FAIL resolution:** LiteSpeed Cache → Purge → Purge All again → wait 60 seconds → retry in fresh incognito.
+
+---
+
+## Final Schema Spot-Check (view-source)
+
+In Chrome, open `view-source:https://asquaresolution.com` and search for `ld+json`.
+
+Confirm:
+- [ ] Two `<script type="application/ld+json">` blocks present in `<head>`
+- [ ] First block: `@type: Organization` with `owns` array
+- [ ] Second block: `@type: WebSite`
+- [ ] No malformed JSON (no unclosed braces, no double-escaped quotes)
+
+---
+
+## Evidence to Capture
+
+Before closing the session, save these screenshots to `/public/evidence/`:
+
+| File | What to capture |
+|---|---|
+| `2026-05-20-rich-results-schema.png` | Full Rich Results Test result showing Organization detected |
+| `2026-05-20-homepage-sections-desktop.png` | Homepage desktop view showing all 3 new sections |
+| `2026-05-20-homepage-sections-mobile.png` | Homepage at 375px showing stacked columns |
+| `2026-05-20-footer-widget.png` | Footer "Our Work" widget visible |
+| `2026-05-20-about-built-in-public.png` | About page with "Built in Public" paragraph |
+
+---
+
+## Go/No-Go Summary
+
+| Gate | Description | Status |
+|---|---|---|
+| 1 | Schema: Organization + WebSite + owns detected | ☐ |
+| 2 | Navigation: AI Lab link in primary nav | ☐ |
+| 3 | Homepage: 3 sections + 9 links verified | ☐ |
+| 4 | Footer: Our Work widget with 3 links | ☐ |
+| 5 | About: Built in Public paragraph + Lab link | ☐ |
+| 6 | Internal links: 5 posts updated | ☐ |
+| 7 | Cache purged + logged-out verification | ☐ |
+
+**All 7 gates passed = rollout complete.**
+**Any FAIL = resolve before logging session as complete.**

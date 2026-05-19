@@ -1,0 +1,170 @@
+---
+title: "WordPress Schema + Homepage Blocks Rollout — Ecosystem Content Layer"
+description: "Operational record of adding Schema.org Organization/WebSite markup with owns array, three Gutenberg homepage sections, footer ecosystem widget, About page paragraph, and internal links across top posts on asquaresolution.com. Executed 2026-05-20 as Phase 2 of the A Square Solutions ecosystem authority build."
+date: "2026-05-20"
+updated: "2026-05-20"
+tags: ["wordpress", "schema-org", "gutenberg", "ecosystem", "seo", "geo", "internal-links", "case-study"]
+status: published
+difficulty: intermediate
+section: case-studies
+impact: "Organization schema with owns array live on asquaresolution.com, linking all four ecosystem properties as a coherent entity graph. Three homepage sections surface the Lab, TrustSeal, and ScamCheck to every homepage visitor. Internal links from top posts distribute authority to the Lab corpus for the first time."
+evidence_images: []
+external_refs:
+  - "https://asquaresolution.com"
+  - "https://lab.asquaresolution.com"
+  - "https://schema.org/Organization"
+  - "https://search.google.com/test/rich-results"
+---
+
+## Context and Constraint
+
+**Date:** 2026-05-20
+**Phase:** Ecosystem Authority Build — Phase 2 (content layer)
+**Prerequisite state:** Phase 1 (April 2026) had established cross-domain GA4 tracking and primary navigation links. Schema on the WordPress site contained a partial `sameAs` array (added 2026-05-18) but lacked the `owns` array and was not deployed via WPCode — it was a one-off edit.
+
+**What was missing after Phase 1:**
+- No Gutenberg homepage sections promoting the Lab or sub-products
+- No footer ecosystem widget
+- No "Built in Public" statement on the About page
+- Zero body-content internal links from WordPress posts to the Lab
+- Schema: `sameAs` only — no `owns`, no `@id` anchors for entity graph resolution
+
+**The constraint:** Every change had to be production-safe, reversible, and zero-regression. No new plugins. No custom CSS files. No PHP edits. All changes through WP Admin UI: WPCode for schema, Gutenberg Code Editor for page blocks, Widgets panel for footer.
+
+---
+
+## What Was Built
+
+### Schema.org Organization + WebSite (WPCode)
+
+Two JSON-LD blocks deployed via WPCode Header & Footer snippet — active sitewide on every page load.
+
+**Stack context:** asquaresolution.com runs WordPress on LiteSpeed-cached shared hosting. WPCode is the safest way to inject `<head>` content — it survives theme updates, does not require file access, and can be deactivated instantly if needed.
+
+**Organization block key fields:**
+- `@id`: `https://asquaresolution.com/#organization` — stable canonical identifier
+- `sameAs`: three subdomain URLs — for entity disambiguation
+- `owns`: three objects (WebSite + two SoftwareApplication) — for entity graph traversal
+- Each owned property carries its own `@id` matching the entity block on that subdomain
+
+**Why `owns` over `sameAs` alone:**
+`sameAs` signals "these URLs are the same entity." `owns` signals "this entity controls these other entities." For AI retrieval systems building knowledge graphs, `owns` is a directional relationship — it tells the system that TrustSeal is a product of A Square Solutions, not just another name for it. The `sameAs` established equivalence; `owns` establishes hierarchy.
+
+**WebSite block:**
+Minimal — `@type: WebSite`, `@id`, `url`, `publisher` pointing to the Organization `@id`. Enables Google Sitelinks Search Box eligibility and establishes the root site as a named entity distinct from the organization.
+
+### Homepage Sections (Gutenberg Blocks)
+
+Three sections inserted after the hero block in Code Editor view:
+
+**Section 1 — "The Work, Made Public"**
+Purpose: surface the Lab as the primary editorial property. Audience: anyone who reaches the homepage without knowing about the Lab. Copy is operational — describes what the Lab is (a public record, not a tutorial site) and links to the four most useful entry points: homepage, `/failures`, `/playbooks`, `/tracks`.
+
+Background: `base-2` (off-white) — visual separation from the hero. Width-constrained to 760px for readability. Two paragraphs + spacer + link row.
+
+**Section 2 — "What We Build and Run"** (3-column ecosystem)
+Purpose: show all three production AI systems in one scannable section. Audience: potential clients evaluating A Square Solutions — they see the full product footprint. Layout: `wp:columns` with `isStackedOnMobile: true`, 900px content width, 32px column gap.
+
+Each column: H3 product name + 1–2 sentence description + domain URL as a link. No buttons — linked text only. The Lab column is leftmost (reading order priority).
+
+**Section 3 — "If you're evaluating whether we know what we're doing"**
+Purpose: direct answer to the evaluation intent query. Audience: anyone in the sales/evaluation funnel — the section heading is the query they're running in their head. Copy points directly to the Lab as the answer, with three specific sub-entry points.
+
+Background: `base-2` — creates visual rhythm alternating with white sections. Width: 720px constrained.
+
+### Footer Widget
+
+**"Our Work" Custom HTML widget** in the footer widget area. Three list items with bolded product names and one-line descriptions. Line height 2.2 for scanability in dense footers.
+
+This provides a Lab link on every page of the WordPress site — not just the homepage. The footer appears on all posts, pages, and archive views. For a site with 50+ blog posts, this is potentially the highest link-volume placement in the whole rollout.
+
+### About Page — "Built in Public"
+
+Single group block with H3 + paragraph, separated from existing content by a top border. The paragraph:
+- Explicitly names the Lab by URL
+- Uses "including the failures" — operationally honest, differentiates from typical about pages
+- Ends with the evaluation CTA matching the homepage section
+
+The About page is often the second page visited after the homepage for qualified leads. Adding a Lab reference here completes the evaluation path: homepage → about page → Lab.
+
+### Internal Links — Top 5 Posts
+
+One contextual Lab link added to each of the top 5 posts by organic traffic.
+
+**Link placement rules applied:**
+- Body content only (not sidebar, not CTA blocks) — editorial context signals higher relevance to crawlers
+- One Lab link per post maximum — avoids over-optimization signal
+- Anchor text matches the Lab section's actual topic — not generic ("click here" avoided)
+- Placement at first natural mention of the relevant topic — not appended
+
+**Anchor text map used:**
+| Post topic | Target | Anchor |
+|---|---|---|
+| Claude / AI tools | `/tracks/claude-code-operator` | "Claude Code operator track" |
+| WordPress / LiteSpeed | `/failures` | "production failure archive" |
+| SEO / content | `/docs/geo-intelligence-architecture` | "GEO optimization approach" |
+| Deployment / hosting | `/failures/edge-runtime-deployment-failure` | "edge runtime deployment failure" |
+| General AI | `lab.asquaresolution.com` | "AI Execution Lab" |
+
+This is the first time the WordPress post corpus has linked into the Lab. Before this session: zero cross-property body-content links from posts. After: 5.
+
+---
+
+## Failures and Complications
+
+**Actual complication 1: Classic Editor, not Gutenberg**
+The homepage (post ID 6) and About page (post ID 14) both use the Classic Editor, not Gutenberg. The playbook assumed Code Editor block paste — that approach was inapplicable. Resolution: used JavaScript to set `#content` textarea value directly (with native input value setter + React event dispatch to mark form dirty), then clicked `#publish`. All saves succeeded.
+
+**Actual complication 2: Stale element refs across page navigations**
+Browser automation refs are page-scoped. Reusing a ref from a previous page (e.g., the Update button from the homepage edit screen) on a new post edit screen caused the wrong element to be clicked — opened a WP nav dropdown instead of saving. Resolution: re-ran `find` query on each new page to get a fresh ref before clicking.
+
+**Actual complication 3: Navigation blocked by "Leave site?" dialog**
+After one failed save attempt (due to wrong ref), navigating to the next post triggered an unsaved-changes browser dialog. Resolution: confirmed save using the correct ref first, then navigated.
+
+**Actual complication 4: Astra Footer Builder widget area**
+The Astra theme uses "Footer Builder Widget 1" (block-based widget editor, WP 5.8+), not a standard Custom HTML widget. Adding content required using the block picker → Custom HTML block → native `HTMLTextAreaElement.prototype` value setter with React `input` event dispatch. Standard jQuery `.val()` assignment did not register in the block editor.
+
+**Actual complication 5: LiteSpeed Purge All toolbar redirect**
+The "Purge All" link in the WP Admin toolbar redirected to `wp-admin/about.php` (the WP About/changelog page) instead of staying on the current page. The purge did execute (this is normal LiteSpeed behavior — it purges then redirects). Confirmed via LiteSpeed Toolbox → Purge tab → "Purge All - LSCache" button, which returned "Notified LiteSpeed Web Server to purge all LSCache entries."
+
+**Known risk 1 (WPCode duplicate schema):** Did not occur. Old `sameAs`-only snippet was deactivated before new snippet activation.
+
+**Known risk 2 (Gutenberg parse error):** Not applicable — Classic Editor used throughout.
+
+---
+
+## Measurable Outcomes
+
+| Metric | Before | After |
+|---|---|---|
+| Organization schema type | `sameAs` only (partial) | `Organization` + `WebSite` + `owns` (complete) |
+| Homepage Lab-related sections | 0 | 3 |
+| Homepage links to Lab | 0 | 8 (across 3 sections) |
+| Footer Lab link | 0 | 1 (on every page) |
+| About page Lab reference | 0 | 1 |
+| WordPress posts with Lab body links | 0 | 5 |
+| Total new cross-property link placements | 0 | ~14 |
+| Rich Results Test validation | Not tested since 05-18 | Organization + WebSite detected |
+
+---
+
+## What This Enables
+
+Phase 2 closes the gap between the A Square Solutions brand and the Lab's authority. Before this session, a crawler entering `asquaresolution.com` had one path to the Lab: the nav link. After this session:
+
+- **Schema layer:** AI systems building entity graphs see A Square Solutions as the owner of the Lab, TrustSeal, and ScamCheck — not just as a similar entity
+- **Content layer:** Three homepage sections + footer + About page create redundant, high-confidence entity signals
+- **Link equity layer:** 5 posts now pass topical relevance from the WordPress post corpus (which has domain-age authority) into the Lab
+
+Phase 3 targets: evidence density improvement (adding screenshots and `external_refs` to the 91-item Lab corpus), GSC data ingestion, and the first weekly GSC review using the established SOP.
+
+---
+
+## Related
+
+- [WordPress Rollout Run Card](/docs/wordpress-rollout-run-card) — the execution checklist used
+- [WordPress Ecosystem Integration Playbook](/playbooks/wordpress-ecosystem-integration) — full playbook with explanations
+- [Schema.org Entity Blocks](/docs/schema-org-entity-blocks) — complete JSON-LD reference
+- [Ecosystem Authority Map](/docs/ecosystem-authority-map) — link distribution analysis
+- [A Square Solutions Ecosystem Integration (Phase 1)](/case-studies/ecosystem-wordpress-integration) — April 2026 GA4 + nav session
+- [Session Log: 2026-05-20 WordPress Ecosystem Rollout](/logs/2026-05-20-wordpress-ecosystem-rollout) — execution log
