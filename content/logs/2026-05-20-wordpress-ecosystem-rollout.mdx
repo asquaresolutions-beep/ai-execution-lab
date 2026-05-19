@@ -7,7 +7,13 @@ status: published
 log_type: "deployment"
 duration: "75 min"
 outcome: "Organization + WebSite schema deployed via WPCode. Three Gutenberg homepage sections added: AI Execution Lab feature, ecosystem architecture (3-column), authority CTA. Footer 'Our Work' widget live. About page 'Built in Public' paragraph added. Internal links added to 5 top posts. LiteSpeed full cache purge completed. All 7 verification gates passed."
-evidence_images: []
+evidence_images:
+  - /evidence/wordpress-rollout/wordpress-nav-link.png
+  - /evidence/wordpress-rollout/homepage-ai-lab-section.png
+  - /evidence/wordpress-rollout/footer-ecosystem-links.png
+  - /evidence/wordpress-rollout/about-built-in-public.png
+  - /evidence/wordpress-rollout/schema-viewsource-deployed.png
+  - /evidence/wordpress-rollout/mobile-homepage-sections.png
 external_refs:
   - "https://asquaresolution.com"
   - "https://lab.asquaresolution.com"
@@ -108,6 +114,10 @@ Plus WebSite schema:
 
 _Note: Previous `sameAs`-only snippet (ID 25657 was the new one) confirmed active. Organization + WebSite blocks both deployed sitewide._
 
+![view-source showing application/ld+json Organization schema in page head](/evidence/wordpress-rollout/schema-viewsource-deployed.png)
+
+*`<script type="application/ld+json">` with `@type: Organization` visible in page source (line 24). Schema is in `<head>` — active on every page load.*
+
 ---
 
 ## Step 2 — Navigation
@@ -115,6 +125,10 @@ _Note: Previous `sameAs`-only snippet (ID 25657 was the new one) confirmed activ
 No change needed — "AI Lab" nav link was confirmed present from the April 2026 session.
 
 **Gate 2 result:** Nav link visible, opens `lab.asquaresolution.com` in new tab → ✅ PASS (confirmed on front-end)
+
+![Primary navigation showing AI Lab as rightmost menu item](/evidence/wordpress-rollout/wordpress-nav-link.png)
+
+*Primary nav. "AI Lab" is visible as the last item before the social icons. Present on every page of the site.*
 
 ---
 
@@ -145,9 +159,17 @@ Three blocks added in order:
 - [x] "What We Build and Run" 3-column visible
 - [x] CTA section visible ("If you're evaluating whether we know what we're doing")
 - [x] 12 Lab links confirmed present on homepage via DOM query
-- [ ] Mobile columns stack at 375px — not tested (DevTools incognito test pending)
+- [x] Mobile columns stack at 375px — confirmed via headless Chrome screenshot
 
 → ✅ PASS
+
+![Homepage showing The Work Made Public section and What We Build and Run 3-col layout](/evidence/wordpress-rollout/homepage-ai-lab-section.png)
+
+*All three new sections visible on scroll: "The Work, Made Public", the 3-column ecosystem layout, and the evaluation CTA heading visible at bottom. 12 Lab links total on homepage.*
+
+![Mobile homepage at 375px showing The Work Made Public section stacked correctly](/evidence/wordpress-rollout/mobile-homepage-sections.png)
+
+*Mobile (375px): "The Work, Made Public" section renders correctly. Flex-wrap collapses to single column. All Lab links are tap-accessible.*
 
 ---
 
@@ -168,6 +190,10 @@ Three blocks added in order:
 
 **Gate 4 result:** Footer "Our Work" widget visible with 3 links → ✅ PASS (confirmed via DOM and front-end page text)
 
+![Footer showing OUR WORK widget with AI Execution Lab, TrustSeal and ScamCheck links](/evidence/wordpress-rollout/footer-ecosystem-links.png)
+
+*Footer "OUR WORK" widget in production. All three ecosystem links (AI Execution Lab, TrustSeal, ScamCheck) are present and linked. This appears on every page of the WordPress site.*
+
 ---
 
 ## Step 5 — About Page
@@ -179,6 +205,10 @@ Three blocks added in order:
 H3 "Built in Public" + paragraph linking to `lab.asquaresolution.com` with border-top separator.
 
 **Gate 5 result:** About page "Built in Public" paragraph visible with Lab link → ✅ PASS (block appended via Classic Editor, post saved)
+
+![About page showing Built in Public section with AI Execution Lab hyperlink](/evidence/wordpress-rollout/about-built-in-public.png)
+
+*"Built in Public" heading and paragraph visible at bottom of About page. "AI Execution Lab" is a live hyperlink in the paragraph. The section sits above the footer — visible to any visitor who reads to the end of the About page.*
 
 ---
 

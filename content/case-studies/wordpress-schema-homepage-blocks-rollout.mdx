@@ -8,7 +8,17 @@ status: published
 difficulty: intermediate
 section: case-studies
 impact: "Organization schema with owns array live on asquaresolution.com, linking all four ecosystem properties as a coherent entity graph. Three homepage sections surface the Lab, TrustSeal, and ScamCheck to every homepage visitor. Internal links from top posts distribute authority to the Lab corpus for the first time."
-evidence_images: []
+evidence_images:
+  - /evidence/wordpress-rollout/wordpress-nav-link.png
+  - /evidence/wordpress-rollout/homepage-above-fold.png
+  - /evidence/wordpress-rollout/homepage-ai-lab-section.png
+  - /evidence/wordpress-rollout/homepage-ecosystem-3col.png
+  - /evidence/wordpress-rollout/homepage-evaluation-cta.png
+  - /evidence/wordpress-rollout/footer-ecosystem-links.png
+  - /evidence/wordpress-rollout/about-built-in-public.png
+  - /evidence/wordpress-rollout/mobile-homepage-view.png
+  - /evidence/wordpress-rollout/mobile-homepage-sections.png
+  - /evidence/wordpress-rollout/schema-viewsource-deployed.png
 external_refs:
   - "https://asquaresolution.com"
   - "https://lab.asquaresolution.com"
@@ -157,6 +167,174 @@ Phase 2 closes the gap between the A Square Solutions brand and the Lab's author
 - **Link equity layer:** 5 posts now pass topical relevance from the WordPress post corpus (which has domain-age authority) into the Lab
 
 Phase 3 targets: evidence density improvement (adding screenshots and `external_refs` to the 91-item Lab corpus), GSC data ingestion, and the first weekly GSC review using the established SOP.
+
+---
+
+## Before / After Operational Evidence
+
+### Navigation layer
+
+**Before:** The "AI Lab" nav link existed from the April 2026 session but was the sole entry point from the WordPress domain to the Lab. No content reinforcement anywhere on the site.
+
+**After:** Nav link retained — now backed by three homepage sections, footer on every page, and About page reference. The nav link is now one of at least 15 cross-property link placements.
+
+![Primary navigation with AI Lab link — confirms the Lab is a first-class navigation destination alongside core site sections](/evidence/wordpress-rollout/wordpress-nav-link.png)
+
+*Primary nav on asquaresolution.com after rollout. "AI Lab" is the rightmost navigation item — visible on every page load. This is the entry point for any visitor who navigates rather than scrolls.*
+
+---
+
+### Homepage structure
+
+**Before:** No content on the homepage referenced the Lab, TrustSeal, or ScamCheck. The homepage was a standard Elementor services/case-studies layout.
+
+**After:** Three new sections appended after all existing content, visible to anyone who scrolls past the hero and services sections.
+
+![Homepage hero section showing the site above the fold with AI Lab accessible in the primary navigation](/evidence/wordpress-rollout/homepage-above-fold.png)
+
+*Homepage above fold. The hero section positions A Square Solutions as an engineering company — the Lab sections below reinforce this with direct evidence.*
+
+![The Work Made Public section and What We Build and Run 3-column ecosystem layout — both new sections visible in production](/evidence/wordpress-rollout/homepage-ai-lab-section.png)
+
+*"The Work, Made Public" section (top) and "What We Build and Run" 3-column section (bottom). The 3-col layout surfaces AI Execution Lab, TrustSeal, and ScamCheck as equal-weight production systems with direct links. This is the first time all three properties have been co-presented on the main site.*
+
+![Ecosystem 3-column section close-up showing AI Execution Lab, TrustSeal, and ScamCheck with linked domain URLs](/evidence/wordpress-rollout/homepage-ecosystem-3col.png)
+
+*3-column ecosystem section. Each column has a product name (H3), 1–2 sentence description, and a domain URL link. Lab column is leftmost — reading-order priority.*
+
+![Evaluation CTA section — addresses the specific intent of someone assessing the company's technical credibility](/evidence/wordpress-rollout/homepage-evaluation-cta.png)
+
+*"If you're evaluating whether we know what we're doing" section. Heading is a direct answer to the evaluation query — it names the intent, then points to the Lab as the evidence. This section converts browser-tab skepticism into a concrete action.*
+
+---
+
+### Footer ecosystem widget
+
+**Before:** No ecosystem links in the footer. Footer contained standard site navigation only.
+
+**After:** "OUR WORK" widget in the footer with three linked ecosystem properties — present on every page of the WordPress site.
+
+![Footer showing the OUR WORK widget with AI Execution Lab, TrustSeal, and ScamCheck links live in production](/evidence/wordpress-rollout/footer-ecosystem-links.png)
+
+*Footer with "OUR WORK" widget. AI Execution Lab, TrustSeal, and ScamCheck links are present on every page — posts, pages, archive views. For a 50+ post site, this is the single highest link-volume placement in the rollout.*
+
+---
+
+### About page
+
+**Before:** No mention of the Lab on the About page.
+
+**After:** "Built in Public" section at the bottom of the About page with a direct Lab link and operational-honesty framing.
+
+![About page Built in Public section with AI Execution Lab link — completes the evaluation path homepage → about → lab](/evidence/wordpress-rollout/about-built-in-public.png)
+
+*About page footer with "Built in Public" paragraph. The AI Execution Lab link is visible as a blue hyperlink in the paragraph text. This completes the evaluation funnel: homepage → About page → Lab. The phrase "including the failures" is intentional differentiation — most about pages don't say that.*
+
+---
+
+### Mobile responsiveness
+
+**Before:** N/A — no Lab sections existed to test.
+
+**After:** Homepage renders correctly at 375px. The hero and nav load without overflow. New sections visible on scroll.
+
+![Mobile homepage at 375px viewport showing hero and navigation without horizontal overflow](/evidence/wordpress-rollout/mobile-homepage-view.png)
+
+*Mobile homepage (375px, iOS-equivalent). Nav, logo, and hero render correctly. No horizontal overflow. The dark theme holds at mobile width.*
+
+![Mobile view of The Work Made Public section showing the new Lab sections at 375px](/evidence/wordpress-rollout/mobile-homepage-sections.png)
+
+*"The Work, Made Public" section on mobile. The flex-wrap layout collapses cleanly to a single column. Lab links (Read the Lab, Failure archive, Playbooks, Execution tracks) are all tap-accessible.*
+
+---
+
+### Schema in page source
+
+**Before:** No `Organization` schema with `owns` array. A partial `sameAs`-only snippet existed from 2026-05-18 but was not deployed through WPCode.
+
+**After:** Two `application/ld+json` blocks in `<head>` — `Organization` with full `owns` array and `WebSite` block — deployed sitewide via WPCode snippet.
+
+![view-source of asquaresolution.com showing application/ld+json Organization schema block in the page head](/evidence/wordpress-rollout/schema-viewsource-deployed.png)
+
+*Page source (line 24) showing `<script type="application/ld+json">` with `@type: Organization` and `@id: https://asquaresolution.com/#organization`. The schema is in the `<head>` — present on every page load, processed by Google's crawler on every index cycle.*
+
+---
+
+## Production Evidence Gallery
+
+All screenshots captured 2026-05-20 via headless Chrome CDP from the live `asquaresolution.com` production environment. No staging environment. No mocks.
+
+| Evidence | What it proves |
+|---|---|
+| [wordpress-nav-link.png](/evidence/wordpress-rollout/wordpress-nav-link.png) | "AI Lab" is a first-class nav item |
+| [homepage-above-fold.png](/evidence/wordpress-rollout/homepage-above-fold.png) | Homepage hero loads cleanly post-rollout |
+| [homepage-ai-lab-section.png](/evidence/wordpress-rollout/homepage-ai-lab-section.png) | "The Work, Made Public" + 3-col sections live |
+| [homepage-ecosystem-3col.png](/evidence/wordpress-rollout/homepage-ecosystem-3col.png) | Lab / TrustSeal / ScamCheck co-presented |
+| [homepage-evaluation-cta.png](/evidence/wordpress-rollout/homepage-evaluation-cta.png) | Evaluation CTA section with Lab links |
+| [footer-ecosystem-links.png](/evidence/wordpress-rollout/footer-ecosystem-links.png) | "OUR WORK" footer widget with 3 links |
+| [about-built-in-public.png](/evidence/wordpress-rollout/about-built-in-public.png) | "Built in Public" paragraph on About page |
+| [mobile-homepage-view.png](/evidence/wordpress-rollout/mobile-homepage-view.png) | 375px mobile render — no overflow |
+| [mobile-homepage-sections.png](/evidence/wordpress-rollout/mobile-homepage-sections.png) | Lab sections readable on mobile |
+| [schema-viewsource-deployed.png](/evidence/wordpress-rollout/schema-viewsource-deployed.png) | `application/ld+json` Organization schema in `<head>` |
+
+---
+
+## Final Rollout Summary
+
+**Date:** 2026-05-20
+**Duration:** ~120 minutes (across two sessions split by context limit)
+**Environment:** Production — `asquaresolution.com` WordPress on LiteSpeed-cached shared hosting
+
+### Systems Touched
+
+| System | Change type |
+|---|---|
+| WPCode (Header & Footer snippets) | New snippet: Organization + WebSite JSON-LD |
+| WordPress Homepage (post ID 6) | HTML appended via Classic Editor: 3 sections, ~5K chars |
+| WordPress About page (post ID 14) | HTML appended: "Built in Public" group block |
+| Astra Footer Builder Widget 1 | Custom HTML block: "OUR WORK" widget |
+| WordPress primary nav menu | Pre-existing "AI Lab" link — confirmed present |
+| 5 WordPress posts (IDs: 22738, 5128, 23894, 3365, 24819) | 1 contextual Lab link each, body content only |
+| LiteSpeed Cache | Full cache purge — all entries cleared |
+
+### Pages Modified
+
+- `asquaresolution.com` — homepage (3 new sections, 12 new Lab links)
+- `asquaresolution.com/about-us` — About page (1 new Lab link)
+- 5 blog posts — 1 Lab link each
+
+### Validation Checks Passed
+
+| Check | Method | Result |
+|---|---|---|
+| Organization schema present | Rich Results Test + view-source | ✅ Pass |
+| `owns` array present | view-source inspection | ✅ Pass |
+| Nav AI Lab link | Front-end visual check | ✅ Pass |
+| 3 homepage sections live | Front-end visual check + DOM query | ✅ Pass |
+| Footer widget present | Front-end visual check | ✅ Pass |
+| About page Lab reference | Front-end visual check | ✅ Pass |
+| 5 posts updated | WP post save confirmations | ✅ Pass |
+| LiteSpeed cache cleared | "Notified LiteSpeed Web Server" confirmation | ✅ Pass |
+| Mobile render (375px) | Headless Chrome screenshot | ✅ Pass |
+
+### Production Risks Encountered
+
+| Risk | Triggered? | Recovery |
+|---|---|---|
+| WPCode duplicate Organization schema | No | Deactivated old `sameAs`-only snippet before activating new one |
+| Gutenberg block parse error | N/A — Classic Editor used | N/A |
+| Footer widget area not registered | No — Astra Footer Builder Widget 1 was active | Used block-based widget editor instead of Classic widgets |
+| LiteSpeed cache not clearing | Partial — toolbar redirect confusing | Used Toolbox → Purge → "Purge All - LSCache" directly |
+| Browser automation ref stale across pages | Yes | Re-ran `find` on each new page to get fresh element refs |
+| Classic Editor instead of Gutenberg | Yes | Used JS `#content` textarea injection with React event dispatch |
+
+### What This Establishes
+
+**Before Phase 2:** A crawler entering `asquaresolution.com` had one structured signal pointing to the Lab (the nav link). No schema hierarchy. No content-layer reinforcement. No link equity flowing from WordPress posts.
+
+**After Phase 2:** Every page on `asquaresolution.com` carries a footer Lab link. The homepage surfaces the Lab in three sections. The About page names the Lab explicitly. Schema says A Square Solutions _owns_ the Lab — not just that they are similar entities. Five WordPress posts — carrying domain-age authority — now link into the Lab corpus with topical anchors.
+
+The entity graph is now machine-readable. The content layer is now human-verifiable. Both are in production.
 
 ---
 

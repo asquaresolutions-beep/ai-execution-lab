@@ -1,0 +1,178 @@
+---
+title: "WordPress wpautop Injects Paragraph Tags Inside HFE Post-Info Widget Links"
+description: "WordPress wpautop() was running on Elementor HFE widget render output and injecting </p><p> sequences inside <a> tags in the hfe-post-info widget. Caused malformed HTML on all post pages. Fixed with an elementor/widget/render_content PHP filter via WPCode."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["wordpress", "elementor", "hfe", "wpautop", "php-filters", "wpcode", "html"]
+status: published
+severity: medium
+failure_status: resolved
+failure_type: configuration
+project: asquaresolution.com
+resolution_time: "45 minutes across two sessions"
+evidence_images: []
+external_refs:
+  - "https://developer.wordpress.org/reference/functions/wpautop/"
+  - "https://elementor.com/help/header-footer-elementor/"
+---
+
+<IncidentReport
+  severity="medium"
+  status="resolved"
+  impact="All post pages on asquaresolution.com served malformed HTML inside hfe-post-info widget links. </p><p> sequences were injected inside <a> tags, producing invalid HTML that misrepresents the post-info widget structure to crawlers and browsers. 5 injection instances confirmed via live curl verification on the primary GEO pillar post."
+  rootCause="WordPress wpautop() — a core function that wraps bare text blocks in paragraph tags — was running on Elementor HFE (Header Footer & Blocks) widget content at render time. The hfe-post-info widget renders author/date/category links as inline content. wpautop() treated the whitespace between link elements as paragraph breaks and injected </p><p> sequences inside the anchor elements."
+  resolution="Deployed a WPCode PHP snippet hooking into elementor/widget/render_content. The filter: (1) detects hfe-post-info content via strpos(), (2) removes </p><p> sequences inside links using three targeted preg_replace() calls, (3) removes <br> injections inside hfe-post-info-icon spans."
+  prevention="Any Elementor HFE widget that renders inline content through WordPress text processing layers is a potential wpautop injection target. Deploy the filter proactively when using hfe-post-info. Always verify HFE widget output via curl after theme/plugin updates that might trigger wpautop re-runs."
+/>
+
+<FailureIntelligence
+  severity="medium"
+  recoveryComplexity="minutes"
+  category="configuration"
+  deploymentRisk="medium"
+  timeToDetect="During SEO audit — identified via live HTML inspection of GEO pillar post"
+  repeatRisk="low"
+  preventionPatterns={[
+    "Deploy the elementor/widget/render_content filter preventively on all WordPress + Elementor HFE installs",
+    "After any WordPress core, Elementor, or HFE plugin update: re-verify hfe-post-info output via curl",
+    "Never verify PHP filter fixes on LiteSpeed without running Purge All first",
+    "The injection pattern to check: grep -c '</p><p>' on post pages with hfe-post-info widgets",
+    "WPCode snippet priority 10 is sufficient — fires before output is rendered to page"
+  ]}
+  relatedFailures={[
+    { title: "LiteSpeed Cache Ignores Client no-cache Headers", href: "/failures/litespeed-client-cache-bypass-ignored", relation: "discovered-during-resolution" }
+  ]}
+  ecosystemImpact={[
+    "Affects all post pages using hfe-post-info widget",
+    "Produces invalid HTML visible to crawlers and in browser source",
+    "Potential impact on schema markup rendering if post-info overlaps with structured data output"
+  ]}
+/>
+
+<ExecutionEvidence
+  commitRef="WPCode snippet: asq_fix_hfe_post_info_wpautop — active"
+  date="2026-05-19"
+  repo="asquaresolution.com (WordPress)"
+/>
+
+## What Happened
+
+During a live HTML audit of asquaresolution.com's primary GEO pillar post, curl output showed repeated `</p><p>` sequences inside the post-info widget markup:
+
+```html
+<a href="/author/admin/" class="hfe-post-info-link">
+</p><p class="hfe-post-info-data hfe-post-info-data-author">Admin</p>
+</a>
+```
+
+This is invalid HTML. An `</p>` closing tag inside an `<a>` element causes browser rendering engines to auto-close the anchor early, and in strict parsers will produce a DOM mismatch.
+
+The widget is the **hfe-post-info** widget from the [Header Footer & Blocks by Brainstorm Force](https://wordpress.org/plugins/header-footer-elementor/) plugin (HFE). It renders post metadata — author, date, categories — as small inline link elements inside a widget container.
+
+---
+
+## Root Cause: wpautop and Inline Content
+
+WordPress `wpautop()` is a core text transformation function that converts bare newlines and blank lines into `<p>` tags. It runs by default on `the_content` but can be triggered on other content strings through filters and template tags.
+
+In this installation's configuration, `wpautop()` was running on the Elementor widget render pipeline for HFE widgets. The hfe-post-info widget outputs something like:
+
+```html
+<span class="hfe-post-info-icon">...</span>
+<a href="/author/admin/">Admin</a>
+<a href="/2026/05/">May 2026</a>
+```
+
+`wpautop()` sees the whitespace between these inline elements and interprets each line break as a paragraph boundary. It wraps them:
+
+```html
+<p><span class="hfe-post-info-icon">...</span></p>
+<p><a href="/author/admin/">Admin</a></p>
+```
+
+But because these elements are inside other HTML structures at render time, the closing/opening `</p><p>` sequences end up inside `<a>` tags in the final output — producing the malformed HTML.
+
+---
+
+## The Fix
+
+Deployed a WPCode PHP snippet (auto-loaded, priority 10) hooking into `elementor/widget/render_content`:
+
+```php
+add_filter( 'elementor/widget/render_content', 'asq_fix_hfe_post_info_wpautop', 10, 2 );
+function asq_fix_hfe_post_info_wpautop( $content, $widget ) {
+    if ( strpos( $content, 'hfe-post-info' ) === false ) { return $content; }
+
+    // Remove </p><p> sequences between elements
+    $content = preg_replace( '/<\/p>\s*<p[^>]*>/', '', $content );
+
+    // Remove <p> tags injected after opening <a>
+    $content = preg_replace( '/(<a\s[^>]*>)\s*<p[^>]*>/', '$1', $content );
+
+    // Remove </p> tags injected before closing </a>
+    $content = preg_replace( '/<\/p>\s*(<\/a>)/', '$1', $content );
+
+    // Remove <br> tags injected inside icon spans
+    $content = preg_replace(
+        '/(<span[^>]*class="[^"]*hfe-post-info-icon[^"]*"[^>]*>)\s*<br\s*\/?>/', '$1', $content
+    );
+
+    return $content;
+}
+```
+
+**Why this approach:**
+- The filter fires at widget render time, before output reaches the page
+- The `strpos( $content, 'hfe-post-info' )` guard exits immediately for all non-HFE widgets — zero performance cost on other widgets
+- The three `preg_replace()` patterns target only the injection patterns confirmed via curl; they do not modify any other content
+
+---
+
+## Verification
+
+After activation, LiteSpeed cache was purged (required — see related failure). Re-verification:
+
+```bash
+curl -sL "https://asquaresolution.com/[geo-post-slug]/" | grep -c '"></p><p>'
+# Expected: 0
+# Result: 0 ✓
+```
+
+Spot-checked two additional post pages — both returned 0 injection instances.
+
+---
+
+## Why This Matters for SEO / GEO
+
+Malformed HTML inside link elements affects:
+
+1. **Crawler parse reliability** — Googlebot's HTML parser is tolerant, but invalid markup inside links can cause partial link graph misattribution
+2. **Schema markup adjacency** — If structured data (JSON-LD for Article type) is rendered near the hfe-post-info widget, malformed surrounding HTML can interfere with parser context
+3. **AI content extraction** — LLMs and AI crawlers used for GEO extract content using DOM-aware parsers; `</p>` inside `<a>` creates ambiguous element nesting
+
+The injection was happening on all post pages — not just the pillar post. Fix deployed once covers all instances.
+
+---
+
+## Relation to LiteSpeed Cache
+
+The verification process revealed a separate failure: [LiteSpeed Cache Ignores Client no-cache Headers](/failures/litespeed-client-cache-bypass-ignored). The fix had deployed correctly on the first attempt, but curl verification with `Cache-Control: no-cache` returned the stale cached HTML, making it appear the filter wasn't working.
+
+The correct verification sequence for any PHP filter on a LiteSpeed WordPress site:
+
+1. Activate snippet → confirm "Active"
+2. WP Admin → LiteSpeed → **Purge All**
+3. Wait 10s
+4. `curl -sL [url] | grep -c '[pattern]'`
+
+---
+
+## Prevention
+
+This injection can reoccur after:
+- Elementor plugin updates that change widget render pipeline hooks
+- HFE plugin updates that modify how widget content passes through WordPress filters
+- WordPress core updates that change `wpautop()` behaviour or its execution context
+- Theme updates that add `wpautop` to additional filter hooks
+
+**After any of those updates:** run the verification command on a post page with hfe-post-info. It takes 30 seconds. The filter is already deployed and will continue working — the check confirms it hasn't been overridden by a plugin update.

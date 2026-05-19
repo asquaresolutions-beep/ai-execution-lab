@@ -1,0 +1,165 @@
+---
+title: "LiteSpeed Cache Ignores Client no-cache Headers"
+description: "Deployed a WPCode PHP filter to fix HFE wpautop injection. curl verification with Cache-Control: no-cache still returned stale cached HTML. Fix appeared not to work — it had worked. LiteSpeed had already cached the old output."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["litespeed", "wordpress", "caching", "php-filters", "wpcode", "debugging"]
+status: published
+severity: medium
+failure_status: resolved
+failure_type: configuration
+project: asquaresolution.com
+resolution_time: "15 minutes"
+evidence_images: []
+external_refs:
+  - "https://docs.litespeedtech.com/lscache/lscwp/purge/"
+---
+
+<IncidentReport
+  severity="medium"
+  status="resolved"
+  impact="Live verification of a deployed PHP filter (WPCode snippet) returned stale output. The fix was live but invisible behind LiteSpeed's server-side cache. Caused a false-negative verification result and unnecessary debugging cycle."
+  rootCause="LiteSpeed Cache operates server-side and caches full HTML responses. Client-sent HTTP headers — including Cache-Control: no-cache and Pragma: no-cache — are forwarded to LiteSpeed but LiteSpeed ignores them for cache bypass decisions. These headers only control browser cache behavior. The WPCode snippet was active and working; the cached page had not been purged."
+  resolution="WordPress Admin → LiteSpeed Cache → Purge All. Immediately served fresh PHP-rendered HTML with the filter applied. curl re-verification confirmed 0 instances of the wpautop injection pattern."
+  prevention="After any WordPress PHP filter or hook deployment: always run LiteSpeed → Purge All before verification. Never use curl with Cache-Control: no-cache to verify filter output on LiteSpeed-cached sites — the header does nothing for server-side cache."
+/>
+
+<FailureIntelligence
+  severity="medium"
+  recoveryComplexity="minutes"
+  category="configuration"
+  deploymentRisk="low"
+  timeToDetect="~8 minutes — after curl verification returned unexpected stale output"
+  repeatRisk="medium"
+  preventionPatterns={[
+    "LiteSpeed server-side cache is NOT bypassed by client Cache-Control headers — this is by design",
+    "Always purge LiteSpeed cache after deploying any PHP filter, action hook, or WPCode snippet",
+    "Use LiteSpeed Admin → Purge All after every content-affecting code change, not just after content publishing",
+    "Verification curl commands on LiteSpeed sites are only reliable after a full cache purge",
+    "The correct bypass sequence: deploy snippet → Purge All → wait 10s → verify with curl"
+  ]}
+  relatedFailures={[]}
+  ecosystemImpact={[
+    "Affects asquaresolution.com (WordPress, LiteSpeed Cache active)",
+    "Any PHP filter deployed without a subsequent cache purge will appear non-functional during verification"
+  ]}
+/>
+
+## What Happened
+
+Was verifying a WPCode snippet deployment that fixes a `</p><p>` injection inside `<a>` tags caused by WordPress `wpautop()` running on HFE (Header Footer & Blocks) post-info widgets. The snippet hooks into `elementor/widget/render_content` and strips the injected paragraph tags from affected widget output.
+
+Ran the verification command after the snippet was activated in WPCode and confirmed "Active":
+
+```bash
+curl -sL "https://asquaresolution.com/[post-slug]/" \
+  -H "Cache-Control: no-cache" \
+  -H "Pragma: no-cache" \
+  | grep -c '"></p><p>'
+```
+
+Result: `5` — five instances still present.
+
+The snippet was correctly activated. The filter was correctly targeting `hfe-post-info` content. But the output was coming from LiteSpeed's full-page HTML cache, not from a fresh PHP render.
+
+---
+
+## Root Cause: How LiteSpeed Cache Works
+
+LiteSpeed Cache is a server-side full-page cache. When a request arrives:
+
+1. LiteSpeed intercepts it **before** it reaches PHP/WordPress
+2. If a cached version of that URL exists: serve the cached HTML directly
+3. PHP never runs — filters never fire — WPCode snippets don't execute
+
+Client HTTP headers like `Cache-Control: no-cache` and `Pragma: no-cache` are forwarded to the origin server, but **LiteSpeed does not honour them for cache bypass**. These headers exist to control browser caches and proxy intermediaries that respect them. LiteSpeed's server-side cache has its own invalidation logic, separate from client-driven cache control.
+
+This is standard behaviour for server-side full-page caches (Varnish, NGINX FastCGI cache, and WP Super Cache behave similarly). The distinction is:
+
+| Cache type | Client no-cache | Bypassed? |
+|---|---|---|
+| Browser cache | ✓ | Yes |
+| CDN (respecting headers) | ✓ | Sometimes |
+| LiteSpeed server-side | ✓ | **No** |
+
+The cached HTML on disk was from before the snippet was activated. LiteSpeed had no reason to invalidate it — no content had been published, no manual purge had been triggered.
+
+---
+
+## The False Negative
+
+The verification result was:
+
+```
+curl count: 5 (still injected)
+```
+
+Interpretation: "The snippet is not working."
+
+Correct interpretation: "The snippet is active and correct, but we are verifying the cached HTML, not live PHP output."
+
+This distinction costs debugging time because the natural next step is to check snippet syntax, hook priority, and filter logic — none of which were wrong.
+
+---
+
+## Timeline
+
+| Time | Event |
+|------|-------|
+| T+0  | WPCode snippet activated ("Active" status confirmed in admin) |
+| T+2  | curl verification run with no-cache headers |
+| T+2  | Result: 5 instances — same as before deployment |
+| T+5  | Checked snippet code again — syntax correct, hook registered |
+| T+8  | Hypothesis: LiteSpeed cache serving stale HTML |
+| T+10 | WordPress Admin → LiteSpeed Cache → Purge All |
+| T+12 | curl re-verification run |
+| T+12 | Result: 0 instances — fix confirmed |
+| T+15 | Root cause documented |
+
+---
+
+## Fix Sequence
+
+For any PHP filter or hook deployed via WPCode on a LiteSpeed-cached WordPress site:
+
+```
+1. Activate snippet in WPCode → confirm "Active" status
+2. WordPress Admin → LiteSpeed Cache plugin → Dashboard → Purge All
+3. Wait 10 seconds (LiteSpeed processes the purge asynchronously)
+4. Verify with curl:
+   curl -sL "https://[domain]/[slug]/" | grep -c '[pattern]'
+   Expected: 0 (pattern absent)
+```
+
+Do NOT use `-H "Cache-Control: no-cache"` in the curl command — it has no effect on LiteSpeed's server-side cache and creates a false impression of bypassing it.
+
+---
+
+## Broader Implication for WordPress Development on LiteSpeed
+
+Any code that affects output at the PHP render layer — filters, actions, shortcodes, WPCode snippets, theme function changes — is **invisible to any visitor until the cache is purged**. This includes:
+
+- Schema markup changes (JSON-LD injected via `wp_head`)
+- Canonical URL modifications
+- HFE widget content adjustments
+- Breadcrumb schema
+- Open Graph tag changes
+- Any custom PHP output
+
+The standard operating procedure after any WordPress code change should include a LiteSpeed Purge All, not just after content publishing. In high-traffic environments, a partial purge (by URL) is preferable to avoid cache warming overhead — but for development and verification, full purge is the safe path.
+
+<Callout type="warn" title="Verification on LiteSpeed requires a prior Purge All">
+Verifying any PHP-level change on a LiteSpeed-cached WordPress site without first running Purge All will return stale cached output. The verification result will be meaningless regardless of what HTTP cache headers you send in the request.
+</Callout>
+
+---
+
+## Prevention Checklist
+
+Before verifying any WordPress PHP change on LiteSpeed:
+
+- [ ] Confirm the code change is saved and active (WPCode: "Active" status)
+- [ ] WordPress Admin → LiteSpeed Cache → Purge All
+- [ ] Wait 10–15 seconds
+- [ ] Run verification (no special curl flags needed — fresh PHP will render)
+- [ ] If result is unexpected, check PHP error log before re-examining the code
