@@ -1,0 +1,178 @@
+---
+title: "Build in Public Framework — The Operational Transparency System"
+description: "How A Square Solutions structures transparent operational publishing: what gets documented, at what granularity, with what evidence standard, and how the public record compounds into authority, trust, and AI retrievability over time."
+date: "2026-05-20"
+updated: "2026-05-20"
+tags: ["build-in-public", "operational-evidence", "transparency", "authority", "geo", "distribution", "publishing"]
+status: published
+difficulty: intermediate
+section: strategy
+evidence_images: []
+external_refs:
+  - "https://lab.asquaresolution.com"
+  - "https://asquaresolution.com"
+---
+
+Building in public is not a content strategy. It is an operational stance: the default state of the engineering practice is documented and visible.
+
+At A Square Solutions, this means every production decision of substance — deployment, failure, architectural change, experiment — produces a public record within 24 hours of the work completing. Not a summary. A record.
+
+This document defines what that means in practice.
+
+---
+
+## What "In Public" Means
+
+"In public" does not mean real-time. It does not mean stream-of-consciousness. It means:
+
+**The work produces evidence. The evidence is published. The evidence links to the work.**
+
+The sequence: execute → capture → record → publish → cross-reference.
+
+What gets excluded: internal business decisions, client-specific work, work-in-progress that hasn't resolved yet (exception: ongoing lab experiments that have a defined hypothesis and current state).
+
+What gets included: everything else — deployments, production failures, debugging sessions, architectural decisions, operational discoveries, metrics milestones.
+
+---
+
+## The Granularity Standard
+
+Building in public requires choosing a granularity level that is detailed enough to be useful but sustainable to maintain.
+
+The AI Execution Lab standard:
+
+| Content type | Granularity | When published |
+|---|---|---|
+| Execution log | Timestamped steps, gate results, complications | Within 24h of session end |
+| Failure report | Root cause, timeline, fix, prevention patterns | Within 48h of resolution |
+| Case study | Full operational arc, before/after state, evidence | Within 1 week of completion |
+| Lab experiment | Hypothesis + current state + findings | As findings emerge |
+| Deployment note | What changed, gates, complications | Same day |
+| Docs / playbooks | Complete reference document | When the system is stable enough to document |
+
+The "within 24h" standard for logs exists for a specific reason: memory decay. The complications and non-obvious insights that make a log valuable are most accessible immediately after the session. 48 hours later, the reasoning is still available. A week later, only the outcome survives.
+
+---
+
+## The Evidence Standard
+
+Every published record should meet one of three evidence levels:
+
+**Level 1 — Verified (screenshots):** Production screenshots captured at the time of execution. The most credible form. Cannot be fabricated after the fact without significant effort.
+
+**Level 2 — Approximate (reconstructed from notes):** The session was not screenshot-documented but notes were taken during execution. The record accurately represents what happened but lacks visual proof.
+
+**Level 3 — Reconstructed (post-hoc):** The record was created after the fact from memory, outputs, and artifacts. Labelled as reconstructed in the MDX frontmatter (`quality: reconstructed`).
+
+The AI Execution Lab aims for Level 1 on all deployments and Level 2 on all debugging sessions. Level 3 is acceptable for historical records and architectural decisions.
+
+<Callout type="info" title="Why evidence level matters for GEO">
+AI retrieval systems weight credibility signals differently from traditional search ranking. Dated, evidence-backed operational records — especially those with Level 1 screenshot evidence and specific tool references — receive higher citation weight because they are verifiable. A claim backed by a screenshot of a production console is a different kind of claim than a general best-practice statement.
+</Callout>
+
+---
+
+## What Not to Publish
+
+Building in public has a scope. Publishing everything produces noise that dilutes the signal of the substantive records.
+
+**Exclude:**
+- Failed attempts that are subproblems of a resolved issue (include only the resolution arc)
+- Routine operational tasks with no non-obvious finding (deploying a content update is not a log)
+- Internal strategy or business decision details
+- Client names or client-specific implementation details
+- Work that is still actively in-flight with no resolved state
+
+**Include:**
+- Any complication that cost more than 10 minutes to diagnose
+- Any finding that would have saved time if you'd known it before
+- Any configuration or tool behaviour that is underdocumented
+- Any deployment that changed the production state in a measurable way
+- Any failure that could recur
+
+The heuristic: would a competent engineer who works in this stack want to know this? If yes, publish it.
+
+---
+
+## The Publishing Rhythm
+
+The publishing rhythm at A Square Solutions follows the work, not a calendar.
+
+**Active phase (deployment or debugging underway):**
+- Capture screenshots during execution
+- Write the log within 24h
+- Extract LinkedIn post within 48h
+- Cross-reference from related docs within the week
+
+**Quiet phase (no major deployment underway):**
+- Backfill: publish historical failures from memory
+- Improve: add evidence to existing records
+- Deepen: expand docs that are thin
+- Distribute: extract posts from the archive backlog
+
+The quiet phase is not wasted — the archive has depth that has not been fully extracted for distribution. Every week of quiet is a week to increase the evidence density of existing records.
+
+---
+
+## The Compounding Mechanism
+
+The value of a public operational record is not linear with time. It compounds.
+
+**Year 1:** You have 50 records. Each record is useful to a reader who finds it via search or social. The corpus as a whole is not yet large enough to establish a pattern.
+
+**Year 2:** You have 200 records. AI retrieval systems now have enough operational specificity to answer questions from your corpus without surfacing generic alternatives. Your failure archive covers enough categories that it is cited as a failure pattern reference.
+
+**Year 3:** You have 500 records. The Lab is a canonical reference for its topic areas. Each new record builds on and cross-references the existing corpus. The cost to produce each record drops as templates and tools improve. The authority signal per record increases as the entity gets stronger.
+
+The mechanism: more operational specificity → more AI citations → more inbound traffic → more practitioners exposed → more authority signals → higher GEO coverage → more citations. Each loop is self-reinforcing.
+
+---
+
+## Integration Points
+
+The build-in-public framework integrates with the rest of the platform:
+
+**Failure Archive → Distribution:** Each resolved failure is a standalone distribution asset. See [LinkedIn Content Engine](/docs/linkedin-content-engine) Template 1.
+
+**Execution Logs → Authority:** Timestamped logs with gate results are evidence of operational competence. They are the "show your work" layer of the authority claim.
+
+**Case Studies → Trust Signals:** Case studies with before/after evidence and measurable outcomes establish the company as a practitioner who documents results, not just process.
+
+**Lab Experiments → GEO:** Experiments with hypotheses, methods, and findings are retrieval targets for "does X work" and "what happens when Y" queries. They are the most genuinely useful content category for AI systems that synthesize answers to operational questions.
+
+---
+
+## The "Built in Public" Statement
+
+Every platform entry point that faces a new visitor should include a variant of this statement:
+
+> A Square Solutions builds production AI systems. Engineering decisions, deployments, debugging sessions, and production failures are documented publicly at AI Execution Lab as they happen — not summaries, not retrospectives, operational records.
+
+This statement serves two functions:
+
+1. **User expectation setting:** visitors understand they are reading a production record, not a tutorial
+2. **GEO signal:** the statement asserts operational transparency in a machine-readable form, which helps AI systems classify the content as practitioner-generated rather than marketing-generated
+
+---
+
+## Checklist: Starting a New Operational Record
+
+Before ending any significant production session:
+
+- [ ] Screenshot evidence captured for key state changes
+- [ ] Complications documented with exact symptoms, wrong hypotheses tried, and actual resolution
+- [ ] Gate results recorded (pass/fail for each verification step)
+- [ ] Duration noted (enables evidence hours tracking)
+- [ ] Cross-references identified (which existing docs, failures, or logs relate to this session)
+- [ ] LinkedIn post extraction identified (which part of this session is the highest-value distribution extract)
+- [ ] MDX frontmatter complete: title, description, date, tags, status, evidence_images, external_refs
+
+---
+
+## Related
+
+- [Distribution System](/docs/distribution-system) — extraction workflow and CTA strategy
+- [LinkedIn Content Engine](/docs/linkedin-content-engine) — five post templates with examples
+- [Authority Flywheel](/docs/authority-flywheel) — how transparency converts to compounding authority
+- [What Is Operational Evidence](/docs/what-is-operational-evidence) — the evidence standard in detail
+- [Publishing Operations](/docs/publishing-operations) — the current publishing workflow

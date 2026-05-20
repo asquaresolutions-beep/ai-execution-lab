@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { getEvidenceMetrics, formatOperationalHours, formatAvgResolution } from '@/lib/evidence-metrics'
 
 // ─────────────────────────────────────────────────────────────
 // Metadata
@@ -170,6 +171,8 @@ const PLATFORM_SECTIONS = [
 // ─────────────────────────────────────────────────────────────
 
 export default function StartHerePage() {
+  const evMetrics = getEvidenceMetrics()
+
   return (
     <div className="px-5 sm:px-6 lg:px-8 py-8 max-w-4xl">
 
@@ -197,6 +200,21 @@ export default function StartHerePage() {
           <span>Progress saved locally</span>
           <span>·</span>
           <span>Start any lesson immediately</span>
+        </div>
+
+        {/* Corpus credibility strip */}
+        <div className="mt-6 flex flex-wrap gap-3">
+          {[
+            { value: String(evMetrics.evidenceCount), label: 'evidence pieces' },
+            { value: formatOperationalHours(evMetrics), label: 'operational hours documented' },
+            { value: `${evMetrics.resolvedCount} resolved`, label: `of ${evMetrics.failureCount} failures` },
+            { value: String(evMetrics.totalContentItems), label: 'published items' },
+          ].map(item => (
+            <div key={item.label} className="flex items-baseline gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2">
+              <span className="text-sm font-bold font-mono text-surface-200">{item.value}</span>
+              <span className="text-[10px] text-surface-600">{item.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 

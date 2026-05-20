@@ -5,6 +5,7 @@ import { SECTION_META, ACCENT_CLASSES, formatDateMono } from '@/lib/utils'
 import { getPlatformStatus } from '@/lib/activity'
 import { FeaturedFailures }  from '@/components/homepage/featured-failures'
 import { LiveActivityBar } from '@/components/platform/live-activity-bar'
+import { getEvidenceMetrics, formatOperationalHours, formatAvgResolution } from '@/lib/evidence-metrics'
 
 // Code-split framer-motion components — reduces initial JS parse work
 const StatsBar = dynamic(
@@ -55,6 +56,8 @@ export default function HomePage() {
     { key: 'playbooks'    as const, count: playbooks.length   },
     { key: 'failures'     as const, count: failures.length    },
   ]
+
+  const evMetrics = getEvidenceMetrics()
 
   const sections = [
     { key: 'docs'         as const, count: docs.length,        items: docs.slice(0, 2)        },
@@ -135,6 +138,38 @@ export default function HomePage() {
 
       {/* ── Stats bar ────────────────────────────────────────── */}
       <StatsBar stats={stats} />
+
+      {/* ── Operational evidence strip ───────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-10 -mt-6">
+        {[
+          {
+            value: evMetrics.evidenceCount,
+            label: 'evidence pieces',
+            sub:   'production screenshots',
+          },
+          {
+            value: formatOperationalHours(evMetrics),
+            label: 'operational hours',
+            sub:   `${evMetrics.deploymentCount} deployments logged`,
+          },
+          {
+            value: `${evMetrics.resolvedCount}/${evMetrics.failureCount}`,
+            label: 'failures resolved',
+            sub:   `avg ${formatAvgResolution(evMetrics)}`,
+          },
+          {
+            value: evMetrics.totalContentItems,
+            label: 'published items',
+            sub:   'across all sections',
+          },
+        ].map(item => (
+          <div key={item.label} className="rounded-xl border border-white/[0.05] bg-white/[0.01] px-3 py-2.5 text-center">
+            <p className="text-lg font-bold font-mono text-surface-200 leading-none">{item.value}</p>
+            <p className="text-[10px] text-surface-600 mt-1">{item.label}</p>
+            <p className="text-[9px] text-surface-700 mt-0.5 font-mono">{item.sub}</p>
+          </div>
+        ))}
+      </div>
 
       {/* ── Featured failures ────────────────────────────────── */}
       <FeaturedFailures />

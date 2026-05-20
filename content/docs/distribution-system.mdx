@@ -1,0 +1,212 @@
+---
+title: "Distribution System — How Operational Content Reaches Audiences"
+description: "The A Square Solutions distribution architecture: how execution logs, failure reports, and case studies are transformed into LinkedIn posts, GEO-indexed answers, and compounding authority signals. Evidence-first social publishing from a production engineering operation."
+date: "2026-05-20"
+updated: "2026-05-20"
+tags: ["distribution", "linkedin", "geo", "content-strategy", "operational-evidence", "authority", "publishing"]
+status: published
+difficulty: intermediate
+section: strategy
+evidence_images: []
+external_refs:
+  - "https://lab.asquaresolution.com/logs"
+  - "https://lab.asquaresolution.com/failures"
+  - "https://lab.asquaresolution.com/case-studies"
+---
+
+The AI Execution Lab does not create content for distribution. It documents operational work, then distributes what already exists.
+
+This is the distinction. Content-first distribution requires you to generate things worth sharing. Operations-first distribution means your existing production record — logs, failures, deployments, case studies — is already a distribution asset. You extract, not create.
+
+This document defines the extraction and distribution architecture.
+
+---
+
+## The Distribution Funnel
+
+Every piece of operational work flows through four layers before it reaches a social audience:
+
+```
+PRODUCTION WORK
+      ↓
+OPERATIONAL RECORD (MDX — Lab)
+      ↓
+EXTRACTION (LinkedIn post / GEO snippet)
+      ↓
+DISTRIBUTION SURFACE (LinkedIn / AI search / direct)
+      ↓
+AUTHORITY SIGNAL (entity recognition / backlinks / trust)
+```
+
+None of these layers require separate content creation. The production work generates the record. The record generates the extraction. The extraction generates the distribution. The distribution generates authority.
+
+The compounding mechanism: authority from distribution increases the search and AI visibility of the Lab corpus, which generates more inbound traffic to the operational records, which increases the citation quality of each failure/log/case study.
+
+---
+
+## Source Content by Type
+
+Each source type produces a specific extraction format.
+
+### Execution Logs (`/logs`)
+
+**What they contain:** timestamped deployment sequences, complications, fixes, gate results.
+
+**What to extract:**
+- The most interesting complication encountered and how it was resolved
+- A specific gate result that was non-obvious
+- A before/after state change with a precise delta
+
+**Example:** "LiteSpeed Purge All admin toolbar link redirects to `wp-admin/about.php`. Fix: use Toolbox direct URL (`admin.php?page=litespeed-toolbox`). Saved 15 minutes of debugging. Filed under operational institutional memory."
+
+**Format:** Short-form with the actual fix command or path. Evidence image if relevant.
+
+---
+
+### Failure Reports (`/failures`)
+
+**What they contain:** root cause, resolution time, prevention patterns, severity scoring.
+
+**What to extract:**
+- The non-obvious root cause (the "this was actually about X, not Y" insight)
+- The prevention pattern in imperative language ("always X before Y")
+- The symptom-to-diagnosis gap (what looked like a failure wasn't)
+
+**Example:** "curl with `Cache-Control: no-cache` does NOT bypass LiteSpeed's server-side cache. The cache operates before PHP, so the header reaches nothing. Fix: Purge All, then curl. Verification without a prior purge is meaningless. Severity: medium. Resolution: 15 min."
+
+**Format:** Lead with the counterintuitive insight. End with the operational rule.
+
+---
+
+### Case Studies (`/case-studies`)
+
+**What they contain:** full operational arc from problem to deployed solution with evidence.
+
+**What to extract:**
+- The key decision that changed the outcome
+- A measurable before/after delta
+- The architectural insight that applies beyond this specific case
+
+**Example:** "Schema.org `sameAs` asserts equivalence. `owns` asserts hierarchy. We had sameAs only — so search engines saw A Square Solutions and AI Execution Lab as parallel entities, not parent and owned property. Replacing sameAs with owns in the Organization schema took 20 minutes and changes how the entity graph is interpreted."
+
+**Format:** Frame as insight, not update. The insight should apply to the reader's own systems.
+
+---
+
+### Deployment Updates
+
+**What they contain:** specific production changes, outcomes, complications.
+
+**What to extract:**
+- What changed in one sentence
+- What it cost (time, complications)
+- What it unlocks
+
+**Format:** "Deployed X. Cost Y. Unlocks Z." Three sentences maximum before expansion.
+
+---
+
+## Post Cadence
+
+The cadence is driven by the production record, not by a content calendar.
+
+**Minimum viable cadence:** 3 posts per week from the production record.
+
+| Day | Source | Format |
+|-----|--------|--------|
+| Monday | Most recent log or deployment | Operational insight or deployment update |
+| Wednesday | Failure archive or debugging session | Root cause breakdown |
+| Friday | Case study or architectural decision | Strategic insight or before/after |
+
+**Surge cadence (active deployment phase):** Post immediately after each significant gate. The deployment itself is the editorial calendar.
+
+**Dead week protocol:** If no new operational work, publish from the failure archive. Every resolved failure is a distribution-ready asset. There are currently 12 scored failures — 12 weeks of content minimum.
+
+---
+
+## CTA Strategy
+
+Every post ends with one of four CTAs, matched to the post type:
+
+| Post type | CTA |
+|-----------|-----|
+| Complication + fix | "Full root cause + prevention checklist: [link to failure post]" |
+| Deployment update | "Full execution log with screenshots: [link to log]" |
+| Architectural insight | "Full case study with before/after evidence: [link to case study]" |
+| Operational rule | "Read the system this rule comes from: [link to doc/playbook]" |
+
+**Never use generic CTAs.** "Read more" is a signal that the post is a content summary rather than a knowledge extract. The CTA should name what is at the link — the failure intelligence table, the execution log with 7 gates, the case study with production screenshots.
+
+The CTA is a retrieval signal: it tells the reader exactly what they will find, and it tells AI search systems that this social post is associated with a specific, verifiable operational record.
+
+---
+
+## Evidence-First Publishing Rules
+
+1. **No synthetic examples.** Every technical claim must be extractable from a real production record in the Lab. If it cannot be linked to a log, failure, or case study, it does not get published.
+
+2. **Lead with the specific, not the general.** "Deployed schema with `owns` array" is a distribution asset. "Schema.org is important for SEO" is not. Specificity is the signal.
+
+3. **Include the failure.** If the deployment had a complication, the complication goes in the post. Non-linear paths are more credible and more useful than perfect deployments.
+
+4. **Name the tools.** "Used WPCode to inject JSON-LD" is more useful than "updated the schema". Tool specificity creates citation targets for AI retrieval.
+
+5. **Timestamp when possible.** "Deployed 2026-05-20, verified same day" adds temporal anchoring that signals operational recency to AI systems.
+
+---
+
+## GEO-Aware Social Snippets
+
+LinkedIn posts that are GEO-aware follow a specific structure designed to be retrievable by AI systems that may crawl or index social content:
+
+**Structure:**
+```
+[Specific operational claim]
+[Evidence: tool, context, date]
+[Non-obvious implication]
+[Operational rule in imperative form]
+[Link to Lab record]
+```
+
+**Example:**
+```
+LiteSpeed Cache does not respect client Cache-Control: no-cache headers.
+The cache operates at the server level before PHP runs. Headers from curl 
+reach the origin, not the cache layer.
+This means: any verification of a PHP filter change using curl without a 
+prior Purge All is verifying the cache, not the live code.
+Rule: Deploy → Purge All → Wait 10s → Verify.
+Root cause + full timeline: [link]
+```
+
+This structure is:
+- Answer-first (the claim leads)
+- Entity-dense (LiteSpeed, PHP, cache-control, Purge All are all named)
+- Operationally specific (timestampable, tool-specific)
+- Retrieval-complete (the full answer is in the post; the link goes deeper)
+
+---
+
+## Post Templates
+
+See [LinkedIn Content Engine](/docs/linkedin-content-engine) for the five reusable post templates (failure, deployment, operational insight, metrics milestone, debugging breakdown).
+
+---
+
+## Distribution Infrastructure Files
+
+- **`scripts/linkedin-post-lab-launch.mjs`** — Post generation script
+- **`scripts/linkedin-util.mjs`** — LinkedIn API utilities
+- **`content/logs/`** — Primary source for deployment posts
+- **`content/failures/`** — Primary source for root cause posts
+- **`content/case-studies/`** — Primary source for strategic insight posts
+
+---
+
+## Related
+
+- [LinkedIn Content Engine](/docs/linkedin-content-engine) — post templates and cadence system
+- [Build in Public Framework](/docs/build-in-public-framework) — the philosophy and execution rhythm
+- [Authority Flywheel](/docs/authority-flywheel) — how distribution converts to compounding authority
+- [What Is Operational Evidence](/docs/what-is-operational-evidence) — the evidential standard
+- [Failure Archive](/failures) — 12 weeks of distribution-ready content

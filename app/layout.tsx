@@ -7,6 +7,7 @@ import { SearchModal } from '@/components/search/search-modal'
 import { Analytics } from '@/components/analytics'
 import { WebVitals } from '@/components/analytics/web-vitals'
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react'
+import { EcosystemFooter } from '@/components/platform/ecosystem-footer'
 
 // ─── Fonts ───────────────────────────────────────────────────
 const fontSans = Inter({
@@ -102,6 +103,28 @@ const organizationSchema = {
     'WordPress Development',
     'Production Systems',
   ],
+  owns: [
+    {
+      '@type': 'WebSite',
+      name: 'AI Execution Lab',
+      url: 'https://lab.asquaresolution.com',
+      description: 'Production AI engineering journal — operational records, failure archive, execution logs.',
+    },
+    {
+      '@type': 'SoftwareApplication',
+      name: 'TrustSeal',
+      url: 'https://trustseal.io',
+      applicationCategory: 'BusinessApplication',
+      description: 'AI-powered trust verification tool.',
+    },
+    {
+      '@type': 'SoftwareApplication',
+      name: 'ScamCheck',
+      url: 'https://scamcheck.tools',
+      applicationCategory: 'SecurityApplication',
+      description: 'AI-powered scam detection tool.',
+    },
+  ],
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -130,6 +153,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <main className="flex-1">
               {children}
             </main>
+
+            <EcosystemFooter />
           </div>
         </div>
 

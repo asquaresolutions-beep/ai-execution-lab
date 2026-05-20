@@ -14,6 +14,10 @@ import { getFailureMemorySummary, getPatternCoverage } from '@/lib/failure-memor
 import { getMemoryGraphSummary } from '@/lib/operational-memory'
 import { getSignalSummary } from '@/lib/operational-signals'
 import { getPublishingPulse } from '@/lib/publishing-pulse'
+import { getTelemetrySummary, TIER_STYLES } from '@/lib/telemetry'
+import { getEvidenceMetrics, formatAvgResolution, formatOperationalHours } from '@/lib/evidence-metrics'
+import { getPlatformTier }  from '@/lib/platform-intelligence'
+import { getContentIntelligenceSummary } from '@/lib/content-intelligence'
 import { SECTION_META, ACCENT_CLASSES, formatDateMono, cn } from '@/lib/utils'
 import { ReadingQueue } from '@/components/platform/reading-queue'
 
@@ -164,6 +168,14 @@ export default function OpsPage() {
   const signalSummary   = getSignalSummary()
   const pulse           = getPublishingPulse()
 
+  // Telemetry health
+  const telemetry        = getTelemetrySummary()
+  const maturityTier     = getPlatformTier()
+  const contentSummary   = getContentIntelligenceSummary()
+
+  // Evidence & operational metrics
+  const evidenceMetrics  = getEvidenceMetrics()
+
   // Draft count (dev only)
   const drafts = allSectionData.flatMap(({ section, items }) =>
     items.filter(i => i.frontmatter.status === 'draft').map(i => ({ ...i, section }))
@@ -240,6 +252,118 @@ export default function OpsPage() {
         </p>
       </div>
 
+      {/* ── Telemetry Health Strip ── */}
+      <div className="mb-5">
+        <Link
+          href="/ops/telemetry"
+          className="group flex items-center gap-0 rounded-xl border border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.025] hover:border-white/[0.10] transition-all overflow-hidden"
+        >
+          {/* Overall tier */}
+          <div className={cn('px-4 py-3 border-r border-white/[0.06] shrink-0', TIER_STYLES[telemetry.overallTier].bg)}>
+            <div className="flex items-center gap-2">
+              <div className={cn('w-2 h-2 rounded-full shrink-0', TIER_STYLES[telemetry.overallTier].dot)} />
+              <span className={cn('text-[10px] font-mono font-bold uppercase tracking-wide', TIER_STYLES[telemetry.overallTier].text)}>
+                {TIER_STYLES[telemetry.overallTier].label}
+              </span>
+            </div>
+            <p className="text-[9px] font-mono text-surface-700 mt-0.5">System Health</p>
+          </div>
+          {/* Per-subsystem pills */}
+          <div className="flex items-center gap-0 flex-1 overflow-x-auto divide-x divide-white/[0.04]">
+            {([
+              { label: 'Deploy',  tier: telemetry.deployment.tier },
+              { label: 'Sitemap', tier: telemetry.sitemap.tier },
+              { label: 'Perf',    tier: telemetry.performance.tier },
+              { label: 'Uptime',  tier: telemetry.uptime.tier },
+              { label: 'Search',  tier: telemetry.search.tier },
+            ] as const).map(({ label, tier }) => (
+              <div key={label} className="px-3 py-3 flex items-center gap-1.5 shrink-0">
+                <div className={cn('w-1.5 h-1.5 rounded-full shrink-0', TIER_STYLES[tier].dot)} />
+                <span className="text-[10px] font-mono text-surface-600 group-hover:text-surface-400 transition-colors">{label}</span>
+              </div>
+            ))}
+          </div>
+          {/* Link hint */}
+          <div className="px-4 py-3 border-l border-white/[0.06] shrink-0">
+            <span className="text-[10px] font-mono text-surface-700 group-hover:text-brand-400 transition-colors">
+              telemetry →
+            </span>
+          </div>
+        </Link>
+      </div>
+
+      {/* ── Platform Intelligence Strip ── */}
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Maturity score */}
+        <Link
+          href="/ops/intelligence"
+          className="group flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.025] hover:border-white/[0.10] transition-all px-4 py-3"
+        >
+          <div className="shrink-0 text-center">
+            <p className={cn('text-2xl font-bold font-mono', maturityTier.tierColor)}>
+              {maturityTier.score}
+            </p>
+            <p className="text-[9px] font-mono text-surface-700 uppercase tracking-wide">Maturity</p>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className={cn('text-[10px] font-mono font-semibold', maturityTier.tierColor)}>
+                {maturityTier.tierLabel}
+              </span>
+              {contentSummary.immediateCount > 0 && (
+                <span className="text-[9px] font-mono text-red-400 bg-red-500/10 border border-red-500/20 rounded px-1.5 py-0.5">
+                  {contentSummary.immediateCount} immediate
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] text-surface-700">
+              {contentSummary.totalRecommendations} recommendations · intelligence dashboard
+            </p>
+          </div>
+          <span className="text-[10px] font-mono text-surface-700 group-hover:text-brand-400 transition-colors shrink-0">→</span>
+        </Link>
+        {/* GEO link */}
+        <Link
+          href="/ops/geo"
+          className="group flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.025] hover:border-white/[0.10] transition-all px-4 py-3"
+        >
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-brand-400/70 border border-brand-400/20 bg-brand-400/5 rounded px-1.5 py-0.5">
+                GEO
+              </span>
+              <span className="text-[11px] font-semibold text-surface-400 group-hover:text-surface-200 transition-colors">
+                GEO Intelligence
+              </span>
+            </div>
+            <p className="text-[10px] text-surface-700">
+              Query taxonomy · entity graph · answerability scoring
+            </p>
+          </div>
+          <span className="text-[10px] font-mono text-surface-700 group-hover:text-brand-400 transition-colors shrink-0">→</span>
+        </Link>
+        {/* Retrieval link */}
+        <Link
+          href="/ops/retrieval"
+          className="group flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.025] hover:border-white/[0.10] transition-all px-4 py-3"
+        >
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-emerald-400/70 border border-emerald-400/20 bg-emerald-400/5 rounded px-1.5 py-0.5">
+                RET
+              </span>
+              <span className="text-[11px] font-semibold text-surface-400 group-hover:text-surface-200 transition-colors">
+                Retrieval Intelligence
+              </span>
+            </div>
+            <p className="text-[10px] text-surface-700">
+              Answer structure · entity density · AI citation scores
+            </p>
+          </div>
+          <span className="text-[10px] font-mono text-surface-700 group-hover:text-brand-400 transition-colors shrink-0">→</span>
+        </Link>
+      </div>
+
       {/* ── Execution Momentum Strip ── */}
       <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
@@ -275,6 +399,42 @@ export default function OpsPage() {
             <p className="text-[10px] font-mono text-surface-700 uppercase tracking-wider mb-1">{label}</p>
             <p className={`text-2xl font-bold font-mono ${color}`}>{value}</p>
             <p className="text-[10px] text-surface-700 mt-0.5">{sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Operational Evidence Metrics ── */}
+      <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          {
+            label: 'Evidence pieces',
+            value: evidenceMetrics.evidenceCount,
+            sub:   `${evidenceMetrics.totalEvidencePages} pages with screenshots`,
+            color: 'text-emerald-400',
+          },
+          {
+            label: 'Operational hours',
+            value: formatOperationalHours(evidenceMetrics),
+            sub:   `${evidenceMetrics.deploymentCount} deployments documented`,
+            color: 'text-blue-400',
+          },
+          {
+            label: 'Failures resolved',
+            value: `${evidenceMetrics.resolvedCount}/${evidenceMetrics.failureCount}`,
+            sub:   `avg ${formatAvgResolution(evidenceMetrics)} resolution`,
+            color: evidenceMetrics.resolvedCount === evidenceMetrics.failureCount ? 'text-emerald-400' : 'text-amber-400',
+          },
+          {
+            label: 'Publishing streak',
+            value: evidenceMetrics.publishingStreak > 0 ? `${evidenceMetrics.publishingStreak}d` : '—',
+            sub:   `${evidenceMetrics.logsPerWeek}/wk log rate`,
+            color: evidenceMetrics.publishingStreak >= 7 ? 'text-emerald-400' : evidenceMetrics.publishingStreak >= 3 ? 'text-amber-400' : 'text-zinc-400',
+          },
+        ].map(card => (
+          <div key={card.label} className="rounded-xl border border-white/[0.06] bg-white/[0.01] px-4 py-3">
+            <p className="text-[10px] font-mono text-surface-700 uppercase tracking-wider mb-1">{card.label}</p>
+            <p className={`text-2xl font-bold font-mono ${card.color}`}>{card.value}</p>
+            <p className="text-[10px] text-surface-700 mt-0.5">{card.sub}</p>
           </div>
         ))}
       </div>
@@ -830,7 +990,13 @@ export default function OpsPage() {
               <div>
                 <p className="text-[9px] font-mono uppercase tracking-widest text-surface-700 mb-1.5 px-1">Intelligence</p>
                 <div className="space-y-1">
-                  <QuickAction href="/docs/geo-intelligence-architecture"   label="GEO Intelligence" />
+                  <QuickAction href="/ops/intelligence" label="Intelligence Dashboard" badge={`${contentSummary.immediateCount > 0 ? contentSummary.immediateCount + ' immediate' : maturityTier.tierLabel}`} />
+                  <QuickAction href="/ops/telemetry" label="Telemetry Dashboard" badge={TIER_STYLES[telemetry.overallTier].label} />
+                  <QuickAction href="/ops/seo"       label="SEO Operations" />
+                  <QuickAction href="/ops/retrieval" label="Retrieval Intelligence" />
+                  <QuickAction href="/ops/gsc"       label="Search Console" />
+                  <QuickAction href="/ops/geo"       label="GEO Intelligence" />
+                  <QuickAction href="/docs/geo-intelligence-architecture"   label="GEO Architecture" />
                   <QuickAction href="/docs/failure-intelligence-architecture" label="Failure Intelligence" />
                   <QuickAction href="/docs/platform-maturity-audit-2026-05" label="Maturity Audit" />
                   <QuickAction href="/docs/knowledge-graph-architecture"    label="Knowledge Graph" />
