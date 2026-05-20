@@ -302,4 +302,26 @@ A GEO audit that runs once is a baseline. A GEO audit that runs monthly for 6 mo
 
 ---
 
+## Frequently Asked Questions
+
+**What is GEO and how is it different from SEO?**
+GEO (Generative Engine Optimization) is the practice of structuring content so that AI search systems — Perplexity, ChatGPT web search, Gemini, Claude.ai — retrieve and cite it when answering user queries. SEO optimizes for position on a traditional SERP (search engine results page). GEO optimizes for inclusion in AI-generated answers. The core difference: classical SEO signals (PageRank, domain authority, title tag match) have limited influence on AI retrieval. AI retrieval is driven primarily by content structure — answer-first sentences, entity density, self-contained paragraphs, and specificity of claims.
+
+**How does Perplexity decide which content to cite?**
+Perplexity uses a retrieval layer that fetches web pages based on query similarity, then passes retrieved chunks to a language model for answer synthesis. A chunk is included if it is: (1) semantically close to the query, (2) self-contained enough to be useful without surrounding context, and (3) specific enough to add information the language model cannot generate from training data. Content with exact version numbers, specific error messages, and named commands is more likely to be retrieved than content with general assertions.
+
+**What is the minimum entity density required for GEO-ready content?**
+The operational standard for this platform is ≥3 named entities per 500-word block. A named entity is a specifically verifiable thing: a tool version (Next.js 15.5.18), an exact command (`tsc --noEmit`), a specific error message, or a configuration value (`export const runtime = 'edge'`). General references to "a deployment tool" or "your configuration" do not count.
+
+**Can a new site rank in AI search results immediately?**
+Yes. AI retrieval is less dependent on domain age and backlink profile than classical search. A new site with a 600-word article that contains an exact error message and a specific command-line fix can be cited in Perplexity within days of indexing. This is the primary advantage of GEO for new platforms: the playing field for citation is significantly flatter than for classical SERP rankings.
+
+**What is answerability scoring?**
+Answerability scoring measures whether a specific section of content can independently answer its implied query without requiring the reader to have read surrounding sections. Each H2 section is scored on four dimensions: answer-first compliance (does the first sentence directly answer the heading?), completeness, specificity, and self-containedness. Target score: ≥7/10 per H2. Sections below 5/10 are flagged for revision before publication.
+
+**How do you test whether content is being cited by AI systems?**
+The 20-query test protocol: for each of 20 target articles, identify the specific query the article was written to answer. Test that query in Perplexity AI (web search mode). Record the result as: cited (URL shown), mentioned (content used without link), not found, or wrong article cited. Run monthly. The delta between months — which articles gained or lost citation status — is the primary GEO performance signal.
+
+---
+
 *GEO Intelligence Architecture v1.0 — 2026-05-18.*

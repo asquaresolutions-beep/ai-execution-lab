@@ -1,0 +1,198 @@
+---
+title: "Distribution Engine — The Full Content Flow Architecture"
+description: "The technical architecture of how A Square Solutions converts production work into compounding authority signals. Full content flow: work → Lab → LinkedIn → GEO retrieval → AI search citations → backlinks → authority. Operational mechanics, not theory."
+date: "2026-05-20"
+updated: "2026-05-20"
+tags: ["distribution", "content-flow", "authority", "geo", "linkedin", "operational-evidence", "ecosystem"]
+status: published
+difficulty: advanced
+section: docs
+evidence_images: []
+external_refs:
+  - "https://lab.asquaresolution.com"
+  - "https://asquaresolution.com"
+---
+
+The distribution engine is the operational system that converts production work — deployments, debugging sessions, production failures, architecture decisions — into compounding authority signals across search, AI retrieval, and professional networks.
+
+It is not a content marketing system. There is no content creation step. The engine takes what already exists — operational records — and moves them through a defined flow until they reach their maximum reach and authority.
+
+---
+
+## The Complete Content Flow
+
+```
+PRODUCTION WORK (asquaresolution.com client work / TrustSeal / ScamCheck)
+         ↓ generates
+OPERATIONAL RECORDS (Lab: /logs, /failures, /case-studies, /playbooks)
+         ↓ split into two parallel tracks
+         ↓                           ↓
+LINKEDIN DISTRIBUTION          GEO INDEXING (AI retrieval)
+  - post extraction             - Perplexity citations
+  - fill-in-the-blank template  - ChatGPT web search
+  - link back to Lab record     - Gemini AI search
+         ↓                           ↓
+PRACTITIONER REACH             AI-MEDIATED DISCOVERY
+  - engagement signals          - organic traffic to Lab
+  - backlink mentions           - entity recognition
+  - direct Lab traffic          - query-to-record matching
+         ↓                           ↓
+         └──────────────────────────→
+                    AUTHORITY ACCUMULATION
+                    - domain authority
+                    - entity recognition (Schema.org)
+                    - citation network depth
+                         ↓
+                    COMMERCIAL OUTCOMES
+                    - client inbound (asquaresolution.com)
+                    - product trust (TrustSeal / ScamCheck)
+                    - Lab citation authority (further GEO wins)
+```
+
+The system is self-reinforcing: authority from distribution increases AI retrieval probability, which increases inbound traffic to operational records, which increases the citation weight of each future record. A record published today is worth more than one published 6 months ago because it enters a higher-authority corpus.
+
+---
+
+## Stage 1: Operational Record Creation
+
+Every piece of work that is planned, executed, and produces a verifiable outcome is eligible for an operational record.
+
+**Record types by content category:**
+
+| Type | Location | Minimum content | GEO value | LinkedIn value |
+|---|---|---|---|---|
+| Execution log | `/logs` | Timeline + outcome + duration | Medium | High |
+| Failure report | `/failures` | Error message + root cause + fix + time | Highest | High |
+| Case study | `/case-studies` | Architecture + decisions + measurable outcome | High | Medium |
+| Playbook | `/playbooks` | Step-by-step procedure + expected outputs | High | Low |
+| Concept doc | `/docs` | Definition + mechanism + examples | Medium | Low |
+
+**Record quality gate:** A record is distribution-ready when it has:
+- At least one specific named entity (version number, exact error, exact command)
+- A verifiable outcome (HTTP 200, build passed, time-to-resolution)
+- A date (for freshness signals)
+
+Records that fail the quality gate are published with `status: draft` and not included in distribution runs.
+
+---
+
+## Stage 2: LinkedIn Extraction
+
+The LinkedIn extraction process converts a Lab record into a post using one of five templates. The extraction does not rewrite — it selects and formats.
+
+**Template map by record type:**
+
+| Record type | Primary template | Secondary template |
+|---|---|---|
+| Failure report | Failure→Fix thread (2-part: error + resolution) | Lesson learned single post |
+| Execution log (deployment) | Deployment journal | Build-in-public update |
+| Execution log (debugging) | Debugging thread | Technical insight single post |
+| Case study | Architecture insight | Outcomes-first post |
+| Playbook | How-I-do-this post | Resource share post |
+
+**Extraction protocol:**
+1. Open the Lab record
+2. Identify the highest-specificity claim in the record (the exact error message, the exact command, the exact metric)
+3. Copy that claim verbatim as the post hook
+4. Fill the template with context, timeline, and outcome
+5. Add the Lab record URL as the link
+6. Add 3-5 hashtags from the Lab tag taxonomy
+7. Post — do not schedule, do not queue (freshness matters)
+
+**Why not schedule:** LinkedIn's algorithm rewards recency. A post published at the time of the operational event (or within 24 hours) has contextual freshness that a scheduled post from a queue does not. The post's source is live production work, not a content calendar.
+
+---
+
+## Stage 3: GEO Indexing
+
+Every published Lab record is automatically included in the sitemap at `lab.asquaresolution.com/sitemap.xml`. This makes it crawlable by Googlebot, Bingbot, and by Perplexity's indexer (which shares much of its index with Bing).
+
+**GEO-specific optimization at the record level:**
+
+| Signal | How it's implemented |
+|---|---|
+| Answer-first sentence | Each doc opening = direct answer to the implied query |
+| Entity density | ≥3 named entities per 500 words (version numbers, commands, error messages) |
+| Self-contained sections | Each H2 section passes the chunk independence test |
+| Schema.org markup | Article/TechArticle type, Organization publisher, datePublished |
+| Canonical URL | Explicit canonical = Lab URL, preventing duplicate content dilution |
+
+**Citation lag:** Perplexity typically indexes and begins citing new content within 72 hours of publication for sites with established crawl priority. For a new platform, expect 1-2 weeks to first citation.
+
+---
+
+## Stage 4: Cross-Property Amplification
+
+The distribution engine does not operate only on the Lab. It runs across all four ecosystem properties simultaneously.
+
+**Current cross-property link topology (as of 2026-05-20):**
+
+```
+asquaresolution.com
+  → lab.asquaresolution.com   (10+ links, "AI Lab" nav, footer)
+  → trustseal.asquaresolution.com  (footer widget)
+  → scamcheck.asquaresolution.com  (footer widget)
+
+lab.asquaresolution.com
+  → asquaresolution.com  (every page footer, hero link)
+  → trustseal.asquaresolution.com  (ecosystem footer, homepage section)
+  → scamcheck.asquaresolution.com  (ecosystem footer, homepage section)
+
+trustseal.asquaresolution.com
+  → asquaresolution.com  (banner)
+  → lab.asquaresolution.com  (ecosystem banner)
+  → scamcheck.asquaresolution.com  (ecosystem banner)
+
+scamcheck.asquaresolution.com
+  → asquaresolution.com  (ecosystem banner)
+  → lab.asquaresolution.com  (ecosystem banner)
+  → trustseal.asquaresolution.com  (ecosystem banner)
+```
+
+**What this topology does for search and AI retrieval:**
+- Each property reinforces the entity `A Square Solutions` as the operator
+- Cross-links create a verifiable ownership graph that search engines can traverse
+- Schema.org `Organization.owns` on the Lab declares the same relationships programmatically
+- AI systems that crawl multiple properties see consistent entity signals, increasing the probability of correct entity attribution in generated answers
+
+---
+
+## Stage 5: Authority Accumulation Mechanics
+
+Authority accumulates through four distinct mechanisms, each operating on a different timescale:
+
+**1. Domain authority (months 1-6):**
+Backlinks from LinkedIn posts, mention tracking, and external practitioner links increase the Lab's domain authority score. Domain authority compounds — each new backlink adds to the existing score rather than being evaluated in isolation.
+
+**2. Entity recognition (weeks 1-4):**
+Schema.org Organization + WebSite + owns declarations, combined with consistent entity mentions across properties, train search engines to recognize `A Square Solutions`, `AI Execution Lab`, `TrustSeal`, and `ScamCheck` as named entities in the same cluster. Entity recognition affects both classical search (Knowledge Panel probability) and AI retrieval (entity-based disambiguation in AI search answers).
+
+**3. Citation network depth (months 3-12):**
+When Perplexity cites a Lab article, that citation becomes part of Perplexity's answer corpus — meaning the Lab URL appears in content that Perplexity itself indexes and can re-cite. This creates citation network depth: the Lab is not just cited, it is part of the evidence layer that other AI systems reference.
+
+**4. Freshness premium (ongoing):**
+Operational records are dated and frequently updated. AI systems weight content freshness when synthesizing answers — a failure report updated in 2026 with a current solution beats a 2023 blog post with a deprecated fix. The `updated:` frontmatter field signals freshness to both classical and AI search systems.
+
+---
+
+## Current Engine State (2026-05-20)
+
+| Stage | Status | Bottleneck |
+|---|---|---|
+| Record creation | ✅ Active — 507 published items | Quality gate compliance for older content |
+| LinkedIn extraction | 🟡 Templates ready, not yet active | Consistent posting cadence |
+| GEO indexing | ✅ Active — sitemap healthy, schema deployed | GSC data not yet ingested for citation tracking |
+| Cross-property amplification | ✅ Active — all 4 properties linked | Loop 5 (products→Lab) at 40% activation |
+| Authority accumulation | 🟡 Early stage | LinkedIn posts needed for backlink velocity |
+
+**Highest-leverage next action:** Start the LinkedIn posting cadence. The extraction templates exist. 32+ records are extraction-ready. Authority accumulation from Stage 5 cannot reach full speed without the external signal volume from Stage 2.
+
+---
+
+## Related
+
+- [Authority Flywheel](/docs/authority-flywheel) — the seven self-reinforcing loops
+- [LinkedIn Publishing Engine](/docs/linkedin-publishing-engine) — 6 templates + 10 production-ready posts
+- [GEO Intelligence Architecture](/docs/geo-intelligence-architecture) — AI retrieval measurement system
+- [Ecosystem Integration Strategy](/docs/ecosystem-integration-strategy) — Schema.org and cross-property architecture
+- [What Is Operational SEO?](/docs/what-is-operational-seo) — classical search reinforcement layer

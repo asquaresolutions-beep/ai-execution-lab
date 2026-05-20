@@ -78,7 +78,12 @@ const websiteSchema = {
     '@type': 'Organization',
     name: 'A Square Solutions',
     url: 'https://asquaresolution.com',
-    sameAs: ['https://twitter.com/asquaresolution'],
+    sameAs: [
+      'https://twitter.com/asquaresolution',
+      'https://lab.asquaresolution.com',
+      'https://trustseal.asquaresolution.com',
+      'https://scamcheck.asquaresolution.com',
+    ],
   },
   potentialAction: {
     '@type': 'SearchAction',
@@ -93,7 +98,12 @@ const organizationSchema = {
   name: 'A Square Solutions',
   url: 'https://asquaresolution.com',
   description: 'AI execution, GEO/AI-search strategy, and production WordPress engineering.',
-  sameAs: ['https://twitter.com/asquaresolution'],
+  sameAs: [
+    'https://twitter.com/asquaresolution',
+    'https://lab.asquaresolution.com',
+    'https://trustseal.asquaresolution.com',
+    'https://scamcheck.asquaresolution.com',
+  ],
   knowsAbout: [
     'Artificial Intelligence',
     'Claude Code',
@@ -113,16 +123,16 @@ const organizationSchema = {
     {
       '@type': 'SoftwareApplication',
       name: 'TrustSeal',
-      url: 'https://trustseal.io',
+      url: 'https://trustseal.asquaresolution.com',
       applicationCategory: 'BusinessApplication',
-      description: 'AI-powered trust verification tool.',
+      description: 'AI-powered fact-checking for publishers. Verifies claims against real-time sources.',
     },
     {
       '@type': 'SoftwareApplication',
       name: 'ScamCheck',
-      url: 'https://scamcheck.tools',
+      url: 'https://scamcheck.asquaresolution.com',
       applicationCategory: 'SecurityApplication',
-      description: 'AI-powered scam detection tool.',
+      description: 'Free AI scam detection. Analyzes messages, UPI IDs, and links for fraud indicators.',
     },
   ],
 }

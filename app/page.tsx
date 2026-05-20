@@ -93,8 +93,11 @@ export default function HomePage() {
             A Square Solutions
           </a>
           . Production failures with exact fixes, operational playbooks, Claude Code workflows,
-          and execution tracks built from two years of daily AI engineering — documented while
-          the work happens.
+          and execution tracks built from building{' '}
+          <a href="https://trustseal.asquaresolution.com" target="_blank" rel="noopener noreferrer" className="text-blue-400/80 hover:text-blue-400 transition-colors">TrustSeal</a>
+          ,{' '}
+          <a href="https://scamcheck.asquaresolution.com" target="_blank" rel="noopener noreferrer" className="text-amber-400/80 hover:text-amber-400 transition-colors">ScamCheck</a>
+          , and production AI pipelines for clients — documented while the work happens.
         </p>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono text-surface-600">
@@ -176,6 +179,55 @@ export default function HomePage() {
 
       {/* ── Section grid ─────────────────────────────────────── */}
       <SectionTracks sections={sections} />
+
+      {/* ── Live production systems ──────────────────────────── */}
+      <div className="mb-10">
+        <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600 mb-4">
+          Production systems documented here
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {[
+            {
+              name: 'A Square Solutions',
+              tag: 'Agency',
+              href: 'https://asquaresolution.com',
+              desc: 'Production WordPress & AI engineering. GEO strategy, SEO operations, full-stack AI deployment for B2B clients.',
+              accent: 'text-brand-400',
+              borderColor: 'hover:border-brand-500/30',
+            },
+            {
+              name: 'TrustSeal',
+              tag: 'Product',
+              href: 'https://trustseal.asquaresolution.com',
+              desc: 'AI fact-checking for publishers. Verifies claims against real-time sources. Firebase + Gemini. Built and documented in this Lab.',
+              accent: 'text-blue-400',
+              borderColor: 'hover:border-blue-500/30',
+            },
+            {
+              name: 'ScamCheck',
+              tag: 'Product',
+              href: 'https://scamcheck.asquaresolution.com',
+              desc: 'Free AI scam detection. Analyzes messages, UPI IDs, and links for fraud signals. Firebase + Cloud Functions. Built and documented in this Lab.',
+              accent: 'text-amber-400',
+              borderColor: 'hover:border-amber-500/30',
+            },
+          ].map(item => (
+            <a
+              key={item.name}
+              href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`group rounded-xl border border-white/[0.06] bg-white/[0.01] px-4 py-3.5 ${item.borderColor} hover:bg-white/[0.03] transition-all`}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <p className={`text-sm font-semibold ${item.accent} group-hover:opacity-90 transition-opacity`}>{item.name} ↗</p>
+                <span className="text-[9px] font-mono font-semibold uppercase tracking-wider text-surface-700 mt-0.5">{item.tag}</span>
+              </div>
+              <p className="text-[11px] text-surface-600 leading-relaxed">{item.desc}</p>
+            </a>
+          ))}
+        </div>
+      </div>
 
       {/* ── Recent activity feed ─────────────────────────────── */}
       {recent.length > 0 && (
