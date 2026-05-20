@@ -650,6 +650,77 @@ The evidence in this archive directly supports the claims made in:
 
 ---
 
+---
+
+## Phase 3 Additions — 2026-05-20 Session 2
+
+The following actions were executed in a second session on 2026-05-20, extending the Phase 2 rollout with blog post Lab link injection and a Case Studies platform CTA.
+
+### Session 2 Baseline (before)
+
+| Metric | Value |
+|---|---|
+| Rank Math Impressions (30d) | 18,700 |
+| Rank Math Clicks (30d) | 37 |
+| Keywords tracked | 2,200 |
+| Average Position | 44.39 |
+| Blog posts with Lab links | 1 (ScamCheck only — already had link) |
+| Case Studies Lab section | None |
+
+### Actions: Blog Post Lab Link Injection
+
+4 blog posts updated via `POST /wp-json/wp/v2/posts/{id}` — each received a styled callout block with contextual Lab links. 1 post (ScamCheck) was skipped as Lab links were already present.
+
+| Post | HTTP | Lab Links | Callout Accent |
+|------|------|-----------|----------------|
+| ChatGPT Search SEO (25641) | 200 ✅ | `/docs/geo-intelligence-architecture` + `/docs/what-is-operational-seo` | Indigo |
+| Google AI Overviews (17157) | 200 ✅ | `/docs/what-is-operational-seo` + `/docs/geo-intelligence-architecture` | Green |
+| TrustSeal (24741) | 200 ✅ | `lab.asquaresolution.com` + TrustSeal product | Blue |
+| Agentic AI Systems (17186) | 200 ✅ | `lab.asquaresolution.com` + `/docs/ecosystem-integration-strategy` | Purple |
+| ScamCheck (24819) | SKIPPED | Already had Lab link | — |
+
+### Action: Case Studies Lab Platform CTA
+
+Page ID 11 (`asquaresolution.com/case-studies/`) updated via REST API.  
+Content size: 37,841 → 39,852 chars (+2,011).
+
+Section injected (verified live via screenshot):
+
+```
+OPERATIONAL TRANSPARENCY PLATFORM
+"Every Case Study Has a Build Log"
+Background: linear-gradient(135deg, #0f172a → #1e1b4b)
+CTA 1: → Visit AI Execution Lab
+CTA 2: → Execution-Level Case Studies
+```
+
+### Phase 3 Internal Link Audit
+
+Run post-session-2. Method: WP REST API + regex.
+
+| Page | Lab Links | Internal | External | Schema |
+|------|-----------|----------|----------|--------|
+| Homepage | 9 | 39 | 18 | ✅ |
+| ChatGPT SEO | 2 | 7 | 7 | ✅ |
+| AI Overviews | 2 | 5 | 4 | ✅ |
+| TrustSeal Post | 1 | 9 | 13 | ✅ |
+| Agentic AI | 2 | 8 | 4 | ✅ |
+| Case Studies | 2 | 10 | 6 | ⚠️ |
+| About Us | 1 | 8 | 5 | ⚠️ |
+| **TOTAL** | **19** | **86** | **57** | |
+
+### Phase 3 Sitemap + Schema Verification
+
+| Check | Result |
+|-------|--------|
+| `sitemap_index.xml` | ✅ HTTP 200, 5 children |
+| `lab.asquaresolution.com/sitemap.xml` | ✅ HTTP 200 |
+| Homepage JSON-LD blocks | 3 (WebSite + Organization + Article) |
+| Organization schema | ✅ |
+| sameAs array | ✅ |
+
+---
+
 ## Cross-References
 
 **This rollout documented across three files:**

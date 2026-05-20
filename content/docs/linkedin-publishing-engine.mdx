@@ -1,0 +1,676 @@
+---
+title: "LinkedIn Operational Publishing Engine"
+description: "Reusable post templates and production content system for converting AI Execution Lab operational records into LinkedIn posts. 6 formats: operational insight, debugging breakdown, failure thread, deployment journal, metrics milestone, build-in-public."
+date: "2026-05-20"
+updated: "2026-05-20"
+tags: ["linkedin", "distribution", "content", "templates", "build-in-public", "publishing"]
+status: published
+section: docs
+---
+
+# LinkedIn Operational Publishing Engine
+
+LinkedIn distribution system for AI Execution Lab content. Every post format maps directly to a Lab content type. Real failures, real deployments, real metrics — no performance, no hype.
+
+---
+
+## The Publishing Philosophy
+
+Posts that perform on LinkedIn from a technical audience:
+1. **Open with a specific fact** — not a question, not a hook phrase
+2. **Evidence before opinion** — show the data, then interpret it
+3. **Name the thing that failed** — specificity > generality
+4. **End with a navigable destination** — Lab URL, not just a CTA
+
+Posts that fail:
+- "Here's what I learned about AI..."
+- "5 tips for better SEO"
+- "Thoughts on building in public"
+
+The Lab generates content that doesn't fail. Every failure report, every deployment log, every metric snapshot is already a LinkedIn post. The templates below extract it.
+
+---
+
+## The 6 Format Templates
+
+---
+
+### FORMAT 1 — Operational Insight
+
+**Use for:** Docs, playbooks, system architecture discoveries  
+**Tone:** Precise, compressed, instructional  
+**Length:** 150–250 words
+
+```
+[SPECIFIC FINDING — 1 sentence, concrete metric or observation]
+
+[WHAT THIS MEANS — 2-3 sentences, no filler]
+
+The mechanism:
+— [specific step 1]
+— [specific step 2]  
+— [specific step 3]
+
+[WHAT WE DID ABOUT IT — 1-2 sentences]
+
+[WHERE TO READ THE FULL SYSTEM — Lab URL]
+
+[1-line CTA]
+
+#[tag1] #[tag2] #[tag3] #[tag4]
+```
+
+**Example output shape:**
+```
+Position 11–20 pages don't rank. They just need a push.
+
+We run a weekly internal link injection pass on pages stuck in that cohort.
+No new content. No backlink outreach. Just redistributing existing authority
+through the internal link graph.
+
+The mechanism:
+— Pull all pages ranking position 11–20 from GSC
+— Identify 3 existing pages that could link to each candidate  
+— Add contextual inline links with query-matched anchor text
+
+In one pass last month, 4 pages moved to page 1 within 12 days.
+No algorithm luck. Just link graph mechanics.
+
+Full system: lab.asquaresolution.com/docs/what-is-operational-seo
+
+If you're doing weekly SEO reviews without an internal link pass,
+you're leaving table stakes on the table.
+
+#SEO #OperationalSEO #InternalLinks #SearchEngineOptimization #GrowthSystems
+```
+
+---
+
+### FORMAT 2 — Debugging Breakdown
+
+**Use for:** Failure reports, error documentation, debugging sessions  
+**Tone:** Diagnostic, methodical, honest  
+**Length:** 200–350 words
+
+```
+[ERROR MESSAGE OR SPECIFIC FAILURE — verbatim if possible]
+
+This broke [WHAT] at [WHEN/CONTEXT].
+
+What I thought it was:
+[FIRST DIAGNOSIS — wrong]
+
+What it actually was:
+[ROOT CAUSE — specific]
+
+The fix:
+[EXACT CHANGE — code or config detail]
+
+Time from failure to fix: [DURATION]
+[WHAT MADE THIS HARD TO DIAGNOSE]
+
+Full failure report with reproduction steps:
+[Lab failures URL]
+
+[1-sentence lesson]
+
+#[tag1] #[tag2] #[tag3] #[tag4] #[tag5]
+```
+
+---
+
+### FORMAT 3 — Failure Thread
+
+**Use for:** Multi-step failures, cascading bugs, incident retrospectives  
+**Tone:** Narrative, sequential, honest  
+**Length:** 300–500 words (can be numbered list format)
+
+```
+[INCIDENT TITLE — specific and searchable]
+
+What happened, in order:
+
+1/ [First thing that broke — specific]
+2/ [What I did to fix it — specific]  
+3/ [What that caused — specific]
+4/ [What I did next — specific]
+5/ [Root cause diagnosis — specific]
+6/ [Final fix — specific]
+
+Total time: [DURATION]
+
+[ONE SENTENCE THAT EXPLAINS WHY THIS HAPPENS]
+
+The fix is in production. The full record — screenshots, error logs,
+config changes — is at:
+[Lab URL]
+
+[LESSON: what this class of failure teaches you]
+
+#[tag1] #[tag2] #[tag3] #[tag4] #[tag5]
+```
+
+---
+
+### FORMAT 4 — Deployment Journal
+
+**Use for:** Build logs, shipping records, production deployment events  
+**Tone:** Operational, specific, build-in-public  
+**Length:** 150–250 words
+
+```
+Shipped: [WHAT] — [DATE]
+
+What it does:
+[2-sentence description]
+
+Stack:
+— [tech 1]
+— [tech 2]
+— [tech 3]
+
+Deploy time: [DURATION]
+Complications: [SPECIFIC ISSUE or "none"]
+
+[WHAT SURPRISED YOU or WHAT YOU'D DO DIFFERENTLY]
+
+Full build log:
+[Lab URL]
+
+[PRODUCT LINK if applicable]
+
+#[tag1] #[tag2] #[tag3] #BuildInPublic #[tag5]
+```
+
+---
+
+### FORMAT 5 — Metrics Milestone
+
+**Use for:** GSC data, analytics milestones, before/after improvements  
+**Tone:** Evidence-first, grounded, specific  
+**Length:** 150–250 words
+
+```
+[SPECIFIC METRIC CHANGE — number to number, timeframe]
+
+What changed:
+— [Specific action taken]
+— [Specific action taken]
+— [Specific action taken]
+
+What didn't change:
+— [Unchanged variable — proves causality]
+
+[2-sentence interpretation]
+
+This is [TIMEFRAME] of [WHAT KIND OF WORK].
+No viral post. No backlink campaign.
+Just [OPERATIONAL DESCRIPTION].
+
+Full data:
+[Lab URL]
+
+[1-sentence framing for context]
+
+#SEO #[tag2] #[tag3] #GrowthSystems #[tag5]
+```
+
+---
+
+### FORMAT 6 — Build-in-Public Thread
+
+**Use for:** System architecture reveals, what-we're-building updates, behind-the-scenes  
+**Tone:** Technical, specific, first-person, no hype  
+**Length:** 200–400 words
+
+```
+Building [WHAT] in public. Here's the architecture.
+
+[2-sentence description of what the thing is and why it exists]
+
+How it works:
+→ [Component 1]: [What it does]
+→ [Component 2]: [What it does]
+→ [Component 3]: [What it does]
+
+What's non-obvious:
+[The thing most people get wrong about this architecture]
+
+Current state:
+— ✅ [Done thing]
+— ✅ [Done thing]
+— 🔄 [In progress]
+— 📋 [Planned]
+
+Full system doc + build history:
+[Lab URL]
+
+[PRODUCT LINK if applicable]
+
+Building [PRODUCT/SYSTEM] at [COMPANY NAME].
+Everything — the wins, the failures, the weird edge cases — goes in the Lab.
+
+#BuildInPublic #[tag2] #[tag3] #AI #[tag5]
+```
+
+---
+
+## 10 Production-Ready LinkedIn Posts
+
+Generated from real Lab content, real metrics, real deployment events.
+
+---
+
+### POST 1 — Operational Insight | GEO / ChatGPT Search
+
+```
+Pages that get cited in ChatGPT answers have one thing in common.
+They contain specific, measurable claims — not general explanations.
+
+"Removing export const runtime = 'edge' fixed a Vercel deployment failure
+in 23 minutes" will be cited. "Edge runtime can cause deployment issues"
+won't be.
+
+This is the core mechanic of GEO (Generative Engine Optimization):
+AI retrieval systems score for answerability, not comprehensiveness.
+
+What "answerability" actually means in a document:
+— A specific error message, not a category of errors
+— A measured outcome (23 min), not a vague result ("faster")
+— A named tool + named failure, not a generic workflow
+
+We've been testing this on lab.asquaresolution.com since launch —
+publishing specific failure records with exact error strings, times,
+config values. The Lab pages get cited. The blog posts don't.
+
+Full architecture:
+lab.asquaresolution.com/docs/geo-intelligence-architecture
+
+If you're publishing AI content and wondering why ChatGPT won't cite you,
+check whether your pages contain anything citable.
+
+#GEO #ChatGPT #AISearch #ContentStrategy #SEO #GenerativeEngineOptimization
+```
+
+---
+
+### POST 2 — Debugging Breakdown | Edge Runtime Failure
+
+```
+Error: "You are using Node.js APIs that are not supported in the Edge Runtime"
+
+This broke our AI Execution Lab Vercel deployment.
+
+What I thought it was:
+A missing polyfill or an outdated Next.js config.
+
+What it actually was:
+A single line in one route file:
+export const runtime = 'edge'
+
+That line caused the entire module tree for that route to be bundled
+for edge runtime — including dependencies that use Node.js Buffer,
+fs, and path APIs. No individual file was wrong. The runtime declaration
+was the problem.
+
+The fix:
+Remove the line. Default runtime handles it correctly.
+
+Time from failure to fix: 23 minutes
+What made it hard: Edge runtime errors are thrown at build time but the
+stack trace points to the dependency, not the runtime declaration.
+
+Full failure report with exact error log:
+lab.asquaresolution.com/failures/edge-runtime-deployment-failure
+
+When Vercel throws a Node.js API error in edge runtime, start with
+your export const runtime lines — not your dependencies.
+
+#Vercel #NextJS #EdgeRuntime #DeploymentDebugging #WebDev #BuildInPublic
+```
+
+---
+
+### POST 3 — Failure Thread | next-mdx-remote v6 Block.js
+
+```
+next-mdx-remote v6 broke our MDX compilation pipeline.
+Here's the full incident sequence:
+
+1/ Upgraded next-mdx-remote from v4 to v6 following the migration guide.
+
+2/ First build error: "Cannot find module 'remark-gfm'"
+Fixed: Added remark-gfm as explicit dep.
+
+3/ Second error: "SyntaxError: Unexpected token" on table syntax in MDX.
+Fixed: Added remarkGfm to the serialize() plugins array.
+
+4/ Third error: "Module not found: Can't resolve './Block.js'" 
+in node_modules/next-mdx-remote/dist/index.js
+
+5/ This one didn't resolve with dependency changes. The v6 package
+was publishing a dist that referenced an internal file that didn't
+exist in the published bundle.
+
+6/ Root cause: next-mdx-remote v6.0.0 had a broken dist.
+Fix: Pin to a specific working version.
+
+Total time: 2h 14 min
+
+This class of failure — a published package with a broken internal reference —
+can't be diagnosed from your code. You have to inspect the published node_modules.
+
+Full incident record with exact error output:
+lab.asquaresolution.com/failures/next-mdx-remote-v6-blockjs
+
+Pin your core rendering deps. Semantic versioning doesn't protect you
+from broken published bundles.
+
+#NextJS #MDX #NodeJS #DeploymentDebugging #WebDev #BuildInPublic #OpenSource
+```
+
+---
+
+### POST 4 — Deployment Journal | AI Execution Lab Launch
+
+```
+Shipped: AI Execution Lab — May 2026
+
+What it is:
+A public production journal for A Square Solutions.
+Real AI deployments, real failures, real SEO engineering — documented
+as they happen. Not retrospectives. Operational records.
+
+Stack:
+— Next.js 14 / App Router
+— next-mdx-remote v4 (pinned after v6 incident)
+— Vercel deployment pipeline
+— Astra + Rank Math on WordPress side
+— 507 static pages, 0 build errors
+
+Deploy sequence:
+— 3 build failures before clean deploy
+— Edge runtime declaration was failure #1
+— Client/server module boundary was failure #2
+— next-mdx-remote v6 broken dist was failure #3
+
+Total time from first commit to production: ~6 hours across 3 sessions
+
+Every failure above is documented with the exact error message,
+the wrong diagnosis, the correct diagnosis, and the fix:
+
+lab.asquaresolution.com/failures
+
+Built at: lab.asquaresolution.com
+
+Documenting what breaks is more useful than documenting what works.
+
+#BuildInPublic #NextJS #Vercel #AIEngineering #WebDev #Deployment #SoftwareEngineering
+```
+
+---
+
+### POST 5 — Metrics Milestone | Operational SEO Baseline
+
+```
+WordPress site baseline — 2026-05-20:
+- 18,700 impressions (30 days)
+- 37 clicks
+- 2,200 keywords tracked
+- Average position: 44.39
+- 749 published posts
+
+These aren't good numbers.
+
+What they are: a documented baseline.
+
+Operational SEO isn't about the numbers you have — it's about
+whether you can measure the delta when you change something.
+
+This week's pass:
+— Injected Lab links into 4 high-traffic posts via REST API
+— Added "Every Case Study Has a Build Log" CTA to Case Studies page
+— Verified schema integrity: Organization + WebSite + sameAs confirmed
+— Audited 7 pages: 19 Lab cross-links total, all healthy
+
+Next week's pass will measure whether any of those pages moved.
+
+The audit system:
+lab.asquaresolution.com/docs/what-is-operational-seo
+
+Weekly review. Logged baseline. 30 minutes.
+That's the practice.
+
+#SEO #OperationalSEO #SearchEngineOptimization #ContentMarketing #GrowthSystems #Analytics
+```
+
+---
+
+### POST 6 — Build-in-Public | ScamCheck Architecture
+
+```
+Building an AI scam detector in public.
+Here's the architecture.
+
+ScamCheck (scamcheck.asquaresolution.com) runs:
+→ URL analysis: DOM inspection + redirect chain tracing
+→ Content analysis: Claude API for deception pattern detection
+→ Social proof audit: fake review signals, inflated ratings
+→ Trust scoring: weighted composite across 8 signal categories
+
+What's non-obvious about AI scam detection:
+Most scam indicators aren't in the URL — they're in the gap between
+what a page claims and what it can verify. The AI layer scores
+that gap, not the surface signals.
+
+Current state:
+— ✅ Core detection pipeline deployed
+— ✅ Razorpay payment integration live
+— ✅ Trust score API returning results
+— 🔄 False positive reduction (known issue: legitimate new sites trigger)
+— 📋 WhatsApp link detection pass
+
+Build history + architecture decisions:
+lab.asquaresolution.com
+
+Try it: scamcheck.asquaresolution.com
+
+We're documenting every architecture decision — including the ones
+that turned out to be wrong.
+
+#BuildInPublic #AI #ScamDetection #Claude #ArtificialIntelligence #WebSecurity #SaaS
+```
+
+---
+
+### POST 7 — Operational Insight | Internal Link Graph
+
+```
+The highest-ROI SEO action most teams skip: internal link audits.
+
+Not "add more internal links." Specifically:
+Redistribute authority from high-DA pages to high-potential pages
+that are stuck at position 11–20.
+
+What we found when we ran this audit on asquaresolution.com:
+
+The homepage had 39 internal links.
+The AI Execution Lab had 9 links from the homepage alone.
+The Case Studies page had 0 links to the Lab.
+
+A page you want to rank needs authority flowing to it from pages
+that already have it. The homepage has it. Service pages have it.
+Blog posts have it.
+
+Fix: systematically route link equity to pages in the 11–20 cohort.
+
+The process takes about 30 minutes per week when you have a
+link graph dashboard. We built one at:
+
+lab.asquaresolution.com/ops/seo
+
+If your SEO work doesn't include a weekly internal link pass,
+you have untapped ranking potential sitting in pages you already own.
+
+#SEO #TechnicalSEO #InternalLinking #ContentStrategy #SearchEngineOptimization
+```
+
+---
+
+### POST 8 — Debugging Breakdown | DNS Subdomain Propagation
+
+```
+Error: "DNS_PROBE_FINISHED_NXDOMAIN" on lab.asquaresolution.com
+
+This blocked our AI Execution Lab launch for 47 minutes.
+
+What I thought it was:
+Incorrect CNAME record configuration.
+
+What it actually was:
+The CNAME was correct. DNS propagation hadn't completed.
+But: I was checking propagation from the same ISP that had
+a cached negative response. I couldn't see the update even
+after it propagated globally.
+
+How I confirmed it:
+- whatsmydns.net showed propagation complete in 98% of nodes
+- My own browser was hitting a cached negative from my ISP's resolver
+- Incognito didn't help — the ISP cache affects all connections
+
+The fix:
+1. Changed DNS resolver to 8.8.8.8 (Google) temporarily
+2. Lab loaded immediately
+3. Reverted 20 minutes later when ISP cache cleared
+
+Time from failure to fix: 47 minutes
+
+Full failure record:
+lab.asquaresolution.com/failures/dns-subdomain-propagation-delay
+
+ISP DNS cache can survive incognito mode. Test from a different
+DNS resolver when subdomain propagation "isn't working."
+
+#DNS #WebDevelopment #DevOps #Debugging #Vercel #SubdomainConfiguration
+```
+
+---
+
+### POST 9 — Build-in-Public | TrustSeal Architecture
+
+```
+Building an AI trust verification product in public.
+
+TrustSeal (trustseal.asquaresolution.com) answers one question:
+"Is this website trustworthy?" — in 10 seconds, for free.
+
+How it works:
+→ Submission: URL input → server-side fetch of page HTML
+→ AI layer: Claude API scores 12 trust signals
+→ Score: 0–100 composite with per-signal breakdown
+→ Seal: Verified sites get an embeddable trust badge
+→ Revenue: Premium verification via Razorpay
+
+What's non-obvious:
+The trust score isn't just "does the site look legitimate."
+It's "does the site make claims it can support."
+That distinction is the entire product.
+
+Current state:
+— ✅ Trust scoring pipeline live
+— ✅ Embeddable seal deployed
+— ✅ Razorpay payment flow active
+— 🔄 WhatsApp forwards fast-check (in progress)
+— 📋 API for third-party integrations
+
+Architecture decisions + build history:
+lab.asquaresolution.com/case-studies/trustseal-architecture-build
+
+Try it: trustseal.asquaresolution.com
+
+A Square Solutions builds and operates all of this.
+Everything ships publicly. Everything gets documented.
+
+#BuildInPublic #AI #TrustVerification #Claude #FactChecking #India #SaaS
+```
+
+---
+
+### POST 10 — Deployment Journal | WordPress Ecosystem Rollout
+
+```
+Executed: Full WordPress ↔ AI Execution Lab ecosystem integration
+Date: 2026-05-20
+
+Objectives:
+— Homepage: verify Lab integration (found 9 existing links ✅)
+— Footer: verify ecosystem nav (already live ✅)
+— AI Lab nav: live since April ✅
+— Blog posts: inject Lab callout sections into 4 high-traffic posts
+— Case Studies: add "Every Case Study Has a Build Log" CTA section
+
+Method:
+WordPress REST API, authenticated via browser nonce.
+Zero UI clicks for content updates.
+All changes via POST /wp-json/wp/v2/{type}/{id}
+
+What I found during the audit that I didn't expect:
+The homepage already had 9 Lab links — from a previous session.
+The ecosystem was more integrated than the task assumed.
+Documenting what already exists is as important as deploying new changes.
+
+Results:
+— 4 posts updated (HTTP 200 each)
+— 1 post skipped (Lab link already present)
+— Case Studies CTA live (37K → 39.8K chars)
+— Internal link audit: 19 Lab links across 7 pages
+— Schema verified: 3 JSON-LD blocks, Organization + WebSite + sameAs
+
+Full execution log + evidence archive:
+lab.asquaresolution.com/labs/wordpress-ecosystem-rollout-evidence
+
+Operational SEO is documenting what you find, not just what you deploy.
+
+#SEO #OperationalSEO #WordPress #BuildInPublic #AIEngineering #ContentStrategy #EcosystemStrategy
+```
+
+---
+
+## Usage Guide
+
+### Sourcing content from the Lab
+
+Every Lab content type maps to a LinkedIn format:
+
+| Lab Content Type | LinkedIn Format |
+|---|---|
+| `content/failures/*.mdx` | Debugging Breakdown or Failure Thread |
+| `content/logs/*.mdx` | Deployment Journal or Metrics Milestone |
+| `content/docs/*.mdx` | Operational Insight |
+| `content/case-studies/*.mdx` | Build-in-Public Thread |
+| `content/systems/*.mdx` | Operational Insight or Build-in-Public |
+
+### Post scheduling principle
+
+1 post per piece of real operational evidence.  
+Do not manufacture content — extract it from what already happened.  
+Every post must link back to a Lab URL.
+
+### Hashtag bank
+
+**Technical:** `#NextJS #Vercel #WordPress #NodeJS #API #WebDev`  
+**AI/ML:** `#AI #Claude #GenerativeAI #LLM #AIEngineering #ArtificialIntelligence`  
+**SEO/GEO:** `#SEO #GEO #OperationalSEO #ContentStrategy #SearchEngineOptimization`  
+**Build-in-public:** `#BuildInPublic #IndieHacker #ProductDevelopment #SaaS`  
+**India/Local:** `#India #IndiaAI #StartupIndia #TechIndia`  
+**Products:** `#TrustSeal #ScamCheck #AIExecutionLab`
+
+---
+
+## Related
+
+- [Distribution System](/docs/distribution-system)
+- [Build in Public Framework](/docs/build-in-public-framework)
+- [Operational SEO](/docs/what-is-operational-seo)
+- [GEO Intelligence Architecture](/docs/geo-intelligence-architecture)
+- [Authority Flywheel](/docs/authority-flywheel)
