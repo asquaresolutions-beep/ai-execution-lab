@@ -13,6 +13,20 @@ resolution_time: "15 minutes"
 evidence_images: []
 external_refs:
   - "https://docs.litespeedtech.com/lscache/lscwp/purge/"
+affected_systems:
+  - litespeed
+  - wordpress
+systems_touched:
+  - asquaresolution.com
+  - wpcode
+related_failures:
+  - wordpress-hfe-wpautop-injection
+related_logs:
+  - 2026-05-20-wordpress-ecosystem-rollout
+  - wordpress-ecosystem-rollout-2026-05-20
+linked_incidents:
+  - wordpress-hfe-wpautop-injection
+deployment_ref: 2026-05-20-wordpress-ecosystem-rollout
 ---
 
 <IncidentReport
@@ -42,6 +56,20 @@ external_refs:
   ecosystemImpact={[
     "Affects asquaresolution.com (WordPress, LiteSpeed Cache active)",
     "Any PHP filter deployed without a subsequent cache purge will appear non-functional during verification"
+  ]}
+/>
+
+<QuickFix
+  symptom="curl verification with Cache-Control: no-cache still returns stale HTML after deploying a WordPress PHP filter or WPCode snippet — the fix appears not to have worked"
+  rootCause="LiteSpeed Cache operates server-side and ignores client Cache-Control headers entirely. The cache serves its stored HTML regardless of what the browser or curl requests. The PHP filter is live — the cached output just hasn't been replaced yet."
+  fix="WordPress Admin → LiteSpeed Cache → Purge All. This clears the server-side cache and forces LiteSpeed to re-render from PHP on the next request."
+  time="2 min"
+  confidence={90}
+  steps={[
+    "Go to WordPress Admin → top admin bar → LiteSpeed Cache → Purge All",
+    "Wait 10 seconds for the purge to propagate",
+    "Re-run your curl verification against the URL",
+    "Confirm the PHP filter output is now reflected in the fresh HTML response"
   ]}
 />
 

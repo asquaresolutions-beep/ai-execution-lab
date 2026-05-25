@@ -1,0 +1,106 @@
+---
+title: "Firebase Auth Session Lost on Custom Domain"
+description: "Firebase Auth login succeeded but session was lost on every page refresh after moving to a custom domain. Root cause: the custom domain was not added to Firebase Console's Authorized Domains list for the Authentication project. Session cookies and token refresh calls require the domain to be explicitly authorized."
+date: "2026-03-05"
+updated: "2026-03-05"
+tags: ["firebase", "authentication", "firebase-auth", "custom-domain", "session", "configuration"]
+status: published
+severity: medium
+failure_status: resolved
+failure_type: configuration
+project: trustseal
+resolution_time: "2 minutes"
+affected_systems:
+  - firebase
+systems_touched:
+  - trustseal
+  - scamcheck
+linked_incidents:
+  - environment-variable-missing-production
+  - razorpay-test-live-key-mismatch
+related_case_studies:
+  - trustseal-architecture-build
+  - scamcheck-architecture-build
+related_logs:
+  - 2026-05-18-trustseal-operations-review
+  - 2026-05-18-scamcheck-operations-review
+evidence_images: []
+external_refs:
+  - "https://firebase.google.com/docs/auth/web/google-signin#before_you_begin"
+---
+
+<QuickFix
+  symptom="Firebase Auth login flow completes successfully but the user is logged out on every page refresh. Browser console shows auth/unauthorized-domain error. Works on localhost but fails on custom domain."
+  rootCause="The custom domain (e.g., trustseal.asquaresolution.com) is not in Firebase Console → Authentication → Settings → Authorized Domains. Firebase Auth rejects session persistence and token refresh requests from unlisted domains."
+  fix="Firebase Console → [project] → Authentication → Settings → Authorized Domains → Add Domain. Enter the custom domain exactly. No redeploy required — takes effect immediately."
+  time="2 min"
+  confidence={95}
+  steps={[
+    "Open browser DevTools on the custom domain while logged in",
+    "Check the Console for auth/unauthorized-domain or similar Firebase Auth errors",
+    "Go to Firebase Console → select the project → Authentication → Settings tab",
+    "Scroll to 'Authorized domains' section",
+    "Click 'Add domain' and enter the custom domain exactly (e.g., trustseal.asquaresolution.com)",
+    "Save — no redeployment needed",
+    "Refresh the app on the custom domain and verify session persists after page reload"
+  ]}
+/>
+
+## What Happened
+
+During TrustSeal's custom domain activation (March 2026), Firebase Auth appeared to work — users could log in through the email/password flow and the app showed the authenticated state. But refreshing the page immediately showed the login screen again. The session was not persisting.
+
+The error only appeared in the browser DevTools console under the Network tab — a failed POST to `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=...` returned a 400 with `UNAUTHORIZED_DOMAIN` in the response body. The Firebase Auth SDK caught this silently and treated it as a sign-out event.
+
+Before the custom domain was configured, all development and testing was done on `localhost` (which Firebase automatically includes in the authorized list) and the `github.io` subdomain. Neither revealed the issue because both were already authorized.
+
+---
+
+## Why Sessions Fail
+
+Firebase Auth uses a combination of:
+1. **IndexedDB** — for storing the auth token locally in the browser
+2. **Token refresh calls** — periodic requests to Google's identity service to get a fresh token
+
+The token refresh call includes the `origin` header of the requesting domain. Firebase validates this against the Authorized Domains list. If the domain is not listed, the refresh is rejected, the token expires, and Firebase Auth fires the `onAuthStateChanged` callback with `null` — which the app interprets as "user logged out."
+
+The login itself can complete because the login form's POST request origin may still be validated against localhost or the GitHub Pages domain. But the refresh fails the moment the custom domain tries to issue one.
+
+---
+
+## The Configuration Requirement
+
+Firebase Auth's Authorized Domains list is not automatically updated when a custom domain is configured on GitHub Pages, Vercel, or any other hosting provider. It is a separate Firebase Console configuration step that must be done explicitly.
+
+**Default authorized domains** (always present):
+- `localhost`
+- `[project-id].firebaseapp.com`
+- `[project-id].web.app`
+
+**Must be added manually:**
+- Any custom domain used in production
+- The GitHub Pages subdomain if testing before switching to custom domain (`[username].github.io`)
+
+---
+
+## Resolution
+
+**Firebase Console → Authentication → Settings → Authorized Domains → Add Domain**
+
+Added `trustseal.asquaresolution.com`. No code changes, no redeploy — the setting takes effect server-side immediately.
+
+For ScamCheck (scamcheck.asquaresolution.com), the same configuration was added during initial setup after learning from the TrustSeal incident. Both custom domains and the GitHub Pages testing subdomain were added before going live.
+
+---
+
+## Prevention
+
+**Pre-launch checklist for any Firebase Auth deployment with custom domains:**
+
+- [ ] Custom production domain added to Authorized Domains list
+- [ ] GitHub Pages testing subdomain added (if testing before DNS cutover)
+- [ ] Auth session persistence tested specifically on the custom domain, not just on the Firebase hosting URL
+- [ ] Browser DevTools Console checked for auth/unauthorized-domain errors after login
+- [ ] Test: log in → refresh page → confirm session persists
+
+**Pattern:** This is a silent configuration failure — the app works completely in development and test environments, then fails in a specific production context (the custom domain) with no visible error in the UI. Same class as environment-variable-missing-production and Razorpay key mode mismatch: a credential or authorization that is scoped to one context is absent from another.

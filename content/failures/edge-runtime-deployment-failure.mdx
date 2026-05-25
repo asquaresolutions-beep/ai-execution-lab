@@ -13,6 +13,23 @@ recovery_complexity: minutes
 deployment_risk: high
 time_to_detect: "2 minutes — next push after the change"
 repeat_risk: low
+affected_systems:
+  - vercel
+  - next.js
+systems_touched:
+  - next-og
+  - github-actions
+related_failures:
+  - server-module-client-bundle
+related_case_studies:
+  - ai-execution-lab-platform-launch
+  - vercel-deployment-evolution
+related_docs:
+  - failure-pattern-library
+  - next-js-vercel-production-operations
+linked_incidents:
+  - server-module-client-bundle
+deployment_ref: 2026-05-14-tracks-failure-archive-build
 ---
 
 <IncidentReport
@@ -47,6 +64,21 @@ repeat_risk: low
   commitRef="fix: remove edge runtime from opengraph-image"
   date="2026-05-10"
   repo="ai-execution-lab"
+/>
+
+<QuickFix
+  symptom="Vercel deployment fails: Error: The Edge Runtime does not support Node.js 'crypto' module"
+  rootCause="export const runtime = 'edge' was added to app/opengraph-image.tsx, which uses next/og internally. next/og requires the Node.js runtime — the edge runtime cannot supply it."
+  fix="Remove export const runtime = 'edge' from any file using next/og, sharp, or Node.js built-ins. Next.js defaults to the Node.js runtime, which is correct for OG image handlers."
+  time="5–10 min"
+  confidence={75}
+  steps={[
+    "Find the file cited in the Vercel build error (usually app/opengraph-image.tsx or similar)",
+    "Confirm the file uses next/og, sharp, crypto, fs, or path — any Node.js API",
+    "Remove the export const runtime = 'edge' line entirely",
+    "Push the fix — Vercel deployment will complete on the next attempt",
+    "Add a comment near the file's exports: // Do not add edge runtime — uses next/og (Node.js only)"
+  ]}
 />
 
 ## What Happened

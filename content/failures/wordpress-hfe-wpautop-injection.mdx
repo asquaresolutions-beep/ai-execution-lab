@@ -14,6 +14,23 @@ evidence_images: []
 external_refs:
   - "https://developer.wordpress.org/reference/functions/wpautop/"
   - "https://elementor.com/help/header-footer-elementor/"
+affected_systems:
+  - wordpress
+  - elementor
+systems_touched:
+  - asquaresolution.com
+  - hfe-plugin
+  - wpcode
+related_failures:
+  - litespeed-client-cache-bypass-ignored
+related_logs:
+  - 2026-05-20-wordpress-ecosystem-rollout
+  - wordpress-ecosystem-rollout-2026-05-20
+related_docs:
+  - ecosystem-wordpress-integration
+linked_incidents:
+  - litespeed-client-cache-bypass-ignored
+deployment_ref: 2026-05-20-wordpress-ecosystem-rollout
 ---
 
 <IncidentReport
@@ -53,6 +70,23 @@ external_refs:
   commitRef="WPCode snippet: asq_fix_hfe_post_info_wpautop — active"
   date="2026-05-19"
   repo="asquaresolution.com (WordPress)"
+/>
+
+<QuickFix
+  symptom="WordPress post pages contain malformed HTML: </p><p> sequences appear inside <a> tags in the hfe-post-info widget output"
+  rootCause="WordPress wpautop() runs on Elementor HFE widget render output and treats whitespace between inline link elements as paragraph breaks, injecting </p><p> inside anchor tags."
+  fix="Deploy a WPCode PHP snippet hooking into elementor/widget/render_content. The filter detects hfe-post-info content and uses preg_replace() to strip the injected paragraph sequences. Then run LiteSpeed → Purge All."
+  time="30–45 min"
+  confidence={80}
+  steps={[
+    "Confirm the injection: curl -s https://yoursite.com/any-post/ | grep -o '</p><p>' | wc -l — should return > 0",
+    "In WPCode (Plugins → Code Snippets), create a new PHP snippet with 'Run Everywhere' scope",
+    "Add the filter: add_filter('elementor/widget/render_content', 'asq_fix_hfe_wpautop', 10, 2)",
+    "In the callback: check strpos($content, 'hfe-post-info') — if true, apply preg_replace() to strip </p><p> inside <a> tags",
+    "Save and activate the snippet",
+    "WordPress Admin → LiteSpeed Cache → Purge All",
+    "Verify: curl again — injection count should be 0"
+  ]}
 />
 
 ## What Happened

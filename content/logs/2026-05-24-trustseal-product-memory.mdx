@@ -1,0 +1,150 @@
+---
+title: "TrustSeal Product Memory — Full Operational Timeline"
+description: "Complete operational provenance for TrustSeal (trustseal.asquaresolution.com) from concept through production. Build phases, infrastructure changes, auth incidents, payment integration, deployment milestones, and failure resolutions — consolidated as a queryable operational record."
+date: "2026-05-24"
+tags: ["trustseal", "firebase", "razorpay", "github-pages", "deployment", "authentication", "gemini"]
+status: published
+log_type: "operations"
+duration: "ongoing"
+outcome: "Complete product operational timeline documented — 6 major build phases, 4 documented failures resolved, payment integration live, custom domain active."
+affected_systems:
+  - github-pages
+  - firebase
+systems_touched:
+  - trustseal
+related_failures:
+  - firebase-functions-node-version-stability
+  - firebase-auth-domain-not-authorized
+  - razorpay-test-live-key-mismatch
+  - vite-github-pages-spa-routing
+  - environment-variable-missing-production
+related_case_studies:
+  - trustseal-architecture-build
+related_docs:
+  - gemini-production-operations
+  - third-party-api-mode-isolation
+---
+
+This is the consolidated operational record for TrustSeal — a complete timeline of every significant infrastructure event, failure, migration, and deployment from initial concept through current production state. It is the authoritative product memory document for this system.
+
+---
+
+## Phase 1: Foundation (January 2026)
+
+<OperationalTimeline
+  events={[
+    { date: "2026-01-05", event: "Product concept defined — AI trust verifier as extension of ScamCheck domain signal concept to full website profiling", type: "milestone" },
+    { date: "2026-01-08", event: "Technology stack selected: React + Vite + Tailwind + Firebase + Gemini + Razorpay + GitHub Pages", type: "build" },
+    { date: "2026-01-10", event: "Firebase project initialized (ass-youtube-agent shared project). Firestore data model defined before any UI: users/{uid}/checks, quota, subscription collections", type: "build", note: "Data model first — prevents schema-UI mismatch" },
+    { date: "2026-01-15", event: "React + Vite scaffold, Tailwind CSS configured, GitHub repository created, dist/.git worktree set up for gh-pages deployment", type: "build" },
+    { date: "2026-01-22", event: "Firebase Auth implemented — email/password + Google OAuth, onAuthStateChanged session management, Firestore security rules deployed", type: "build" }
+  ]}
+/>
+
+---
+
+## Phase 2: Core Trust Check Flow (January–February 2026)
+
+<OperationalTimeline
+  events={[
+    { date: "2026-01-26", event: "Core trust check flow — URL input, signal collection (SSL, domain age, HTTP headers, redirect chain), Gemini Cloud Function first pass", type: "build" },
+    { date: "2026-01-29", event: "Gemini Cloud Function deployed to Firebase — initial prompt without embedded schema, output inconsistent", type: "build" },
+    { date: "2026-02-01", event: "FAILURE: Firebase Cloud Functions crashing on every production invocation. Firebase default Node 18 runtime incompatible with Gemini SDK ESM exports. Local Firebase emulator ran Node 22, masking the issue entirely", type: "failure" },
+    { date: "2026-02-01", event: "FIX: firebase.json updated — runtime: nodejs22. functions/package.json engines field updated. Functions redeployed. All invocations stable", type: "fix" },
+    { date: "2026-02-05", event: "Gemini prompt structured with embedded JSON schema, signal taxonomy section, and edge case handling. Structured output reliability improved to production-acceptable level", type: "build" },
+    { date: "2026-02-10", event: "Full trust check flow working end-to-end: URL submission → signal collection → Gemini analysis → structured verdict → Firestore write → client display", type: "milestone" }
+  ]}
+/>
+
+---
+
+## Phase 3: Razorpay Payment Integration (February 2026)
+
+<OperationalTimeline
+  events={[
+    { date: "2026-02-12", event: "Razorpay subscription tier architecture designed: free (10 checks/month quota) + premium (unlimited, ₹149–299/month). Firestore subscription document structure defined", type: "build" },
+    { date: "2026-02-15", event: "Razorpay integration built: createSubscription Cloud Function, checkout modal initialization, webhook handler Cloud Function with signature verification", type: "build" },
+    { date: "2026-02-18", event: "Firestore onSnapshot listener for real-time tier unlock — premium upgrade reflected in UI without page reload", type: "build" },
+    { date: "2026-02-20", event: "FAILURE: Razorpay test/live key mode mismatch. Client key: rzp_test_. Server key: rzp_live_. Checkout modal opened successfully but no webhook fired. Payment appeared to complete; server received nothing", type: "failure" },
+    { date: "2026-02-20", event: "FIX: Both keys switched to consistent mode (test). Rule established: both keys must carry same mode prefix simultaneously. Mode switch to live will be done as atomic operation at go-live", type: "fix" },
+    { date: "2026-02-28", event: "Full payment flow working in test mode: free tier quota enforcement, checkout modal, webhook handler, premium tier unlock, Firestore subscription document written correctly", type: "milestone" }
+  ]}
+/>
+
+---
+
+## Phase 4: Custom Domain and Auth Configuration (March 2026)
+
+<OperationalTimeline
+  events={[
+    { date: "2026-03-01", event: "Custom domain DNS planning: trustseal.asquaresolution.com CNAME to GitHub Pages. DNS records created in Hostinger.", type: "build" },
+    { date: "2026-03-03", event: "GitHub Pages custom domain configured — trustseal.asquaresolution.com pointing to gh-pages branch. HTTPS certificate provisioning begins after DNS propagation (~30 min)", type: "build" },
+    { date: "2026-03-05", event: "FAILURE: Firebase Auth session lost on every page refresh on the custom domain. Login completed successfully, page refresh returned to login screen. UNAUTHORIZED_DOMAIN in network tab — custom domain not in Firebase Authorized Domains list", type: "failure" },
+    { date: "2026-03-05", event: "FIX: Firebase Console → Authentication → Settings → Authorized Domains → added trustseal.asquaresolution.com. Session persistence immediately restored. Resolution time: 2 minutes", type: "fix" },
+    { date: "2026-03-10", event: "Razorpay keys switched to live mode — both client and server keys updated atomically to rzp_live_ prefix. Production payment flow verified with real transaction", type: "milestone" },
+    { date: "2026-03-15", event: "trustseal.asquaresolution.com fully live: HTTPS active, Firebase Auth stable, Gemini analysis working, Razorpay live payments accepting", type: "milestone" }
+  ]}
+/>
+
+---
+
+## Phase 5: Ecosystem Integration (April 2026)
+
+<OperationalTimeline
+  events={[
+    { date: "2026-04-25", event: "TrustSeal integrated into A Square Solutions ecosystem: header nav links to asquaresolution.com, footer ecosystem block added (ScamCheck, AI Execution Lab)", type: "build" },
+    { date: "2026-04-24", event: "GA4 cross-domain measurement configured — cookie_domain set to asquaresolution.com. TrustSeal sessions now stitched with main site sessions in GA4", type: "build" },
+    { date: "2026-04-27", event: "TrustSeal footer ecosystem block deployed to gh-pages. Cross-property navigation active from all TrustSeal pages", type: "deploy" }
+  ]}
+/>
+
+---
+
+## Phase 6: Documentation and Operational Memory (May 2026)
+
+<OperationalTimeline
+  events={[
+    { date: "2026-05-14", event: "TrustSeal architecture build case study published — full build narrative, failure timeline, architecture decisions documented", type: "milestone" },
+    { date: "2026-05-18", event: "TrustSeal operations review log published — deployment health, Razorpay sandbox integration, Firebase auth stability noted", type: "milestone" },
+    { date: "2026-05-24", event: "TrustSeal system document published — canonical operational reference with architecture, Firestore schema, Cloud Functions table, payment flow, risk table", type: "milestone" },
+    { date: "2026-05-24", event: "TrustSeal product memory log (this document) published — complete operational timeline consolidated", type: "milestone" }
+  ]}
+/>
+
+---
+
+## Current Production State (May 2026)
+
+| Dimension | State |
+|---|---|
+| Deployment | GitHub Pages `gh-pages` branch, manual dist/ git push |
+| Custom domain | trustseal.asquaresolution.com — HTTPS active |
+| Firebase Auth | Email/password + Google OAuth — session stable |
+| Authorized domains | trustseal.asquaresolution.com + github.io testing subdomain |
+| Cloud Functions | Node 22 runtime (explicit) — all invocations stable |
+| Gemini | Structured output with embedded schema + validation |
+| Razorpay | Live keys active — subscription payment flow operational |
+| GA4 | Scoped to production environment — cross-domain session stitching |
+| Firestore | Quota enforcement + subscription state management operational |
+
+---
+
+## Documented Failure Lineage
+
+Four production failures documented and resolved:
+
+1. **Firebase Functions Node 18 crash** (2026-02-01) — [Full report](/failures/firebase-functions-node-version-stability) — 20 min to resolve — `nodejs22` explicit in firebase.json
+2. **Razorpay key mode mismatch** (2026-02-20) — [Full report](/failures/razorpay-test-live-key-mismatch) — 10 min to resolve — atomic mode switch procedure established
+3. **Firebase Auth custom domain unauthorized** (2026-03-05) — [Full report](/failures/firebase-auth-domain-not-authorized) — 2 min to resolve — Authorized Domains checklist added
+4. **SPA routing 404 on GitHub Pages** (resolved during setup) — [Full report](/failures/vite-github-pages-spa-routing) — 404.html redirect pattern deployed
+
+---
+
+## Operational Risks (Current)
+
+| Risk | Status |
+|---|---|
+| Gemini free tier quota exhaustion | Monitored — upgrade to paid tier when usage warrants |
+| Firebase cold start latency (2–4s) | Mitigated — multi-stage loading UX in place |
+| Razorpay webhook delivery failure | Low probability — Razorpay retry is automatic |
+| Firebase Auth token refresh failure | Mitigated — custom domain in Authorized Domains list |

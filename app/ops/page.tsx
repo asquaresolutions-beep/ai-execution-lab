@@ -12,6 +12,7 @@ import {
 } from '@/lib/ecosystem'
 import { getFailureMemorySummary, getPatternCoverage } from '@/lib/failure-memory'
 import { getMemoryGraphSummary } from '@/lib/operational-memory'
+import { getReverseRelationshipCount, getOrphanedItems } from '@/lib/relationship-index'
 import { getSignalSummary } from '@/lib/operational-signals'
 import { getPublishingPulse } from '@/lib/publishing-pulse'
 import { getTelemetrySummary, TIER_STYLES } from '@/lib/telemetry'
@@ -162,7 +163,10 @@ export default function OpsPage() {
   // Failure intelligence metrics
   const failureSummary  = getFailureMemorySummary()
   const patternCoverage = getPatternCoverage()
-  const memorySummary   = getMemoryGraphSummary()
+  const memorySummary       = getMemoryGraphSummary()
+  const reverseRelCount     = getReverseRelationshipCount()
+  const orphanedFailures    = getOrphanedItems('failures')
+  const orphanedLogs        = getOrphanedItems('logs')
 
   // Operational signals + publishing pulse
   const signalSummary   = getSignalSummary()
@@ -854,6 +858,9 @@ export default function OpsPage() {
                 { label: 'Recurring patterns',   value: failureSummary.recurringPatterns, color: 'text-orange-400' },
                 { label: 'Named patterns',        value: patternCoverage.length, color: 'text-surface-400' },
                 { label: 'Entity relationships', value: memorySummary.relationshipCount, color: 'text-brand-400' },
+                { label: 'Reverse-discovered refs', value: reverseRelCount, color: 'text-violet-400' },
+                { label: 'Orphaned failures',     value: orphanedFailures.length, color: orphanedFailures.length > 0 ? 'text-orange-400' : 'text-green-400' },
+                { label: 'Orphaned logs',         value: orphanedLogs.length, color: orphanedLogs.length > 0 ? 'text-orange-400' : 'text-green-400' },
               ].map(({ label, value, color }) => (
                 <div key={label} className="flex items-center justify-between px-4 py-2.5">
                   <p className="text-[10px] text-surface-600">{label}</p>

@@ -38,9 +38,30 @@ export interface ContentFrontmatter {
   project?: string
   resolution_time?: string
   // Logs-specific
-  log_type?: 'daily' | 'weekly' | 'deployment' | 'debug' | 'experiment' | 'release'
+  log_type?: 'daily' | 'weekly' | 'deployment' | 'debug' | 'experiment' | 'release' | 'operations'
   duration?: string    // e.g. "2h 15m"
   outcome?: string     // one-line result
+  // Failure-specific operational fields
+  affected_systems?: string[]  // systems impacted by this failure (e.g. ["firebase-functions", "vercel"])
+  repeat_risk?: 'low' | 'medium' | 'high'  // likelihood of recurrence
+  recovery_complexity?: string // e.g. "5 minutes" or "requires full redeploy"
+  deployment_risk?: 'low' | 'medium' | 'high'
+  time_to_detect?: string      // e.g. "immediate" or "~2 hours"
+  systems_touched?: string[]   // broader ecosystem touch points
+  deployment_ref?: string      // reference to the deployment log slug
+  // Cross-section relationship fields
+  related_failures?: string[]  // slugs of related failure entries
+  related_logs?: string[]      // slugs of related execution log entries
+  related_case_studies?: string[]  // slugs of related case studies
+  related_docs?: string[]      // slugs of related docs
+  related_playbooks?: string[] // slugs of related playbooks
+  linked_incidents?: string[]  // slugs of incidents that share root cause or context
+  // Authorship fields
+  author?: string
+  author_role?: string
+  // GEO / evidence fields
+  evidence_images?: string[]   // paths or URLs to evidence screenshots/assets
+  external_refs?: string[]     // external citations used in the content
 }
 
 export interface ContentItem {
@@ -69,6 +90,12 @@ function sectionDir(section: ContentSection): string {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Build-time memoization
+// One Node.js process per build — safe to cache indefinitely.
+// ─────────────────────────────────────────────────────────────
+const _metaCache = new Map<ContentSection, ContentMeta[]>()
+
+// ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
 
@@ -88,16 +115,21 @@ function parseMeta(raw: string, slug: string, section: ContentSection): ContentM
 // Public API
 // ─────────────────────────────────────────────────────────────
 
-/** Metadata for all published items in a section, sorted by date desc. */
+/** Metadata for all published items in a section, sorted by date desc. Memoized per process. */
 export function getAllMeta(section: ContentSection): ContentMeta[] {
+  if (_metaCache.has(section)) return _metaCache.get(section)!
+
   const dir = sectionDir(section)
-  if (!fs.existsSync(dir)) return []
+  if (!fs.existsSync(dir)) {
+    _metaCache.set(section, [])
+    return []
+  }
 
   const files = fs
     .readdirSync(dir)
     .filter((f) => f.endsWith('.mdx') || f.endsWith('.md'))
 
-  return files
+  const result = files
     .map((file) => {
       const slug = slugFromFilename(file)
       const raw = fs.readFileSync(path.join(dir, file), 'utf-8')
@@ -109,6 +141,9 @@ export function getAllMeta(section: ContentSection): ContentMeta[] {
     .sort((a, b) =>
       new Date(b.frontmatter.date).getTime() - new Date(a.frontmatter.date).getTime()
     )
+
+  _metaCache.set(section, result)
+  return result
 }
 
 /** Single item with full MDX content. */
@@ -193,3 +228,6 @@ export function getSectionCounts(): Record<ContentSection, number> {
   }
   return result
 }
+
+// getCrossRelated and getLinkedIncidents have moved to lib/relationship-index.ts
+// where they are implemented with full bidirectional reverse-index support.

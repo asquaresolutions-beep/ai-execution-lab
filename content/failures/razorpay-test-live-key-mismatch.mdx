@@ -1,0 +1,115 @@
+---
+title: "Razorpay Test/Live Key Mode Mismatch"
+description: "Razorpay checkout modal opened and payment appeared to complete, but the webhook was never fired and the subscription wasn't activated. Root cause: client-side key was in test mode (rzp_test_) while the server-side Cloud Function key was in live mode (rzp_live_), or vice versa. Both keys must match modes simultaneously."
+date: "2026-02-20"
+updated: "2026-02-20"
+tags: ["razorpay", "authentication", "configuration", "firebase", "payments", "firebase-functions"]
+status: published
+severity: high
+failure_status: resolved
+failure_type: configuration
+project: trustseal
+resolution_time: "10 minutes"
+affected_systems:
+  - razorpay
+  - firebase
+systems_touched:
+  - trustseal
+linked_incidents:
+  - environment-variable-missing-production
+  - firebase-auth-domain-not-authorized
+related_case_studies:
+  - trustseal-architecture-build
+related_logs:
+  - 2026-05-18-trustseal-operations-review
+related_docs:
+  - deployment-workflow
+evidence_images: []
+external_refs:
+  - "https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/build-integration/"
+---
+
+<QuickFix
+  symptom="Razorpay checkout modal opens, user completes payment steps, but no webhook fires and subscription is not activated. The payment appears successful client-side but the server has no record of it."
+  rootCause="Client-side Razorpay key prefix (rzp_test_ or rzp_live_) does not match the server-side Cloud Function key. Mixed-mode keys use separate payment rails — test payments are invisible to the live environment and vice versa."
+  fix="Switch both the client-facing key and the server-side Cloud Function key to the same mode simultaneously. Never mix prefixes across environments."
+  time="10 min"
+  confidence={88}
+  steps={[
+    "Check the client-side key prefix: rzp_test_ (test mode) or rzp_live_ (live mode)?",
+    "Check the server-side Cloud Function environment variable key prefix",
+    "If they differ, this is the root cause — no further debugging needed",
+    "Update the mismatched key so both are in the same mode",
+    "Redeploy the Cloud Function with the corrected environment variable",
+    "Trigger a test transaction using Razorpay test card details to verify webhook fires",
+    "Check Firebase Console → Functions → logs to confirm webhook handler received the event"
+  ]}
+/>
+
+## What Happened
+
+During TrustSeal's Razorpay integration phase (February 2026), the first end-to-end payment test appeared to work: the checkout modal opened, the test card was entered, the payment succeeded on the Razorpay modal, and the modal closed. But the TrustSeal dashboard didn't activate the premium tier. The Firestore `subscription` document was never created.
+
+The symptom looked like a webhook configuration issue. The Razorpay dashboard showed the test transaction under Test → Payments, but the webhook logs (Test → Webhooks → Recent Events) had no entries for the event.
+
+The actual cause: the client-side checkout used `rzp_test_` key, but the Cloud Function that processed the webhook was configured with the `rzp_live_` key. Razorpay's test and live environments are completely isolated. A test-mode payment generates a test webhook — but the live-mode server endpoint was never registered to receive test webhooks, so nothing arrived.
+
+---
+
+## Why This Is Non-Obvious
+
+Razorpay's two environments are separated by key prefix only. There is no obvious error. The checkout modal works in both modes. Payments complete in both modes. The differentiation is only visible in:
+
+1. The key prefix (`rzp_test_` vs `rzp_live_`)
+2. The webhook dashboard section (separate Test and Live views)
+3. Whether real money actually moves (test mode never charges)
+
+A developer who switches the server-side key to live mode while leaving the client-side key in test mode (or vice versa) gets a completely functional-looking checkout with no payment record on the other side.
+
+---
+
+## The Razorpay Key Model
+
+| Context | Key Type | Prefix |
+|---|---|---|
+| Client-side checkout (browser) | `key_id` | `rzp_test_` or `rzp_live_` |
+| Server-side API calls | API key + secret | Matching prefix |
+| Webhooks received | Environment-scoped | Separate test/live endpoints |
+
+**Rule:** Both keys must always have the same prefix. There is no cross-mode communication.
+
+---
+
+## Root Cause
+
+Razorpay requires both the client-side key ID and the server-side secret key to operate in the same mode. The mode is determined by the key prefix — `rzp_test_` for test mode, `rzp_live_` for production.
+
+When the TrustSeal server was migrated from test to live mode keys (for the Razorpay production go-live on 2026-03-10), the Cloud Function environment variable was updated but the client-side key in the React build was not updated simultaneously. Result: the client was still sending transactions to the test environment, while the server was configured to receive live webhooks only.
+
+---
+
+## Resolution
+
+Update both keys to use the same mode prefix. In TrustSeal's case, the go-live sequence was:
+
+1. Razorpay Dashboard → Generate live API keys
+2. Update `VITE_RAZORPAY_KEY_ID` in the Vite build to `rzp_live_*`
+3. Update `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` in Firebase Functions config to live mode values
+4. `firebase deploy --only functions`
+5. `npm run build && cd dist && git push` (new client build with live key)
+6. Test with a real small-amount transaction to confirm webhook fires in the Live webhook dashboard
+
+After this, both the client-side checkout and the server-side webhook handler operated in live mode. The webhook fired correctly and the Firestore subscription record was created.
+
+---
+
+## Prevention
+
+**Pre-deployment checklist for Razorpay mode switch:**
+
+- [ ] Both client-side and server-side keys use the same mode prefix
+- [ ] Cloud Function environment variables updated before client build deployment
+- [ ] A test transaction verified in the correct mode (test cards for test, real card for live) before announcing availability
+- [ ] Razorpay Dashboard → Webhooks → [mode] → Recent Events checked to confirm events arriving
+
+**Operational pattern:** The test/live key mismatch is a subcategory of the runtime-environment-scope-drift pattern — credentials scoped to one environment are being used by a system expecting another environment's credentials. The same class of failure applies to Firebase API keys, Stripe keys, SendGrid keys, and any service with environment isolation.

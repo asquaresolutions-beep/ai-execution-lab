@@ -1,0 +1,642 @@
+---
+title: "Release Discipline Doctrine — A Square Solutions"
+description: "How changes move safely from intent to stable production operation. Change classification framework, blast radius evaluation, preflight discipline, staging philosophy, and change-management invariants extracted from real deployment history across TrustSeal, ScamCheck, AI Execution Lab, and WordPress. Answers: how do we reduce the probability that a production change introduces unexpected operational behavior?"
+date: "2026-05-25"
+tags: ["reliability", "deployment", "firebase", "production", "vercel", "github-pages", "wordpress"]
+status: published
+related_docs:
+  - operational-invariants
+  - deployment-verification-checklist
+  - operator-decision-doctrine
+  - incident-response-doctrine
+---
+
+Every production incident in this archive was introduced by a change. Not by random system degradation — by a specific change that was either misclassified, insufficiently verified, incorrectly sequenced, or applied with an untested assumption about platform behavior.
+
+This doctrine formalizes how changes are classified before execution, how blast radius is evaluated, what preflight verification is required per change class, and what conditions constitute an unsafe deploy. Ten change-management invariants are defined here — each grounded in a documented failure.
+
+---
+
+## Change Classification Framework
+
+Before executing any change, classify it. Classification determines the verification requirement. An unclassified change is always treated as high risk.
+
+### Class A — Content-Only Changes
+
+**What qualifies:** New or edited MDX content, static asset updates, documentation edits, text changes in UI components with no behavioral modification.
+
+**Risk profile:** Low. Build may fail if MDX syntax is malformed; no production infrastructure state changes.
+
+**Preflight:** TypeScript clean (`node ./node_modules/typescript/bin/tsc --noEmit`). MDX syntax valid.
+
+**Post-deploy verification:** One content page loads. No console errors.
+
+**Examples:** New failure report, edited case study, updated operational doc.
+
+---
+
+### Class B — Configuration-Only Changes
+
+**What qualifies:** Changes made entirely through a platform dashboard or admin panel, with no code pushed. The change takes effect immediately without a deploy command.
+
+**Risk profile:** Medium. Fast to apply; fast to reverse. However, many absent-signal failures are Class B (firebase-auth-domain-not-authorized, ga4-preview-environment-contamination, litespeed-client-cache-bypass-ignored). Configuration changes require behavioral verification even though no code changed.
+
+**Preflight:** Confirm the current state before changing it. Know exactly what you are modifying.
+
+**Post-change verification:** Behavioral test for the specific configuration surface changed (see relevant platform checklist).
+
+**Examples:**
+- Firebase Console → Auth → Authorized Domains (domain addition)
+- Vercel Dashboard → Environment Variables (scope change)
+- LiteSpeed → Purge All (cache configuration)
+- WordPress Admin → Settings → Permalinks → Save (rewrite rule flush)
+- Razorpay Dashboard → Webhooks (endpoint or secret change)
+- GA4 → Data Streams → cookie_domain setting
+
+**Critical:** Class B changes do not require a redeploy, but they do require post-change behavioral verification. Absent-signal failures are concentrated in this class.
+
+---
+
+### Class C — Single-Platform Code Deploy
+
+**What qualifies:** A code or configuration change deployed to exactly one platform, with no dependencies on simultaneous changes to other platforms or configuration surfaces.
+
+**Risk profile:** Standard. The post-deploy verification checklist for the relevant platform is required.
+
+**Preflight:** Build verification, TypeScript check, emulator/preview test (knowing these do not replace production verification).
+
+**Post-deploy verification:** Full platform post-deploy checklist.
+
+**Examples:**
+- Vercel deploy (Next.js code change, no Firebase change)
+- Firebase Functions deploy only (no Firestore rules change)
+- GitHub Pages push (no Firebase Auth or DNS change)
+- WordPress WPCode snippet activation (no REST API or plugin change)
+
+---
+
+### Class D — Multi-Surface or Multi-Platform Changes
+
+**What qualifies:** Any change that modifies more than one deployment surface, platform, or environment simultaneously — whether or not those surfaces are technically part of the same product.
+
+**Risk profile:** High. Multi-surface changes have the largest blast radius in the archive. Two of the three highest-impact incidents (razorpay-test-live-key-mismatch, firebase-deploy-sequence-auth-failure) were Class D changes treated as Class C. Sequencing and atomicity requirements apply.
+
+**Preflight:** Identify all affected surfaces explicitly. Define the required sequence or atomicity. Confirm all pre-conditions for each surface independently before beginning.
+
+**Post-deploy verification:** Full post-deploy checklist for every affected platform, in sequence.
+
+**Examples:**
+- Firebase combined release (Functions + Firestore Rules) — requires rules-first sequencing
+- Razorpay mode switch (4 credentials across Firebase Functions env, client env, Razorpay Dashboard, plan ID)
+- New product go-live (DNS + GitHub Pages + Firebase Auth + Razorpay + GA4)
+- Vercel + Firebase simultaneous change (client and server both changing)
+- WordPress plugin change affecting both REST API and front-end rendering
+
+**Sequencing rule:** For Class D changes, define the deploy sequence before starting. Write it down. Do not proceed without it.
+
+---
+
+### Class E — Infrastructure Changes
+
+**What qualifies:** Changes to infrastructure that propagates over time and cannot be force-completed. The change is applied instantly at the source but takes time to reach effective global state.
+
+**Risk profile:** Time-bounded. The risk is premature go-live announcement or premature downstream actions that depend on propagation completing. Cannot be accelerated.
+
+**Preflight:** Understand the propagation time. Set an explicit "earliest verification" time before starting.
+
+**Post-change verification:** External verification tools (dnschecker.org), not local browser. Patience is part of the procedure.
+
+**Examples:**
+- DNS record creation or modification (TTL propagation, up to 4 hours)
+- GitHub Pages HTTPS certificate provisioning (15–30 min after DNS resolves)
+- Firebase IAM propagation after rules deploy (60 seconds)
+
+**Class E rule:** No downstream action (go-live announcement, Firebase Functions deploy, HTTPS verification) may be taken before the infrastructure propagation is confirmed as complete via external verification.
+
+---
+
+### Class F — Dependency or Platform Upgrade
+
+**What qualifies:** Any change to package.json dependencies, Firebase SDK, Next.js version, or underlying platform version where the version change is owned by a third party and behavioral changes are not fully documented.
+
+**Risk profile:** Unpredictable. Semver is not a reliability guarantee. A minor version bump produced the second-longest debugging session in the archive (next-mdx-remote v6 blockJS: 41 minutes).
+
+**Preflight:** Read the changelog. Look specifically for default behavior changes. Test the upgrade in isolation on a non-production path before propagating to production.
+
+**Post-deploy verification:** Full behavioral regression test, not just build verification. Every feature that the upgraded package is involved in must be tested end-to-end.
+
+**Examples:**
+- next-mdx-remote v5 → v6 (blockJS default changed from false to true)
+- Firebase SDK version bump (Admin SDK or Client SDK)
+- next.js major version change
+- Any package with `"*"` or `"^"` version specification resolving to a new major version
+
+**Class F rule:** "It built successfully" is not sufficient verification for a dependency upgrade. Every behavioral change introduced by the upgrade is a production risk until verified by a real request in production.
+
+---
+
+## Change Invariants
+
+### INV-CHG-1 — Every change must be classified before execution
+
+**Statement:** Before executing any deploy, update, or configuration change, explicitly classify it using the six-class framework. An unclassified change is treated as Class D (high risk, multi-surface verification required).
+
+**Why it exists:** ga4-preview-environment-contamination was a Class B change (Vercel environment variable scope) that was treated as a development task. The operator did not classify it as a production configuration change. It contaminated production analytics data for 6 weeks before detection.
+
+**30-second classification discipline:**
+```
+Before any change: "What class is this?"
+→ Content only (A) / Config only (B) / Single platform code (C) / 
+   Multi-surface (D) / Infrastructure (E) / Dependency upgrade (F)
+
+→ What verification does this class require?
+→ What is the blast radius if it fails?
+→ What is the recovery path?
+```
+
+---
+
+### INV-CHG-2 — Configuration changes are production changes
+
+**Statement:** A change made through a dashboard, admin panel, or environment variable UI has the same production impact as a code change and requires the same behavioral verification.
+
+**Why it exists:** Four of the highest-impact incidents in the archive were configuration-only failures:
+- firebase-auth-domain-not-authorized: missing entry in Firebase Console → auth sessions lost for all users on new domain
+- ga4-preview-environment-contamination: wrong Vercel env var scope → 6 weeks data contamination
+- razorpay-test-live-key-mismatch: wrong credential values → payments processed but no access granted
+- litespeed-client-cache-bypass-ignored: cache not purged → verification produced wrong results
+
+None of these required code changes. All of them had production user impact.
+
+**Rule:** The delivery mechanism (code push vs. dashboard click vs. env var update) does not determine the risk level. The production state affected determines the risk level.
+
+---
+
+### INV-CHG-3 — Firebase Functions and Firestore Rules are separate deployment surfaces requiring explicit sequencing
+
+**Statement:** Any release that modifies both Firebase Cloud Functions and Firestore Security Rules is a Class D change. The two surfaces must be deployed in sequence (rules first, functions second), with a propagation wait between them. Using a combined deploy command is not equivalent.
+
+**Why it exists:** firebase-deploy-sequence-auth-failure. Combined deploy produced undefined artifact ordering that created a 12-minute auth failure window. The failure was caused by treating two separate deployment surfaces as one.
+
+**The surfaces:**
+```
+Surface 1: Firebase Cloud Functions (Cloud Run artifacts)
+Surface 2: Firebase Firestore Security Rules (IAM policy state)
+Surface 3: Firebase Authentication configuration (Authorized Domains)
+
+Each surface has independent deployment state.
+Changing one does not change another.
+Changing multiple requires explicit orchestration.
+```
+
+---
+
+### INV-CHG-4 — Multi-system changes require atomicity specification before execution begins
+
+**Statement:** For any Class D change, the operator must define — before beginning — which changes are atomic (must happen simultaneously), which are sequential (must happen in order), and what the verification gate is between stages.
+
+**Why it exists:** razorpay-test-live-key-mismatch. The mode switch from test to live required four simultaneous credential changes across Firebase Functions environment, client environment variable, Razorpay Dashboard webhook registration, and subscription plan ID. Fixing one credential and checking created a second failure mode where the partial fix appeared to work (modal opened) but the webhook handler still failed.
+
+**Atomicity catalog for this ecosystem:**
+
+| Change | Atomicity requirement |
+|---|---|
+| Razorpay mode switch | All 4 credentials must match simultaneously |
+| Firebase combined release | Rules deploy must complete before Functions deploy begins |
+| New domain go-live | Firebase Auth domain addition must precede user announcement |
+| GA4 mode isolation | All environment scopes must be corrected before declaring analytics clean |
+
+---
+
+### INV-CHG-5 — Dependency upgrades are Class F regardless of semver classification
+
+**Statement:** A third-party package version change carries unpredictable behavioral risk regardless of whether it is a patch, minor, or major version bump. The upgrade must be treated as Class F until behavioral verification in production is complete.
+
+**Why it exists:** next-mdx-remote v5 → v6. A minor version upgrade changed the default value of `blockJS` from false to true. The change was not prominently documented. It silently disabled all custom MDX components. The failure was not caught by build verification, TypeScript check, or emulator testing. It was discovered only when a real content page was viewed in production.
+
+**Upgrade verification requirement:** Read the package changelog before upgrading. Look for any mention of "default behavior," "breaking change," or changed option defaults. After upgrade, run a full behavioral regression for every feature that touches the upgraded package.
+
+---
+
+### INV-CHG-6 — A new domain addition is a Class D multi-surface change
+
+**Statement:** Adding a custom domain or subdomain to any product in this ecosystem requires coordinated changes to at minimum three surfaces: DNS records (Class E infrastructure), GitHub Pages custom domain configuration (Class C), and Firebase Auth Authorized Domains (Class B). This is never a single-surface change.
+
+**Why it exists:** firebase-auth-domain-not-authorized. A new domain was deployed without adding it to Firebase Auth Authorized Domains. The deployment itself (DNS + GitHub Pages) was correct. The adjacent configuration surface (Firebase Auth) was not updated. Auth sessions were lost on every reload for all users on the new domain.
+
+**New domain surface checklist:**
+```
+Surface 1: DNS registrar → CNAME record (Class E — propagation required)
+Surface 2: GitHub Pages → custom domain setting + CNAME file (Class C)
+Surface 3: Firebase Console → Auth → Authorized Domains (Class B)
+Surface 4: Razorpay Dashboard → Webhooks (if applicable — endpoint URL changes)
+Surface 5: GA4 → cookie_domain (if applicable — cross-subdomain tracking)
+```
+
+None of these surfaces is optional. Every new domain in this ecosystem requires all five to be audited.
+
+---
+
+### INV-CHG-7 — Preview and emulator environments verify logic, not infrastructure state
+
+**Statement:** Firebase Emulator, Vercel preview deployments, and local development environments verify that the code logic is correct. They do not verify that the production infrastructure is configured correctly for the change. Production verification is always required after every deploy.
+
+**Why it exists:** Every incident in the archive that involved production infrastructure state — Node runtime, deploy sequence, authorized domains, DNS propagation, webhook credentials — passed emulator or preview testing. The emulator does not enforce Firebase Auth Authorized Domains. The Vercel preview does not use production Firebase credentials. Local DNS resolves differently than global DNS.
+
+**The correct mental model:**
+
+```
+Emulator/Preview → verifies: function logic, rendering, routing, data models
+Production verification → verifies: IAM state, auth config, infrastructure timing,
+                          real credential behavior, global network state
+```
+
+These are complementary verification surfaces. Neither replaces the other. A change is not safe until both have been verified.
+
+---
+
+### INV-CHG-8 — Gemini prompt or parsing changes require adversarial output testing
+
+**Statement:** Any change to Gemini API call structure, prompt text, or response parsing logic must be tested with adversarial inputs (malformed JSON, unexpected response formats, truncated outputs) before production deployment.
+
+**Why it exists:** gemini-json-parse-failure. The baseline Gemini response had a ~6% malformed JSON rate in production — markdown code fences, truncated braces, text after the closing brace. This rate was not observable in normal development testing, where Gemini typically returns clean JSON. The failure was discovered only when production traffic volume made the ~6% rate statistically certain.
+
+**Adversarial test protocol for Gemini changes:**
+```
+1. Test prompt with minimal/edge-case inputs (empty string, single word, very long text)
+2. Test parser with manually-crafted malformed outputs:
+   → JSON wrapped in markdown fences: ```json { ... } ```
+   → JSON with trailing text: { ... } "Additional commentary"
+   → Truncated JSON: { "verdict": "scam", "reason":
+   → Empty response: ""
+3. Confirm pre-parse cleaning handles all malformed formats
+4. Confirm parser returns structured error (not exception) for all failure modes
+```
+
+---
+
+### INV-CHG-9 — A Vite build is a destructive operation on dist/
+
+**Statement:** Every `npm run build` command wipes the `dist/` directory and rebuilds it from source. Files that are not in `public/` are not present in `dist/` after a build. This is not a bug — it is how Vite works. Files that must survive builds must live in `public/`.
+
+**Why it exists:** vite-github-pages-spa-routing. After every Vite build, `404.html` and `CNAME` were deleted because they were placed directly in `dist/` rather than in `public/`. The SPA routing and custom domain broke after every deploy. The fix (moving both files to `public/`) is permanent; the failure recurs until the fix is applied.
+
+**Required `public/` inventory for GitHub Pages deployments:**
+```
+public/
+  404.html    ← SPA redirect script (if missing: non-root routes 404)
+  CNAME       ← custom domain name, no https:// prefix (if missing: domain reverts to github.io)
+```
+
+**Pre-deploy check for GitHub Pages:** Confirm both files exist in `public/` before every build.
+
+---
+
+### INV-CHG-10 — Blast radius is determined by production state impact, not diff size
+
+**Statement:** The risk of a change is not proportional to the number of lines changed. One environment variable checkbox, one missing entry in a domain list, one missing file in `public/` — each produced a production incident while appearing to be a trivial change.
+
+**Why it exists:** The smallest diffs in the archive produced the highest-impact incidents:
+- ga4-preview-environment-contamination: one checkbox unchecked → 6 weeks data contamination
+- firebase-auth-domain-not-authorized: one domain not added → auth broken for all users on new domain
+- firebase-deploy-sequence-auth-failure: one wrong deploy command → 12-min P1 outage
+- vite-github-pages-spa-routing: one missing file → SPA routing broken after every deploy
+
+**Blast radius evaluation should ask:**
+> "What production state does this change modify, and how many users are affected if that state is wrong?"
+> not
+> "How big is the diff?"
+
+---
+
+## Blast Radius Evaluation Guide
+
+For any change, before deploying:
+
+```
+1. What production state does this change modify?
+   → Code logic: affects the functionality using that code
+   → Environment variable: affects every invocation of the affected function
+   → Firestore rules: affects all reads and writes matching the changed rules
+   → Auth configuration: affects all users on the affected domain
+   → DNS record: affects all users globally until propagation completes
+   → Analytics configuration: affects data quality, not user functionality
+
+2. How many users are affected if the change is wrong?
+   → All users (P0): all authentication, all Cloud Functions, all static pages
+   → All users of one product (P1): one platform completely broken
+   → Users in a specific condition (P2): paying users, new signups, users on one domain
+   → No users (silent/P3): data quality, analytics, SEO signals
+
+3. How quickly can the change be reversed?
+   → Configuration-only: minutes (fastest recovery)
+   → Code + single deploy: 5–15 minutes
+   → Multi-surface change: 15–30 minutes
+   → Infrastructure (DNS): hours (cannot accelerate)
+
+4. What is the observable signal if the change fails?
+   → Hard error (log entry, HTTP error code): fast detection
+   → Soft signal (degraded analytics, partial function): slow detection
+   → Absent signal (no log, no error, behavior appears correct): very slow detection
+   → The absent-signal category requires the most preflight rigor
+```
+
+### Blast Radius Reference by Change Type
+
+| Change type | Max blast radius | Detection speed | Recovery speed |
+|---|---|---|---|
+| MDX content | Zero (build failure) | Immediate | Minutes |
+| WPCode PHP snippet | One page/feature | Fast (visible) | 30 seconds |
+| Firebase Auth domain | All users on affected domain | Absent-signal | 2 minutes |
+| Firestore rules | All reads/writes matching rules | Hard signal | 3–15 min |
+| Firebase Functions | All AI analysis calls | Hard signal | 5–15 min |
+| Razorpay credentials | All payment upgrades | Soft signal | 8 minutes |
+| GA4 configuration | Data quality (no user impact) | Absent-signal | 2 minutes |
+| DNS record | All users on affected domain | Absent-signal | Hours |
+| Vite build (missing public/ files) | SPA routing on all non-root routes | Hard signal | 10 minutes |
+| Dependency upgrade | Any feature using upgraded package | Varies | Varies |
+
+---
+
+## Staging Philosophy
+
+This ecosystem has no dedicated staging environment. The staging surfaces that exist are:
+
+| Surface | What it verifies | What it does NOT verify |
+|---|---|---|
+| Firebase Emulator | Function logic, data models, basic auth flow | IAM propagation, Authorized Domains, Node runtime, rules-functions sequencing |
+| Vercel preview deployment | Next.js rendering, routing, MDX content | Production Firebase credentials, production env var behavior, GA4 production data |
+| Razorpay test mode | Payment UI flow, checkout modal, test webhook delivery | Live webhook delivery, live Razorpay plan behavior, production auth integration |
+| GitHub Pages `[username].github.io` | SPA routing, static file serving | Firebase Auth on custom domain, GA4 production tracking |
+| Local browser (developer's DNS) | Application behavior at current DNS state | Global DNS propagation state |
+
+**The honest staging model for this ecosystem:**
+
+Emulator and preview environments verify that **logic is correct**. They do not verify that **infrastructure is configured correctly for production**. These are two different verification concerns that require two different environments.
+
+```
+Stage 1: Logic verification (emulator / preview / local)
+  → Function code is correct
+  → Rendering is correct
+  → Data models are correct
+  → UI behavior is correct
+
+Stage 2: Infrastructure verification (production, post-deploy)
+  → IAM and auth configuration is correct
+  → Credentials are correct and in the right mode
+  → DNS has propagated
+  → Platform runtime is configured correctly
+  → Real requests succeed end-to-end
+```
+
+Stage 1 may be skipped only for Class A (content-only) changes. Stage 2 is never optional.
+
+**The staging shortcut that doesn't exist:** There is no staging environment for Firebase production IAM state, Firebase Auth Authorized Domains, or DNS propagation. These can only be verified in production because they are production infrastructure. This is not a gap to fill with enterprise tooling — it is the correct understanding of where the risk lives.
+
+---
+
+## Preflight Verification by Change Class
+
+The preflight is the 60-second check before executing any deploy. Not the post-deploy checklist — the before-deploy readiness check.
+
+### Class A Preflight (Content)
+```
+☐ MDX syntax valid (no unclosed tags, no broken frontmatter)
+☐ node ./node_modules/typescript/bin/tsc --noEmit → zero errors
+☐ Internal links resolve to real content slugs
+```
+
+### Class B Preflight (Configuration)
+```
+☐ Current state documented: what is the value before the change?
+☐ Desired state documented: what should it be after?
+☐ Behavioral verification method identified: how will I confirm it's correct?
+☐ Recovery method identified: how do I reverse this in under 2 minutes?
+```
+
+### Class C Preflight (Single Platform Code)
+```
+☐ Build passes locally
+☐ TypeScript check: zero errors
+☐ Emulator / preview tested for the changed functionality
+☐ Post-deploy verification method named: "I will confirm success by [specific real request]"
+☐ For Firebase: does this touch both Functions AND Rules?
+   → Yes → reclassify as Class D; do not proceed with Class C preflight
+```
+
+### Class D Preflight (Multi-Surface)
+```
+☐ All affected surfaces enumerated
+☐ Deploy sequence or atomicity requirement defined in writing
+☐ Pre-conditions for each surface independently verified
+☐ Verification method for each surface defined
+☐ Recovery sequence defined: what is the undo order if something goes wrong mid-deploy?
+☐ For Firebase combined release:
+   → Rules-first deploy confirmed as the plan
+   → 60-second IAM propagation wait built into the sequence
+☐ For Razorpay mode switch:
+   → All 4 credentials identified and prepared
+   → Test transaction planned after completion
+```
+
+### Class E Preflight (Infrastructure)
+```
+☐ Propagation time understood and accepted (write it down: "I expect this to take ~X hours")
+☐ External verification tool identified (dnschecker.org for DNS)
+☐ Downstream actions that depend on propagation completion listed
+☐ Explicit "do not proceed before" time established
+```
+
+### Class F Preflight (Dependency Upgrade)
+```
+☐ Changelog read for the version range being upgraded
+☐ Default behavior changes identified (search changelog for "default", "breaking")
+☐ Features affected by the upgraded package listed
+☐ Behavioral regression test scope defined (not just "build passes")
+☐ Rollback plan: if behavior regresses, how is the previous version restored?
+```
+
+---
+
+## Production Release Workflow
+
+A minimal release workflow that works for a single-operator ecosystem without enterprise tooling.
+
+### Step 1 — Classify (30 seconds)
+What class is this change? Name it explicitly.
+
+### Step 2 — Evaluate blast radius (60 seconds)
+What production state does this change modify? Who is affected if it's wrong? How fast is detection? How fast is recovery?
+
+### Step 3 — Preflight (1–5 minutes depending on class)
+Run the preflight checklist for the change class. Do not proceed if any preflight item fails.
+
+### Step 4 — Execute
+For Class D: follow the defined sequence. Do not improvise under pressure.
+For Class E: execute the infrastructure change and wait. Do not skip to downstream steps.
+
+### Step 5 — Post-deploy verification (2–10 minutes)
+Run the post-deploy checklist for the affected platform. Verify with a real production request — not logs, not build success.
+
+### Step 6 — Declare complete
+Three conditions: real request succeeded, checklist passed, console clean for 5 minutes.
+
+**Total overhead for a standard Class C deploy: approximately 5–10 minutes beyond the deploy command itself.** This is the cost of not having the next incident.
+
+---
+
+## Change Confidence Model
+
+### Low-Risk Changes
+
+**Characteristics:** Class A only. No platform configuration changes. No new API calls. No dependency changes. TypeScript builds clean.
+
+**Confidence:** High. Deploy without extended preflight.
+
+**Post-deploy:** Confirm one content page renders. Done.
+
+---
+
+### Medium-Risk Changes
+
+**Characteristics:** Class B or Class C. One platform affected. Established pattern (not a new behavior). Behavioral verification method known.
+
+**Confidence:** Verified after post-deploy checklist completion.
+
+**Post-deploy:** Full platform checklist. One real production request. Console clean for 5 minutes.
+
+---
+
+### High-Risk Changes
+
+**Characteristics:** Class D, E, or F. Multiple surfaces affected. New behavior in production for the first time. Unknown or unverified platform interactions.
+
+**Confidence:** Only after all verification gates pass, including any time-bounded propagation waits.
+
+**Post-deploy:** All affected platform checklists. Multiple real production requests. Extended console monitoring.
+
+---
+
+### Unsafe Deploy Conditions
+
+The following conditions make a deploy unsafe. A deploy should not be executed when any of these conditions is true.
+
+**1. An active incident is in progress on the same platform.**
+Deploying to a platform while an incident is being investigated adds a new variable to an already-ambiguous situation. If the incident's root cause is a recent deploy, a new deploy may mask the original failure signal. Exception: a targeted fix for the active incident is the deploy.
+
+**2. The deploy sequence for a Class D change has not been defined.**
+A multi-surface change without a written sequence plan will be executed under pressure with improvised ordering. This is exactly the condition that produced firebase-deploy-sequence-auth-failure.
+
+**3. A Class E change has not propagated to its completion threshold.**
+Deploying Firebase Functions before Firestore Rules IAM has propagated (60 seconds) produces a 403 window. Deploying HTTPS-dependent features before DNS has propagated produces a certificate error window.
+
+**4. The post-deploy verification method has not been identified.**
+If the operator cannot name, before deploying, what real production action will confirm the deploy is safe — the deploy is not ready. "I'll figure it out after" is an unsafe condition.
+
+**5. For Razorpay mode switch: fewer than all four credentials are prepared and verified.**
+A partial mode switch is worse than no mode switch. The partial state produces a second silent failure mode.
+
+---
+
+### Deploy Freeze Conditions
+
+These conditions justify pausing all non-critical deploys until resolved:
+
+- Any P0 or P1 incident is unresolved on any platform
+- Razorpay live-mode webhook is not delivering (payment integrity at risk)
+- Firebase Auth domain configuration is wrong for any active product domain
+- DNS propagation is in progress for an active product domain
+
+A deploy freeze is not a process gate — it is the recognition that introducing additional change during an active incident increases the diagnostic complexity and extends the recovery time.
+
+---
+
+## Historical Incident → Change-Management Analysis
+
+For each incident: what change type it was, how it should have been classified, and what change-management failure contributed.
+
+### firebase-deploy-sequence-auth-failure
+**Actual change class:** Class D (multi-surface: Functions + Rules)  
+**Treated as:** Class C (single-platform)  
+**Change-management failure:** Deploy sequence not specified. Combined deploy command used.  
+**Blast radius misestimated:** Operator estimated "Functions deploy only." Actual blast radius: all authenticated requests to TrustSeal.  
+**Preflight gap:** No "does this touch both surfaces?" check. INV-CHG-3 was not in place.
+
+### firebase-functions-node-version-stability
+**Actual change class:** Class D (new project first deploy — platform configuration + code)  
+**Treated as:** Class C (routine deploy)  
+**Change-management failure:** Platform default (Node 18) not audited. INV-CHG-2 (platform defaults audit) not applied.  
+**Preflight gap:** firebase.json not checked before deploy.
+
+### firebase-auth-domain-not-authorized
+**Actual change class:** Class D (new domain go-live — DNS + GitHub Pages + Firebase Auth)  
+**Treated as:** Class C (GitHub Pages deploy only)  
+**Change-management failure:** Firebase Auth surface not included in go-live checklist. INV-CHG-6 (new domain is Class D) not in place.  
+**Preflight gap:** No Firebase Auth domain check in new domain workflow.
+
+### razorpay-test-live-key-mismatch
+**Actual change class:** Class D (mode switch — 4 surfaces simultaneously)  
+**Treated as:** Class B (credential update)  
+**Change-management failure:** Atomicity requirement not defined. Three surfaces updated; one missed. INV-CHG-4 not in place.  
+**Blast radius misestimated:** Operator estimated "payment credentials only." Actual blast radius: all new premium upgrades silently broken.
+
+### ga4-preview-environment-contamination
+**Actual change class:** Class B (configuration change — Vercel env var)  
+**Treated as:** Development task (no production classification applied)  
+**Change-management failure:** INV-CHG-2 not applied — configuration change not classified as production change.  
+**Detection delay:** 6 weeks. Absent-signal failure class; no log entry.
+
+### next-mdx-remote-v6-blockjs
+**Actual change class:** Class F (dependency upgrade)  
+**Treated as:** Class C (routine upgrade, build passes = safe)  
+**Change-management failure:** Changelog not read for default behavior changes. INV-CHG-5 not in place.  
+**Preflight gap:** No behavioral regression test after upgrade.
+
+### vite-github-pages-spa-routing
+**Actual change class:** Class C (GitHub Pages deploy) with Class F risk (Vite build wipes dist/)  
+**Treated as:** Simple push  
+**Change-management failure:** INV-CHG-9 not in place — Vite build's destructive behavior not documented.  
+**Preflight gap:** No `public/404.html` and `public/CNAME` existence check before build.
+
+### dns-subdomain-propagation-delay
+**Actual change class:** Class E (infrastructure — DNS propagation)  
+**Treated as:** Instant configuration change  
+**Change-management failure:** Class E propagation behavior not understood. Go-live announcement made on local DNS resolution.  
+**Preflight gap:** No external propagation verification step. No "earliest go-live time" established.
+
+### litespeed-client-cache-bypass-ignored
+**Actual change class:** Class B (WPCode PHP snippet activation)  
+**Treated as:** Code change requiring code-level verification  
+**Change-management failure:** Verification methodology not matched to change class. Class B changes require cache purge before verification.  
+**Preflight gap:** No "LiteSpeed Purge All before verification" step in Class B workflow.
+
+---
+
+## Staging Verification Decision Table
+
+| What you want to verify | Use this environment |
+|---|---|
+| Function logic (no auth, no Firestore) | Firebase Emulator |
+| Auth-gated function behavior | Firebase Emulator + local auth |
+| React/Next.js rendering and routing | Vercel preview |
+| MDX content and component rendering | Vercel preview |
+| IAM propagation after rules deploy | Production only (60s wait) |
+| Firebase Auth Authorized Domains | Production only |
+| Node runtime behavior | Production only (or emulator with explicit Node 22 match) |
+| Razorpay test-mode payment flow | Test mode with test credentials |
+| Razorpay live-mode payment flow | Production only (live credentials required) |
+| DNS propagation status | dnschecker.org (external) |
+| Custom domain routing + HTTPS | Production only |
+| GA4 event attribution | GA4 Realtime on production |
+| LiteSpeed cache behavior | Production WordPress only |
+| Global availability | External tool (dnschecker.org / external browser) |
+
+---
+
+## Related
+
+- [Operational Invariants](/docs/operational-invariants) — the reliability contracts this release discipline enforces
+- [Deployment Verification Checklist](/docs/deployment-verification-checklist) — the post-deploy verification executed after every Class C/D/E/F change
+- [Operator Decision Doctrine](/docs/operator-decision-doctrine) — the human judgment layer that governs how classification and preflight are actually applied
+- [Incident Response Doctrine](/docs/incident-response-doctrine) — what to do when a deployed change produces unexpected behavior
+- [Failure Pattern Library](/docs/failure-pattern-library) — the failure taxonomy this release doctrine is derived from

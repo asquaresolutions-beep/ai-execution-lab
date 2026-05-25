@@ -1,0 +1,527 @@
+---
+title: "Operational Onboarding Guide — A Square Solutions"
+description: "Orientation for new operators, contributors, and AI sessions entering the A Square Solutions ecosystem. Covers the three-product architecture, platform independence model, doctrine navigation map, safe contribution zones, the ten most operationally critical facts, and a glossary of platform-specific behaviors. Start here before making any production changes."
+date: "2026-05-25"
+tags: ["reliability", "deployment", "firebase", "production", "observability", "trustseal", "scamcheck"]
+status: published
+related_docs:
+  - operational-invariants
+  - release-discipline-doctrine
+  - deployment-verification-checklist
+  - operator-decision-doctrine
+  - incident-response-doctrine
+---
+
+This guide orients you to the A Square Solutions ecosystem before you make any production changes. It maps the governance stack, identifies safe contribution zones, and surfaces the ten operational facts most likely to matter in the first hour of working with this system.
+
+If something is wrong in production right now, skip to [When Something Is Wrong](#when-something-is-wrong). Otherwise, read this in order.
+
+---
+
+## What This Ecosystem Is
+
+A Square Solutions operates three production products and one main site:
+
+| Product | Domain | What it does | Platform |
+|---|---|---|---|
+| **TrustSeal** | trustseal.asquaresolution.com | URL trust verification using Gemini AI; premium subscription via Razorpay | Firebase + GitHub Pages |
+| **ScamCheck** | scamcheck.asquaresolution.com | Scam message detection using Gemini AI; free tier for authenticated users | Firebase + GitHub Pages |
+| **AI Execution Lab** | lab.asquaresolution.com | Operational intelligence knowledge base (this site) | Vercel + Next.js |
+| **Main Site** | asquaresolution.com | Company WordPress site; blog, SEO, REST API for content automation | WordPress (LiteSpeed) |
+
+These four systems are **operationally independent**. A Firebase outage does not affect Vercel. A WordPress change does not affect TrustSeal. No single failure class takes down the entire ecosystem simultaneously. This independence is architectural and deliberate.
+
+---
+
+## Platform Architecture
+
+### Firebase — TrustSeal and ScamCheck Backend
+
+Both TrustSeal and ScamCheck run on the same Firebase project infrastructure pattern:
+- **Cloud Functions v2** (Node.js 22, Cloud Run) — execute Gemini API calls, handle Razorpay webhooks, enforce quota
+- **Firestore** — stores user quota documents (`users/{uid}/quota/current`), check history, subscription state
+- **Firebase Authentication** — email/password; session persists only on authorized domains
+
+Critical architectural fact: Firebase Admin SDK (used in Cloud Functions) **bypasses all Firestore Security Rules**. Client SDK (used in the React app) is governed by Firestore rules. These are two different access paths with fundamentally different permission models.
+
+### GitHub Pages — TrustSeal and ScamCheck Frontend
+
+Both TrustSeal and ScamCheck are React SPAs deployed to GitHub Pages:
+- Built with Vite; deployed to a `gh-pages` branch via a `dist/.git` worktree
+- Custom domains via CNAME DNS records pointing to `[username].github.io`
+- SPA routing depends on `public/404.html` surviving every Vite build
+
+Critical architectural fact: **Vite wipes `dist/` on every build**. Files that must survive (CNAME, 404.html) must live in `public/`, not `dist/`.
+
+### Vercel — AI Execution Lab
+
+The AI Execution Lab is a Next.js 15 App Router static site:
+- Content is MDX files in `content/` subdirectories (failures, docs, labs, playbooks, logs, case-studies)
+- Operational memory graph lives in `lib/operational-memory.ts` and `lib/entities.ts`
+- No Firebase dependency — Vercel and Firebase are fully independent systems
+- Deployed by pushing to `main`; Vercel auto-deploys
+
+### WordPress — asquaresolution.com
+
+WordPress is managed independently on a LiteSpeed server:
+- PHP filter customization via WPCode snippets (not themes or plugins)
+- LiteSpeed Cache serves all front-end pages; **client Cache-Control headers are ignored**
+- REST API authenticated via Application Passwords (Base64-encoded, no URL-encoding)
+- Rank Math SEO manages sitemap
+
+---
+
+## Three-Tier Access Model (Firebase)
+
+Understanding Firebase access is essential before making any Firebase change:
+
+```
+Tier 1 — Admin (Cloud Functions, Firebase Admin SDK)
+  → Bypasses ALL Firestore Security Rules
+  → Has full read/write access to every document
+  → Should only run server-side in Cloud Functions
+
+Tier 2 — Authenticated User (Client SDK + Firebase Auth)
+  → Governed by Firestore Security Rules
+  → Can only access documents the rules permit
+  → Rules must be deployed before any production client operation depends on them
+
+Tier 3 — Public (no authentication)
+  → Blocked at function entry point
+  → Every callable Cloud Function checks auth context on invocation
+  → No unauthenticated path to Firestore exists by design
+```
+
+If you see a 403 from a Cloud Function, the first question is: was the request Tier 2 (authenticated user) or Tier 1 (admin call)? A 403 on a Tier 2 call means Firestore rules are wrong or the user's auth context is missing. A 403 on a Tier 1 call should not be possible — if it happens, something is wrong with the Cloud Function's Firebase Admin initialization.
+
+---
+
+## The Ten Most Important Operational Facts
+
+These are the ten facts that, if unknown to an operator, most reliably produce production incidents. Each links to the invariant that formalizes it.
+
+### 1. Firebase combined deploys are dangerous
+
+`firebase deploy` and `firebase deploy --only firestore:rules,functions` produce **undefined artifact ordering**. When Firestore rules change in the same release as Cloud Functions, you must deploy rules first, wait ~60 seconds, then deploy functions. Using the combined command has produced a 12-minute P1 outage.
+
+→ See [INV-FB-1](/docs/operational-invariants#inv-fb-1), [INV-CHG-3](/docs/release-discipline-doctrine)
+
+### 2. Firebase requires Node 22 explicitly declared
+
+Firebase Cloud Functions default to Node 18. Several packages used in this ecosystem are incompatible with Node 18. `firebase.json` must contain `"runtime": "nodejs22"` in the functions configuration. Omitting this line causes all function invocations to fail immediately.
+
+→ See [INV-FB-2](/docs/operational-invariants#inv-fb-2)
+
+### 3. Firebase Auth only works on explicitly authorized domains
+
+Firebase Authentication only accepts sign-in requests from domains listed in Firebase Console → Authentication → Settings → Authorized Domains. Every new custom domain must be added there. Failure to add it produces silent session loss — sign-in appears to work, but every page reload logs the user out. **No error appears in any log.**
+
+→ See [INV-FB-3](/docs/operational-invariants#inv-fb-3)
+
+### 4. LiteSpeed cache ignores client Cache-Control headers
+
+WordPress runs behind LiteSpeed Cache, which serves cached HTML to all visitors. Sending `Cache-Control: no-cache` from the browser does nothing. The only way to see post-change behavior is to: (1) activate the WPCode snippet, (2) LiteSpeed → Purge All, (3) open a fresh private browser window. Verifying before the purge always shows stale content.
+
+→ See [INV-DEP-3](/docs/operational-invariants#inv-dep-3)
+
+### 5. Vite wipes dist/ on every build
+
+Running `npm run build` deletes everything in `dist/` and rebuilds from source. Files placed directly in `dist/` are gone after every build. The SPA routing file (`404.html`) and custom domain file (`CNAME`) must live in `public/` to survive. If non-root routes return GitHub's 404 page, these files are missing.
+
+→ See [INV-CHG-9](/docs/release-discipline-doctrine)
+
+### 6. Razorpay test mode and live mode do not share credentials
+
+Razorpay uses completely separate credential sets for test and live modes. Switching from test to live requires updating **all four** simultaneously: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_PLAN_ID` (in Firebase Functions environment), and `REACT_APP_RAZORPAY_KEY_ID` (in the client). Mixing modes produces silent payment failures — the checkout modal appears to work, but no webhook fires and no premium access is granted.
+
+→ See [INV-PAY-2](/docs/operational-invariants#inv-pay-2), [INV-CHG-4](/docs/release-discipline-doctrine)
+
+### 7. Gemini returns malformed JSON ~6% of the time without pre-parse cleaning
+
+The Gemini 1.5-flash API sometimes returns JSON wrapped in markdown code fences, with trailing text, or truncated. Without a pre-parse cleaning step (strip fences, extract first `{` to last `}`), approximately 6% of Cloud Function responses will fail to parse. The cleaning layer must be in place before any production Gemini call.
+
+→ See [INV-AI-2](/docs/operational-invariants#inv-ai-2)
+
+### 8. DNS propagation cannot be accelerated
+
+After a DNS record is created or modified, global propagation takes up to the TTL duration (up to 4 hours for TTL 3600). The developer's local browser may resolve the new record before global resolvers do. Never announce a domain as live until dnschecker.org shows 90%+ global resolution.
+
+→ See [INV-DEP-1](/docs/operational-invariants#inv-dep-1)
+
+### 9. Several failure classes produce no log entry
+
+Firebase Auth domain failures, GA4 misconfiguration, Razorpay key mode mismatches, and CNAME/404.html missing from GitHub Pages all produce zero error log entries. These are "absent-signal" failures: the system appears to work in every log and dashboard, but specific user actions fail silently. Detection requires behavioral tests, not log reads.
+
+→ See [Production Observability Doctrine](/docs/production-observability-doctrine)
+
+### 10. A deploy is not safe until a real production request succeeds
+
+Build success, emulator passing, TypeScript clean, and Vercel "Ready" are all necessary but not sufficient. A deployment is safe only when a real user action (an AI analysis, a page navigation, a payment) returns the expected response on the production domain. This has been validated by multiple incidents that passed all pre-deploy checks and only failed at first real invocation.
+
+→ See [INV-DEP-5](/docs/operational-invariants#inv-dep-5), [INV-OPS-1](/docs/operator-decision-doctrine)
+
+---
+
+## Doctrine Navigation Map
+
+Use this to find the right document before acting. Read the relevant doctrine before making high-risk changes — not after.
+
+### "I am about to deploy to Firebase"
+1. [Release Discipline Doctrine](/docs/release-discipline-doctrine) → Classify your change (Class C or Class D?)
+2. [Deployment Verification Checklist](/docs/deployment-verification-checklist) → Firebase section preflight and post-deploy
+3. If rules + functions both change: verify deploy sequence before running any command
+
+### "I am about to deploy to Vercel (AI Execution Lab)"
+1. [Deployment Verification Checklist](/docs/deployment-verification-checklist) → Vercel section
+2. `node ./node_modules/typescript/bin/tsc --noEmit` → must be zero errors before push
+
+### "I am about to deploy to GitHub Pages (TrustSeal or ScamCheck)"
+1. Confirm `public/404.html` and `public/CNAME` exist before running `npm run build`
+2. [Deployment Verification Checklist](/docs/deployment-verification-checklist) → GitHub Pages section
+3. If this is a new domain: [Custom Domain Setup Checklist](/docs/deployment-verification-checklist#new-custom-domain-setup-checklist)
+
+### "I am about to change WordPress"
+1. [Deployment Verification Checklist](/docs/deployment-verification-checklist) → WordPress section
+2. Activate snippet → **LiteSpeed Purge All** → verify in fresh private window (in this exact order)
+
+### "I am switching Razorpay from test to live"
+1. [Deployment Verification Checklist](/docs/deployment-verification-checklist) → Payment Mode Switch checklist
+2. All four credentials must be prepared before touching any of them
+3. One real live transaction must be verified after the switch
+
+### "I am adding a new domain or subdomain"
+1. [Deployment Verification Checklist](/docs/deployment-verification-checklist) → Custom Domain Setup Checklist
+2. Firebase Console → Auth → Authorized Domains → add new domain
+3. Wait for 90%+ DNS propagation before any downstream action
+
+### "Something appears to be broken in production"
+1. [Incident Detection Playbook](/playbooks/incident-detection-playbook) → find the relevant system section
+2. Assess blast radius before any action: what is broken vs. what is still working?
+3. [Recovery Runbook](/playbooks/recovery-runbook) → match the symptom to the recovery procedure
+
+### "I want to understand why a specific behavior exists"
+1. [Operational Invariants](/docs/operational-invariants) → the complete set of "what must be true and why"
+2. [Failure Pattern Library](/docs/failure-pattern-library) → the failure taxonomy that produced the invariants
+3. [AI Execution Lab failure archive](/failures) → the specific incident that established each invariant
+
+### "I want to understand a past incident"
+1. Navigate to the specific failure page (e.g., `/failures/firebase-deploy-sequence-auth-failure`)
+2. The failure report includes: root cause, impact, fix, pattern classification, linked incidents
+3. [Operator Decision Doctrine](/docs/operator-decision-doctrine) → the human decision failure that contributed
+
+### "I am making a change I haven't made before"
+1. [Release Discipline Doctrine](/docs/release-discipline-doctrine) → classify the change (A through F)
+2. [Operator Decision Doctrine](/docs/operator-decision-doctrine) → name your assumptions before deploying (INV-OPS-9)
+3. If Class D or higher: define the sequence and atomicity requirements before starting
+
+---
+
+## Safe Contribution Zones
+
+Not all changes carry equal operational risk. This table defines what level of context is required before making each type of change.
+
+### Zone 1 — Safe Without Full Doctrine Context
+
+Changes in this zone have a contained blast radius, fast recovery, and no platform infrastructure dependencies.
+
+- **New MDX content** (failure reports, lessons, docs, labs, case studies) — content builds fail loudly if syntax is wrong; no production infrastructure state changes
+- **Editing existing MDX content** — same properties as above
+- **CSS and UI styling changes** without new API calls
+- **Operational memory graph additions** (new entities and relationships in `lib/operational-memory.ts`) — TypeScript validates correctness; no deployment side effects
+- **`lib/entities.ts` additions** — same properties
+
+**Minimum required reading:** TypeScript check must pass. MDX syntax must be valid. No other doctrine required.
+
+---
+
+### Zone 2 — Safe With Deployment Checklist
+
+Changes in this zone follow well-documented patterns. The risk is recoverable within minutes if something goes wrong.
+
+- **Vercel deploys** (Next.js content or code changes) — full Vercel post-deploy checklist required
+- **Firebase Functions deploy** (no Firestore rules change) — full Firebase post-deploy checklist required
+- **WPCode snippet activation** — LiteSpeed purge required; verify in private window
+- **Firebase configuration changes** (non-auth, non-rules) — behavioral verification required
+
+**Minimum required reading:** [Deployment Verification Checklist](/docs/deployment-verification-checklist) for the relevant platform.
+
+---
+
+### Zone 3 — Requires Full Doctrine Context
+
+Changes in this zone have caused the highest-impact incidents in the archive. They should not be made by anyone who has not read the relevant doctrine.
+
+- **Firebase combined release** (Functions + Firestore Rules) — requires rules-first sequencing; used wrong command produced 12-minute P1
+- **Razorpay mode switch** — requires atomic 4-credential update; partial fix produces silent payment failure
+- **New domain or subdomain go-live** — requires Firebase Auth domain addition, DNS propagation verification, full 5-surface checklist
+- **Dependency upgrades** (npm packages, Firebase SDK) — requires changelog review and behavioral regression
+- **Firestore Security Rules changes** — must deploy before Functions; behavioral verification required
+- **Razorpay webhook handler changes** — affects payment integrity; must verify HMAC implementation after change
+
+**Minimum required reading:** [Release Discipline Doctrine](/docs/release-discipline-doctrine), [Operational Invariants](/docs/operational-invariants), [Deployment Verification Checklist](/docs/deployment-verification-checklist).
+
+---
+
+### Zone 4 — Founder Access Only
+
+These changes require credentials and context that exist only with the ecosystem owner. They are not contributor changes.
+
+- Any Firebase Console access (project settings, IAM, credentials)
+- Any Razorpay Dashboard access (live credentials, webhook configuration)
+- Any Vercel environment variable changes
+- Any DNS registrar changes
+- Any Firebase environment variable changes (secrets)
+- Any WordPress Application Password rotation
+
+---
+
+## When Something Is Wrong
+
+Quick orientation for production incidents, in order:
+
+```
+1. Identify which platform is affected
+   → TrustSeal / ScamCheck (Firebase): go to Incident Detection Playbook → System 1/2
+   → GitHub Pages SPA: go to Incident Detection Playbook → System 3
+   → AI Execution Lab: go to Incident Detection Playbook → System 4
+   → WordPress: go to Incident Detection Playbook → System 5
+
+2. Assess blast radius before any action
+   → What is completely broken?
+   → What is degraded but operational?
+   → What is unaffected?
+   (A Firebase Functions failure does not affect WordPress or Vercel)
+
+3. Classify the failure
+   → P0: no user can complete the core function
+   → P1: partial function loss (specific condition or time window)
+   → P2: degraded operation (core function works but with reduced quality)
+   → P3: silent configuration drift (appears correct but underlying state is wrong)
+
+4. Find the recovery procedure
+   → Recovery Runbook → match the symptom to the relevant section
+
+5. Verify recovery with a real production request
+   → Not logs. A real user action returning the expected response.
+
+6. Run the full post-deploy checklist before declaring recovery complete
+```
+
+**The most important rule during an incident:** Do not make things worse. Assess blast radius before acting. Fix the minimum change that addresses the root cause. Do not use `firebase deploy` during a Firebase incident — use targeted `--only` commands.
+
+---
+
+## Operational Continuity Invariants
+
+Eight invariants governing how this ecosystem's operational knowledge survives transitions between operators and sessions.
+
+### INV-CONT-1 — Operational procedures must be executable from documentation alone
+
+**Statement:** Every critical operational procedure must be documented in sufficient detail that a new operator can execute it correctly without receiving verbal instructions, historical context, or founder intuition from another person.
+
+**Why it exists:** The AI Execution Lab itself exists because context exhaustion during a development session ([claude-code-context-exhaustion](/failures/claude-code-context-exhaustion)) made undocumented operational knowledge inaccessible at a critical moment. Every document in this governance stack is a session-boundary survival mechanism.
+
+**Current state:** The recovery runbook, deployment checklist, and incident detection playbook all meet this standard. The remaining gap is founder-held context about specific credentials, plan IDs, and architectural decisions.
+
+---
+
+### INV-CONT-2 — Platform behavior surprises must be documented with their failure evidence
+
+**Statement:** When a platform behaves unexpectedly (LiteSpeed ignoring cache headers, Vite wiping dist/, Firebase defaulting to Node 18), the documentation must include not only what to do but *why* — specifically, which production failure established the requirement.
+
+**Why it exists:** Without the failure evidence, operational requirements appear arbitrary. An operator who does not understand *why* LiteSpeed Purge All must happen before verification will skip it as unnecessary overhead. The link from procedure to incident is what prevents "optimization" of the procedure.
+
+**Current state:** Every invariant in [Operational Invariants](/docs/operational-invariants) includes establishing evidence. Every failure report links to the invariants it established.
+
+---
+
+### INV-CONT-3 — Deploy sequences must be discoverable before the first deploy is executed
+
+**Statement:** The correct deploy sequence for every platform must be findable in doctrine before an operator executes their first deploy on that platform. Discovering the correct sequence through a production incident is not acceptable when it is preventable.
+
+**Why it exists:** firebase-deploy-sequence-auth-failure. The rules-first sequencing requirement was not documented before the first combined deploy was executed. The operator discovered it by producing a 12-minute outage. The [Release Discipline Doctrine](/docs/release-discipline-doctrine) and [Deployment Verification Checklist](/docs/deployment-verification-checklist) exist so this discovery can happen through reading rather than incident.
+
+---
+
+### INV-CONT-4 — New operators must be oriented to absent-signal failures before any production changes
+
+**Statement:** An operator who does not know that certain failures produce no log entry will declare recovery complete based on log cleanliness — for failures where log cleanliness is meaningless. The absent-signal failure class must be understood before any production troubleshooting begins.
+
+**Why it exists:** firebase-auth-domain-not-authorized, ga4-preview-environment-contamination, razorpay-test-live-key-mismatch. All three produced zero error logs before and after the fix. An operator trained only on log-based debugging will be structurally blind to these failure classes.
+
+**Absent-signal failures in this ecosystem:** Firebase Auth domain missing, GA4 misconfiguration, Razorpay key mode mismatch, missing CNAME/404.html on GitHub Pages, Gemini quota exhaustion visible only in the UI.
+
+---
+
+### INV-CONT-5 — The operational memory graph must be updated when new failures or patterns are documented
+
+**Statement:** When a new failure report, lesson, or doc is added to the AI Execution Lab, the corresponding entity and relationships must be added to `lib/operational-memory.ts`. A failure report without graph entries is discoverable only by direct navigation — not through the relationship system.
+
+**Why it exists:** The graph is the queryable intelligence layer. It connects a failure to the patterns it exemplifies, the lessons that prevent it, the systems it affects, and the playbooks that resolve it. A failure outside the graph is institutionally isolated.
+
+**Enforcement:** TypeScript validates graph structure. Missing slug cross-references should produce a TypeScript error in any code that queries by entity ID.
+
+---
+
+### INV-CONT-6 — Safe contribution zones must be established before external contributors begin work
+
+**Statement:** Before any contributor who lacks full platform context makes changes, they must know which zones are safe (MDX content, graph additions), which require checklist compliance (code deploys), and which are outside contributor scope (credentials, Firebase Console, Razorpay Dashboard).
+
+**Why it exists:** Zone 3 changes (Firebase combined releases, Razorpay mode switch, new domain go-live) have produced the highest-impact incidents in the archive. A contributor who does not know these are high-risk will approach them with the same confidence as Zone 1 content changes.
+
+---
+
+### INV-CONT-7 — Doctrine navigation must surface the highest-risk documents before the highest-risk actions
+
+**Statement:** The doctrine navigation map must allow an operator to find the relevant pre-deploy reading before executing any Zone 2 or Zone 3 change. The deployment checklist and release doctrine must be discoverable from the onboarding guide, not only from direct URL.
+
+**Why it exists:** Documentation that exists but is not discovered before a risky action provides no protection. The navigation map in this document and the related_docs frontmatter in every doctrine document are the discovery mechanisms.
+
+---
+
+### INV-CONT-8 — Operational context must remain attached to technical decisions
+
+**Statement:** Architectural decisions that appear arbitrary without historical context — Node 22 pin, rules-first deploy sequence, `public/CNAME` location, fail-loud webhook secret pattern — must remain linked to the failure that required them. Removing the "why" from any documented decision makes that decision a candidate for "simplification" by a future operator who doesn't know the cost.
+
+**Why it exists:** Every operational requirement in this ecosystem was earned through a production failure. The `"runtime": "nodejs22"` line in firebase.json is not a stylistic preference — it prevents a specific crash class. `public/404.html` is not a leftover artifact — it is the SPA routing mechanism. The link from requirement to incident is the only protection against these requirements being removed.
+
+---
+
+## Founder-Dependent Knowledge Map
+
+Knowledge that currently exists only with the ecosystem owner and is not fully documented in the governance stack:
+
+| Knowledge domain | Current documentation state | Risk if lost |
+|---|---|---|
+| Firebase project credentials and service account keys | Not documented (by design — security) | Cannot redeploy or access Firebase Console |
+| Specific Razorpay plan IDs and subscription structure | Partially documented in integration reference | Cannot correctly configure new payment plans |
+| Specific Firestore collection schema beyond quota | System docs reference key paths; schema not fully specified | Wrong assumptions about data structure |
+| GA4 property IDs and cross-domain configuration | Configuration exists in GA4; not in code docs | Cannot reconstruct analytics configuration |
+| WordPress Application Password and user configuration | Not documented (by design — security) | Cannot authenticate REST API automation |
+| Why specific architectural decisions were made | Linked to failure reports in most cases | Decisions may be "simplified" by future operators |
+| DNS registrar access and zone configuration | Not documented | Cannot add new domains or modify DNS |
+
+**Status:** The governance stack documents *procedures* and *patterns*. Credentials and platform-specific IDs are intentionally not documented here (security). The risk of credential loss is an access risk, not a knowledge risk. The risk of architectural context loss is mitigated by the failure archive.
+
+---
+
+## Remaining Single-Operator Dependencies
+
+Knowledge flows that currently require the ecosystem owner to be available:
+
+1. **All credential rotation** (Firebase, Razorpay, WordPress) — inherent to single-operator architecture
+2. **Firebase Console structural changes** (new projects, IAM configuration) — requires Google account access
+3. **Razorpay live-mode operations** (webhook configuration, plan management) — requires Razorpay account access
+4. **DNS management** — requires registrar account access
+5. **WordPress admin access** — requires WordPress login
+
+These are access dependencies, not knowledge dependencies. The governance stack eliminates knowledge dependencies. Access dependencies are structural properties of a single-operator ecosystem and are not addressed by documentation.
+
+---
+
+## Operational Glossary
+
+Platform-specific terms, behaviors, and doctrine references that appear throughout the governance stack.
+
+**Absent-signal failure** — A production failure that produces no error log, no dashboard alert, and no observable error signal. Detection requires behavioral tests. Examples: firebase-auth-domain-not-authorized, ga4-preview-environment-contamination. See [Production Observability Doctrine](/docs/production-observability-doctrine).
+
+**Admin SDK bypass** — Firebase Admin SDK (used in Cloud Functions) is not subject to Firestore Security Rules. It has full read/write access to all documents. Client SDK is rules-governed. These are separate access paths.
+
+**Behavioral verification** — Confirming production state by performing a real user action (submit an analysis, sign in and reload, place a payment) and observing the result. Distinct from log verification, build verification, or dashboard verification. See [INV-OPS-1](/docs/operator-decision-doctrine).
+
+**Blast radius** — The scope of users or system functions affected by a failure. Assessed before any recovery action. No single failure class in this ecosystem affects all four platforms simultaneously.
+
+**Class A–F changes** — The six-tier change classification system from [Release Discipline Doctrine](/docs/release-discipline-doctrine). Class A (content, lowest risk) through Class F (dependency upgrades, unpredictable risk).
+
+**Combined deploy** — `firebase deploy` without `--only`. Dangerous: produces undefined artifact ordering when both Functions and Firestore Rules change in the same release. Always use `--only` flags.
+
+**Deploy sequence** — The required order for multi-surface Firebase deploys: Firestore Rules first, Cloud Functions second, with a ~60-second IAM propagation wait between. See [INV-FB-1](/docs/operational-invariants).
+
+**dist/.git worktree** — The deployment pattern for GitHub Pages SPAs: `dist/` acts as a working tree for the `gh-pages` branch, allowing `git push` without mixing the source and deployment branches.
+
+**Fail-loud** — A pattern where a missing or invalid configuration value causes the program to log an error and return a non-2xx response, rather than silently falling through to a broken state. Opposite of the dangerous `|| ''` fallback pattern.
+
+**Fix-forward** — The recovery posture in this ecosystem: apply the minimum correct change to restore safe state, rather than rolling back to a previous version. Rollback is rarely correct here. See [INV-REC-1](/docs/incident-response-doctrine).
+
+**finally\{\}** — The JavaScript pattern for clearing loading state and re-enabling UI controls regardless of success or error. Required in every Cloud Function call handler. Omitting it produces the [gemini-rate-limit-429-no-ux](/failures/gemini-rate-limit-429-no-ux) failure class.
+
+**gh-pages branch** — The dedicated Git branch where compiled Vite builds are pushed for GitHub Pages deployment. Not the same as `main`. Changes to this branch are deployments.
+
+**IAM propagation** — The ~60-second delay after `firebase deploy --only firestore:rules` before the new rules take effect in production. Functions deployed during this window may fail with 403. See [INV-FB-1](/docs/operational-invariants).
+
+**INV-FB-1, INV-AI-2, INV-REC-3** etc. — Cross-document invariant references. Format: `INV-[cluster]-[number]`. Clusters: FB (Firebase), AI (AI reliability), PAY (payment), ENV (environment), DEP (deployment), DET (detection), COST (cost), SEC (security), REC (recovery), OPS (operator behavior), CHG (change management), CONT (continuity).
+
+**LiteSpeed purge** — LiteSpeed Cache → Purge All in WordPress Admin. Must be executed after every PHP filter change and before any post-change verification. Client Cache-Control headers do not trigger a server-side cache purge.
+
+**onSnapshot listener** — Firebase Realtime Database / Firestore real-time listener used in TrustSeal to update the UI immediately when Firestore state changes (e.g., after a Razorpay webhook updates `quota.tier`). Users should not need to reload the page to see premium access granted.
+
+**Platform default** — The behavior a platform exhibits when no explicit configuration is provided. In this ecosystem, every documented platform default is dangerous: Firebase defaults to Node 18, Vite defaults to wiping `dist/`, Vercel env vars default to all environments, Firebase Auth defaults to localhost-only. See [INV-OPS-2](/docs/operator-decision-doctrine).
+
+**Pre-parse cleaning** — The function that strips Gemini output of markdown code fences, trailing text, and non-JSON artifacts before `JSON.parse()`. Required for production reliability. Without it, ~6% of Gemini responses cause a parse failure. See [INV-AI-2](/docs/operational-invariants).
+
+**public/ directory** — The Vite directory that is copied into `dist/` on every build. Files that must survive builds (CNAME, 404.html) must be in `public/`, not in `dist/`. See [INV-CHG-9](/docs/release-discipline-doctrine).
+
+**Quota document** — Firestore path: `users/{uid}/quota/current`. Contains `tier` (free/premium), `checksUsed`, `checksLimit`, `resetDate`. Updated atomically by Cloud Functions using `FieldValue.increment(1)`.
+
+**Rules-first deploy** — The required sequence for combined Firebase releases: `firebase deploy --only firestore:rules` then wait ~60 seconds then `firebase deploy --only functions`. See [INV-FB-1](/docs/operational-invariants).
+
+**rzp_live_ / rzp_test_** — Razorpay key prefixes. All four credentials must share the same prefix (all live or all test). Mixing prefixes produces a silent payment failure. See [INV-PAY-2](/docs/operational-invariants).
+
+**Three-tier access model** — Firebase access architecture: Admin SDK (bypasses all rules) / Authenticated Client SDK (rules-governed) / Public unauthenticated (blocked). See [Operational Security Doctrine](/docs/operational-security-doctrine).
+
+---
+
+## Quick Reference: Platform Status Checks
+
+How to check if each platform is healthy in under 60 seconds:
+
+| Platform | Status check | Healthy signal |
+|---|---|---|
+| Firebase (TrustSeal/ScamCheck) | Firebase Console → Functions → Logs | No 403/500 in last 5 min |
+| TrustSeal front-end | Navigate to trustseal.asquaresolution.com | Site loads; submit one analysis |
+| ScamCheck front-end | Navigate to scamcheck.asquaresolution.com/history directly | React app loads (not GitHub 404) |
+| AI Execution Lab | Navigate to lab.asquaresolution.com | Homepage loads; navigate to one content page |
+| WordPress | curl REST API endpoint → 200 | `curl -u user:pass https://asquaresolution.com/wp-json/wp/v2/posts?per_page=1` |
+| Razorpay | Razorpay Dashboard → Webhooks → recent Delivery attempts | 200 responses for recent events |
+| DNS | dnschecker.org → enter subdomain | 90%+ locations resolving |
+| GA4 | GA4 Realtime → Active users | Events from correct domain only |
+
+---
+
+## Complete Doctrine Index
+
+All operational governance documents, organized by when they are most useful:
+
+**Before making any change:**
+- [Release Discipline Doctrine](/docs/release-discipline-doctrine) — classify the change, evaluate blast radius, preflight
+- [Operator Decision Doctrine](/docs/operator-decision-doctrine) — name assumptions, avoid pressure shortcuts
+- [Deployment Verification Checklist](/docs/deployment-verification-checklist) — platform-specific pre/post-deploy verification
+
+**When something appears broken:**
+- [Incident Detection Playbook](/playbooks/incident-detection-playbook) — where to look first per system
+- [Recovery Runbook](/playbooks/recovery-runbook) — per-symptom recovery procedures
+- [Incident Response Doctrine](/docs/incident-response-doctrine) — classification, blast radius, recovery posture
+
+**For understanding why things work the way they do:**
+- [Operational Invariants](/docs/operational-invariants) — the complete reliability contract
+- [Failure Pattern Library](/docs/failure-pattern-library) — the failure taxonomy
+- [Production Observability Doctrine](/docs/production-observability-doctrine) — detection invariants, signal taxonomy
+
+**For understanding access, cost, and security:**
+- [Operational Security Doctrine](/docs/operational-security-doctrine) — access model, credentials, security invariants
+- [AI Cost Governance](/docs/ai-cost-governance) — quota economics, scaling thresholds, cost invariants
+
+**For platform-specific implementation details:**
+- [Razorpay Subscription Integration](/docs/razorpay-subscription-integration)
+- [GitHub Pages SPA Deployment](/docs/github-pages-spa-deployment)
+- [Firestore Quota Enforcement](/docs/firebase-firestore-quota-enforcement)
+- [Gemini Production Operations](/docs/gemini-production-operations)
+
+---
+
+## Related
+
+- [Operational Invariants](/docs/operational-invariants) — the complete set of reliability contracts this guide summarizes
+- [Deployment Verification Checklist](/docs/deployment-verification-checklist) — the first checklist to run before any production change
+- [Incident Detection Playbook](/playbooks/incident-detection-playbook) — the first playbook to consult when something is wrong
+- [Release Discipline Doctrine](/docs/release-discipline-doctrine) — the change classification system referenced throughout this guide

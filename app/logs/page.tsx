@@ -4,6 +4,8 @@ import { getAllMeta, type ContentMeta } from '@/lib/content'
 import { buildSectionMetadata } from '@/lib/metadata'
 import { formatDateMono, cn } from '@/lib/utils'
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
+
 export const metadata: Metadata = buildSectionMetadata(
   'Execution Logs',
   'Daily build logs, deployment journals, debugging sessions, and weekly execution summaries from active production AI work.',
@@ -21,6 +23,7 @@ const LOG_TYPE_CONFIG = {
   debug:      { label: 'Debug',      classes: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/25' },
   experiment: { label: 'Experiment', classes: 'text-purple-400 bg-purple-500/10 border-purple-500/25' },
   release:    { label: 'Release',    classes: 'text-brand-400 bg-brand-500/10 border-brand-500/25' },
+  operations: { label: 'Ops',        classes: 'text-sky-400 bg-sky-500/10 border-sky-500/25' },
 } as const
 
 // ─────────────────────────────────────────────────────────────
@@ -94,6 +97,24 @@ function LogRow({ item }: { item: ContentMeta }) {
 // Page
 // ─────────────────────────────────────────────────────────────
 
+function buildLogsItemListSchema(items: ContentMeta[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'AI Execution Lab — Execution Logs',
+    description: 'Daily build logs, deployment journals, debugging sessions, and weekly execution summaries from active production AI engineering work.',
+    url: `${SITE_URL}/logs`,
+    numberOfItems: items.length,
+    itemListElement: items.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.frontmatter.title,
+      description: item.frontmatter.outcome ?? item.frontmatter.description ?? '',
+      url: `${SITE_URL}/logs/${item.slug}`,
+    })),
+  }
+}
+
 export default function LogsPage() {
   const items = getAllMeta('logs')
 
@@ -108,6 +129,12 @@ export default function LogsPage() {
 
   return (
     <div className="px-6 lg:px-8 py-8 max-w-4xl">
+      {/* ItemList JSON-LD for AI/GEO crawlers */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildLogsItemListSchema(items)) }}
+      />
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-3">

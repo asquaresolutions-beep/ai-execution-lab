@@ -100,6 +100,7 @@ export { CaseStudyMeta }                             from './mdx/case-study-meta
 export { OperationalTimeline }                       from './mdx/operational-timeline'
 export { FailureIntelligence }                       from './mdx/failure-intelligence'
 export { EvidenceBlock }                             from './mdx/evidence-block'
+export { QuickFix }                                  from './mdx/quick-fix'
 
 // Media — existing
 export { YouTube }     from './media/youtube-embed'

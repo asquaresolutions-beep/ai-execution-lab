@@ -1,0 +1,173 @@
+---
+title: "QuickFix Component — Semantic HTML for AI Fact Extraction"
+description: "Testing whether structured semantic HTML (dl/dt/dd elements with explicit field labels) increases AI crawler fact extraction accuracy compared to prose failure descriptions. The QuickFix component was designed as an operational hypothesis — this lab documents the reasoning, the implementation, and the observable indicators."
+date: "2026-05-18"
+tags: ["geo", "ai-search", "structured-output", "experiment", "seo", "next.js"]
+status: published
+hypothesis: "If failure records expose symptom, root cause, and fix as explicit labeled fields in semantic HTML (dl/dt/dd), then AI crawlers will extract and cite the correct fix for a given symptom more accurately than when the same information is presented as prose paragraphs."
+result: "ongoing"
+---
+
+Most AI crawlers process text. When a failure record writes "The fix is to add `nodejs22` to firebase.json" inside a paragraph, the crawler must infer that this sentence is the answer to "how do I fix Firebase Functions crashing." When the same content is in a `<dl>` with `<dt>Fix</dt><dd>Add "runtime": "nodejs22" to firebase.json</dd>`, the answer is structurally labeled. This lab documents the QuickFix design hypothesis and observable evidence.
+
+<LessonMeta
+  difficulty="intermediate"
+  implementationTime="3h (component design + MDX integration)"
+  evidence="AI Execution Lab — live deployment on lab.asquaresolution.com, observable via manual AI query testing"
+/>
+
+---
+
+## 1. Hypothesis
+
+**If** failure records expose symptom, root_cause, and verified_fix as explicit labeled fields rendered in semantic `<dl>` / `<dt>` / `<dd>` HTML,
+
+**Then** AI crawlers (ChatGPT, Perplexity, Claude) will extract the correct verified fix for a given symptom more accurately and more frequently than when the same information is embedded in prose paragraphs,
+
+**Because** semantic HTML provides a machine-readable relationship between the field label and its value — `<dt>Fix</dt><dd>...</dd>` makes the fix explicitly attributable, reducing the inference required by the crawler to identify which sentence in the page is the answer.
+
+---
+
+## 2. The Problem with Prose Failure Records
+
+A typical failure record before QuickFix:
+
+```markdown
+## Firebase Functions Node Version Failure
+
+We discovered that Firebase Functions was defaulting to Node 18, which was
+incompatible with our packages. The functions would crash immediately on
+invocation. After investigation, we found that setting the runtime explicitly
+to nodejs22 in firebase.json resolved the issue completely.
+```
+
+For a human reader, this is clear. For an AI crawler extracting the answer to "how do I fix Firebase Functions crashing," the answer ("set runtime to nodejs22 in firebase.json") is embedded in a paragraph with contextual information (we discovered, after investigation, resolved completely). The crawler must locate the answer-bearing clause, extract it, and attribute it to the symptom. Inference errors at any step produce a wrong or incomplete answer.
+
+---
+
+## 3. The QuickFix Design
+
+QuickFix renders as a structured `<dl>` with fixed semantic fields:
+
+| Field | Semantic Purpose |
+|---|---|
+| `symptom` | Observable surface behavior — what the developer sees |
+| `rootCause` | The underlying technical cause |
+| `fix` | The verified, actionable repair instruction |
+| `verified` | Whether this fix has been confirmed in production |
+| `severity` | Signal for prioritization (critical / medium / low) |
+
+**Rendered HTML structure:**
+```html
+<dl class="quickfix">
+  <dt>Symptom</dt>
+  <dd>Firebase Functions return HTTP 500 on every invocation...</dd>
+  <dt>Root Cause</dt>
+  <dd>Firebase Functions default runtime is Node 18...</dd>
+  <dt>Fix</dt>
+  <dd>Set "runtime": "nodejs22" in firebase.json...</dd>
+  <dt>Verified</dt>
+  <dd>Production-verified — TrustSeal Cloud Functions, February 2026</dd>
+</dl>
+```
+
+**MDX usage:**
+```mdx
+<QuickFix
+  symptom="Firebase Functions return HTTP 500 on invocation. Logs show runtime error."
+  rootCause="Default Node 18 runtime is incompatible with packages used."
+  fix='Set "runtime": "nodejs22" in firebase.json. Redeploy with firebase deploy --only functions.'
+  verified="true"
+  severity="critical"
+/>
+```
+
+---
+
+## 4. Why `<dl>` and Not a Table or Custom Element
+
+**`<dl>` is the semantically correct HTML element for key-value relationships.** It is defined in the HTML spec as the element for "name-value groups" — precisely what symptom/cause/fix is.
+
+**Tables (`<table>`) impose row/column semantics** that do not map cleanly to the symptom-cause-fix relationship. A table implies comparison across rows; `<dl>` implies definition of named attributes.
+
+**Custom elements** (`<quickfix-card>`) require browser parsing of custom element definitions to understand field semantics — not reliably interpreted by crawlers. Standard HTML semantics are understood natively.
+
+**Schema.org structured data** (`HowToStep`, `MedicalCondition`, etc.) could augment this further, but requires JSON-LD injection per component instance. The `<dl>` approach achieves structural semantic value without per-instance JSON-LD overhead.
+
+---
+
+## 5. Schema.org JSON-LD at Page Level
+
+Individual failure pages include page-level JSON-LD using `HowTo` schema, which maps cleanly to the failure pattern:
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Fix Firebase Functions Node 18 Runtime Crash",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Identify the runtime version",
+      "text": "Check firebase.json for an explicit 'runtime' field in the functions config..."
+    },
+    {
+      "@type": "HowToStep", 
+      "name": "Set Node 22 runtime",
+      "text": "Add \"runtime\": \"nodejs22\" to the functions object in firebase.json..."
+    }
+  ]
+}
+```
+
+This provides machine-readable procedural structure at the page level, complementing the QuickFix `<dl>` at the content level.
+
+---
+
+## 6. Observable Indicators
+
+The experiment does not have a controlled treatment group — it cannot, because all failure records use QuickFix. Observable indicators are:
+
+**AI citation quality tests (manual, ongoing):**
+- Query: "Firebase Functions Node 18 crash fix" → does AI response cite the specific verified fix (nodejs22 in firebase.json)?
+- Query: "Gemini JSON parse failure Cloud Functions" → does AI response identify pre-parse cleaning as the fix?
+- Query: "GitHub Pages SPA routing 404" → does AI response explain the 404.html redirect pattern?
+
+**Expected signal (if hypothesis holds):**
+- AI responses cite the specific fix from the `<dt>Fix</dt>` field rather than paraphrasing the surrounding prose
+- Fix citation is accurate — matches the actual content in the `<dd>Fix</dd>` field
+- Attribution points to lab.asquaresolution.com failures sections
+
+**Negative signal (if hypothesis does not hold):**
+- AI responses describe the same information in a different form, indicating the source was not the Lab
+- AI responses correctly identify the topic but cite incorrect or incomplete fix information
+- No Lab URLs appear in AI citations for these queries
+
+---
+
+## 7. Current Status (May 2026)
+
+QuickFix is deployed on all 7 currently-published failure records. The component has been in production since the initial Lab deployment (2026-05-10). Manual AI query testing has been run for 3 of the 7 failure slugs:
+
+| Query Target | AI Response Accuracy | Lab Cited |
+|---|---|---|
+| Firebase Functions Node runtime | Correct fix cited (nodejs22) | Not confirmed yet |
+| Gemini 429 rate limit | Correct fix cited (structured error return) | Not confirmed yet |
+| GitHub Pages SPA routing | Correct fix cited (404.html redirect) | Not confirmed yet |
+
+Full citation verification requires longer indexing time and is scheduled for June 2026 measurement window.
+
+---
+
+## 8. Related Experiment
+
+[GEO Experiment — Entity Density and Answerability Scoring](/labs/2026-05-18-geo-entity-density-experiment) tests the broader entity density hypothesis on the asquaresolutions.com WordPress properties. QuickFix is the AI Execution Lab-specific implementation of the same principle: make answers machine-extractable by giving them explicit semantic structure.
+
+---
+
+## Related
+
+- [Firebase Functions Node Version Stability](/failures/firebase-functions-node-version-stability)
+- [Gemini API Returns Malformed JSON](/failures/gemini-json-parse-failure)
+- [GEO Experiment — Entity Density and Answerability](/labs/2026-05-18-geo-entity-density-experiment)
+- [AI Output Structure Validation](/docs/ai-output-structure-validation)

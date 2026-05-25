@@ -43,30 +43,75 @@ const PRIORITY_STYLES: Record<SignalPriority, { badge: string; dot: string; labe
 }
 
 const TYPE_LABELS: Record<SignalType, string> = {
-  unscored_failure:   'Unscored Failures',
-  low_confidence_fix: 'Low Confidence Fixes',
-  pattern_gap:        'Pattern Coverage Gaps',
-  missing_playbook:   'Missing Playbooks',
-  stale_section:      'Stale Sections',
-  single_instance:    'Single-Instance High Severity',
+  unscored_failure:      'Unscored Failures',
+  low_confidence_fix:    'Low Confidence Fixes',
+  pattern_gap:           'Pattern Coverage Gaps',
+  missing_playbook:      'Missing Playbooks',
+  stale_section:         'Stale Sections',
+  single_instance:       'Single-Instance High Severity',
+  weak_evidence:         'Weak Evidence Coverage',
+  missing_case_study:    'Missing Case Studies',
+  entity_inconsistency:  'Entity Naming Inconsistencies',
+  unhealthy_cadence:     'Unhealthy Publishing Cadence',
+  missing_geo_coverage:  'Missing GEO Coverage',
+  no_failure_coverage:   'Systems Without Failure Coverage',
+  // Phase 1 — Autonomous Signal Engine
+  stale_assumption:      'Stale Operational Assumptions',
+  underdeveloped_track:  'Underdeveloped Topic Clusters',
+  publishing_imbalance:  'Publishing Portfolio Imbalance',
+  operational_blind_spot: 'Operational Blind Spots',
+  weak_geo_cluster:      'Weak GEO Query Clusters',
+  low_link_density:      'Low Internal Link Density',
 }
 
 const TYPE_DESCRIPTIONS: Record<SignalType, string> = {
-  unscored_failure:   'Failure reports without confidence scoring. Prevents debugging intelligence from loading.',
-  low_confidence_fix: 'Failures with confidence below 60/100. Single instance or undocumented recovery path.',
-  pattern_gap:        'Named failure patterns with ≥2 member failures but no resolver playbook.',
-  missing_playbook:   'Recurring failures without documented resolution procedures.',
-  stale_section:      'Content sections that have not been updated past their cadence threshold.',
-  single_instance:    'High-severity failures with only one confirmed instance — fix reliability unverified.',
+  unscored_failure:      'Failure reports without confidence scoring. Prevents debugging intelligence from loading.',
+  low_confidence_fix:    'Failures with confidence below 60/100. Single instance or undocumented recovery path.',
+  pattern_gap:           'Named failure patterns with ≥2 member failures but no resolver playbook.',
+  missing_playbook:      'Recurring failures without documented resolution procedures.',
+  stale_section:         'Content sections that have not been updated past their cadence threshold.',
+  single_instance:       'High-severity failures with only one confirmed instance — fix reliability unverified.',
+  weak_evidence:         'Content entries without evidence images or external citations. Reduces GEO citation credibility.',
+  missing_case_study:    'Execution tracks with no end-to-end case study. Case studies are the highest-value GEO content type.',
+  entity_inconsistency:  'Entity names in content diverge from canonical platform entity definitions.',
+  unhealthy_cadence:     'Publishing velocity has dropped below minimum viable threshold across multiple sections simultaneously.',
+  missing_geo_coverage:  'Core platform entities with no GEO-optimised definitional or procedural content.',
+  no_failure_coverage:   'Documented systems or deployments with no linked failure archive entry.',
+  // Phase 1 — Autonomous Signal Engine
+  stale_assumption:      'Docs with no updated: timestamp and age > 60 days. Operational procedures may no longer reflect current platform state.',
+  underdeveloped_track:  'Topic clusters with < 3 content items. Thin areas lack the depth needed for GEO citation and query coverage.',
+  publishing_imbalance:  'One content section has 5× more items than the lowest populated section. Portfolio imbalance limits cross-query coverage.',
+  operational_blind_spot: 'Active ecosystem properties with no docs or failure coverage. Live systems without documentation are the highest operational risk.',
+  weak_geo_cluster:      'GEO query category where zero queries have a mapped content target. Entire intent category is invisible to AI retrieval.',
+  low_link_density:      'High-severity failures with no related lessons or resolver playbooks. Isolated failures reduce knowledge-graph value and debugging discoverability.',
 }
 
 const TYPE_ORDER: SignalType[] = [
+  // Critical operational gaps (block intelligence systems)
   'unscored_failure',
   'low_confidence_fix',
+  'operational_blind_spot',
+  // Pattern + playbook gaps
   'pattern_gap',
   'missing_playbook',
+  // Cadence + staleness
+  'unhealthy_cadence',
   'stale_section',
+  'stale_assumption',
+  // Content quality
   'single_instance',
+  'weak_evidence',
+  'low_link_density',
+  // Publishing health
+  'publishing_imbalance',
+  'underdeveloped_track',
+  // GEO coverage
+  'missing_geo_coverage',
+  'weak_geo_cluster',
+  'missing_case_study',
+  // Entity + consistency
+  'entity_inconsistency',
+  'no_failure_coverage',
 ]
 
 const TEMPLATE_LINKS: Record<string, string> = {

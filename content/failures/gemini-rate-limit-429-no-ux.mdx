@@ -1,0 +1,190 @@
+---
+title: "Gemini API 429 Rate Limit Returns Hanging Spinner Instead of User Feedback"
+description: "ScamCheck's Gemini scam detection Cloud Function hit the free tier rate limit (429 Too Many Requests) during rapid testing. The client had no handling for the 429 case and showed an indefinite spinning loader. Root cause: the Cloud Function did not return a structured error response for 429, and the client had no branch for anything other than success. Fix: return { rateLimited: true } from the Cloud Function on 429, detect it client-side, and render a specific message."
+date: "2026-02-10"
+updated: "2026-02-10"
+tags: ["gemini", "firebase-functions", "rate-limiting", "api", "ux", "scamcheck", "firebase"]
+status: published
+severity: medium
+failure_status: resolved
+failure_type: configuration
+project: scamcheck
+resolution_time: "2 hours"
+affected_systems:
+  - firebase
+  - scamcheck
+systems_touched:
+  - scamcheck
+linked_incidents:
+  - firebase-functions-node-version-stability
+  - environment-variable-missing-production
+related_case_studies:
+  - scamcheck-architecture-build
+related_logs:
+  - 2026-05-18-scamcheck-operations-review
+related_docs: []
+evidence_images: []
+external_refs:
+  - "https://ai.google.dev/gemini-api/docs/rate-limits"
+  - "https://firebase.google.com/docs/functions/error-handling"
+---
+
+<QuickFix
+  symptom="User submits a scam check request. The submit button shows a loading spinner that never resolves. No error message appears. The Cloud Function logs show HTTP 429 Too Many Requests from the Gemini API."
+  rootCause="The Gemini free tier enforces a requests-per-minute (RPM) limit. When multiple requests are submitted in rapid succession, the Gemini API returns 429. The Cloud Function was not handling the 429 case — it propagated the error as an unhandled exception, which the client interpreted as a generic failure and left the spinner running indefinitely."
+  fix="In the Cloud Function, catch the 429 from Gemini and return a structured response object: { rateLimited: true, message: 'Rate limit reached — please wait a few seconds and try again.' }. In the client, check for rateLimited in the response before the success path. Render the message instead of the normal verdict display."
+  time="2 hours"
+  confidence={92}
+  steps={[
+    "Reproduce: submit 3–5 analysis requests in rapid succession on the free tier",
+    "Check Firebase Console → Functions → Logs — confirm 429 from Gemini API is present",
+    "In the Cloud Function, wrap the Gemini API call in a try/catch",
+    "On catch: check if error.status === 429 (or error.message includes '429')",
+    "Return { rateLimited: true } from the function (HTTP 200 response — this is a structured error, not an exception)",
+    "In the React client, check response.rateLimited before parsing the verdict",
+    "If rateLimited is true, display: 'Rate limit reached — please wait a few seconds and try again'",
+    "Re-enable the submit button so the user can retry",
+    "Test: submit multiple requests rapidly, confirm the rate limit message appears instead of a hanging spinner"
+  ]}
+/>
+
+## What Happened
+
+During ScamCheck development (February 2026), a testing session involved submitting multiple scam check requests in quick succession to verify the verdict display across different input types. After 3–4 requests within a minute, new submissions stopped returning results.
+
+The submit button showed a loading spinner. The spinner did not resolve. No error message appeared. The app appeared frozen.
+
+Checking Firebase Console → Functions → Logs showed the Cloud Function was receiving the request, calling the Gemini API, and then crashing with:
+
+```
+Error: 429 Too Many Requests
+    at ...
+```
+
+The Gemini API free tier applies a per-minute rate limit on the number of requests. The limit is not high — it is designed for development, not production load. Submitting 3–4 analysis requests within a minute was enough to hit it.
+
+---
+
+## Why the UX Failed
+
+The Cloud Function's error handling at the time of the failure was minimal:
+
+```javascript
+// Cloud Function — before fix (simplified)
+exports.analyzeText = functions.https.onCall(async (data, context) => {
+  const result = await gemini.generateContent(prompt)
+  return { verdict: parseVerdict(result) }
+})
+```
+
+When Gemini returned 429, `gemini.generateContent(prompt)` threw an unhandled exception. Firebase Cloud Functions propagate unhandled exceptions to the client as an `internal` HTTPS error with no structured payload. The React client was handling this as a generic network error:
+
+```javascript
+// React client — before fix (simplified)
+try {
+  const { data } = await analyzeText({ text: inputText })
+  setVerdict(data.verdict)
+} catch (error) {
+  // Generic catch — no handling for rate limit specifically
+  console.error(error)
+  // spinner stays on — setVerdict never called
+}
+```
+
+The catch block logged the error but never called `setVerdict` or reset the loading state. Result: the button remained in loading state indefinitely until the user refreshed the page.
+
+---
+
+## Why 429 Needs Structured Handling
+
+A 429 from Gemini is not a bug. It is expected behavior on the free tier. It requires a distinct user-facing response:
+
+| Error type | User should see |
+|---|---|
+| Network error | "Analysis failed — check your connection and try again" |
+| Server error (500) | "Analysis failed — please try again" |
+| Rate limit (429) | "Rate limit reached — please wait a few seconds and try again" |
+
+Lumping 429 into the generic catch bucket means the user has no signal that waiting will fix the problem. They see a frozen UI and typically either keep clicking (making the problem worse) or leave.
+
+---
+
+## The Fix
+
+**Cloud Function — after fix:**
+
+```javascript
+exports.analyzeText = functions.https.onCall(async (data, context) => {
+  try {
+    const result = await gemini.generateContent(prompt)
+    return { verdict: parseVerdict(result) }
+  } catch (error) {
+    // Gemini rate limit — expected on free tier
+    if (error.status === 429 || error.message?.includes('429')) {
+      return { rateLimited: true }
+    }
+    // Parse failure — return structured error verdict instead of crashing
+    if (error instanceof SyntaxError) {
+      return { parseError: true }
+    }
+    throw error  // Re-throw unexpected errors for Firebase to handle
+  }
+})
+```
+
+Returning `{ rateLimited: true }` as an HTTP 200 response (rather than throwing) means the client receives a structured object it can branch on cleanly. The Firebase client SDK only throws on HTTP errors — returning 200 with a payload keeps the client in the normal code path.
+
+**React client — after fix:**
+
+```javascript
+const { data } = await analyzeText({ text: inputText })
+
+if (data.rateLimited) {
+  setErrorMessage('Rate limit reached — please wait a few seconds and try again')
+  setLoading(false)
+  return
+}
+
+setVerdict(data.verdict)
+setLoading(false)
+```
+
+The submit button is re-enabled after a rate limit response. The user can retry after waiting. No page refresh required.
+
+---
+
+## Free Tier Rate Limit Context
+
+The Gemini API free tier (as of February 2026) enforces limits per minute and per day. The per-minute limit is the constraint hit in normal use — multiple users or a single user testing rapidly can exceed it within seconds. The per-day limit is rarely hit during development but becomes relevant in early production with real user traffic.
+
+**Mitigation strategies beyond the UX fix:**
+
+1. **Disable the submit button during in-flight requests** — prevents the user from submitting additional requests before the current one resolves. This alone reduces rate limit frequency during normal use (a user who cannot submit again does not accidentally queue up 3 requests).
+
+2. **Add a client-side cooldown** — after a successful analysis, prevent resubmission for 3–5 seconds. Most legitimate use cases involve reading the verdict between submissions.
+
+3. **Upgrade to paid tier** — the paid Gemini API tier has significantly higher rate limits appropriate for production workloads.
+
+4. **Implement server-side request queuing** — for production deployments expecting high concurrency, queue requests in the Cloud Function and process them sequentially with delays. This adds latency but prevents rate limit exhaustion from simultaneous users.
+
+For ScamCheck's current scale (single-operator development), the UX fix plus submit button disabling during in-flight requests was sufficient. Rate limit hits became informative rather than confusing.
+
+---
+
+## Second Issue Discovered: Parse Failure Silent Error
+
+While fixing the 429 handling, a second issue was found: if Gemini returned a valid response but with malformed JSON (non-standard formatting, markdown code fences around the JSON), `JSON.parse()` would throw, the Cloud Function would crash, and the client would receive the same spinner-forever behavior.
+
+This was also handled in the same fix — `SyntaxError` is now caught and returns `{ parseError: true }`. The client renders "Could not parse analysis result" with a retry button.
+
+The pattern: **any failure mode that leaves the client spinner running indefinitely is a UX bug**, regardless of its technical root cause.
+
+---
+
+## Prevention
+
+- [ ] For every external API call in a Cloud Function, define the set of non-exception failure modes (rate limit, parse failure, empty response) and return structured objects for each
+- [ ] Never let the client loading state depend on an unhandled exception being caught — always have an explicit reset path
+- [ ] Gemini free tier: disable the submit button for the duration of in-flight requests to prevent users from queueing up multiple requests
+- [ ] Test rate limit behavior explicitly: submit 5+ requests in rapid succession during development and verify the UX handles it correctly
+- [ ] Return structured error objects (HTTP 200 + `{ rateLimited: true }`) rather than throwing exceptions for expected error conditions — keeps client code in the normal branch

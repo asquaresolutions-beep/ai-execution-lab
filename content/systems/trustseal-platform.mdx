@@ -1,0 +1,199 @@
+---
+title: "TrustSeal Platform"
+description: "TrustSeal (trustseal.asquaresolution.com) — AI-powered website trust verification tool. React/Vite/GitHub Pages frontend, Firebase Auth + Firestore backend, Firebase Functions v2 for Gemini AI analysis and Razorpay webhook handling. Subscription-based monetization via Razorpay (INR). Node 22 runtime required."
+date: "2026-03-15"
+updated: "2026-05-18"
+tags: ["trustseal", "firebase", "firebase-functions", "firestore", "authentication", "razorpay", "github-pages", "vite", "react", "gemini", "deployment", "rate-limiting"]
+status: published
+system_status: "production"
+system_type: "web-application"
+properties:
+  - url: "https://trustseal.asquaresolution.com"
+    hosting: "GitHub Pages"
+    branch: "gh-pages"
+stack:
+  - React 18
+  - Vite 5
+  - Tailwind CSS
+  - Firebase Auth
+  - Firestore
+  - Firebase Functions v2 (Node 22)
+  - Gemini 1.5-flash
+  - Razorpay
+  - GitHub Pages
+related_case_studies:
+  - trustseal-architecture-build
+related_failures:
+  - firebase-auth-domain-not-authorized
+  - firebase-functions-node-version-stability
+  - razorpay-test-live-key-mismatch
+  - environment-variable-missing-production
+  - vite-github-pages-spa-routing
+related_logs:
+  - 2026-05-18-trustseal-operations-review
+related_docs: []
+---
+
+TrustSeal is an AI-powered website trust verifier at [trustseal.asquaresolution.com](https://trustseal.asquaresolution.com). Users submit a URL and receive a structured trust verdict — trust score (0–100), verdict label (Verified / Caution / Suspicious / High Risk), detected signals, and a recommended action. The system is live on a zero-fixed-cost architecture: GitHub Pages for hosting, Firebase free tier for auth and database, Gemini free tier for AI analysis, and Razorpay pay-per-transaction for payments.
+
+---
+
+## Architecture
+
+### Frontend
+
+- **React 18** SPA built with **Vite 5**
+- **Tailwind CSS** — utility-first styling (justified at this UI complexity level: URL input, verdict panel, signal breakdown, account dashboard, check history, subscription management — ~10 distinct component types)
+- Deployed to **GitHub Pages** via `dist/.git` worktree pointing at `gh-pages` branch
+- Custom domain: `trustseal.asquaresolution.com` via CNAME in `dist/`
+- SPA routing via `404.html` redirect pattern (no URL rewrite capability on GitHub Pages)
+- `vite.config.ts` base: `'/'` — required for custom domain at root path
+
+### Backend
+
+- **Firebase Auth** — email/password + Google OAuth
+- **Firestore** — user data, check history, quota, subscription state
+- **Firebase Functions v2** — serverless API endpoints on Node 22 runtime (explicit — default Node 18 caused production crashes)
+- **Gemini 1.5-flash** — AI analysis engine, called server-side inside Cloud Functions
+
+### Payment
+
+- **Razorpay** — Indian payment rails (UPI, net banking, INR credit cards)
+- Subscription creation and webhook processing via separate Cloud Functions
+- Webhook handler verifies Razorpay signature before writing to Firestore
+
+---
+
+## Firestore Data Model
+
+```
+users/{uid}/
+  checks/                         # subcollection
+    {checkId}/
+      url: string
+      signals: object             # collected domain/SSL/WHOIS signals
+      verdict: {
+        score: number             # 0–100
+        label: string             # Verified | Caution | Suspicious | High Risk
+        signals: Array<{positive: boolean, category: string, description: string}>
+        action: string
+      }
+      createdAt: timestamp
+  quota/
+    current/
+      checksThisMonth: number
+      tier: 'free' | 'premium'
+      resetDate: timestamp
+  subscription/
+    {subId}/
+      razorpaySubscriptionId: string
+      status: string
+      currentPeriodEnd: timestamp
+```
+
+---
+
+## Cloud Functions
+
+| Function | Trigger | Purpose |
+|---|---|---|
+| `analyzeTrust` | HTTPS callable | Receives URL + signals from client, calls Gemini, writes result to Firestore, returns verdict |
+| `createSubscription` | HTTPS callable | Creates Razorpay subscription, returns subscription_id to client |
+| `razorpayWebhook` | HTTPS request | Receives Razorpay events, verifies signature, updates Firestore tier |
+
+All functions run on **Node 22** runtime. `firebase.json`:
+
+```json
+{
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
+  }
+}
+```
+
+---
+
+## Auth Flow
+
+1. Email/password sign-in or Google OAuth via Firebase Auth SDK
+2. `onAuthStateChanged` listener manages client auth state
+3. Auth token passed to Cloud Functions via Firebase callable SDK (automatic)
+4. Custom domain `trustseal.asquaresolution.com` is in Firebase Console → Authentication → Authorized Domains
+5. GitHub Pages `username.github.io` subdomain also added during development
+
+**Documented failure:** Omitting the custom domain from Firebase's Authorized Domains list causes session loss on every page refresh — `UNAUTHORIZED_DOMAIN` in the network layer, no visible UI error. Fix: add domain to Firebase Console → Authentication → Settings → Authorized Domains.
+
+---
+
+## Payment Flow
+
+```
+User clicks "Upgrade"
+  → Client calls createSubscription Cloud Function
+  → Cloud Function creates Razorpay subscription via Razorpay API (server key)
+  → Cloud Function returns { subscriptionId }
+  → Client opens Razorpay Checkout modal with subscriptionId + client key
+  → User completes payment
+  → Razorpay fires subscription.charged webhook
+  → Webhook Cloud Function: verifies signature → updates Firestore tier: 'premium'
+  → Client's onSnapshot listener picks up Firestore change
+  → Premium features unlocked without page reload
+```
+
+**Documented failure:** Razorpay test client key + live server key causes silent failures — checkout modal opens but no webhook fires. Both keys must be from the same mode simultaneously.
+
+---
+
+## Deployment
+
+**Source branch:** `main` (React + Vite source)  
+**Deploy branch:** `gh-pages` (built output only)
+
+```bash
+npm run build                   # Vite → dist/
+cd dist
+git add -A
+git commit -m "deploy $(date +%Y-%m-%d)"
+git push origin gh-pages
+```
+
+`dist/` has its own `.git` pointing at `gh-pages`. `dist/` is in `main`'s `.gitignore`.
+
+**Cloud Functions:**
+
+```bash
+firebase deploy --only functions
+```
+
+After any functions deploy: verify in Firebase Console → Functions → Logs that the first invocation completes without errors. Deploy success ≠ execution success.
+
+---
+
+## Monitoring
+
+- **Firebase Console → Functions → Logs** — Cloud Function errors, Gemini latency, Razorpay webhook delivery
+- **Firebase Console → Authentication** — daily active users, sign-in method distribution
+- **Firestore usage metrics** — read/write counts for quota tracking
+- **GA4 (G-MPQVF41ZYM)** — user sessions, check submission events, premium conversion funnel
+
+---
+
+## Operational Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| Gemini free tier quota exhaustion | Medium | High — all trust checks fail | Upgrade to paid tier; implement per-user rate limiting |
+| Firebase Functions cold start | High | Low — 2–4s latency on first call | Multi-stage loading UX; acceptable for trust verification use case |
+| Razorpay webhook delivery failure | Low | High — premium tier not activated | Webhook retry is automatic; add Firestore fallback reconciliation |
+| Node runtime version gap | Low (mitigated) | High — all functions crash | Explicit `nodejs22` in firebase.json; document in deployment checklist |
+| Firebase Auth domain unauthorized | Low (mitigated) | Medium — session loss | Custom domain in Authorized Domains list; verify on each new domain |
+
+---
+
+## Related
+
+- [TrustSeal: Building an AI Website Trust Verifier](/case-studies/trustseal-architecture-build)
+- [Razorpay Test/Live Key Mismatch](/failures/razorpay-test-live-key-mismatch)
+- [Firebase Auth Session Lost on Custom Domain](/failures/firebase-auth-domain-not-authorized)
+- [Firebase Cloud Functions Crashing on Default Node Runtime](/failures/firebase-functions-node-version-stability)

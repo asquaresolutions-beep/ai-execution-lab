@@ -13,6 +13,20 @@ recovery_complexity: minutes
 deployment_risk: high
 time_to_detect: "Immediate — next build fails with Module not found"
 repeat_risk: medium
+affected_systems:
+  - next.js
+systems_touched:
+  - vercel
+  - typescript
+related_failures:
+  - edge-runtime-deployment-failure
+related_case_studies:
+  - ai-execution-lab-platform-launch
+related_docs:
+  - failure-pattern-library
+linked_incidents:
+  - edge-runtime-deployment-failure
+deployment_ref: 2026-05-14-tracks-failure-archive-build
 ---
 
 <FailureIntelligence
@@ -47,6 +61,22 @@ repeat_risk: medium
   commitRef="fix: split getLessonContent into server-only lib/lesson-content.ts"
   date="2026-05-14"
   repo="ai-execution-lab"
+/>
+
+<QuickFix
+  symptom="next build fails: Module not found: Can't resolve 'fs' (or 'path', 'crypto', 'os')"
+  rootCause="A 'use client' component imports a lib file that contains Node.js built-ins. Next.js bundles all imports of client components for the browser — Node.js modules cannot exist anywhere in that import chain."
+  fix="Move Node.js-dependent functions to a new *.server.ts file. Update the server component that needs them to import from the new location instead."
+  time="15–30 min"
+  confidence={75}
+  steps={[
+    "Read the error's import trace — it shows exactly which client component imports which lib file",
+    "Identify which functions in the lib file use Node.js built-ins (fs, path, crypto, etc.)",
+    "Create lib/[name].server.ts and move those functions there — keep only browser-safe code in the original file",
+    "Remove the Node.js imports from the original lib file",
+    "Update any server component imports to point to the new *.server.ts file",
+    "Run next build — the error should not reappear"
+  ]}
 />
 
 ## What Happened

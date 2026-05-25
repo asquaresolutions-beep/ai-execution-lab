@@ -13,6 +13,16 @@ recovery_complexity: minutes
 deployment_risk: high
 time_to_detect: "Found after user testing in production — feature appeared to work in dev"
 repeat_risk: high
+affected_systems:
+  - vercel
+systems_touched:
+  - gemini-api
+related_failures:
+  - wordpress-rest-api-auth-failure
+related_docs:
+  - deployment-workflow
+linked_incidents:
+  - wordpress-rest-api-auth-failure
 ---
 
 <IncidentReport
@@ -42,6 +52,22 @@ repeat_risk: high
     { title: "WordPress REST API Authentication Failure", href: "/failures/wordpress-rest-api-auth-failure", relation: "same-category" }
   ]}
   ecosystemImpact={["Feature silently non-functional in production while appearing to work in development", "No build error, no TypeScript error, no deployment warning — failure is invisible until runtime"]}
+/>
+
+<QuickFix
+  symptom="Feature works in local dev and Vercel preview but silently fails in production — API returns 500 or a generic error message with no specific cause"
+  rootCause="Environment variable was added to Vercel dashboard with Development scope only. process.env.VAR_NAME returns undefined in all production builds."
+  fix="Vercel dashboard → Project → Settings → Environment Variables → find the variable → edit → enable the Production checkbox → trigger a redeploy."
+  time="5–10 min"
+  confidence={90}
+  steps={[
+    "Check if the feature works in Vercel preview deployments — if yes, the variable scope is likely Development-only",
+    "Go to Vercel dashboard → Project → Settings → Environment Variables",
+    "Find the variable — check which scope checkboxes are enabled (Development / Preview / Production)",
+    "Edit the variable and check Production (and Preview if relevant)",
+    "Trigger a manual redeploy from the Vercel Deployments tab",
+    "Test the feature in production immediately after deploy completes"
+  ]}
 />
 
 ## What Happened

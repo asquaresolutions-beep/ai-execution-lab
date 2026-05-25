@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getItem, getAllSlugs, getNeighbors } from '@/lib/content'
 import { ContentPage } from '@/components/content-page'
+import { CrossRelated } from '@/components/operational/cross-related'
 import { buildArticleMetadata } from '@/lib/metadata'
 import type { Metadata } from 'next'
 
@@ -22,5 +23,10 @@ export default async function LabPage({ params }: Props) {
   const item = getItem('labs', slug)
   if (!item) notFound()
   const { prev, next } = getNeighbors('labs', slug)
-  return <ContentPage item={item} prev={prev} next={next} />
+  const afterContent = (
+    <div className="mt-10">
+      <CrossRelated section="labs" slug={slug} />
+    </div>
+  )
+  return <ContentPage item={item} prev={prev} next={next} afterContent={afterContent} />
 }

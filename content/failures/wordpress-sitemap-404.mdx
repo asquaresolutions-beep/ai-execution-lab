@@ -1,0 +1,122 @@
+---
+title: "WordPress Sitemap Returns 404 While robots.txt Declares It"
+description: "asquaresolution.com/sitemap_index.xml returned HTTP 404 despite robots.txt correctly declaring the sitemap URL and Rank Math's XML sitemap being enabled in plugin settings. Root cause: WordPress rewrite rules cache was stale — the URL handler for the sitemap was no longer registered. Fix: flush and rebuild rewrite rules by saving Permalinks settings without any changes."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["wordpress", "sitemap", "seo", "rank-math", "google-search-console", "indexing", "rewrite-rules"]
+status: published
+severity: high
+failure_status: resolved
+failure_type: configuration
+project: asquaresolution.com
+resolution_time: "5 minutes"
+affected_systems:
+  - wordpress
+  - google-search-console
+systems_touched:
+  - asquaresolution.com
+linked_incidents:
+  - wordpress-hfe-wpautop-injection
+  - litespeed-client-cache-bypass-ignored
+related_logs:
+  - 2026-05-19-wordpress-seo-technical-audit
+  - 2026-05-18-wordpress-seo-operations
+related_docs:
+  - deployment-workflow
+evidence_images: []
+external_refs:
+  - "https://rankmath.com/kb/sitemap/"
+  - "https://developer.wordpress.org/reference/hooks/init/"
+---
+
+<QuickFix
+  symptom="curl -I https://yourdomain.com/sitemap_index.xml returns HTTP 404. GSC shows sitemap submission errors or 'Couldn't fetch' status. robots.txt correctly declares the sitemap URL. Rank Math XML Sitemap is confirmed enabled in plugin settings."
+  rootCause="WordPress permalink/rewrite rules cache is stale. Rewrite rules map /sitemap_index.xml to Rank Math's internal handler — if these rules are flushed (e.g., after a plugin update, core update, or server migration) and not rebuilt, the URL has no registered handler and WordPress returns 404."
+  fix="WordPress Admin → Settings → Permalinks → Save Changes. This flushes and rebuilds rewrite rules without changing permalink structure. Takes effect immediately — no redeploy or cache purge needed."
+  time="5 min"
+  confidence={90}
+  steps={[
+    "Confirm the 404: curl -I https://yourdomain.com/sitemap_index.xml",
+    "Go to WordPress Admin → Settings → Permalinks",
+    "Click 'Save Changes' without modifying any settings",
+    "Re-test: curl -I https://yourdomain.com/sitemap_index.xml — should now return HTTP 200",
+    "If still 404: Rank Math → General Settings → Sitemap → disable XML Sitemap → save → re-enable → save",
+    "If still 404: Deactivate and reactivate the Rank Math plugin to force rule re-registration",
+    "Submit the sitemap URL in Google Search Console if it was previously in error state"
+  ]}
+/>
+
+## What Happened
+
+During the May 2026 WordPress SEO technical audit, a curl check of the sitemap URL confirmed:
+
+```bash
+curl -I "https://asquaresolution.com/sitemap_index.xml"
+# HTTP/1.1 404 Not Found
+```
+
+The robots.txt file correctly declared:
+```
+Sitemap: https://asquaresolution.com/sitemap_index.xml
+```
+
+And Rank Math's plugin settings showed XML Sitemap as enabled. From WordPress's perspective, the sitemap should exist. But it didn't.
+
+Google Search Console had been receiving the sitemap URL for weeks. The GSC sitemap report showed "Couldn't fetch" — Google's crawler was hitting the same 404.
+
+---
+
+## Why WordPress Sitemaps 404
+
+WordPress uses a rewrite rules system to map pretty URLs to internal query parameters. The URL `/sitemap_index.xml` is not a physical file — it's a virtual URL that WordPress maps to Rank Math's sitemap generation handler via registered rewrite rules.
+
+These rewrite rules are stored in the WordPress database option `rewrite_rules`. They are regenerated ("flushed") when:
+- WordPress permalink structure is changed
+- Plugins are activated or deactivated
+- A plugin explicitly calls `flush_rewrite_rules()`
+
+If the rewrite rules are flushed but not rebuilt (which can happen during certain plugin updates, core updates, or server-level PHP opcode cache clears), the `sitemap_index.xml` mapping disappears. WordPress then falls through to its default 404 handler.
+
+---
+
+## The Rewrite Flush Pattern
+
+The fix — saving Permalinks without changes — works because WordPress always regenerates and saves the full rewrite rules table on any Permalinks save. This is the documented WordPress method for forcing a rewrite flush.
+
+**Why not just deactivate/reactivate Rank Math?** Plugin reactivation also triggers a rewrite flush and rebuild, but it's a heavier operation. Saving Permalinks is the minimal-impact approach.
+
+**Why not just call `flush_rewrite_rules()` via WP-CLI?** That works too:
+```bash
+wp rewrite flush
+```
+
+But the WP Admin approach requires no server access and is appropriate in a managed hosting environment.
+
+---
+
+## GSC Impact
+
+The sitemap 404 had been in place for an unknown duration before the audit. Google Search Console showed the sitemap in "Couldn't fetch" state. After fixing the 404 (saving Permalinks, confirming HTTP 200), the sitemap was re-submitted in GSC and the status changed to "Success" on the next crawl cycle.
+
+**Implication:** During the 404 period, Googlebot's ability to discover new URLs on asquaresolution.com was reduced to following links from existing indexed pages and external backlinks. The sitemap XML — which provides explicit URL lists, change frequencies, and priority signals — was unavailable to the crawler for indexing decisions.
+
+---
+
+## Diagnosis Approach
+
+When a sitemap URL returns 404:
+
+1. **Confirm it's not a DNS/CDN issue:** `curl -I` directly to the origin, bypass any Cloudflare or CDN layer with `--connect-to` if necessary
+2. **Confirm the plugin is enabled:** Rank Math → General Settings → Sitemap → XML Sitemap toggle
+3. **Confirm rewrite rules are the issue** (optional): `wp rewrite list | grep sitemap` — if no result, the rule is not registered
+
+In the asquaresolution.com case, step 2 confirmed the plugin was enabled, making stale rewrite rules the most likely cause — which was immediately confirmed after the Permalinks save.
+
+---
+
+## Prevention
+
+- **After any WordPress plugin update:** Save Permalinks or run `wp rewrite flush` to ensure rules are current
+- **After WordPress core updates:** Same — core updates can flush rewrite rules without guaranteeing immediate rebuild
+- **Monthly SEO audit checklist:** Include `curl -I domain.com/sitemap_index.xml` as a quick automated check
+- **GSC monitoring:** A sitemap switching to "Couldn't fetch" in the GSC Sitemaps report is a reliable indicator of this failure — set up a GSC alert or include GSC sitemap status in monthly reviews

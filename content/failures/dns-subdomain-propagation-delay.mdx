@@ -13,6 +13,19 @@ recovery_complexity: hours
 deployment_risk: medium
 time_to_detect: "Appears resolved after 20 minutes, fails for other regions/users"
 repeat_risk: high
+affected_systems:
+  - github-pages
+  - dns
+systems_touched:
+  - scamcheck
+  - trustseal
+related_failures:
+  - vite-github-pages-spa-routing
+related_case_studies:
+  - scamcheck-architecture-build
+  - trustseal-architecture-build
+linked_incidents:
+  - vite-github-pages-spa-routing
 ---
 
 <IncidentReport
@@ -42,6 +55,21 @@ repeat_risk: high
     { title: "Vite SPA Routing on GitHub Pages 404s on Refresh", href: "/failures/vite-github-pages-spa-routing", relation: "same-category" }
   ]}
   ecosystemImpact={["Inconsistent site availability across user geographies", "GitHub Pages HTTPS certificate cannot be provisioned until DNS propagates — users see certificate errors", "Premature go-live announcements create support confusion"]}
+/>
+
+<QuickFix
+  symptom="New subdomain works in your browser after 20 minutes but other users report 'site not found' — inconsistent availability by region"
+  rootCause="DNS propagation is not instant or global. Your local resolver cached the new record first. Other resolvers (ISPs, corporate DNS, CDN nodes) have not yet picked it up."
+  fix="Use dnschecker.org to verify global propagation from multiple server locations. Wait until 90%+ of locations show the correct record. For GitHub Pages, also wait for 'Enforce HTTPS' to become available — it confirms the Let's Encrypt certificate has been issued."
+  time="2–4 hours (DNS propagation) + 5 min verification"
+  confidence={80}
+  steps={[
+    "Go to dnschecker.org — enter the subdomain and select CNAME (or A) record type",
+    "Wait and refresh until at least 90% of global locations show the correct target value",
+    "In GitHub Pages repository settings, check the custom domain — verify no error flag is shown",
+    "Wait for the 'Enforce HTTPS' checkbox to become available (not greyed out) — this confirms certificate issuance",
+    "Only announce the domain as live after both DNS propagation and HTTPS are confirmed"
+  ]}
 />
 
 ## What Happened

@@ -62,6 +62,67 @@ export function buildArticleMetadata(item: ContentItem): Metadata {
   }
 }
 
+/**
+ * Failure-optimized Next.js Metadata (Open Graph, Twitter, canonical).
+ * For HowTo JSON-LD, call buildHowToSchema() separately and inject
+ * it as a <script type="application/ld+json"> in the page JSX.
+ */
+export function buildFailureMetadata(item: ContentItem): Metadata {
+  return buildArticleMetadata(item)
+}
+
+/**
+ * Build a Schema.org HowTo object for a failure page.
+ * JSON-LD for procedural debugging content — surfaces in AI search for
+ * "how to fix X", "how to resolve Y in Next.js", etc.
+ *
+ * Usage in page.tsx:
+ *   <script type="application/ld+json"
+ *     dangerouslySetInnerHTML={{ __html: JSON.stringify(buildHowToSchema(item)) }}
+ *   />
+ */
+export function buildHowToSchema(item: ContentItem): Record<string, unknown> {
+  const fm      = item.frontmatter
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: `How to fix: ${fm.title}`,
+    description: fm.description,
+    url: `${siteUrl}/failures/${item.slug}`,
+    datePublished: fm.date,
+    dateModified: fm.updated ?? fm.date,
+    author: {
+      '@type': 'Organization',
+      name: AUTHOR_NAME,
+      url: AUTHOR_URL,
+    },
+    // Resolution time from frontmatter (e.g. "15-30 min" → label only; ISO PT format requires exact minutes)
+    ...(fm.resolution_time ? { performTime: fm.resolution_time } : {}),
+    // Affected systems as HowToTool items
+    ...(fm.affected_systems?.length ? {
+      tool: fm.affected_systems.map((sys: string) => ({
+        '@type': 'HowToTool',
+        name: sys,
+      })),
+    } : {}),
+    step: [
+      {
+        '@type': 'HowToStep',
+        position: 1,
+        name: 'Identify the failure',
+        text: fm.description,
+      },
+      ...(fm.tags?.slice(0, 4).map((tag: string, i: number) => ({
+        '@type': 'HowToStep',
+        position: i + 2,
+        name: `Investigate: ${tag}`,
+      })) ?? []),
+    ],
+  }
+}
+
 /** Minimal metadata for a section list page. */
 export function buildSectionMetadata(
   title: string,

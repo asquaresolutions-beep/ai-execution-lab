@@ -1,0 +1,146 @@
+---
+title: "Firebase Cloud Functions Crashing on Default Node Runtime"
+description: "Firebase Cloud Functions deployed and appeared active in the console but crashed on every invocation in production. Cold start succeeded but function execution failed with unhandled promise rejections and module resolution errors not present in local development. Root cause: default Node runtime version (Node 18) had known incompatibilities with the npm packages used. Migrating to Node 22 runtime resolved production crashes."
+date: "2026-02-01"
+updated: "2026-02-01"
+tags: ["firebase", "firebase-functions", "node", "runtime", "deployment", "configuration"]
+status: published
+severity: high
+failure_status: resolved
+failure_type: configuration
+project: trustseal
+resolution_time: "20 minutes"
+affected_systems:
+  - firebase
+  - firestore
+systems_touched:
+  - trustseal
+  - scamcheck
+linked_incidents:
+  - environment-variable-missing-production
+related_case_studies:
+  - trustseal-architecture-build
+  - scamcheck-architecture-build
+related_logs:
+  - 2026-05-18-trustseal-operations-review
+  - 2026-05-18-scamcheck-operations-review
+evidence_images: []
+external_refs:
+  - "https://firebase.google.com/docs/functions/manage-functions?gen=2nd#set_nodejs_version"
+---
+
+<QuickFix
+  symptom="Firebase Cloud Functions deploy without errors but crash on every invocation in production. Firebase Console → Functions → Logs shows function started but immediately fails with unhandled rejections or module errors. Local emulator works fine."
+  rootCause="Firebase Functions default Node runtime (Node 18 at time of incident) was incompatible with specific npm packages or ESM module resolution used in the function code. The local Node version (typically 20 or 22) worked correctly, masking the incompatibility until production deployment."
+  fix="Explicitly pin Node 22 runtime in firebase.json under functions config. Redeploy all functions. Verify in Firebase Console that functions initialize and execute without errors."
+  time="20 min"
+  confidence={82}
+  steps={[
+    "Check current runtime: Firebase Console → Functions → [function name] → Details",
+    "Open firebase.json and locate the 'functions' configuration block",
+    "Add or update: '\"runtime\": \"nodejs22\"' under the functions config",
+    "Verify package.json has matching engines field: '\"node\": \"22\"'",
+    "Run: firebase deploy --only functions",
+    "Watch Firebase Console → Functions → Logs for a clean initialization (no crash on first cold start)",
+    "Invoke a function (via the app or Firebase Console) and confirm successful execution in logs"
+  ]}
+/>
+
+## What Happened
+
+During TrustSeal's initial build (early February 2026), Firebase Cloud Functions were deployed for the Gemini AI analysis and Razorpay webhook handling. The `firebase deploy --only functions` command succeeded with no errors. Firebase Console showed the functions as "Active."
+
+But every invocation failed. The Gemini analysis Cloud Function returned 500 errors to the client. The Firebase Console logs showed the function had started (cold start completed) but then immediately threw:
+
+```
+Unhandled Promise Rejection: Cannot find module '...'
+```
+
+or in some invocations:
+
+```
+Error: package exports do not define a valid 'exports' main
+```
+
+The local Firebase emulator (`firebase emulators:start`) ran without any errors using the same code. This masked the issue during development — the emulator used the local Node.js version (22 at time of development), while the deployed functions used Firebase's default runtime.
+
+---
+
+## The Runtime Version Gap
+
+Firebase Functions v2 (Cloud Run-based) defaults to Node 18 unless explicitly specified. At the time of this incident, the `firebase-admin` SDK version in use, combined with specific npm packages for the Gemini integration, had known issues on Node 18 related to ESM exports and module resolution changes that were resolved in Node 20/22.
+
+The emulator used the local Node version — which was 22. Production used Node 18. The codebase worked on one and crashed on the other.
+
+**The rule:** Never assume the Firebase emulator runtime matches the deployed runtime. The emulator uses your local Node binary. Firebase production uses the runtime declared in `firebase.json` (defaulting to Node 18 if not set).
+
+---
+
+## firebase.json Configuration
+
+**Before (implicit default — Node 18):**
+```json
+{
+  "functions": {
+    "source": "functions"
+  }
+}
+```
+
+**After (explicit Node 22):**
+```json
+{
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
+  }
+}
+```
+
+Also update `functions/package.json`:
+```json
+{
+  "engines": {
+    "node": "22"
+  }
+}
+```
+
+The `engines` field tells npm which Node version to expect. Without it, Firebase Functions CLI may warn or select a different runtime than intended.
+
+---
+
+## Why This Happens
+
+Firebase Functions v2 uses Google Cloud Run. Cloud Run images are pinned to a specific Node runtime that doesn't change unless you explicitly update it. The Firebase default is chosen for stability and broad compatibility — not for compatibility with the latest npm ecosystem.
+
+As npm packages adopt newer Node features (ESM, `exports` field in package.json, top-level await), they may require a more recent Node runtime than Firebase's default. The incompatibility only surfaces at execution time in the deployed environment.
+
+---
+
+## Resolution
+
+Updating `firebase.json` to set `"runtime": "nodejs22"` and running `firebase deploy --only functions` was the complete fix. The functions deployed to Node 22 runtime, all module resolution errors disappeared, and the Gemini analysis and Razorpay webhook functions executed correctly.
+
+No code changes were required — the issue was purely the runtime version mismatch.
+
+---
+
+## Operational Impact
+
+- TrustSeal Gemini AI analysis was non-functional in production for the duration of the debugging session
+- Razorpay webhook processing was also failing (same runtime environment, same crash pattern)
+- Both products appeared fully deployed but were silently broken for all Cloud Function-dependent features
+
+---
+
+## Prevention
+
+**Firebase Functions deployment checklist:**
+
+- [ ] `firebase.json` explicitly declares `"runtime": "nodejs22"` (or current stable)
+- [ ] `functions/package.json` has matching `"engines": { "node": "22" }` field
+- [ ] After deploying, immediately invoke one function from the production app and verify in Firebase Console → Functions → Logs that execution completed without errors
+- [ ] Never treat `firebase deploy` success as production validation — the deploy succeeds even if the function will crash on invocation
+
+**Pattern:** This is a runtime-environment-scope-drift failure — the development environment (local emulator on Node 22) differs from the production environment (Cloud Run on Node 18 by default) in a way that masks a real incompatibility until production deployment.

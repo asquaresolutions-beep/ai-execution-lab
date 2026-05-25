@@ -116,6 +116,10 @@ Adding a variable to the Vercel dashboard with "Development" scope checked does 
 
 - [Edge Runtime Deployment Failure](/failures/edge-runtime-deployment-failure) — edge runtime export added to OG image handler; Node.js crypto unavailable in edge workers
 - [Missing Production Environment Variable Caused Silent Feature Failure](/failures/environment-variable-missing-production) — `GEMINI_API_KEY` added to `.env.local` only, absent from Vercel Production scope
+- [Firebase Auth Session Lost on Custom Domain](/failures/firebase-auth-domain-not-authorized) — custom domain omitted from Firebase Authorized Domains list; auth session valid on localhost and test domain, silently lost on production custom domain
+- [Firebase Cloud Functions Crashing on Default Node Runtime](/failures/firebase-functions-node-version-stability) — local emulator ran Node 22; Firebase production defaulted to Node 18; function crashed on every invocation only in production
+- [Razorpay Test/Live Key Mode Mismatch](/failures/razorpay-test-live-key-mismatch) — test client key + live server key; checkout modal opened but no webhook fired; only reproducible in the production payment path
+- [GA4 Production Analytics Contaminated by Vercel Preview Deployments](/failures/ga4-preview-environment-contamination) — `NEXT_PUBLIC_GA_MEASUREMENT_ID` scoped to all Vercel environments; preview deployments baked production GA4 ID in at build time
 
 ### Prevention Checklist
 
@@ -124,42 +128,60 @@ Adding a variable to the Vercel dashboard with "Development" scope checked does 
 3. Add a startup validation function (`validateEnv()`) that throws explicitly and immediately for any missing required variable — this surfaces the error in Vercel function logs on first invocation instead of burying it in a generic catch block.
 4. Before adding `export const runtime = 'edge'` to any file, confirm the target environment is intentional and check all imports against the Vercel Edge Runtime compatibility table.
 5. After any feature deployment: perform an end-to-end test in production (not just preview) before marking the feature as ready.
+6. For Firebase Functions: explicitly set `"runtime": "nodejs22"` in `firebase.json` — never rely on the default Node version matching your local development environment.
+7. For Firebase Auth: add every domain you deploy to (including GitHub Pages testing subdomains) to the Firebase Console Authorized Domains list before deploying to that domain.
+8. For any third-party API that has test and live modes: verify both client and server keys are from the same mode before making any production payment or API call.
+9. For Vercel analytics variables: scope `NEXT_PUBLIC_` measurement IDs to Production only — preview deployments fire to production analytics data streams if the variable is in scope.
 
 ---
 
 ## Pattern 4: Infrastructure Timing Dependencies
 
-**Definition:** An operation assumes that an external infrastructure change — DNS record creation, TLS certificate provisioning — is immediately effective. The change has a propagation delay with non-zero TTL. Testing proceeds before propagation is complete, producing inconsistent results that appear to indicate a different failure.
+**Definition:** An operation assumes that an external infrastructure change — DNS record creation, TLS certificate provisioning, Firebase rules propagation — is immediately effective. The change has a propagation delay or ordering dependency. Testing proceeds before propagation is complete, or deployment artifacts are released in the wrong order, producing inconsistent results that appear to indicate a different failure.
 
 ### What Triggers It
 
-The trigger is testing or announcing a deployment too soon after making an infrastructure change that requires external propagation. The developer's own browser and DNS resolver are typically among the fastest to pick up new records, creating a false positive: the site loads locally while failing for most users.
+Two variants are documented from the archive:
+
+**Variant A — Propagation delay:** Testing or announcing a deployment too soon after making an infrastructure change that requires external propagation. The developer's own browser and DNS resolver are typically among the fastest to pick up new records, creating a false positive: the site loads locally while failing for most users.
 
 The specific archive case: a new CNAME record for `scamcheck.asquaresolution.com` was created with a 3600s TTL. The site loaded locally after 20 minutes. It was announced as live. Reports of "site not found" came back from users on resolvers that had not yet propagated the record. The failure window lasted approximately 4 hours — the full propagation cycle. A second time-gate compounded it: GitHub Pages HTTPS certificate provisioning cannot begin until DNS propagation is complete, adding 15–30 minutes after DNS resolves. ([Subdomain DNS Propagation Delay Blocked Deployment Testing](/failures/dns-subdomain-propagation-delay))
 
+**Variant B — Deployment artifact ordering:** Two interdependent infrastructure artifacts are deployed in the wrong sequence. The first artifact goes live against a stale state of the second, creating an inconsistency window that produces runtime failures.
+
+The specific archive case: Firestore security rules and Firebase Cloud Functions were both changed in the same release. Functions deployed first (via a single `firebase deploy` command with undefined artifact ordering). For the 12 minutes until the rules deployment completed, new function code was live against stale IAM/rules state — Firebase's auth context validation failed, returning 403 to every incoming request. The local emulator did not reproduce the failure because it does not simulate IAM propagation. Fix: always deploy `firebase deploy --only firestore:rules` before `firebase deploy --only functions` when both change in the same release. ([Firebase Functions 403 After Redeploy — Firestore Rules Deployment Order](/failures/firebase-deploy-sequence-auth-failure))
+
 ### How It Manifests
 
-Inconsistent behavior across users: some see the site, some see "site not found" or a DNS error. The failure is geography-dependent — users on resolvers that haven't propagated the record fail, users on resolvers that have succeed. The developer typically sees success because their local resolver propagates first.
+**Variant A (DNS propagation):** Inconsistent behavior across users — some see the site, some see "site not found." Geography-dependent. Developer sees success because their local resolver propagates first.
 
-A secondary timing dependency: GitHub Pages HTTPS certificate status. The "Enforce HTTPS" checkbox remains greyed out until after DNS propagation is complete and the Let's Encrypt certificate has been issued. This is a reliable proxy for full propagation readiness.
+**Variant B (deploy ordering):** Consistent failure for all users in production immediately after deploy. Local environment passes completely. Failure disappears after the second artifact finishes deploying. Firebase logs show auth context errors (403/missing auth) rather than application logic errors.
 
-**Detection timing:** Delayed and inconsistent. Appears to work immediately for the developer, fails for external users for hours.
+In both variants, local testing provides no warning. The failure only appears in production.
 
-<Callout type="info" title="Local browser success is not propagation verification">
-Your DNS resolver is often one of the fastest to pick up new records — especially if you use Google (8.8.8.8) or Cloudflare (1.1.1.1). Seeing the site load after 20 minutes confirms your resolver has the record. It says nothing about the remaining global resolver population. Use dnschecker.org or whatsmydns.net to verify from multiple geographic locations before announcing any domain as live.
+**Detection timing:** Variant A is delayed and inconsistent (hours). Variant B is immediate in production, resolves within minutes once the second deploy completes.
+
+<Callout type="info" title="Local success is not infrastructure state verification">
+The local environment — browser, emulator, DNS resolver — does not replicate production infrastructure state. A local emulator passes rules immediately and does not simulate propagation delays or deployment ordering gaps. A local DNS resolver picks up records faster than the global resolver population. Both create false positives that mask infrastructure timing failures.
 </Callout>
 
 ### Demonstrated By
 
 - [Subdomain DNS Propagation Delay Blocked Deployment Testing](/failures/dns-subdomain-propagation-delay) — CNAME record propagation, premature go-live announcement, chained dependency with HTTPS certificate provisioning
+- [Firebase Functions 403 After Redeploy — Firestore Rules Deployment Order](/failures/firebase-deploy-sequence-auth-failure) — Functions deployed before Rules creates 12-minute auth context gap in production; 14 failed TrustSeal requests
 
 ### Prevention Checklist
 
+**For DNS/propagation timing (Variant A):**
 1. After creating any DNS record: wait a minimum of 2 hours before considering the domain live. This is a hard minimum, not an estimate.
 2. Verify propagation using dnschecker.org or whatsmydns.net — check that 90%+ of listed locations resolve the correct record before proceeding.
-3. For GitHub Pages deployments: confirm the "Enforce HTTPS" checkbox is available (not greyed out) in the repository Pages settings before announcing the domain. This is the terminal indicator that both DNS and certificate provisioning are complete.
-4. Set DNS record TTL to 300 seconds (5 minutes) before any planned DNS change — this reduces the propagation window for subsequent changes.
-5. Add DNS propagation verification as a required step in any deployment checklist that involves a new custom domain.
+3. For GitHub Pages deployments: confirm the "Enforce HTTPS" checkbox is available (not greyed out) before announcing the domain. This is the terminal indicator that both DNS and certificate provisioning are complete.
+4. Set DNS record TTL to 300 seconds (5 minutes) before any planned DNS change — reduces the propagation window for subsequent changes.
+
+**For Firebase deployment ordering (Variant B):**
+5. When deploying Firestore rules and Cloud Functions in the same release: always deploy rules first (`firebase deploy --only firestore:rules`), then functions (`firebase deploy --only functions`).
+6. Never use a combined `firebase deploy` or `firebase deploy --only firestore:rules,functions` when both artifacts change — artifact ordering is not guaranteed.
+7. Immediately after any Firebase multi-artifact deploy: run one real production request and verify HTTP 200. The 5 minutes after deploy is the highest-risk window.
 
 ---
 
@@ -207,10 +229,14 @@ WordPress REST API, and many other Basic Auth implementations, return a bare 401
 | Pattern | Trigger | Detection Timing | Archive Examples |
 |---------|---------|-----------------|-----------------|
 | Module Boundary Violations | Node.js module in client component import chain | Immediate (build) or delayed (edge deploy) | [server-module-client-bundle](/failures/server-module-client-bundle), [edge-runtime-deployment-failure](/failures/edge-runtime-deployment-failure) |
-| Dependency Default Behavioral Changes | Library upgrade ships breaking behavior as opt-out default | Silent (build passes, render fails) | [next-mdx-remote-v6-blockjs](/failures/next-mdx-remote-v6-blockjs) |
-| Runtime Environment Scope Drift | Dev/prod environment divergence for runtime or config | Delayed (works locally, fails in production) | [edge-runtime-deployment-failure](/failures/edge-runtime-deployment-failure), [environment-variable-missing-production](/failures/environment-variable-missing-production) |
-| Infrastructure Timing Dependencies | External propagation with non-zero TTL tested too early | Delayed and inconsistent (works for developer, fails for users) | [dns-subdomain-propagation-delay](/failures/dns-subdomain-propagation-delay) |
+| Dependency Default Behavioral Changes | Library upgrade ships breaking behavior as opt-out default | Silent (build passes, render fails) | [next-mdx-remote-v6-blockjs](/failures/next-mdx-remote-v6-blockjs), [wordpress-sitemap-404](/failures/wordpress-sitemap-404) |
+| Runtime Environment Scope Drift | Dev/prod environment divergence for runtime, config, or credentials | Delayed (works locally, fails in production) | [edge-runtime-deployment-failure](/failures/edge-runtime-deployment-failure), [environment-variable-missing-production](/failures/environment-variable-missing-production), [firebase-auth-domain-not-authorized](/failures/firebase-auth-domain-not-authorized), [firebase-functions-node-version-stability](/failures/firebase-functions-node-version-stability), [razorpay-test-live-key-mismatch](/failures/razorpay-test-live-key-mismatch), [ga4-preview-environment-contamination](/failures/ga4-preview-environment-contamination) |
+| Infrastructure Timing Dependencies | External propagation delay OR deployment artifact ordering gap | Delayed/inconsistent (DNS) or immediate in production only (deploy order) | [dns-subdomain-propagation-delay](/failures/dns-subdomain-propagation-delay), [firebase-deploy-sequence-auth-failure](/failures/firebase-deploy-sequence-auth-failure) |
 | Authentication Encoding Pitfalls | Credential string transformed before encoding handshake | Immediate (401) or silent (analytics anomaly) | [wordpress-rest-api-auth-failure](/failures/wordpress-rest-api-auth-failure), [ga4-cross-domain-tracking-gap](/failures/ga4-cross-domain-tracking-gap) |
+
+**See also:**
+- [Third-Party API Mode Isolation](/docs/third-party-api-mode-isolation) — dedicated pattern doc for test/live key separation, preview environment contamination, and mode-scoped credential failures
+- [Gemini Production Operations](/docs/gemini-production-operations) — operational reference for AI output structure failures, rate limit handling, and server-side key patterns
 
 <Callout type="lab" title="Using this library during debugging">
 When a failure doesn't immediately have an obvious cause, match the symptom to a pattern before diving into the specific code. A build that passes locally but fails on Vercel is almost always Pattern 1 or Pattern 3. A feature that works in dev but is broken in production is Pattern 3. Empty components after a dependency upgrade is Pattern 2. Inconsistent DNS resolution is Pattern 4. A 401 with no explanation is Pattern 5. Naming the pattern first narrows the diagnostic scope significantly.

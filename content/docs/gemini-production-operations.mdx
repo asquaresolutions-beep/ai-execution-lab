@@ -1,0 +1,345 @@
+---
+title: "Gemini API: Production Operations Reference"
+description: "Operational reference for running Gemini AI in production via Firebase Cloud Functions. Covers: structured output enforcement, JSON parse failure handling, 429 rate limit UX design, server-side key isolation, cold start latency mitigation, Node runtime requirements, and the three-part prompt architecture that produces reliable structured output across calls."
+date: "2026-05-24"
+tags: ["gemini", "firebase-functions", "firebase", "ai", "rate-limiting", "structured-output", "prompt-engineering", "production", "scamcheck", "trustseal"]
+status: published
+related_failures:
+  - gemini-rate-limit-429-no-ux
+  - firebase-functions-node-version-stability
+  - environment-variable-missing-production
+related_case_studies:
+  - scamcheck-architecture-build
+  - trustseal-architecture-build
+related_docs:
+  - third-party-api-mode-isolation
+  - failure-pattern-library
+related_logs:
+  - 2026-05-18-scamcheck-operations-review
+  - 2026-05-18-trustseal-operations-review
+---
+
+This is the operational reference for running Gemini AI in production at A Square Solutions. It is not a quickstart guide. It is what you need to know after you have the basic integration working — the failure modes, the mitigation patterns, and the architectural decisions that emerged from running Gemini in two live products (TrustSeal and ScamCheck).
+
+---
+
+## Architecture: Server-Side Only
+
+**Rule: The Gemini API key never touches the client.**
+
+The only correct architecture for a consumer-facing Gemini integration:
+
+```
+Client → Firebase Cloud Function → Gemini API
+                     ↑
+            API key is here.
+            Never on the client.
+```
+
+The client calls a Firebase Cloud Function using the Firebase callable SDK. The Cloud Function holds the Gemini API key in its environment variables (`process.env.GEMINI_API_KEY`). The Cloud Function makes the Gemini request and returns a structured response to the client.
+
+**Why server-side only:**
+- A client-side Gemini key is visible in the browser network tab, DevTools application storage, and any JavaScript bundle analysis tool
+- Rate limit abuse is trivially achievable with an exposed key — any script can make unlimited API calls on your quota
+- Billing attribution is unclear when clients call directly — server-side calls are attributable to the application, not individual users
+- Server-side allows quota enforcement (rate limiting per user, daily check limits) before the Gemini call is even made
+
+**Vercel alternative:** If you are not using Firebase, an equivalent architecture is a Next.js API route (`app/api/`) or a Vercel serverless function. The principle is identical: the Gemini key stays in server environment variables and never reaches the browser.
+
+---
+
+## Node Runtime: Must Be Node 22
+
+Firebase Cloud Functions v2 defaults to Node 18. The Gemini SDK (`@google/generative-ai`) and related packages have module resolution behavior that is incompatible with Node 18. Functions deploy successfully but crash on every invocation in production.
+
+```json
+// firebase.json — always explicit
+{
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
+  }
+}
+```
+
+```json
+// functions/package.json — match the engines field
+{
+  "engines": {
+    "node": "22"
+  }
+}
+```
+
+**Verification:** After any `firebase deploy --only functions`, immediately open Firebase Console → Functions → Logs and trigger one function invocation. A successful cold start log + a result log confirms the runtime is correct. If you see `Cannot find module` or ESM export errors, the runtime is wrong.
+
+Full failure report: [Firebase Cloud Functions Crashing on Default Node Runtime](/failures/firebase-functions-node-version-stability)
+
+---
+
+## Structured Output Enforcement
+
+**The problem:** Gemini returns text. You need JSON. The naive approach — ask Gemini to return JSON and parse the response — fails in production at a non-trivial rate. Gemini's output format varies across calls without explicit schema enforcement.
+
+Common failure modes without schema enforcement:
+- JSON wrapped in markdown code fences (` ```json ... ``` `) — `JSON.parse()` throws
+- Extra fields not in your expected schema — downstream code accesses undefined keys
+- Different field name casing across calls — `scamProbability` vs `scam_probability`
+- Omitted optional fields — code assumes presence, crashes on missing keys
+
+**The solution: embed the schema in the prompt.**
+
+```javascript
+const SCAM_VERDICT_SCHEMA = `{
+  "probability": number (0-100),
+  "label": "Safe" | "Probably Safe" | "Uncertain" | "Likely Scam" | "High Risk",
+  "patterns": [
+    { "category": string, "description": string }
+  ],
+  "action": string (plain-language recommendation, 1-2 sentences)
+}`
+
+const prompt = `
+You are a scam detection expert. Analyze the following content for scam indicators.
+
+Return ONLY a JSON object matching this exact schema:
+${SCAM_VERDICT_SCHEMA}
+
+Do not include markdown code fences. Do not include explanation. JSON only.
+
+Content to analyze:
+${userInput}
+`
+```
+
+Including the schema in the prompt with explicit field names, types, and allowed values dramatically improves structured output reliability. Without the schema, Gemini's JSON formatting varies across calls in ways that break the client-side parser.
+
+**The `JSON.parse()` wrapper:**
+
+```javascript
+let verdict
+try {
+  // Strip any markdown fences Gemini occasionally adds
+  const raw = result.response.text().trim()
+  const cleaned = raw.replace(/^```json\n?/, '').replace(/\n?```$/, '')
+  verdict = JSON.parse(cleaned)
+} catch (error) {
+  // Return structured error instead of crashing the function
+  return { parseError: true, message: 'Analysis result could not be parsed' }
+}
+```
+
+The `replace()` calls handle the common Gemini code fence wrapping. The `try/catch` returns a structured `{ parseError: true }` object instead of throwing — the client can display "Could not parse analysis result" and offer a retry rather than hanging on an unhandled exception.
+
+---
+
+## Rate Limit Handling (429)
+
+**The failure mode:** Gemini free tier enforces a requests-per-minute (RPM) limit. When the limit is hit, Gemini returns HTTP 429. Without explicit handling, the Cloud Function crashes and the client shows an indefinite spinner.
+
+Full failure report: [Gemini API 429 Rate Limit Returns Hanging Spinner Instead of User Feedback](/failures/gemini-rate-limit-429-no-ux)
+
+**The correct pattern:**
+
+```javascript
+// Cloud Function — Gemini call with rate limit handling
+async function callGemini(prompt) {
+  try {
+    const result = await model.generateContent(prompt)
+    return { ok: true, text: result.response.text() }
+  } catch (error) {
+    if (error.status === 429 || error.message?.includes('429')) {
+      return { ok: false, rateLimited: true }
+    }
+    if (error.status >= 500) {
+      return { ok: false, serverError: true }
+    }
+    throw error  // unexpected errors: re-throw for Firebase to log
+  }
+}
+
+// In the handler:
+const geminiResult = await callGemini(prompt)
+
+if (!geminiResult.ok) {
+  if (geminiResult.rateLimited) {
+    return { rateLimited: true }  // HTTP 200, structured response — not an exception
+  }
+  return { error: true, message: 'Analysis service temporarily unavailable' }
+}
+```
+
+**Client-side handling:**
+
+```javascript
+const response = await analyzeContent({ text: input })
+
+if (response.data.rateLimited) {
+  setMessage('Rate limit reached — please wait a few seconds and try again')
+  setLoading(false)
+  return
+}
+
+if (response.data.parseError) {
+  setMessage('Could not analyze the result — please try again')
+  setLoading(false)
+  return
+}
+
+setVerdict(response.data.verdict)
+setLoading(false)
+```
+
+**Key principle:** Return structured response objects (HTTP 200) for expected error conditions (rate limits, parse failures). Only throw unhandled exceptions for unexpected errors. Structured responses keep the client in the normal code path — no unhandled promise rejections, no indefinite loading states.
+
+---
+
+## Cold Start Latency
+
+**What happens:** Firebase Cloud Functions v2 (Cloud Run-based) have a cold start period after a period of inactivity. The first invocation after idle takes 2–4 seconds before the Gemini call even begins. Warm invocations take 1–2 seconds total.
+
+**Not a failure — requires UX design.** Cold start latency is a fundamental characteristic of serverless compute. For an AI analysis tool where the user expects meaningful processing time, 2–4 seconds is acceptable if the UI communicates that work is happening.
+
+**The wrong UX:** A single spinner that appears immediately and takes 4+ seconds to resolve. Users interpret this as the application hanging.
+
+**The right UX:** A multi-stage loading indicator that updates to show progress:
+
+```javascript
+// ScamCheck loading state sequence
+const LOADING_STAGES = [
+  { delay: 0,    text: 'Analyzing input...' },
+  { delay: 1500, text: 'Checking patterns...' },
+  { delay: 3000, text: 'Generating verdict...' },
+]
+
+useEffect(() => {
+  if (!loading) return
+  let timeouts = []
+  LOADING_STAGES.forEach(({ delay, text }) => {
+    timeouts.push(setTimeout(() => setLoadingText(text), delay))
+  })
+  return () => timeouts.forEach(clearTimeout)
+}, [loading])
+```
+
+The text updates at intervals that roughly match the actual processing phases. Users perceive a 4-second wait as faster when the interface is showing progress than when it is static.
+
+---
+
+## Quota Management Pattern
+
+**Free tier limits (approximate, as of 2026):**
+- 15 RPM (requests per minute)
+- 1 million tokens per minute
+- 1,500 RPD (requests per day) — model-dependent
+
+For a consumer product on the free tier, the RPM limit is the first constraint hit. The RPD limit becomes relevant as real user traffic grows.
+
+**User-level quota enforcement (Firestore pattern):**
+
+```javascript
+// Check quota before calling Gemini — avoid burning free tier on abusive users
+const quotaDoc = await db.doc(`users/${uid}/quota/current`).get()
+const quota    = quotaDoc.data()
+
+if (quota.checksThisMonth >= FREE_TIER_LIMIT) {
+  return { quotaExceeded: true }
+}
+
+// Proceed with Gemini call
+const result = await callGemini(prompt)
+
+// Increment quota atomically
+await db.doc(`users/${uid}/quota/current`).update({
+  checksThisMonth: FieldValue.increment(1)
+})
+```
+
+Quota enforcement before the Gemini call prevents the quota from being consumed by unauthenticated or rate-abused traffic. The atomic Firestore increment ensures concurrent requests don't race past the limit.
+
+---
+
+## The Three-Part Prompt Architecture
+
+For any Gemini integration that returns structured data, the prompt should follow a three-part structure. This is not aesthetic preference — it is derived from the production evidence of what makes Gemini output reliable and parseable.
+
+### Part 1: Role and Output Schema
+
+Define what Gemini is and what format it must return. Embed the exact JSON schema in this section.
+
+```
+You are a [role]. Analyze the following [input type] and return a structured analysis.
+
+Return ONLY a JSON object with this exact schema:
+{
+  "field1": type,
+  "field2": "allowed" | "values" | "only",
+  ...
+}
+
+No markdown code fences. No explanation text. JSON only.
+```
+
+### Part 2: Signal Taxonomy or Evaluation Criteria
+
+Provide the specific criteria Gemini should evaluate. Do not ask Gemini to invent its own taxonomy. Providing the taxonomy:
+- Ensures consistent categorization across calls
+- Reduces false positives from single-signal matches
+- Makes the output more defensible and explainable
+
+```
+Evaluate against these specific categories:
+- [Category A]: [definition and examples]
+- [Category B]: [definition and examples]
+...
+Weight the categories in combination, not in isolation.
+```
+
+### Part 3: Edge Cases and Negative Space
+
+Explicitly handle the cases where Gemini should not flag something. The most common edge case: a user asking about X is different from X itself.
+
+```
+Edge cases to handle:
+- If the content clearly belongs to [legitimate category], return probability 0–20
+- Do not flag content based solely on discussing [sensitive topic] — e.g., a user
+  describing [concern] to ask about it is not itself [concern]
+- If the content is ambiguous, prefer [conservative/liberal] scoring
+```
+
+**Why Part 3 matters:** Without edge case handling, ScamCheck would flag a description of a scam (submitted by a user asking if it was a scam) as a scam itself. The prompt would be generating false positives on its own valid input type.
+
+---
+
+## Production Checklist
+
+```
+BEFORE LAUNCH
+☐ GEMINI_API_KEY in Firebase Functions environment variables (firebase functions:config:set OR secrets)
+☐ firebase.json: "runtime": "nodejs22"
+☐ functions/package.json: "engines": { "node": "22" }
+☐ Prompt structured with schema, taxonomy, and edge cases
+☐ JSON.parse() wrapped with try/catch returning { parseError: true }
+☐ 429 handling returns { rateLimited: true } — not an exception
+☐ Submit button disabled during in-flight request
+
+AFTER DEPLOY
+☐ Firebase Console → Functions → Logs — trigger one invocation and verify clean execution
+☐ Test with rapid successive requests — confirm rate limit message appears, not spinner
+☐ Test with ambiguous input — confirm edge case handling behaves as expected
+
+QUOTA MONITORING
+☐ Gemini API Console — check daily and per-minute usage weekly
+☐ Set a budget alert in Google Cloud Console if on paid tier
+☐ User-level quota enforced in Firestore before Gemini call
+```
+
+---
+
+## Related
+
+- [ScamCheck: Building an AI Scam Detector](/case-studies/scamcheck-architecture-build) — real build record with Gemini prompt iterations and failure timeline
+- [TrustSeal: Building an AI Website Trust Verifier](/case-studies/trustseal-architecture-build)
+- [Gemini API 429 Rate Limit Returns Hanging Spinner](/failures/gemini-rate-limit-429-no-ux)
+- [Firebase Cloud Functions Crashing on Default Node Runtime](/failures/firebase-functions-node-version-stability)
+- [Third-Party API Mode Isolation](/docs/third-party-api-mode-isolation)

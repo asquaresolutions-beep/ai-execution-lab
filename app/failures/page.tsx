@@ -210,6 +210,8 @@ function ArchiveStats({ items }: { items: ContentMeta[] }) {
 // Page
 // ─────────────────────────────────────────────────────────────
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
+
 export default function FailuresPage() {
   const items        = getAllMeta('failures')
   const memoryTable  = getFailureMemory()
@@ -230,8 +232,30 @@ export default function FailuresPage() {
     }
   }
 
+  // ItemList schema — makes this archive AI-citable as a curated list
+  const itemListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Failure Archive — AI Execution Lab',
+    description: 'Documented production failures from real AI execution work, with root cause analysis, resolution timelines, and verified fixes.',
+    url: `${SITE_URL}/failures`,
+    numberOfItems: items.length,
+    itemListElement: items.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.frontmatter.title,
+      description: item.frontmatter.description,
+      url: `${SITE_URL}/failures/${item.slug}`,
+    })),
+  }
+
   return (
     <div className="px-6 lg:px-8 py-8 max-w-4xl">
+      {/* ItemList structured data for AI search engine citation */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
+      />
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-3">

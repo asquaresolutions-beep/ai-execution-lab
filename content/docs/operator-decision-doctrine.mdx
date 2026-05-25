@@ -1,0 +1,587 @@
+---
+title: "Operator Decision Doctrine — A Square Solutions"
+description: "How operators make sound decisions during deployments, failures, recovery, and production uncertainty. Ten operator invariants extracted from real incidents where assumption, pressure, and incomplete verification made incidents worse or masked them for weeks. Answers the question: how do humans avoid making production incidents worse under pressure?"
+date: "2026-05-25"
+tags: ["reliability", "deployment", "firebase", "production", "observability"]
+status: published
+related_docs:
+  - operational-invariants
+  - incident-response-doctrine
+  - production-observability-doctrine
+  - deployment-verification-checklist
+---
+
+Technical doctrine governs what must be true about the system. This doctrine governs what must be true about the operator's judgment. The same production incidents that produced the [Operational Invariants](/docs/operational-invariants) also reveal where human decision-making went wrong — and where it would have gone wrong under pressure even with the technical invariants known.
+
+Ten operator invariants are defined here. Each one addresses a specific failure mode in human judgment that contributed to, extended, or masked a production incident. None are aspirational principles. All are grounded in documented incident history.
+
+---
+
+## Operator Invariant Index
+
+| ID | Statement | Incident that established it |
+|---|---|---|
+| INV-OPS-1 | Deploy success is not proof of operational correctness | firebase-functions-node-version-stability, firebase-deploy-sequence-auth-failure |
+| INV-OPS-2 | Platform defaults must be audited before every new project deploy | firebase-functions-node-version-stability, vite-github-pages-spa-routing |
+| INV-OPS-3 | Verification scope must match the actual user flow, not the deploy surface | firebase-auth-domain-not-authorized, vite-github-pages-spa-routing |
+| INV-OPS-4 | Go-live declarations require behavioral verification, not build verification | dns-subdomain-propagation-delay, firebase-deploy-sequence-auth-failure |
+| INV-OPS-5 | Under pressure, the safest action is the most deliberate one | firebase-deploy-sequence-auth-failure, litespeed-client-cache-bypass-ignored |
+| INV-OPS-6 | Log cleanliness is not recovery confirmation for absent-signal failures | firebase-auth-domain-not-authorized, ga4-preview-environment-contamination |
+| INV-OPS-7 | Recovery under pressure must not change more than one variable at a time | razorpay-test-live-key-mismatch |
+| INV-OPS-8 | Incomplete fixes look like complete fixes until the verification moment | razorpay-test-live-key-mismatch, firebase-auth-domain-not-authorized |
+| INV-OPS-9 | Assumptions about platform behavior must be named before they become deployments | All — every failure was an untested assumption |
+| INV-OPS-10 | Reproducing the failure is more valuable than the first fix attempt | litespeed-client-cache-bypass-ignored, wordpress-rest-api-auth-failure |
+
+---
+
+## The Ten Operator Invariants
+
+### INV-OPS-1 — Deploy success is not proof of operational correctness
+
+**Statement:** A deployment command exiting 0 is proof that the artifact was delivered to the platform. It is not proof that the system behaves correctly under production conditions.
+
+**Why it exists:** Three distinct failures in the archive passed all pre-deploy checks — build success, emulator pass, TypeScript clean — and only manifested when a real production request was made after go-live:
+
+- **firebase-functions-node-version-stability:** `firebase deploy` exited successfully. Functions appeared healthy in the Firebase Console dashboard. Every invocation failed immediately at runtime.
+- **firebase-deploy-sequence-auth-failure:** Both deploy steps exited 0. Firebase Console showed functions as deployed. Every request returned 403 for 12 minutes.
+- **firebase-auth-domain-not-authorized:** Deployment was unrelated to auth. Auth appeared to work on sign-in. Sessions were lost silently on every reload.
+
+**The cognitive trap:** "It deployed" maps to "it works" automatically for most engineers. This mapping is wrong for platforms where the deployment artifact (code, config) is distinct from the operational runtime state (IAM propagation, Authorized Domains, Node runtime). The artifact being in place does not mean the runtime is configured correctly.
+
+**Correct posture:** The question after every deploy is not "did it deploy?" but "did a real user request succeed?"
+
+**Verification:** [INV-DEP-5](/docs/operational-invariants#inv-dep-5) operationalizes this — a real production request must succeed before any deploy is declared safe. This operator invariant describes the human cognition failure; the reliability invariant describes the technical requirement.
+
+---
+
+### INV-OPS-2 — Platform defaults must be audited before every new project deploy
+
+**Statement:** Before the first deploy to any new Firebase project, GitHub Pages repository, or Vercel project, each platform's dangerous defaults must be explicitly checked and overridden if needed. The defaults are not safe.
+
+**Why it exists:** Every platform in this ecosystem has a dangerous default that has produced a production failure:
+
+| Platform | Dangerous default | Failure it caused |
+|---|---|---|
+| Firebase Functions | Node 18 runtime | firebase-functions-node-version-stability |
+| Firebase CLI | Undefined deploy artifact order on combined deploy | firebase-deploy-sequence-auth-failure |
+| Vite + GitHub Pages | dist/ wiped on every build | vite-github-pages-spa-routing |
+| LiteSpeed (WordPress) | Ignores client Cache-Control headers | litespeed-client-cache-bypass-ignored |
+| Vercel env vars | All environment checkboxes checked by default | ga4-preview-environment-contamination |
+| Firebase Auth | Only localhost authorized by default | firebase-auth-domain-not-authorized |
+
+**The cognitive trap:** "Default" implies "safe for the common case." For each of the failures above, the operator assumed the default was appropriate for their use case. In each case, the platform did exactly what it was designed to do — the assumption that the default applied to this context was wrong.
+
+**Correct posture:** A new project checklist is not bureaucracy — it is the document that compensates for the fact that platform defaults are optimized for the platform's general audience, not for this specific ecosystem. The [New Firebase Project Setup Checklist](/docs/deployment-verification-checklist#new-firebase-project-setup-checklist) exists precisely because of this invariant.
+
+---
+
+### INV-OPS-3 — Verification scope must match the actual user flow, not the deploy surface
+
+**Statement:** After any deploy, verification must cover the user's path through the system from their entry point, not just the component that changed. If the user's path includes steps the operator did not modify, those steps must still be verified.
+
+**Why it exists:** Two distinct failures in the archive were caused by incomplete verification scope:
+
+- **vite-github-pages-spa-routing:** After deploying to GitHub Pages, the operator verified that the root route loaded correctly. Non-root routes (`/history`, `/dashboard`) were not tested — because "I didn't change the routing." Those routes returned GitHub's 404 page. A user navigating directly to any non-root URL would have hit 404.
+
+- **firebase-auth-domain-not-authorized:** The auth change that was being tested was unrelated to domain authorization. Auth sign-in appeared to work. The operator did not test the post-reload session persistence because "I didn't change auth." Every user who reloaded the page was silently logged out.
+
+**The cognitive trap:** "I only changed X, so I only need to verify X." This is true in isolated unit tests. It is false in production systems where components share runtime state. A Vite build affects all files in dist/, including 404.html. A Firebase deployment affects the entire auth configuration, including which domains are authorized.
+
+**User flow verification:** Verify from the user's entry point to their goal completion, not from the change boundary to the code boundary.
+
+```
+Wrong: "I changed the quota enforcement logic, so I verified that quotas are enforced."
+Correct: "I changed the quota enforcement logic, so I verified: sign in → perform analysis → quota increments → second analysis → quota enforced → third analysis blocked → history shows correct count."
+```
+
+---
+
+### INV-OPS-4 — Go-live declarations require behavioral verification, not build verification
+
+**Statement:** A product or feature must not be announced as live until at least one real user action on the production domain has completed successfully — not until build success, not until "looks good in console," not until local testing passes.
+
+**Why it exists:** Two distinct failures involved announcements or declarations made before verification was complete:
+
+- **dns-subdomain-propagation-delay:** The custom domain resolved for the developer (whose DNS resolver had already propagated the record) and was announced as live. The majority of users on global resolvers that had not yet propagated could not reach the site for up to 4 hours. The go-live announcement preceded actual availability.
+
+- **razorpay-test-live-key-mismatch:** The payment flow was declared production-ready after the integration was built and the UI looked correct. No real payment was placed through the live flow before go-live. Test-mode credentials remained in place. Every user who paid saw a success modal but received no premium access.
+
+**Behavioral verification vs. build verification:**
+
+| Build verification | Behavioral verification |
+|---|---|
+| `firebase deploy` exited 0 | One AI analysis request returned HTTP 200 |
+| Vercel shows "Ready" | Homepage loads AND one dynamic route renders |
+| DNS record created in registrar | dnschecker.org shows 90%+ resolving |
+| Razorpay integration built | One real payment placed, webhook fired, Firestore updated |
+| GitHub Pages "Site is live" | Non-root route loads on direct navigation |
+
+**Correct posture:** Behavioral verification is slower. It also the only verification that matters.
+
+---
+
+### INV-OPS-5 — Under pressure, the safest action is the most deliberate one
+
+**Statement:** Deployment pressure, incident urgency, and the desire to "just fix it quickly" are conditions under which the most dangerous shortcuts are taken. The actions that save the most time under pressure are the ones most likely to extend the incident.
+
+**Why it exists:** The firebase-deploy-sequence-auth-failure was caused by an operational shortcut: `firebase deploy` (the fast, "just deploy everything" command) instead of the two-step sequence (the slightly slower, correct procedure). The pressure to deploy quickly was the exact condition under which the deploy sequence invariant was violated.
+
+**The time math:** The two-step Firebase deploy takes approximately 90 seconds longer than `firebase deploy`. The recovery from the resulting 12-minute outage took approximately 8 minutes. The shortcut cost 8 minutes to avoid costing 90 seconds.
+
+**Pressure behaviors to recognize and resist:**
+
+| Pressure behavior | Why it feels right | Why it's dangerous |
+|---|---|---|
+| Using `firebase deploy` for a combined release | Fastest deploy command | Undefined artifact order → 403 window |
+| Verifying WordPress change before cache purge | "I just want to check if it worked" | Sees cached HTML → wrong conclusion → unnecessary rework |
+| Announcing DNS go-live when local browser works | "It works for me" | Local resolver propagates faster than global |
+| Declaring recovery complete when logs go quiet | "I don't see any more errors" | Absent-signal failures don't log |
+| Fixing one Razorpay credential and checking | "Let me see if this was the problem" | Leaves three credentials wrong; second failure is silent |
+
+**Correct posture:** When under pressure to "just fix it fast," explicitly pause and identify: am I about to skip a step that exists because of a past failure? If yes, do not skip it.
+
+---
+
+### INV-OPS-6 — Log cleanliness is not recovery confirmation for absent-signal failure classes
+
+**Statement:** For any failure class that produces no log entry when broken, log cleanliness after recovery is not confirmation that recovery succeeded. The logs were clean before the failure too.
+
+**Why it exists:** The most dangerous failures in the archive produced no error logs — they were only detectable through behavioral tests. After recovery actions for these failures, the logs are still clean — because they were always clean:
+
+| Failure class | Log signal when broken | Log signal after fix |
+|---|---|---|
+| firebase-auth-domain-not-authorized | None | None |
+| ga4-preview-environment-contamination | None | None |
+| ga4-cross-domain-tracking-gap | None | None |
+| vite-github-pages-spa-routing (CNAME missing) | None | None |
+| razorpay-test-live-key-mismatch | None (payment UI appears to work) | None |
+
+**The trap:** Operator applies recovery action → opens Firebase Console → sees no error entries → "logs are clean, we're good." This is a false positive for the entire absent-signal failure class. The behavioral test (sign in → reload → confirm session) is the only signal that distinguishes the broken state from the recovered state.
+
+**Rule:** For any failure that was detected through behavioral observation (not through a log entry or dashboard alert), recovery must be confirmed through behavioral observation. The absence of a log signal is not the same as the presence of a success signal.
+
+---
+
+### INV-OPS-7 — Recovery under pressure must not change more than one variable at a time
+
+**Statement:** During incident recovery, make the smallest possible change that addresses the diagnosed root cause. Verify that change. Only if it fails to resolve the incident, identify and apply the next change. Never apply multiple simultaneous changes during recovery.
+
+**Why it exists:** The razorpay-test-live-key-mismatch recovery required updating four credentials simultaneously — but the operator discovered this was a multi-variable fix only because the recovery checklist specified it. The temptation in any recovery scenario is to "fix everything that might be wrong" simultaneously, which produces a new problem: if the symptom disappears, the operator doesn't know which change fixed it. If the symptom persists, the operator doesn't know which change failed. Either way, the recovery state is ambiguous.
+
+**Exception:** Some failures require multi-variable fixes as an atomic operation (Razorpay mode switch requires all four credentials to match simultaneously — fixing one while leaving three creates a second failure mode). The atomic requirement should be documented as part of the recovery procedure, not discovered under pressure.
+
+**Documented atomic requirements in this ecosystem:**
+- Razorpay mode switch: all four credentials must switch simultaneously (INV-PAY-2)
+- Firebase combined release: rules deploy and functions deploy are sequential but both must complete before declaring the release done
+
+Every other recovery in the archive was single-variable.
+
+---
+
+### INV-OPS-8 — Incomplete fixes look like complete fixes until the verification moment
+
+**Statement:** An incomplete fix produces no error signals until the exact condition that requires the missing component is triggered. An operator who does not run the full verification checklist cannot distinguish an incomplete fix from a complete one.
+
+**Why it exists:** Two incidents in the archive had incomplete-fix traps:
+
+- **razorpay-test-live-key-mismatch:** Fixing `RAZORPAY_KEY_ID` to live mode makes the subscription creation call succeed. The checkout modal opens. The user can "pay." Everything looks correct until the webhook fires — and the webhook handler uses `RAZORPAY_KEY_SECRET` in live mode but the subscription was created with a test-mode plan (wrong `RAZORPAY_PLAN_ID`). The fix appeared complete until a real payment was attempted.
+
+- **firebase-auth-domain-not-authorized:** Adding the production custom domain to Authorized Domains fixes the production sign-in. The app appears to work. The GitHub Pages staging domain is still missing — staging deployments will fail auth. The fix appears complete until someone tests auth on staging.
+
+**The pattern:** Every incomplete fix in the archive shared one characteristic — it addressed the symptom that was currently observable while leaving a second, currently-dormant failure mode in place. The verification checklist is specifically designed to surface these dormant modes before users encounter them.
+
+**Correct posture:** After any fix, the question is not "does the thing I broke now work?" but "does the complete user journey work end-to-end?"
+
+---
+
+### INV-OPS-9 — Assumptions about platform behavior must be named before they become deployments
+
+**Statement:** Before any deploy, explicitly identify the assumptions being made about how the platform will behave. If any assumption has not been verified in production for this specific ecosystem, treat it as an unknown and verify it.
+
+**Why it exists:** Every production failure in the archive was a failed assumption:
+
+| Assumption made | What actually happened |
+|---|---|
+| "Firebase deploys artifacts in a sensible order" | Firebase deploys in undefined order; functions before rules causes 403 |
+| "Firebase uses a modern Node runtime by default" | Firebase defaults to Node 18; packages are incompatible |
+| "Firebase Auth works on any domain we deploy to" | Only explicitly listed domains are authorized |
+| "Vite build preserves my manually-added files" | Vite wipes dist/ on every build; public/ is the correct location |
+| "LiteSpeed respects Cache-Control no-cache from the browser" | LiteSpeed ignores client-sent cache headers; only server-side purge works |
+| "Spaces in credentials should be URL-encoded before Base64" | WordPress expects raw spaces in Application Passwords |
+| "Preview deployments won't contaminate production analytics" | NEXT_PUBLIC_ vars scope to all environments by default |
+| "My DNS change will be live for all users when it works in my browser" | Local resolver propagates before global resolvers |
+| "Razorpay test mode and live mode use the same key format" | Test keys require test infrastructure; mixing modes produces silent failure |
+
+**Every single one of these was a reasonable assumption that turned out to be wrong for this specific ecosystem.** The invariant is not that all assumptions are wrong — it is that unverified assumptions about platform behavior are production risk. Named assumptions can be checked. Unnamed assumptions become incidents.
+
+**Pre-deploy assumption inventory (informal practice):**
+Before any deploy involving a new behavior, take 30 seconds to name what you're assuming. Any assumption that has not been verified in production for this platform → add it to the post-deploy verification checklist for this deploy.
+
+---
+
+### INV-OPS-10 — Reproducing the failure is more valuable than the first fix attempt
+
+**Statement:** Before applying a fix during any incident, first confirm that you can reproduce the failure reliably. An unreproducible failure that disappears after a change may have resolved spontaneously — or the fix may have addressed the wrong cause.
+
+**Why it exists:** Two incidents in the archive had reproduction as the key diagnostic step:
+
+- **litespeed-client-cache-bypass-ignored:** The PHP change appeared to have no effect. The first recovery instinct was "the code is wrong." The correct diagnosis required reproducing the observation: "the change is not visible" → purge cache → "now it is visible." The failure was not in the code; it was in the verification methodology. Without reproducing the failure deliberately (observing the cached HTML, then purging, then re-observing), the diagnosis would have been "PHP change not working" instead of "cache not cleared."
+
+- **wordpress-rest-api-auth-failure:** The 401 appeared inconsistently across different testing methods (curl vs. application code). The correct fix required reproducing the specific 401 with the exact credential format, identifying the URL-encoding step that produced the wrong hash, and confirming the fix with the same curl test. Without a reproducible test case, the fix would have been guesswork.
+
+**Reproduction before fix:**
+```
+1. Confirm the failure is still occurring right now (not transient)
+2. Identify the minimal action that reproduces the failure reliably
+3. Apply the fix
+4. Confirm the same action no longer reproduces the failure
+5. Confirm the related user flow works end-to-end
+```
+
+This sequence also provides natural verification: the fix is confirmed by the absence of the previously-reproducible failure, not by the absence of errors in a log.
+
+---
+
+## Common Operator Mistake Taxonomy
+
+Patterns abstracted from the incident archive, organized by failure mode type.
+
+### Type 1 — Proxy Confidence
+
+Using a signal that correlates with success as a substitute for direct success verification.
+
+**Instances:**
+- Deploy exit code 0 as proxy for "system is working"
+- Log entries stopping as proxy for "incident resolved"
+- Payment modal opening as proxy for "payment integration is correct"
+- DNS record created as proxy for "domain is live globally"
+
+**Recognition:** "I know it's working because [build/log/console/UI element] shows X." If X is not a real user request succeeding, it is proxy confidence.
+
+---
+
+### Type 2 — Scope Underestimation
+
+Verifying the changed component without verifying the user journey that includes it.
+
+**Instances:**
+- Verifying root route after GitHub Pages deploy (non-root routes untested)
+- Verifying sign-in after auth config change (post-reload session untested)
+- Verifying one Razorpay credential (other three untested)
+- Verifying quota increment (quota block at limit untested)
+
+**Recognition:** "I checked the part I changed." The question is whether you checked the part the user encounters.
+
+---
+
+### Type 3 — Pressure Shortcutting
+
+Taking the faster action because of time pressure, where the faster action has produced a prior incident.
+
+**Instances:**
+- `firebase deploy` instead of the two-step sequential deploy (12-min outage)
+- Verifying before LiteSpeed purge (false negative, unnecessary rework)
+- Announcing go-live when local browser works (users can't reach it)
+
+**Recognition:** "I'll just do it quickly this way." If "this way" has an asterisk in any operational doctrine document, do not do it this way.
+
+---
+
+### Type 4 — Assumption Deployment
+
+Deploying a behavior that has not been verified in production for this platform, based on a reasonable inference from general knowledge.
+
+**Instances:**
+- Firebase Node runtime (reasonable to assume modern default; wrong)
+- LiteSpeed cache headers (reasonable to assume client headers respected; wrong)
+- Firebase Auth domains (reasonable to assume domain-agnostic; wrong)
+- Vite build preservation (reasonable to assume files are preserved; wrong)
+
+**Recognition:** "It should work because..." If the reasoning ends with a general principle rather than "and I've verified this in this platform's production environment," it is an assumption deployment.
+
+---
+
+### Type 5 — Incomplete Recovery Declaration
+
+Declaring an incident resolved before running the full verification checklist for the affected platform.
+
+**Instances:**
+- Fixing RAZORPAY_KEY_ID and declaring payment recovery complete (three credentials still wrong)
+- Adding production domain to Auth and declaring auth recovery complete (staging domain still missing)
+- Seeing 403 errors stop in logs and declaring Firebase recovery complete (no real request tested)
+
+**Recognition:** "Looks good." This phrase is a signal that verification may be incomplete. The recovery completion checklist exists for exactly this scenario.
+
+---
+
+## Misleading Signals Catalog
+
+Signals that appear to confirm correct operation but do not.
+
+| Signal | What it actually confirms | What it does not confirm |
+|---|---|---|
+| `firebase deploy` exits 0 | Artifact delivered | Runtime correctness, deploy sequence correctness |
+| Firebase Console → Functions → "OK" status | Function is deployed and accepting invocations | That invocations succeed with the correct auth context |
+| Firebase Functions logs show no errors | No invocations produced log entries | That invocations succeed (no-log failures exist) |
+| Vercel shows "Ready" | Build succeeded | That runtime behavior is correct |
+| Payment modal opens and shows success | Checkout flow UI is functional | That webhook fired, Firestore was updated, premium access was granted |
+| DNS record visible in registrar | Record was created | That global resolvers have propagated it |
+| WPCode snippet shows "Active" | Snippet is running | That its output is visible (cache not cleared yet) |
+| GA4 Realtime shows events firing | Tracking script is loaded | That data is attributed correctly and not contaminating production |
+| Site loads on production domain after auth change | Static content is served | That Firebase Auth session persists after reload |
+| Emulator tests pass | Local behavior is correct | That production infrastructure matches emulator behavior |
+
+---
+
+## Human Error Analysis — Historical Incidents
+
+For each incident, what the human decision failure was, independent of the technical root cause.
+
+### firebase-deploy-sequence-auth-failure
+**Human decision failure:** Used the faster deploy command (`firebase deploy`) under the assumption that platform ordering would be safe by default.  
+**Assumption replaced verification:** Assumed combined deploy would sequence correctly. Never verified deploy ordering behavior.  
+**Pressure factor:** Deploy urgency encouraged "just run the deploy command."  
+**What correct behavior looks like:** Check: does this release touch both functions and rules? Yes → use two-step sequence.
+
+### firebase-functions-node-version-stability
+**Human decision failure:** Deployed without auditing firebase.json for runtime declaration.  
+**Assumption replaced verification:** Assumed Firebase would use a compatible Node version by default.  
+**False confidence signal:** `firebase deploy` exited 0, console showed functions healthy.  
+**What correct behavior looks like:** New project checklist includes "firebase.json: nodejs22 confirmed."
+
+### firebase-auth-domain-not-authorized
+**Human decision failure:** Launched on custom domain without verifying the auth flow on that specific domain.  
+**Assumption replaced verification:** Assumed Firebase Auth works on any domain where the app is deployed.  
+**Scope underestimation:** Verified sign-in (worked). Did not verify post-reload session persistence (failed).  
+**What correct behavior looks like:** New domain setup checklist includes "Firebase Auth: sign in → hard reload → session persists."
+
+### razorpay-test-live-key-mismatch
+**Human decision failure:** Declared payment integration production-ready without placing a real payment through the live flow.  
+**Assumption replaced verification:** "The UI looks correct and works in test mode, so it's ready for live mode."  
+**Proxy confidence:** Payment modal opened and showed success. Did not trigger webhook. Did not update Firestore.  
+**Incomplete fix risk:** Fixing one credential while leaving three wrong would produce the same symptom.  
+**What correct behavior looks like:** Mode switch checklist requires one real live transaction before go-live declaration.
+
+### ga4-preview-environment-contamination
+**Human decision failure:** Set GA4 variable in Vercel without restricting environment scope.  
+**Assumption replaced verification:** "Preview URLs are internal, they won't be accessed by real users."  
+**Silent duration:** 6 weeks before detection. Logs were clean throughout.  
+**What correct behavior looks like:** Any NEXT_PUBLIC_ analytics variable → verify Vercel env scope is Production only.
+
+### litespeed-client-cache-bypass-ignored
+**Human decision failure:** Verified the PHP change by refreshing the page before purging cache.  
+**False negative produced:** Observed pre-change HTML → concluded "PHP change didn't work."  
+**Pressure factor:** Quick check instinct — "let me just see if it worked."  
+**Reproduction intelligence:** Purging cache and re-observing would have immediately revealed the change was correct.  
+**What correct behavior looks like:** Deploy PHP change → LiteSpeed Purge All → then verify.
+
+### vite-github-pages-spa-routing
+**Human decision failure:** Verified only the root route after deploy. Assumed routing was unaffected.  
+**Scope underestimation:** The change was not to routing — but the Vite build wiped 404.html which handles routing.  
+**What correct behavior looks like:** Post-deploy verification always includes direct navigation to a non-root route.
+
+### dns-subdomain-propagation-delay
+**Human decision failure:** Go-live announcement made when the developer's browser showed the site loading.  
+**Proxy confidence:** "It works for me" interpreted as "it works."  
+**What correct behavior looks like:** Verify with dnschecker.org (external perspective) before any announcement.
+
+---
+
+## Operational Confidence Model
+
+When is confidence in a production state justified, and when is it dangerous?
+
+### Verified Confidence
+
+Confidence is justified when:
+
+1. **A real production request through the full user flow returned a successful response.** Not an emulator request. Not a curl to a single endpoint. A complete user journey on the production domain.
+
+2. **The full post-deploy verification checklist for the affected platform was run.** Not the items the operator thinks are relevant — all items. The checklist exists because operators don't always know which items are relevant.
+
+3. **No new errors appeared in the relevant console for 5 minutes after the deploy or recovery action.**
+
+4. **The verification was performed in a state that matches user state.** For cache-related verification: fresh private browser window, not a developer browser with warm cache. For auth verification: sign-in followed by hard reload, not just sign-in.
+
+### Dangerous Uncertainty
+
+Treat the current state as unverified when:
+
+- The deploy command succeeded but no real request has been tested
+- The logs are clean but the failure class is in the absent-signal taxonomy
+- The fix addressed one variable but the recovery checklist specifies multiple
+- Verification was performed without purging LiteSpeed cache (for WordPress)
+- Verification was performed in the developer's browser without checking an external perspective (for DNS)
+- The last action taken was under pressure and involved a shortcut
+
+### When Additional Verification is Mandatory
+
+Four conditions that require running the full post-deploy checklist even when the operator believes the deploy was low-risk:
+
+1. **Any change that touches Firebase Auth configuration.** Includes domain additions, rule changes, and adjacent deploys. Always requires: sign in → hard reload → session persists.
+
+2. **Any Razorpay credential or webhook change.** Always requires: one real transaction, webhook delivery confirmed, Firestore updated.
+
+3. **Any Firebase combined release (functions + rules).** Always requires: rules-first two-step deploy, then one real AI analysis request.
+
+4. **Any new domain or subdomain addition.** Always requires: dnschecker.org verification at 90%+, Firebase Auth authorized domains updated, one complete user flow on the new domain.
+
+---
+
+## Lightweight Operator Workflows
+
+Minimal mental processes for common high-risk operations. These are not checklists — they are the 30-second pre-action discipline that prevents the most common failures.
+
+### Safe Deploy Workflow
+
+Before any deploy, answer three questions:
+
+```
+1. Does this release touch both Firebase Functions AND Firestore rules?
+   → Yes: must use two-step sequential deploy (rules first, then functions)
+   → No: proceed
+
+2. Have I named every assumption I'm making about platform behavior?
+   → List them explicitly, even just mentally
+   → Any unverified assumption → add it to post-deploy verification
+
+3. What is the minimum real user action I will take to confirm the deploy is safe?
+   → Name it specifically: "I will submit one TrustSeal analysis"
+   → Not "I will check the console" — a real user action
+```
+
+### Production Verification Discipline
+
+After any deploy, before declaring it complete:
+
+```
+Run the relevant post-deploy checklist.
+The verification is complete when a real user action succeeded.
+Not when the console is clean.
+Not when the build log shows success.
+When a real request returned the expected response.
+```
+
+### Recovery Confirmation Workflow
+
+Three conditions, all required:
+
+```
+☐ One real production request through the full affected stack returned success
+☐ Full post-deploy verification checklist for the affected platform passed
+☐ No new errors in relevant console for 5 minutes after recovery action
+
+If any condition is not met: the incident is not resolved.
+"Looks good" is not a condition.
+```
+
+### Rollback Evaluation Workflow
+
+Before attempting rollback, answer:
+
+```
+1. What specific production state am I rolling back to?
+   → If unknown: rollback is riskier than fix-forward
+
+2. Does the rollback state have the same dangerous conditions as the current state?
+   → Firebase rollback with wrong deploy sequence → same 403 window
+   → Vercel rollback without env var fix → same missing configuration
+
+3. Is there a configuration change (without code change) that would fix this faster?
+   → Configuration recovery is always faster and safer than rollback
+   → If yes: do configuration recovery, not rollback
+
+4. If rollback is still the decision:
+   → Apply the same deploy sequencing rules as a forward deploy
+   → Run the full post-deploy checklist after rollback
+   → Verify with a real production request
+```
+
+**Rule:** In this ecosystem, fix-forward is almost always correct. If rollback is being considered, the question "why can't I fix this forward?" should have a specific answer.
+
+### Auth Verification Workflow
+
+After any Firebase Auth change, domain addition, or adjacent Firebase release:
+
+```
+1. Open a fresh browser window (File → New Private Window — not a tab)
+2. Navigate to the production custom domain
+3. Sign in with any test account
+4. Note the URL after sign-in
+5. Perform Ctrl+Shift+R (hard reload, bypasses browser cache)
+6. Confirm: still signed in
+7. Navigate to an auth-gated feature
+8. Confirm: accessible
+```
+
+If step 6 fails (signed out after reload): auth domain configuration is still wrong.
+
+**Why a fresh private window:** Developer browsers often have cached auth tokens or active auth state. A private window simulates a new user with no prior auth state — the scenario where the domain authorization failure first manifests.
+
+### Payment Verification Workflow
+
+Before any Razorpay-related go-live declaration:
+
+```
+1. Confirm all four credentials match mode (all rzp_live_ or all rzp_test_)
+2. Place one real transaction (or minimum-amount test payment on live mode)
+3. Check Razorpay Dashboard → Webhooks → Delivery attempts
+   → New entry for this payment? → webhook fired
+4. Check Firestore → users/{uid}/quota/current → tier: 'premium'
+5. Confirm UI shows premium state (without page reload — via onSnapshot)
+```
+
+If any step fails: the payment integration is not verified. Do not declare go-live.
+
+### Quota Incident Handling Workflow
+
+When AI analysis is failing with rate limit or quota signals:
+
+```
+1. Classify: per-minute rate limit or daily quota exhaustion?
+   → "429" in last 5 minutes, analysis works between attempts: per-minute
+   → All analyses failing since [time]: daily quota likely exhausted
+
+2. Per-minute rate limit:
+   → Wait 60 seconds
+   → Do not retry during the 60 seconds
+   → Do not change any configuration
+   → Verify by submitting one analysis 60+ seconds later
+
+3. Daily quota exhausted:
+   → Do not retry (wastes nothing, resolves nothing before midnight UTC)
+   → Degraded state is correct: "Analysis service temporarily unavailable"
+   → If upgrading to paid tier: test one analysis before declaring recovery
+   → Recovery time: midnight UTC (not acceleratable)
+```
+
+---
+
+## Operational Maturity Self-Assessment
+
+A rough signal for where operator discipline stands at any point:
+
+**Level 1 — Reactive**
+Incidents are discovered by user reports. Verification happens after problems are reported. Recovery is trial-and-error.
+
+**Level 2 — Deploy-aware**
+Incidents are discovered by post-deploy verification. Deploy checklists exist. Recovery follows documented procedures.
+
+**Level 3 — Assumption-aware** (current target)
+Assumptions are named before every deploy. Platform defaults are audited. Behavioral verification is standard practice. Absent-signal failure classes are tested proactively.
+
+**Level 4 — Pattern-aware**
+New failures are immediately classified against the existing pattern library. The pattern library is updated before declaring recovery complete. Recovery procedures are tested before they are needed.
+
+The gap between Level 2 and Level 3 is exactly what this document addresses. The gap between Level 3 and Level 4 is closed by maintaining the failure archive and running the pre-deploy assumption inventory consistently.
+
+---
+
+## Related
+
+- [Operational Invariants](/docs/operational-invariants) — the technical reliability contracts; this doctrine governs the human layer
+- [Incident Response Doctrine](/docs/incident-response-doctrine) — recovery invariants and classification
+- [Production Observability Doctrine](/docs/production-observability-doctrine) — detection invariants, signal taxonomy, absent-signal class
+- [Deployment Verification Checklist](/docs/deployment-verification-checklist) — the checklist that operationalizes these invariants
+- [Incident Detection Playbook](/playbooks/incident-detection-playbook) — system-by-system detection procedures
+- [Recovery Runbook](/playbooks/recovery-runbook) — per-system recovery procedures

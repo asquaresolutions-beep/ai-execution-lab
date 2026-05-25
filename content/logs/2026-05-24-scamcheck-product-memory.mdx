@@ -1,0 +1,154 @@
+---
+title: "ScamCheck Product Memory — Full Operational Timeline"
+description: "Complete operational provenance for ScamCheck (scamcheck.asquaresolution.com) from concept through production. Build phases, infrastructure changes, Gemini rate limit incident, auth configuration, CSS architecture decisions, and deployment milestones — consolidated as a queryable operational record."
+date: "2026-05-24"
+tags: ["scamcheck", "firebase", "gemini", "github-pages", "deployment", "authentication", "rate-limiting", "google-analytics-4"]
+status: published
+log_type: "operations"
+duration: "ongoing"
+outcome: "Complete product operational timeline documented — 5 major build phases, 3 documented failures resolved, Gemini rate limit UX handling in place, custom domain active."
+affected_systems:
+  - github-pages
+  - firebase
+systems_touched:
+  - scamcheck
+related_failures:
+  - firebase-functions-node-version-stability
+  - firebase-auth-domain-not-authorized
+  - gemini-rate-limit-429-no-ux
+  - vite-github-pages-spa-routing
+  - ga4-cross-domain-tracking-gap
+related_case_studies:
+  - scamcheck-architecture-build
+related_docs:
+  - gemini-production-operations
+  - ai-output-structure-validation
+---
+
+This is the consolidated operational record for ScamCheck — a complete timeline of every significant infrastructure event, failure, migration, and deployment from initial concept through current production state. It is the authoritative product memory document for this system.
+
+---
+
+## Phase 1: Foundation (January 2026)
+
+<OperationalTimeline
+  events={[
+    { date: "2026-01-05", event: "Product concept defined — AI scam detector targeting non-technical users in Southeast Asia. Unstructured text/URL input, plain-language verdict output", type: "milestone" },
+    { date: "2026-01-08", event: "Firestore data model defined before UI: users/{uid}/checks subcollection, quota document, verdict schema. Deliberate sequence to prevent UI-driving-schema mistakes", type: "build", note: "Data model first principle — learned from TrustSeal" },
+    { date: "2026-01-10", event: "Stack decision: plain CSS over Tailwind — ScamCheck UI has < 10 distinct component types, Tailwind overhead not justified. CSS custom properties for theming at :root", type: "build" },
+    { date: "2026-01-12", event: "React + Vite scaffold, plain CSS structure, Firebase project reused (ass-youtube-agent shared project)", type: "build" },
+    { date: "2026-01-18", event: "Firebase Auth implemented — email/password + Google OAuth, scamcheck.asquaresolution.com and github.io subdomain added to Authorized Domains during setup (preventing auth domain failure from TrustSeal incident)", type: "build" }
+  ]}
+/>
+
+---
+
+## Phase 2: Gemini Integration (January–February 2026)
+
+<OperationalTimeline
+  events={[
+    { date: "2026-01-22", event: "Gemini Cloud Function first pass — basic prompt, unstructured output, inconsistent JSON format across calls", type: "build" },
+    { date: "2026-01-25", event: "Prompt redesigned to three-part structure: (1) role + embedded JSON schema, (2) signal taxonomy (phishing, urgency, domain patterns, financial requests, impersonation, logical inconsistencies), (3) edge case handling for users describing scams", type: "build", note: "Schema in prompt = dramatically improved output reliability" },
+    { date: "2026-01-28", event: "FAILURE: CSS specificity conflict — probability bar class-based color system bleeding into verdict card border color. Multiple component instances conflicting on same class selectors", type: "failure" },
+    { date: "2026-01-29", event: "FIX: Probability bar color moved to inline style (computed from probability number). Verdict card color moved to CSS custom property on card root element (--verdict-color). Class-based color conflicts structurally impossible in this model", type: "fix" },
+    { date: "2026-02-01", event: "Firebase Functions Node 22 runtime set in firebase.json (proactive — TrustSeal had just resolved the Node 18 crash failure 2 days prior). All functions stable on first deploy", type: "build", note: "Learned from TrustSeal's Node 18 failure — applied fix before hitting the failure" },
+    { date: "2026-02-05", event: "FAILURE: GA4 cross-subdomain session bleed. Both ScamCheck and TrustSeal shared GA4 property, cookie_domain not scoped to subdomain. Sessions from scamcheck were counted under trustseal and vice versa in early reports", type: "failure" },
+    { date: "2026-02-06", event: "FIX: cookie_domain set explicitly to scamcheck.asquaresolution.com in ScamCheck's gtag config. Session bleed eliminated. Later superseded by ecosystem integration (cookie_domain set to root domain)", type: "fix" }
+  ]}
+/>
+
+---
+
+## Phase 3: Rate Limit and UX Hardening (February 2026)
+
+<OperationalTimeline
+  events={[
+    { date: "2026-02-10", event: "FAILURE: Gemini free tier rate limit (429) hit during rapid testing. No UX handling — client showed indefinite spinner. Firebase Functions logs showed 429 from Gemini API. User had no signal that waiting would fix the problem", type: "failure" },
+    { date: "2026-02-12", event: "FIX: Cloud Function catches 429, returns { rateLimited: true } as HTTP 200 structured response. Client checks rateLimited flag, renders 'Rate limit reached — please wait a few seconds and try again', re-enables submit button. Spinner-forever UX eliminated", type: "fix" },
+    { date: "2026-02-12", event: "Second UX hardening: submit button disabled during in-flight request to prevent rapid successive submissions that trigger rate limit", type: "build" },
+    { date: "2026-02-12", event: "Multi-stage loading indicator added: 'Analyzing input...' → 'Checking patterns...' → 'Generating verdict...' — reduces perceived cold start latency from 2–4s indeterminate wait to active progress", type: "build" },
+    { date: "2026-02-15", event: "JSON parse failure handling added: { parseError: true } returned from Cloud Function on SyntaxError during JSON.parse(). Client displays 'Could not parse analysis result' with retry button", type: "build" },
+    { date: "2026-02-18", event: "Full flow working end-to-end: submit → Gemini analysis → verdict display → Firestore history write. All failure modes handled (429, parse failure, server error)", type: "milestone" }
+  ]}
+/>
+
+---
+
+## Phase 4: Custom Domain and Deployment (February 2026)
+
+<OperationalTimeline
+  events={[
+    { date: "2026-02-19", event: "GitHub Pages dist/.git worktree initialized: dist/ configured as separate git repo pointing to gh-pages branch of scamcheck repository", type: "build" },
+    { date: "2026-02-20", event: "First production deployment: dist/ built with Vite, committed to gh-pages branch, pushed to GitHub Pages", type: "deploy" },
+    { date: "2026-02-20", event: "404.html SPA redirect script deployed — client-side routing works on direct URL access and browser refresh on GitHub Pages", type: "build" },
+    { date: "2026-02-21", event: "Custom domain DNS: scamcheck.asquaresolution.com CNAME → GitHub Pages. 2-hour propagation window observed before announcing live", type: "build", note: "DNS propagation lesson from TrustSeal/ScamCheck domain deployment" },
+    { date: "2026-02-22", event: "scamcheck.asquaresolution.com live: HTTPS active, SPA routing working, Firebase Auth stable, Gemini analysis working", type: "milestone" }
+  ]}
+/>
+
+---
+
+## Phase 5: Ecosystem and Analytics Integration (April 2026)
+
+<OperationalTimeline
+  events={[
+    { date: "2026-04-24", event: "GA4 cross-domain measurement configured for ecosystem integration. cookie_domain changed from scamcheck.asquaresolution.com to asquaresolution.com (root domain) — enables session stitching across all four properties", type: "build" },
+    { date: "2026-04-27", event: "ScamCheck header nav and footer ecosystem block added — main site link, TrustSeal link, AI Execution Lab link. Deployed to gh-pages", type: "deploy" },
+    { date: "2026-04-28", event: "GA4 DebugView verification — cross-domain session stitching confirmed: navigation from scamcheck to main site shows as one continuous session", type: "measurement" }
+  ]}
+/>
+
+---
+
+## Phase 6: Documentation and Operational Memory (May 2026)
+
+<OperationalTimeline
+  events={[
+    { date: "2026-05-14", event: "ScamCheck architecture build case study published — full build narrative, Gemini prompt architecture documented, CSS decision rationale documented", type: "milestone" },
+    { date: "2026-05-18", event: "ScamCheck operations review log published — deployment health, Firebase free tier status, GA4 cross-domain status reviewed", type: "milestone" },
+    { date: "2026-05-24", event: "ScamCheck system document published — canonical operational reference with CSS architecture, Gemini prompt structure, risk table, deployment commands", type: "milestone" },
+    { date: "2026-05-24", event: "ScamCheck product memory log (this document) published — complete operational timeline consolidated", type: "milestone" }
+  ]}
+/>
+
+---
+
+## Current Production State (May 2026)
+
+| Dimension | State |
+|---|---|
+| Deployment | GitHub Pages `gh-pages` branch, manual dist/ git push |
+| Custom domain | scamcheck.asquaresolution.com — HTTPS active |
+| Firebase Auth | Email/password + Google OAuth — session stable |
+| Authorized domains | scamcheck.asquaresolution.com + github.io subdomain |
+| Cloud Functions | Node 22 runtime (explicit) — all invocations stable |
+| Gemini | Three-part prompt structure — structured output reliable |
+| Rate limit UX | `{ rateLimited: true }` structured response — spinner-forever eliminated |
+| GA4 | Scoped to root domain — cross-domain session stitching active |
+| Firestore | Check history + quota per user — monthly reset operational |
+
+---
+
+## Documented Failure Lineage
+
+Three direct failures + two proactively avoided from TrustSeal experience:
+
+**Failures hit and resolved:**
+1. **CSS specificity conflict** (2026-01-28) — Color class conflicts between probability bar and verdict card. Resolved by inline styles for computed values, CSS custom properties for themed values.
+2. **Gemini 429 rate limit — no UX** (2026-02-10) — [Full report](/failures/gemini-rate-limit-429-no-ux) — 2 hours to resolve — structured error response pattern established
+3. **GA4 cookie_domain not scoped** (2026-02-05) — [Cross-domain tracking report](/failures/ga4-cross-domain-tracking-gap) — 30 min to resolve — cookie_domain set explicitly
+
+**Proactively avoided (learned from TrustSeal):**
+- Firebase Functions Node 22 — set explicitly from first deploy, never hit Node 18 crash
+- Firebase Auth custom domain — added to Authorized Domains before first custom domain deploy
+
+---
+
+## Operational Risks (Current)
+
+| Risk | Status |
+|---|---|
+| Gemini free tier 429 | Mitigated — rate limit UX in place; upgrade to paid tier when usage warrants |
+| Gemini free tier daily quota | Monitored — not yet hit at current user volumes |
+| Firebase cold start (2–3s) | Mitigated — multi-stage loading indicator in place |
+| JSON parse failure | Mitigated — `{ parseError: true }` handled on client |

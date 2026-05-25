@@ -1,0 +1,194 @@
+---
+title: "Firebase Functions 403 After Redeploy — Firestore Rules Deployment Order"
+description: "Firebase Cloud Functions returned 403 errors with missing auth context for 12 minutes after a redeploy that included a Firestore rules update. Root cause: Functions were deployed before Rules, creating a window where new function code ran against stale IAM/rules state. Fix: always deploy Firestore rules before Cloud Functions when both change in the same release."
+date: "2026-05-24"
+tags: ["firebase", "firebase-functions", "firestore", "deployment", "authentication", "trustseal", "production"]
+severity: medium
+status: published
+project: trustseal
+symptom: "Firebase Functions return HTTP 403 after redeploy. Firebase logs show missing auth context. Local emulator works. Production fails on custom domain only. 14 failed requests over 12 minutes."
+root_cause: "Firestore rules and Firebase Functions were deployed in the wrong order — Functions first, then Rules. During the window between the two deploys, new function code was live while old Firestore rules were still enforced. Firebase's IAM propagation state was inconsistent, causing auth token validation to fail for incoming requests."
+verified_fix: "Deploy Firestore rules before Cloud Functions when both change in the same release. Use: firebase deploy --only firestore:rules followed by firebase deploy --only functions. Never deploy functions first when rules are changing simultaneously."
+linked_incidents:
+  - firebase-functions-node-version-stability
+  - firebase-auth-domain-not-authorized
+related_case_studies:
+  - trustseal-architecture-build
+related_docs:
+  - razorpay-subscription-integration
+related_logs:
+  - 2026-05-24-trustseal-product-memory
+---
+
+Firebase Functions and Firestore rules are separate deployment artifacts that Firebase manages with separate IAM and configuration states. When both change in the same release and are deployed in the wrong order, there is a window where the function is live against an inconsistent backend state. This produced a 12-minute production outage on TrustSeal in which users could not verify trust claims.
+
+---
+
+## What Happened
+
+A release included changes to both Firebase Cloud Functions and Firestore security rules. The deploy was run as a single `firebase deploy` command, which in practice deploys functions and rules in undefined order — in this case, functions deployed first.
+
+For the 12 minutes between the functions deploy completing and the rules deploy completing:
+
+1. New function code was live and accepting requests
+2. Old Firestore rules were still enforced
+3. Firebase's IAM state for the service account was in the middle of propagation
+4. Incoming requests carried valid Firebase Auth tokens, but the auth context was not being recognized by the running functions
+
+Firebase Functions logs showed:
+```
+Error: missing auth context
+```
+
+HTTP response to client: `403 Forbidden`
+
+14 requests failed before the rules deploy completed and the auth context error disappeared.
+
+**Local emulator did not reproduce the failure.** The Firebase emulator runs with a static, pre-loaded rules state and does not replicate the IAM propagation behavior of Firebase's production infrastructure. This is a documented divergence between emulator and production behavior.
+
+---
+
+<QuickFix
+  symptom="Firebase Functions return 403 after redeploy. Logs show 'missing auth context'. Local emulator works fine. Failure is specific to production, custom domain. Disappears after second deploy."
+  rootCause="Firestore rules and Cloud Functions deployed in wrong order. Functions-first deployment runs new code against stale IAM/rules state during the window between the two deploys."
+  fix="Deploy Firestore rules before Cloud Functions: firebase deploy --only firestore:rules then firebase deploy --only functions. Never use a single firebase deploy when both functions and rules are changing."
+  verified="true"
+  severity="medium"
+/>
+
+---
+
+## Root Cause — Deployment Artifact Ordering
+
+Firebase maintains separate deployment pipelines for Cloud Functions (Cloud Run) and Firestore security rules (Firebase Security Rules engine). Each has its own propagation timeline after a deploy command completes.
+
+When functions are deployed first:
+- New function code is immediately live
+- Firestore rules are still at the previous state
+- Firebase's internal IAM state for the functions service account is partially propagated
+- Requests arrive and are processed by the new code, but the auth evaluation infrastructure is in a transient state
+
+When rules are deployed first:
+- Rules propagate to Firebase's evaluation infrastructure
+- The IAM state associated with the rules is stable
+- Function code deploys into an already-stable authorization environment
+- Requests are processed correctly from first invocation
+
+**The emulator divergence:** The Firebase emulator loads rules at startup and holds them statically. It does not simulate IAM propagation delays or intermediate deployment states. A test passing in the emulator provides no signal about deployment ordering correctness in production.
+
+---
+
+## Timeline
+
+| Time | Event |
+|---|---|
+| T+0 | `firebase deploy` run — functions deploy first |
+| T+2m | Functions deploy complete — new code live |
+| T+2m | First 403 error observed in Firebase logs |
+| T+4m | Incident noticed — TrustSeal check button returning error |
+| T+8m | Rules deploy completes (part of same deploy command, delayed) |
+| T+12m | 403 errors stop — 14 total failed requests |
+| T+15m | Root cause identified — rules-first deploy sequence established |
+
+---
+
+## Production Impact
+
+- **Users affected:** TrustSeal trust verification flow — "Verify" button returned error for all requests during the 12-minute window
+- **Failed requests:** 14 (visible in Firebase Functions invocation logs)
+- **Data loss:** None — no Firestore writes were attempted during 403 window (quota enforcement check happens before write)
+- **Scope:** Production only — staging/emulator testing showed no errors
+
+---
+
+## The Correct Deploy Sequence
+
+**When only functions change (no rules):**
+```bash
+firebase deploy --only functions
+```
+
+**When only rules change (no functions):**
+```bash
+firebase deploy --only firestore:rules
+```
+
+**When both change in the same release:**
+```bash
+# Step 1: Deploy rules first — let IAM state stabilize
+firebase deploy --only firestore:rules
+
+# Step 2: Deploy functions into stable rules environment
+firebase deploy --only functions
+```
+
+**Never use for combined rules + functions releases:**
+```bash
+# DANGEROUS — undefined deployment order
+firebase deploy
+# or
+firebase deploy --only firestore:rules,functions
+```
+
+The single `firebase deploy --only firestore:rules,functions` command deploys both targets but the ordering between them is not guaranteed by Firebase's CLI.
+
+---
+
+## Why Local Testing Doesn't Catch This
+
+The Firebase emulator suite:
+- Loads rules from `firestore.rules` at emulator startup
+- Functions run against the emulator's static rules state
+- No IAM propagation occurs — rules are immediately applied
+- Order of `firebase emulators:start` arguments does not simulate production deploy order
+
+This failure class is **emulator-invisible by design**. It can only be caught by:
+1. A documented deployment sequence that enforces rules-first ordering
+2. Post-deploy verification that runs actual check requests immediately after each deploy step
+
+---
+
+## Deployment Verification Protocol
+
+After any Firebase deployment that includes rules changes:
+
+```bash
+# After rules deploy — verify rules are active before deploying functions
+firebase firestore:rules list  # confirm rule version deployed
+
+# After functions deploy — immediate functional test
+# Run a test request and verify auth token is accepted (HTTP 200, not 403)
+```
+
+The "Enforce HTTPS checkbox becomes available" pattern from GitHub Pages applies here in spirit: do not consider a multi-artifact Firebase deploy "complete" until a real production request has succeeded through the full stack.
+
+---
+
+## Prevention Checklist
+
+```
+☐ Separate rules and functions into distinct deploy commands when both change
+☐ Always deploy firestore:rules before functions in the same release
+☐ Never use firebase deploy (all targets) for combined releases
+☐ Add post-deploy functional test: one real request after functions deploy
+☐ Monitor Firebase Functions logs for 403 errors in the 5 minutes after any deploy
+☐ Document expected deploy order in release notes when both artifacts change
+☐ Know that emulator passing does not validate deploy order correctness
+```
+
+---
+
+## Related Failures — Same Deploy Ordering Class
+
+This failure shares the infrastructure timing dependency pattern with:
+
+- [Subdomain DNS Propagation Delay](/failures/dns-subdomain-propagation-delay) — DNS records and HTTPS certificate provisioning have ordering and timing dependencies that are invisible during local testing
+- [Firebase Functions Node Version Stability](/failures/firebase-functions-node-version-stability) — Firebase runtime configuration (Node version) must be set before deploy; default runtime state produces immediate production failure
+
+---
+
+## Related
+
+- [Razorpay Subscription Integration with Firebase](/docs/razorpay-subscription-integration) — Documents the full Cloud Function deployment architecture for TrustSeal
+- [TrustSeal: Building an AI Website Trust Verifier](/case-studies/trustseal-architecture-build)
+- [TrustSeal Product Memory](/logs/2026-05-24-trustseal-product-memory)

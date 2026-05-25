@@ -1,0 +1,149 @@
+---
+title: "GA4 Production Analytics Contaminated by Vercel Preview Deployments"
+description: "NEXT_PUBLIC_GA_MEASUREMENT_ID was scoped to all Vercel environments (Production, Preview, Development). Every preview deployment URL accessed during development fired GA4 events to the production analytics property. Production session counts, traffic sources, and pageview totals were inflated by developer and build-verification activity until the variable was rescoped to Production only."
+date: "2026-03-20"
+updated: "2026-03-20"
+tags: ["ga4", "vercel", "deployment", "analytics", "environment", "next.js", "google-analytics-4"]
+status: published
+severity: low
+failure_status: resolved
+failure_type: configuration
+project: ai-execution-lab
+resolution_time: "30 minutes"
+affected_systems:
+  - google-analytics-4
+  - vercel
+systems_touched:
+  - ai-execution-lab
+linked_incidents:
+  - environment-variable-missing-production
+related_case_studies:
+  - vercel-deployment-evolution
+related_logs:
+  - 2026-05-18-deployment-journal-may-2026
+related_docs: []
+evidence_images: []
+external_refs:
+  - "https://vercel.com/docs/projects/environment-variables"
+  - "https://nextjs.org/docs/app/building-your-application/configuring/environment-variables"
+---
+
+<QuickFix
+  symptom="GA4 Realtime report shows active users on production analytics URL (G-XXXXXXXX) while you are browsing a Vercel preview deployment. Production analytics session counts are higher than expected given known traffic. Direct traffic attribution is inflated."
+  rootCause="NEXT_PUBLIC_GA_MEASUREMENT_ID is set in Vercel with environment scope 'All Environments' (Production + Preview + Development). Vercel inlines NEXT_PUBLIC_ variables at build time — preview deployments receive the same GA4 ID as production. Every page view on a preview deployment fires to the production GA4 property."
+  fix="In Vercel dashboard → Project Settings → Environment Variables → NEXT_PUBLIC_GA_MEASUREMENT_ID: change environment scope from 'All Environments' to 'Production' only. Redeploy to apply. Preview and Development builds will no longer have the variable — GA4 will not fire on those builds."
+  time="30 min"
+  confidence={95}
+  steps={[
+    "Verify the issue: open a Vercel preview deployment URL and check GA4 Realtime — if you see yourself as an active user, the variable is leaking",
+    "Vercel Dashboard → your project → Settings → Environment Variables",
+    "Find NEXT_PUBLIC_GA_MEASUREMENT_ID",
+    "Edit the variable: uncheck 'Preview' and 'Development' environment checkboxes — leave only 'Production' checked",
+    "Save the change",
+    "Trigger a new preview deployment (push a commit or redeploy from dashboard)",
+    "Open the new preview deployment — verify you do NOT appear in GA4 Realtime",
+    "Note: historical data contaminated before the fix cannot be recovered — document the fix date in your analytics log for baseline reference"
+  ]}
+/>
+
+## What Happened
+
+When GA4 was first integrated into AI Execution Lab (March 2026), `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-MPQVF41ZYM` was added to Vercel environment variables using the default scope: all three environments (Production, Preview, Development).
+
+The default scope is intentional for most variables — developers usually want the same API keys and service connections across all environments. For analytics, it is the wrong default. GA4 has one measurement property per site. There is no "staging" version of the analytics property.
+
+The consequence: every time a Vercel preview deployment was opened to verify a new feature — checking that a new MDX component rendered correctly, confirming a layout change looked right, validating `generateStaticParams` output — those pageviews were fired to production GA4. Every new content batch verified via preview URL generated a session attributed to the preview deployment's URL.
+
+In GA4's Acquisition reports, these sessions appeared as direct traffic (the preview URL is `ai-execution-lab-git-branch-hash.vercel.app` — not a referrer that GA4 would map to any traffic source). Session counts were inflated. Bounce rate was distorted. Any funnel analysis run in the first few weeks included this development traffic.
+
+---
+
+## Why NEXT_PUBLIC_ Variables Behave This Way
+
+`NEXT_PUBLIC_` prefix variables in Next.js are **inlined at build time** — they are substituted directly into the JavaScript bundle during `next build`. They are not environment variables read at runtime; they are constants baked into the deployed static files.
+
+This has two implications:
+
+1. **Changing the value in Vercel requires a new deployment to take effect.** If you update `NEXT_PUBLIC_GA_MEASUREMENT_ID` in Vercel dashboard, the currently-deployed static files still contain the old value. A redeploy is required.
+
+2. **Preview deployments get whatever value is in scope for their environment.** If the variable is scoped to all environments, every preview build gets the production measurement ID baked in.
+
+```typescript
+// In Next.js source code, this reference:
+process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
+
+// Is replaced at build time with the literal string value:
+'G-MPQVF41ZYM'
+
+// In every environment that has the variable in scope.
+```
+
+The fix is simple: scope the variable to Production only. Preview and Development builds receive `undefined` for the variable, the GA4 initialization code either guards against it or simply does not fire the `gtag('config', ...)` call.
+
+---
+
+## Safe Pattern for Analytics Variables
+
+```typescript
+// app/layout.tsx — GA4 initialization (safe pattern)
+const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
+
+// Only render the analytics script if the ID is present
+// In production: ID is present, analytics fires
+// In preview/development: ID is undefined, analytics does not fire
+{GA_ID && (
+  <>
+    <Script
+      src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+      strategy="afterInteractive"
+    />
+    <Script id="ga4-init" strategy="afterInteractive">
+      {`
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '${GA_ID}');
+      `}
+    </Script>
+  </>
+)}
+```
+
+The `{GA_ID && (...)}` guard is the critical detail. Without it, if the variable is undefined in a preview build, the gtag config call fires with `undefined` as the measurement ID — which may or may not fail silently depending on the GA4 SDK version. The guard ensures analytics is only active when a valid ID is present.
+
+---
+
+## Analytics-Specific Environment Variable Rule
+
+This failure pattern applies to any analytics or monitoring tool that aggregates data:
+
+| Variable type | Correct scope | Reason |
+|---|---|---|
+| GA4 measurement ID | Production only | Preview sessions inflate production session counts |
+| Error monitoring (Sentry DSN) | Production or own preview DSN | Developer-triggered errors should not appear in production error budgets |
+| Feature flag service key | Depends — use caution | Preview deployments should use a staging environment of the flag service |
+| API keys for external services | Usually all environments | Development needs real API calls; use test mode, not scope restriction |
+
+The distinction: analytics and monitoring tools aggregate data into one reporting view. A preview session appears identical to a production session in GA4 reports — there is no "preview traffic" segment visible after the fact. For all other API calls, development use is typically separable (test mode, separate account, etc.).
+
+---
+
+## Impact on Historical Data
+
+The GA4 data from the period before the fix (approximately March 15–20, 2026) includes preview deployment pageviews. The contaminated data cannot be recovered or filtered retroactively — GA4 does not store the HTTP referrer with sufficient fidelity to distinguish `vercel.app` preview URLs from organic traffic after the fact.
+
+The practical consequence: session counts and pageview counts from the first 5 days of the site's existence are unreliable. The contamination period was short (5 days before detection and fix), and absolute traffic numbers in the first week of any new site are low enough that the distortion is minor.
+
+The lesson: this is a permanent data quality degradation for the affected period. Setting the correct scope before the first deployment costs nothing. Discovering it after has no retroactive remedy.
+
+---
+
+## Prevention
+
+- [ ] Add "Scope GA4 measurement ID to Production only" to the Vercel setup checklist for every new Next.js project
+- [ ] Verify analytics scope before opening the first preview deployment — the first preview access is the first contamination event
+- [ ] In `app/layout.tsx`, guard the GA4 script block with `{GA_ID && (...)}` so undefined behavior is explicit and clean
+- [ ] After any analytics configuration change in Vercel, verify the change with a preview deployment: open it, check GA4 Realtime, confirm you do not appear as an active user
+- [ ] Document the date any analytics variable scope change was made — provides a reliable baseline cutoff date for historical analysis
+
+**Related pattern:** This is the same failure class as `environment-variable-missing-production` — a variable has the wrong scope, and the wrong scope causes incorrect production behavior. Here the wrong scope causes data contamination rather than a missing feature. Both are configuration scope failures with no runtime error to surface them.

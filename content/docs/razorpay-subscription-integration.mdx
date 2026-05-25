@@ -1,0 +1,322 @@
+---
+title: "Razorpay Subscription Integration with Firebase"
+description: "Production implementation reference for Razorpay subscription payments with Firebase Cloud Functions and Firestore. Covers the full flow: subscription creation, checkout modal, webhook verification, Firestore state synchronization, realtime client unlock via onSnapshot, idempotency, and failure modes. Built and verified in production on TrustSeal."
+date: "2026-05-24"
+tags: ["razorpay", "firebase", "firebase-functions", "firestore", "authentication", "trustseal", "deployment", "payments"]
+status: published
+related_failures:
+  - razorpay-test-live-key-mismatch
+  - environment-variable-missing-production
+  - firebase-functions-node-version-stability
+related_case_studies:
+  - trustseal-architecture-build
+related_docs:
+  - third-party-api-mode-isolation
+  - gemini-production-operations
+related_logs:
+  - 2026-05-18-trustseal-operations-review
+  - 2026-05-24-trustseal-product-memory
+---
+
+This is the production implementation reference for Razorpay subscription payments with Firebase. It is based on the TrustSeal implementation — a live product that accepts real INR subscription payments from Indian users. The implementation covers both the code and the failure modes that must be handled for this integration to be production-reliable.
+
+**Why Razorpay over Stripe for Indian products:** Stripe processes Indian payments via Stripe India with higher fees and lower conversion rates on UPI and net banking compared to Razorpay, which is purpose-built for the Indian payment ecosystem. For a product targeting Indian users paying in INR, Razorpay is the correct choice.
+
+---
+
+## Architecture Overview
+
+```
+Client                Firebase Cloud Functions         Razorpay
+──────                ───────────────────────          ────────
+
+[1] User clicks Upgrade
+        │
+        ▼
+[2] Call createSubscription CF ──────────────────► Razorpay.subscriptions.create()
+                                                           │
+        ◄──────────────────────── { subscriptionId } ─────┘
+        │
+        ▼
+[3] Open Razorpay Checkout modal (client key + subscriptionId)
+        │
+        ▼ (User completes payment)
+        │
+[4] Razorpay fires webhook ──────────────────────► razorpayWebhook CF
+                                                           │
+                                                    Verify signature
+                                                           │
+                                                    Update Firestore:
+                                                    tier: 'premium'
+                                                           │
+        ◄──────────────────── onSnapshot listener picks up change
+        │
+        ▼
+[5] Premium features unlocked in UI (no page reload)
+```
+
+---
+
+## Step 1: Subscription Creation Cloud Function
+
+The client never calls Razorpay directly for subscription creation. The server holds the API secret key.
+
+```javascript
+// functions/src/createSubscription.js
+const functions = require('firebase-functions/v2/https')
+const Razorpay  = require('razorpay')
+const { getFirestore } = require('firebase-admin/firestore')
+
+const razorpay = new Razorpay({
+  key_id:     process.env.RAZORPAY_KEY_ID,      // rzp_live_... or rzp_test_...
+  key_secret: process.env.RAZORPAY_KEY_SECRET,   // must match key_id mode
+})
+
+exports.createSubscription = functions.onCall(async (request) => {
+  const uid = request.auth?.uid
+  if (!uid) throw new functions.HttpsError('unauthenticated', 'Login required')
+
+  const subscription = await razorpay.subscriptions.create({
+    plan_id:        process.env.RAZORPAY_PLAN_ID,  // e.g. plan_XXXXXXXXXXXXXXXX
+    total_count:    12,  // 12 monthly billing cycles — adjust for your model
+    quantity:       1,
+    customer_notify: 1,
+    notes: { uid },      // pass uid in notes for webhook reconciliation
+  })
+
+  return { subscriptionId: subscription.id }
+})
+```
+
+**Key decisions:**
+- `total_count: 12` — Razorpay subscriptions are created with a fixed count of billing cycles. Set to a large number (e.g. 120) for indefinite subscriptions
+- `notes: { uid }` — Pass the Firebase UID in subscription notes. The webhook handler uses this to identify which user to update in Firestore
+- Cloud Function throws `HttpsError` for unauthenticated users — the client catches this and redirects to login
+
+---
+
+## Step 2: Checkout Modal (Client Side)
+
+```javascript
+// React component — TrustSeal subscription upgrade flow
+async function handleUpgradeClick() {
+  setUpgrading(true)
+
+  // Get subscription ID from server
+  const { data } = await createSubscription()
+
+  // Open Razorpay checkout
+  const rzp = new window.Razorpay({
+    key:         process.env.REACT_APP_RAZORPAY_KEY_ID,  // rzp_live_ or rzp_test_
+    subscription_id: data.subscriptionId,
+    name:        'TrustSeal',
+    description: 'Premium Subscription',
+    prefill: {
+      email: currentUser.email,
+    },
+    handler: function(response) {
+      // Payment success — Razorpay will fire the webhook server-side
+      // The onSnapshot listener (Step 5) handles the UI update
+      // No client-side action needed here except UX feedback
+      setUpgrading(false)
+      setShowSuccessMessage(true)
+    },
+    modal: {
+      ondismiss: function() {
+        setUpgrading(false)
+      }
+    }
+  })
+
+  rzp.open()
+}
+```
+
+**Important:** Load Razorpay's checkout.js script in your HTML before calling `new window.Razorpay(...)`:
+```html
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+```
+
+The `handler` callback fires on successful payment from the user's perspective. The actual access unlock happens via webhook → Firestore → onSnapshot — not directly in the handler. Do not grant access in the handler function; it is client-controllable.
+
+---
+
+## Step 3: Webhook Handler
+
+This is the authoritative access grant path. Webhooks are server-to-server events that cannot be spoofed by the client.
+
+```javascript
+// functions/src/razorpayWebhook.js
+const functions  = require('firebase-functions/v2/https')
+const crypto     = require('crypto')
+const { getFirestore, FieldValue } = require('firebase-admin/firestore')
+
+exports.razorpayWebhook = functions.onRequest(async (req, res) => {
+  // 1. Verify webhook signature
+  const webhookSecret   = process.env.RAZORPAY_WEBHOOK_SECRET
+  const receivedSig     = req.headers['x-razorpay-signature']
+  const expectedSig     = crypto
+    .createHmac('sha256', webhookSecret)
+    .update(JSON.stringify(req.body))
+    .digest('hex')
+
+  if (receivedSig !== expectedSig) {
+    console.error('Webhook signature verification failed')
+    return res.status(400).json({ error: 'Invalid signature' })
+  }
+
+  const event        = req.body.event
+  const subscription = req.body.payload?.subscription?.entity
+
+  // 2. Handle relevant events
+  if (event === 'subscription.charged' || event === 'subscription.activated') {
+    const uid = subscription?.notes?.uid
+    if (!uid) {
+      console.error('No uid in subscription notes:', subscription?.id)
+      return res.status(200).json({ received: true })  // ack to prevent retry
+    }
+
+    const db = getFirestore()
+
+    // 3. Update Firestore atomically
+    await db.doc(`users/${uid}/subscription/current`).set({
+      razorpaySubscriptionId: subscription.id,
+      status:                 subscription.status,
+      currentPeriodEnd:       subscription.current_end,
+      updatedAt:              FieldValue.serverTimestamp(),
+    }, { merge: true })
+
+    await db.doc(`users/${uid}/quota/current`).set({
+      tier:     'premium',
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true })
+  }
+
+  if (event === 'subscription.cancelled' || event === 'subscription.completed') {
+    const uid = subscription?.notes?.uid
+    if (uid) {
+      const db = getFirestore()
+      await db.doc(`users/${uid}/quota/current`).set({
+        tier:     'free',
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true })
+    }
+  }
+
+  // Always acknowledge — prevents Razorpay from retrying the event
+  return res.status(200).json({ received: true })
+})
+```
+
+**Signature verification is non-negotiable.** Without it, any HTTP request to the webhook URL can grant premium access. The `x-razorpay-signature` header is an HMAC-SHA256 of the raw request body using your webhook secret.
+
+**Acknowledge all events (200).** Razorpay retries webhooks if it does not receive a 200 within 5 seconds. Always return 200 for events you handle AND events you ignore. Return 200, not 204 — Razorpay's retry logic is sensitive to the response code.
+
+---
+
+## Step 4: Register the Webhook in Razorpay Dashboard
+
+1. Razorpay Dashboard → Settings → Webhooks → Add New Webhook
+2. URL: `https://[your-region]-[project-id].cloudfunctions.net/razorpayWebhook`
+3. Secret: generate a random 32-character string, store in Firebase env
+4. Active events: `subscription.charged`, `subscription.activated`, `subscription.cancelled`, `subscription.completed`
+
+**Firebase env configuration:**
+```bash
+firebase functions:config:set \
+  razorpay.key_id="rzp_live_..." \
+  razorpay.key_secret="..." \
+  razorpay.webhook_secret="..." \
+  razorpay.plan_id="plan_..."
+```
+
+Or use Firebase Secrets (Cloud Secret Manager) for production:
+```bash
+firebase functions:secrets:set RAZORPAY_KEY_SECRET
+```
+
+---
+
+## Step 5: Real-Time Client Unlock via onSnapshot
+
+The client listens to the Firestore quota document in real time. When the webhook updates `tier: 'premium'`, the client receives the change automatically — no page reload required.
+
+```javascript
+// React hook — real-time tier listener
+useEffect(() => {
+  if (!currentUser) return
+
+  const unsubscribe = db
+    .doc(`users/${currentUser.uid}/quota/current`)
+    .onSnapshot((doc) => {
+      const data = doc.data()
+      setTier(data?.tier ?? 'free')
+      setChecksThisMonth(data?.checksThisMonth ?? 0)
+    })
+
+  return unsubscribe  // cleanup on unmount
+}, [currentUser])
+
+// In the component:
+const isPremium = tier === 'premium'
+// Use isPremium to conditionally render check button, upgrade prompt, etc.
+```
+
+The `onSnapshot` listener fires:
+1. On mount — initializes the tier state from Firestore
+2. When the webhook updates the Firestore document — immediately updates the client
+
+Latency from payment completion to UI unlock: typically 2–5 seconds (Razorpay webhook delivery + Firestore write + listener update).
+
+---
+
+## Idempotency
+
+Webhook events can be delivered multiple times. Razorpay retries on network failure or non-200 responses. The Firestore writes above use `{ merge: true }` with a `set()` operation — they are safe to execute multiple times without corrupting state.
+
+**Idempotency rule:** Any Firestore write triggered by a webhook must be safe to execute N times. Use `set` with `merge: true` rather than `update` when the document may not exist yet. Use specific fields rather than overwriting the entire document.
+
+If stronger deduplication is required, write the `subscription.id` to a Firestore collection of processed events and check before acting:
+```javascript
+const eventRef = db.doc(`processedWebhooks/${subscription.id}_${event}`)
+const existing = await eventRef.get()
+if (existing.exists) return res.status(200).json({ duplicate: true })
+await eventRef.set({ processedAt: FieldValue.serverTimestamp() })
+// ... proceed with Firestore updates
+```
+
+---
+
+## Failure Modes
+
+| Failure | Symptom | Fix |
+|---|---|---|
+| Test/live key mode mismatch | Checkout modal opens, no webhook fires | Both `key_id` and `key_secret` must share the same mode prefix (`rzp_test_` or `rzp_live_`) |
+| Webhook signature failure | Webhook handler returns 400, Razorpay retries indefinitely | Verify `RAZORPAY_WEBHOOK_SECRET` matches the secret in Razorpay Dashboard exactly |
+| `uid` missing from notes | Webhook fires, Firestore not updated, user not upgraded | Always set `notes: { uid }` in `createSubscription` — this is the reconciliation key |
+| Cloud Function cold start > 5s | Razorpay times out waiting for 200, marks delivery failed | Cloud Functions must acknowledge (200) within 5 seconds — do heavy writes asynchronously if needed |
+| Node 18 runtime crash | All Cloud Functions fail on invocation | Set `"runtime": "nodejs22"` in firebase.json — see [Firebase Functions Node runtime failure](/failures/firebase-functions-node-version-stability) |
+
+---
+
+## Mode Switch Checklist (Test → Live)
+
+This is the most common failure point. All three Razorpay credentials must be switched simultaneously:
+
+```
+☐ RAZORPAY_KEY_ID       → rzp_live_...
+☐ RAZORPAY_KEY_SECRET   → live secret key
+☐ RAZORPAY_PLAN_ID      → live plan ID (create in Razorpay Dashboard under Subscriptions → Plans)
+☐ REACT_APP_RAZORPAY_KEY_ID → rzp_live_... (client-side key, same mode)
+☐ Webhook URL registered in Razorpay Dashboard (live mode, not test mode)
+☐ Post-switch verification: place one real transaction and confirm webhook fires and Firestore updates
+```
+
+---
+
+## Related
+
+- [Razorpay Test/Live Key Mode Mismatch](/failures/razorpay-test-live-key-mismatch)
+- [TrustSeal: Building an AI Website Trust Verifier](/case-studies/trustseal-architecture-build)
+- [TrustSeal Platform](/systems/trustseal-platform)
+- [Third-Party API Mode Isolation](/docs/third-party-api-mode-isolation)

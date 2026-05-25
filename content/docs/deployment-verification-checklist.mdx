@@ -1,0 +1,320 @@
+---
+title: "Deployment Verification Checklist — A Square Solutions"
+description: "Platform-specific deployment verification checklists for Vercel (AI Execution Lab), Firebase (TrustSeal and ScamCheck Cloud Functions), GitHub Pages (TrustSeal and ScamCheck SPAs), and WordPress (asquaresolution.com). A deploy is not safe until every item on the relevant checklist has been confirmed in production — not in the emulator, not locally, not from build logs."
+date: "2026-05-25"
+tags: ["deployment", "vercel", "firebase", "github-pages", "wordpress", "trustseal", "scamcheck", "reliability", "production"]
+status: published
+related_docs:
+  - operational-invariants
+  - github-pages-spa-deployment
+  - razorpay-subscription-integration
+  - third-party-api-mode-isolation
+related_failures:
+  - firebase-deploy-sequence-auth-failure
+  - firebase-functions-node-version-stability
+  - firebase-auth-domain-not-authorized
+  - environment-variable-missing-production
+  - ga4-preview-environment-contamination
+  - dns-subdomain-propagation-delay
+---
+
+A deployment is not safe until verified in production. Build success, test suite pass, and emulator verification are necessary but not sufficient. Three production failures in the archive passed all pre-deploy checks and were only discovered when a real user request failed after go-live.
+
+This checklist is organized by deployment target. Run the relevant section for every deploy. "Safe" means a real production request returned a successful response — not that the deploy command exited 0.
+
+---
+
+## How to Use This Checklist
+
+**Before deploying:** Run the pre-deploy verification for the target platform. If any item fails, do not deploy.
+
+**After deploying:** Run the post-deploy verification. Do not declare the deploy complete until the production functional test passes.
+
+**On combined releases** (multiple artifacts changing together): run all relevant platform checklists. Order matters — see [INV-FB-1](/docs/operational-invariants#inv-fb-1).
+
+---
+
+## Platform 1: Vercel — AI Execution Lab
+
+### Pre-Deploy
+
+```
+☐ npm run build passes locally with zero errors
+☐ node ./node_modules/typescript/bin/tsc --noEmit produces zero errors
+☐ NEXT_PUBLIC_GA_MEASUREMENT_ID is scoped to Production only in Vercel Dashboard
+   (Vercel → Project → Settings → Environment Variables → confirm only Production checkbox)
+☐ All required environment variables exist with Production scope in Vercel
+☐ No new server-only imports in client components (check for 'use client' + Node.js module imports)
+☐ No new edge runtime usage without explicit Edge-compatible API audit
+```
+
+### Deploy Command
+
+```bash
+git push origin main   # triggers Vercel auto-deploy
+```
+
+### Post-Deploy
+
+```
+☐ Vercel deployment dashboard shows "Ready" status (not "Error")
+☐ Navigate to lab.asquaresolution.com — homepage loads without console errors
+☐ Navigate to a failure page (e.g., /failures/edge-runtime-deployment-failure) — content renders
+☐ Navigate to a tag page (e.g., /tags/firebase) — entity page renders with operational description
+☐ Navigate to a docs page (e.g., /docs/operational-invariants) — content renders
+☐ Vercel Functions log shows no errors for the deploy
+☐ GA4 Realtime confirms events are firing from production domain only (not from vercel.app preview URLs)
+```
+
+**Deploy is safe when:** All post-deploy items checked. At minimum: homepage, one content page, one entity tag page.
+
+---
+
+## Platform 2: Firebase — Cloud Functions + Firestore
+
+### Pre-Deploy: All Firebase Releases
+
+```
+☐ firebase.json contains "runtime": "nodejs22" in functions config  (INV-FB-2)
+☐ All Cloud Functions under test via Firebase emulator pass
+☐ Determine whether this release changes: functions only / rules only / both
+```
+
+### Pre-Deploy: Rules + Functions Combined Release (most critical)
+
+```
+☐ Confirmed deploy sequence will be: rules first, then functions  (INV-FB-1)
+☐ Do NOT use: firebase deploy --only firestore:rules,functions
+☐ Do NOT use: firebase deploy (all targets)
+```
+
+### Deploy Commands
+
+**Rules only:**
+```bash
+firebase deploy --only firestore:rules
+```
+
+**Functions only:**
+```bash
+firebase deploy --only functions
+```
+
+**Rules AND functions in same release — REQUIRED ORDER:**
+```bash
+# Step 1 — rules first
+firebase deploy --only firestore:rules
+
+# Step 2 — functions after rules propagate (wait ~60 seconds)
+firebase deploy --only functions
+```
+
+### Post-Deploy: Cloud Functions
+
+```
+☐ Firebase Console → Functions → confirm all functions show "OK" status (not error)
+☐ Execute one real TrustSeal analysis request (trust check on any URL) — confirm HTTP 200 response
+☐ Execute one real ScamCheck analysis request (submit any text) — confirm verdict returned
+☐ Firebase Functions logs show no 403 or 500 errors in the 5 minutes after deploy
+☐ Quota document increments correctly after a successful check (Firestore → users/{uid}/quota/current)
+```
+
+**Deploy is safe when:** At least one real AI analysis call returns HTTP 200 in production. Build success and emulator passing are not sufficient.
+
+### New Firebase Project Setup Checklist
+
+Run this once before first deploy on any new Firebase project:
+
+```
+☐ firebase.json: "runtime": "nodejs22" set
+☐ Firebase Console → Authentication → Settings → Authorized Domains:
+   ☐ custom production domain added (e.g., trustseal.asquaresolution.com)
+   ☐ GitHub Pages staging domain added (e.g., [username].github.io)  (INV-FB-3)
+☐ Firebase environment variables set:
+   ☐ GEMINI_API_KEY
+   ☐ RAZORPAY_KEY_ID (if payments enabled)
+   ☐ RAZORPAY_KEY_SECRET (if payments enabled)
+   ☐ RAZORPAY_WEBHOOK_SECRET (if payments enabled)
+   ☐ RAZORPAY_PLAN_ID (if payments enabled)
+☐ Razorpay Dashboard → Webhooks: webhook URL registered with correct secret
+☐ Razorpay key mode verified: all credentials match (all rzp_live_ or all rzp_test_)  (INV-PAY-2)
+```
+
+---
+
+## Platform 3: GitHub Pages — TrustSeal and ScamCheck
+
+### Pre-Deploy
+
+```
+☐ public/CNAME exists with correct custom domain  (INV-DEP-2)
+☐ public/404.html exists with SPA redirect script  (INV-DEP-2)
+☐ vite.config.ts: base: '/' confirmed (for custom domain at root)
+☐ dist/ is listed in .gitignore on main branch
+☐ dist/.git exists and remote is set to gh-pages branch
+   (git -C dist remote -v should show gh-pages origin)
+```
+
+### Deploy Commands
+
+```bash
+# Standard deploy sequence
+npm run build
+cd dist
+git add -A
+git commit -m "deploy $(date +%Y-%m-%d)"
+git push origin gh-pages
+cd ..
+```
+
+### Post-Deploy
+
+```
+☐ GitHub Pages shows "Your site is live" in repository Settings → Pages
+☐ Navigate to custom domain (e.g., scamcheck.asquaresolution.com) — homepage loads
+☐ Navigate directly to a non-root route (e.g., scamcheck.asquaresolution.com/history)
+   — React app loads (not GitHub's 404 page)  [SPA routing verification]
+☐ Perform a hard refresh on a non-root route — app reloads correctly
+☐ Firebase Auth: sign in → navigate away → confirm session persists on return
+☐ Perform one AI analysis check — confirm verdict is returned
+```
+
+**Deploy is safe when:** Non-root route loads correctly on direct navigation AND after hard refresh. This verifies that CNAME survived the build (custom domain active) and 404.html is in place (SPA routing functional).
+
+### New Custom Domain Setup Checklist
+
+```
+☐ DNS CNAME record created: [subdomain] → [username].github.io
+☐ Wait minimum 2 hours — do NOT proceed to verification before this
+☐ Verify propagation: dnschecker.org shows 90%+ locations resolving correctly  (INV-DEP-1)
+☐ GitHub Pages Settings → Custom domain: enter domain → save
+☐ Wait for "Enforce HTTPS" checkbox to become available (not greyed out)
+☐ Check "Enforce HTTPS" — this signals DNS complete + certificate provisioned
+☐ Firebase Console → Auth → Authorized Domains: add the new custom domain  (INV-FB-3)
+☐ Perform full post-deploy checklist above
+```
+
+---
+
+## Platform 4: WordPress — asquaresolution.com
+
+### Pre-Deploy: WPCode / PHP Filter Changes
+
+```
+☐ Change staged and reviewed in WPCode editor (not active yet)
+☐ Confirm change does not conflict with existing active snippets
+```
+
+### Deploy: WPCode Change
+
+```
+1. Activate the snippet in WPCode
+2. LiteSpeed Cache → Purge All  ← MUST happen before any verification  (INV-DEP-3)
+3. Wait 5 seconds for cache to clear
+4. Verify change in browser (hard refresh or private window)
+```
+
+**Critical:** Any verification that happens before LiteSpeed Purge All produces false results — the cached HTML will show pre-change behavior regardless of what the PHP now returns.
+
+### Pre-Deploy: WordPress REST API Automation
+
+```
+☐ Test auth with raw curl before writing any automation:
+   curl -u "username:password with spaces" https://asquaresolution.com/wp-json/wp/v2/posts?per_page=1
+   → must return HTTP 200  (INV-DEP-4)
+☐ Confirm Application Password has NOT been URL-encoded before Base64
+☐ Confirm no %20 or + in password string passed to Base64 encoder
+```
+
+### Post-Deploy: WordPress Changes
+
+```
+☐ After any PHP filter change: verify in fresh private window (bypass browser cache)
+☐ After any sitemap-related change: check /sitemap_index.xml returns 200 (not 404)
+☐ After any SEO plugin change: submit updated sitemap in Google Search Console
+☐ After any header/footer change: verify on both desktop and mobile
+☐ LiteSpeed Cache → Purge All confirmed after every change
+```
+
+---
+
+## Cross-Platform: Payment Mode Switch (Test → Live)
+
+Run this checklist when switching any Razorpay integration from test mode to live mode:
+
+```
+☐ RAZORPAY_KEY_ID       → rzp_live_...  (Firebase Functions env)
+☐ RAZORPAY_KEY_SECRET   → live secret   (Firebase Functions env)
+☐ RAZORPAY_PLAN_ID      → live plan ID  (create in Razorpay Dashboard → Subscriptions → Plans)
+☐ REACT_APP_RAZORPAY_KEY_ID → rzp_live_ (client env var)
+☐ Razorpay Dashboard → Webhooks: webhook URL registered in LIVE mode (not test mode)
+☐ Razorpay Dashboard → Webhooks: webhook secret matches RAZORPAY_WEBHOOK_SECRET
+☐ Firebase Functions redeployed with live credentials
+☐ Post-switch: place one real transaction (₹1 test plan or minimum amount)
+☐ Confirm webhook fires in Firebase Functions logs
+☐ Confirm Firestore users/{uid}/quota/current → tier: 'premium' after payment
+☐ Confirm UI unlocks premium features via onSnapshot listener (no page reload required)
+```
+
+**Mode switch is safe when:** One real live transaction completes, webhook fires, and UI upgrades without page reload.
+
+---
+
+## Cross-Platform: New Product Go-Live Checklist
+
+Run this once before launching any new product on the A Square Solutions ecosystem:
+
+```
+FIREBASE
+☐ firebase.json: "runtime": "nodejs22"
+☐ Auth Authorized Domains: production custom domain + GitHub Pages domain
+
+RAZORPAY (if payments)
+☐ All four credentials in rzp_live_ mode
+☐ Webhook URL registered in live mode with matching secret
+☐ One real test transaction completed and verified
+
+GITHUB PAGES
+☐ public/CNAME with correct domain
+☐ public/404.html with SPA redirect script
+☐ DNS propagation verified at 90%+ (dnschecker.org)
+☐ "Enforce HTTPS" checkbox available and checked
+
+ANALYTICS
+☐ NEXT_PUBLIC_GA_MEASUREMENT_ID scoped to Production only in Vercel (if Lab)
+☐ GA4 cookie_domain set to asquaresolution.com (not subdomain)
+☐ GA4 cross-domain measurement configured for all ecosystem properties
+
+FUNCTIONAL
+☐ One complete user flow executed end-to-end on production domain
+   (sign up → use core feature → result displays → history persists)
+☐ Non-root route navigated to directly and on hard refresh
+☐ Firebase Auth session verified to persist across page refresh
+```
+
+---
+
+## Verification Failures — What They Mean
+
+| Observed | Likely invariant violated | Check |
+|---|---|---|
+| 403 after Firebase deploy | INV-FB-1 | Deploy rules before functions |
+| All Cloud Functions return error on first invoke | INV-FB-2 | Check firebase.json for nodejs22 |
+| Auth session lost on refresh | INV-FB-3 | Check Authorized Domains |
+| Payment completes but no access granted | INV-PAY-2 | Check Razorpay key mode |
+| Site not found on custom domain | INV-DEP-1 | Check DNS propagation |
+| Non-root routes 404 on GitHub Pages | INV-DEP-2 | Check public/404.html exists |
+| Preview traffic in GA4 production data | INV-ENV-1 | Scope GA4 ID to Production only |
+| PHP change has no visible effect | INV-DEP-3 | Purge LiteSpeed cache |
+| WordPress API returns 401 | INV-DEP-4 | Check Base64 encoding, no URL-encode |
+| AI analysis returns indefinite spinner | INV-AI-4 | Check finally{} clears loading state |
+
+---
+
+## Related
+
+- [Operational Invariants](/docs/operational-invariants) — the full doctrine behind this checklist
+- [GitHub Pages SPA Deployment](/docs/github-pages-spa-deployment) — complete GitHub Pages deployment reference
+- [Razorpay Subscription Integration with Firebase](/docs/razorpay-subscription-integration) — payment deployment reference
+- [Third-Party API Mode Isolation](/docs/third-party-api-mode-isolation) — environment mode verification patterns
+- [Failure Pattern Library](/docs/failure-pattern-library) — the taxonomy this checklist was derived from

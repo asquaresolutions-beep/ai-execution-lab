@@ -14,6 +14,15 @@ recovery_complexity: "minutes"
 deployment_risk: "low"
 time_to_detect: "3 days post-deployment — visible in GSC Coverage report on next crawl cycle"
 repeat_risk: "medium"
+affected_systems:
+  - google-search-console
+systems_touched:
+  - ai-execution-lab
+related_logs:
+  - 2026-05-18-deployment-journal-may-2026
+related_docs:
+  - geo-intelligence-architecture
+deployment_ref: 2026-05-18-deployment-journal-may-2026
 ---
 
 <FailureIntelligence
@@ -46,6 +55,21 @@ repeat_risk: "medium"
   rootCause="Working as intended — but without pre-rollout baseline documentation of which URLs were being intentionally excluded, the GSC drop looked identical to an accidental deindexing event. The monitoring gap was the absence of an expected-exclusion record attached to the deployment."
   resolution="Cross-referenced all URLs in GSC's 'Excluded by noindex tag' list against the 8 planning documents and thin-tag pages that had been intentionally noindexed. Every excluded URL matched an intentional exclusion. Documented the post-rollout baseline: approximately 370 indexed production pages, 8 planning docs excluded, approximately 40 thin-tag pages excluded. Added a GSC verification step to the operational runbook for any future noindex deployment."
   prevention="Before any noindex rollout: list the exact URLs being excluded. After the rollout: note the expected GSC behavior in the deployment commit message or ops log. Check GSC Coverage 7 days later and confirm the exclusion count matches the pre-documented expectation."
+/>
+
+<QuickFix
+  symptom="Google Search Console Coverage report shows a drop in indexed pages after a metadata or robots.txt deployment"
+  rootCause="noindex: true was added to pages (intentionally or accidentally) and GSC's crawl cycle reflected the exclusions 3–7 days later. The drop looks identical whether it was intentional or accidental — without a pre-rollout baseline, you cannot distinguish the two."
+  fix="Export the excluded URLs from GSC Coverage → 'Excluded by noindex tag'. Cross-reference against your documented intentional exclusions. If all excluded URLs are expected, update your baseline count in the ops log. If any production content was accidentally excluded, check its frontmatter for noindex: true."
+  time="25 min"
+  confidence={70}
+  steps={[
+    "GSC → Index → Pages → Excluded → select 'Excluded by noindex tag' → export URL list",
+    "Compare the exported URLs against your list of intentionally noindexed pages (planning docs, thin-tag pages, staging content)",
+    "If all excluded URLs are intentional: document the new post-rollout indexed page count in your ops log as the new baseline",
+    "If any unexpected URL appears excluded: check that file's frontmatter for noindex: true and check the layout for accidental robots meta tags",
+    "Add a 7-day reminder after any noindex deployment to verify the GSC exclusion count matches expectations"
+  ]}
 />
 
 ## What Happened

@@ -1,0 +1,332 @@
+---
+title: "Incident Detection Playbook — A Square Solutions"
+description: "Step-by-step detection procedures for every production system in the A Square Solutions ecosystem. Covers TrustSeal, ScamCheck, AI Execution Lab, and WordPress. For each system: what healthy looks like, what each failure mode looks like, and what to check first when something is wrong."
+date: "2026-05-25"
+tags: ["reliability", "firebase", "gemini", "razorpay", "deployment", "observability", "trustseal", "scamcheck", "production"]
+status: published
+related_docs:
+  - production-observability-doctrine
+  - operational-invariants
+  - deployment-verification-checklist
+---
+
+When something seems wrong, this playbook tells you where to look first. Each section covers one system: normal health state, observable failure modes, and the detection procedure for each.
+
+Use this playbook in two modes:
+- **Proactive:** after every deploy, run the post-deploy checks for the affected platform
+- **Reactive:** when a failure is suspected, find the relevant system section and follow the detection procedure
+
+---
+
+## System 1: TrustSeal Cloud Functions (Firebase)
+
+### Healthy state
+- Trust check requests return HTTP 200 with a structured verdict in under 5 seconds
+- Firebase Console → Functions → Dashboard shows under 1% error rate
+- No 403, 500, or auth errors in Functions logs in the past hour
+- Quota document increments after each successful check
+
+### Failure mode: Analysis returns error (403 / 500)
+
+```
+1. Firebase Console → Functions → Logs
+2. Filter: last 30 minutes
+3. Search: "error" or "403"
+4. If 403 entries present:
+   → Check deploy sequence — were rules deployed after functions?
+   → Fix: firebase deploy --only firestore:rules → verify logs clear
+5. If 500 entries present:
+   → Read the error message — is it a parse error or a crash?
+   → Parse error: check Gemini output in rawPreview log field
+   → Crash: check Node runtime in firebase.json
+```
+
+### Failure mode: Analysis hangs (infinite spinner)
+
+```
+1. Open browser DevTools → Network tab
+2. Submit an analysis request
+3. Find the Cloud Function network call
+4. Check response status and body:
+   → If no response / timeout: function cold start issue or crash — check logs
+   → If 200 with { rateLimited: true }: rate limit — wait and retry
+   → If 200 with { parseError: true }: Gemini parse failure — check prompt
+   → If 200 with { quotaExceeded: true }: quota hit — check tier in Firestore
+5. If none of the above: check that finally{} clears loading state in client code
+```
+
+### Failure mode: User can't log in / session lost on refresh
+
+```
+1. Open browser DevTools → Console
+2. Attempt sign in — look for Firebase Auth error messages
+3. After sign-in: hard reload (Ctrl+Shift+R)
+4. If logged out after reload:
+   → Firebase Console → Authentication → Settings → Authorized Domains
+   → Confirm the current domain is listed
+   → If missing: add domain → save → test again
+```
+
+### Failure mode: Payment completed but no premium access
+
+```
+1. Razorpay Dashboard → Webhooks → select endpoint → Delivery attempts
+2. Find the event timestamp matching the payment
+3. If no entry: key mode mismatch — check all four Razorpay credentials
+4. If entry with non-200 response: webhook handler error — check Functions logs
+5. If entry with 200 but access still not granted:
+   → Firestore Console → users/{uid}/quota/current
+   → Confirm tier field is 'premium'
+   → If not updated: check webhook handler uid extraction (subscription.notes.uid)
+```
+
+### Post-deploy detection checklist (TrustSeal)
+
+```
+☐ Firebase Console → Functions → Logs → no errors in last 5 min
+☐ Navigate to trustseal.asquaresolution.com
+☐ Submit one trust check for any URL
+☐ Confirm verdict renders (not spinner, not error)
+☐ If deploy included auth changes: sign in → hard reload → confirm session
+☐ If deploy included payment changes: check Razorpay Dashboard delivery log
+```
+
+---
+
+## System 2: ScamCheck Cloud Functions (Firebase)
+
+### Healthy state
+- Scam check requests return HTTP 200 with verdict in under 5 seconds
+- Firebase Console → Functions → Dashboard shows under 1% error rate
+- No 429 spikes in the past hour
+- Check history writing to Firestore after each analysis
+
+### Failure mode: Analysis returns no result (spinner)
+
+```
+1. Same detection path as TrustSeal — see System 1: Analysis hangs
+2. ScamCheck-specific: check for { rateLimited: true } — ScamCheck is
+   on Gemini free tier and more susceptible to per-minute rate limits
+   under heavy testing
+```
+
+### Failure mode: 429 rate limit spike
+
+```
+1. Firebase Console → Functions → Logs
+2. Filter: "429" or "rateLimited"
+3. If 3+ entries in last hour: approaching per-minute limit
+4. If 429 on every call: daily free tier quota likely exhausted
+5. For per-minute rate: wait 60 seconds — rate limits reset per minute
+6. For daily quota: no recovery until midnight UTC — consider upgrading to paid tier
+```
+
+### Post-deploy detection checklist (ScamCheck)
+
+```
+☐ Firebase Console → Functions → Logs → no errors in last 5 min
+☐ Navigate to scamcheck.asquaresolution.com
+☐ Submit a short test message ("This is a test")
+☐ Confirm verdict renders with probability and explanation
+☐ Navigate directly to scamcheck.asquaresolution.com/history
+☐ Confirm history page loads (not GitHub 404) — SPA routing verification
+☐ Hard refresh on /history → confirm app reloads correctly
+```
+
+---
+
+## System 3: GitHub Pages SPA Deployments (TrustSeal + ScamCheck)
+
+### Healthy state
+- Custom domain loads over HTTPS
+- Root route (/) renders the React app
+- Non-root routes render the React app on direct navigation
+- Non-root routes reload correctly on hard refresh
+- Firebase Auth session persists across navigation
+
+### Failure mode: Non-root routes return GitHub 404
+
+```
+1. Navigate directly to [domain]/history (or any non-root route)
+2. If GitHub "404 - File not found" page appears:
+   → dist/404.html was deleted by a Vite build
+   → Check: does public/404.html exist?
+   → If not: create public/404.html with SPA redirect script
+   → Redeploy: npm run build && cd dist && git add -A && git commit -m "fix 404.html" && git push origin gh-pages
+3. Verify: navigate to non-root route again → confirm React app loads
+```
+
+### Failure mode: Custom domain reverted to github.io URL
+
+```
+1. Navigate to custom domain (e.g., scamcheck.asquaresolution.com)
+2. If redirected to [username].github.io/[repo]:
+   → CNAME file was deleted by a Vite build
+   → Check: does public/CNAME exist with correct domain?
+   → If not: create public/CNAME with just the domain name (no https://)
+   → Redeploy
+3. GitHub Pages settings may also need the custom domain re-entered
+```
+
+### Failure mode: Site unreachable on custom domain (DNS)
+
+```
+1. Check if site loads on [username].github.io/[repo] URL
+   → If yes: DNS issue, not deployment issue
+   → If no: deployment issue
+2. For DNS: dnschecker.org → enter subdomain → check global propagation
+3. If <90% resolved: wait for TTL duration (up to 1 hour for TTL 3600)
+4. GitHub Pages → Settings → Pages → check custom domain status
+5. If "Enforce HTTPS" greyed out: DNS not yet fully propagated
+```
+
+---
+
+## System 4: AI Execution Lab (Vercel + Next.js)
+
+### Healthy state
+- Vercel deployment shows "Ready" status
+- All content pages render without console errors
+- Entity tag pages render with operational descriptions
+- GA4 Realtime shows traffic from lab.asquaresolution.com only
+
+### Failure mode: Pages returning 500 or blank content
+
+```
+1. Vercel Dashboard → Deployments → latest deploy → Function logs
+2. Check for runtime errors
+3. If "Module not found" or edge runtime error:
+   → Likely a server module pulled into client component
+   → Check recent component changes for missing 'use client' directives
+4. If MDX content not rendering:
+   → Check for recent next-mdx-remote updates
+   → Verify blockJS: false in MDX configuration
+```
+
+### Failure mode: GA4 analytics contamination suspected
+
+```
+1. GA4 → Realtime → Active users on site
+2. Watch for traffic from unexpected domains (vercel.app, github.io)
+3. If vercel.app traffic visible:
+   → Vercel Dashboard → Project → Settings → Environment Variables
+   → NEXT_PUBLIC_GA_MEASUREMENT_ID → confirm only "Production" checkbox
+   → Redeploy to apply scope restriction
+4. If cross-subdomain sessions are fragmented:
+   → GA4 → Admin → Data Streams → select stream → More tagging settings
+   → Confirm cookie_domain is set to asquaresolution.com
+```
+
+### Post-deploy detection checklist (AI Execution Lab)
+
+```
+☐ Vercel Dashboard shows "Ready" for the deploy
+☐ Navigate to lab.asquaresolution.com — homepage loads
+☐ Navigate to /failures/firebase-deploy-sequence-auth-failure — content renders
+☐ Navigate to /tags/firebase — entity page renders with description
+☐ Navigate to /docs/operational-invariants — content renders
+☐ Open browser DevTools → Console → no errors
+☐ GA4 Realtime → confirm events firing from lab.asquaresolution.com
+```
+
+---
+
+## System 5: WordPress — asquaresolution.com
+
+### Healthy state
+- REST API returns 200 for authenticated requests
+- Sitemap at /sitemap_index.xml returns 200
+- LiteSpeed cache serving current content (not stale)
+- No 404 errors for known URLs in GSC
+
+### Failure mode: PHP filter or WPCode change has no visible effect
+
+```
+1. Confirm the WPCode snippet is Active (not Inactive)
+2. LiteSpeed Cache → Purge All  ← MUST happen before any other step
+3. Wait 5 seconds
+4. Open a fresh private browser window (not a tab — a window)
+5. Navigate to the affected page
+6. If change now visible: was a cache issue — procedure working correctly
+7. If still not visible: check snippet syntax for PHP errors (WPCode will disable broken snippets)
+```
+
+### Failure mode: WordPress REST API returning 401
+
+```
+1. Test with raw curl first:
+   curl -s -o /dev/null -w "%{http_code}" \
+     -u "username:raw_password_no_url_encoding" \
+     https://asquaresolution.com/wp-json/wp/v2/posts?per_page=1
+2. If 401: check password encoding — no URL-encoding of spaces before Base64
+3. If still 401: Application Password may have been revoked — generate new one in WordPress Users → Profile
+4. If 200 from curl but 401 from code: check code's encoding pipeline
+```
+
+### Failure mode: Sitemap returning 404
+
+```
+1. Navigate to asquaresolution.com/sitemap_index.xml
+2. If 404: Rank Math sitemap URL handler may have been flushed
+3. WordPress Admin → Settings → Permalinks → Save Changes (flushes rewrite rules)
+4. Test sitemap again
+5. If still 404: check if Rank Math SEO plugin is active and sitemap feature is enabled
+```
+
+### Post-change detection checklist (WordPress)
+
+```
+☐ WPCode: snippet shows Active status
+☐ LiteSpeed Cache → Purge All executed
+☐ Verified in fresh private browser window (not cached browser)
+☐ If PHP change: REST API still returns 200 (credentials not affected)
+☐ If plugin change: sitemap accessible at /sitemap_index.xml
+```
+
+---
+
+## System Health Quick Reference
+
+| System | First check | Key console | Fastest health signal |
+|---|---|---|---|
+| TrustSeal Functions | Firebase Console → Functions → Logs | Firebase Console | Submit one trust check |
+| ScamCheck Functions | Firebase Console → Functions → Logs | Firebase Console | Submit one analysis |
+| GitHub Pages SPA | Direct-navigate non-root route | GitHub repo → Settings → Pages | /history or /dashboard loads |
+| AI Execution Lab | Vercel Dashboard → latest deploy | Vercel Dashboard | Homepage + one content page |
+| WordPress | curl REST API auth test | WordPress Admin | curl returns 200 |
+| Razorpay payments | Razorpay Dashboard → Webhooks | Razorpay Dashboard | Delivery log shows 200 after payment |
+| GA4 analytics | GA4 Realtime view | GA4 | No vercel.app traffic visible |
+| DNS / custom domain | dnschecker.org | dnschecker.org | 90%+ locations resolving |
+
+---
+
+## When Nothing Seems Obviously Wrong
+
+If a user reports a problem but no hard signal is visible in any console:
+
+```
+1. Ask the user to describe the exact behavior:
+   - What URL? What action? What did they expect? What happened?
+2. Reproduce in a fresh private browser window on the production domain
+3. Open DevTools → Network → reproduce the issue
+   - Look for non-200 responses on API calls
+   - Look for console errors
+4. Check Firebase Console → Functions → Logs for the time of the report
+5. Check Razorpay Dashboard if payment-related
+6. Check Firestore → users/{uid}/quota/current if analysis-related
+7. Check GA4 Realtime if analytics-related
+
+If no signal found in any of the above:
+   → The failure may be in the absent-signal class (see Production Observability Doctrine)
+   → Test the auth flow specifically: sign in → reload → confirm session
+   → Navigate to a non-root route directly and hard-refresh
+   → These two behavioral tests cover the most common silent failure modes
+```
+
+---
+
+## Related
+
+- [Production Observability Doctrine](/docs/production-observability-doctrine) — detection invariants, signal taxonomy, failure detection audit
+- [Deployment Verification Checklist](/docs/deployment-verification-checklist) — pre/post-deploy verification steps
+- [Operational Invariants](/docs/operational-invariants) — the reliability contracts this playbook enforces

@@ -1,0 +1,544 @@
+---
+title: "Operational Security Doctrine — A Square Solutions"
+description: "Security invariants, credential governance, trust boundary model, and access discipline for the A Square Solutions ecosystem. Documents the three-tier access architecture across TrustSeal and ScamCheck, all credentials and where they are allowed, the security implications of historical operational failures, silent security drift scenarios, and lightweight security observability patterns. Grounded entirely in real production architecture."
+date: "2026-05-25"
+tags: ["reliability", "firebase", "firebase-functions", "firestore", "razorpay", "authentication", "gemini", "production", "trustseal", "scamcheck", "deployment"]
+status: published
+related_docs:
+  - operational-invariants
+  - deployment-verification-checklist
+  - razorpay-subscription-integration
+  - firebase-firestore-quota-enforcement
+  - third-party-api-mode-isolation
+related_failures:
+  - razorpay-test-live-key-mismatch
+  - firebase-auth-domain-not-authorized
+  - firebase-deploy-sequence-auth-failure
+  - ga4-preview-environment-contamination
+  - environment-variable-missing-production
+---
+
+Security in this ecosystem is not a separate layer — it is an emergent property of the access architecture. The most dangerous security scenarios are not external attacks against hardened endpoints. They are internal configuration states where the system grants more access than intended, or where a credential reaches a context it should not be in. Both are silent. Neither produces a log entry.
+
+This document formalizes the access model, credential inventory, security invariants, trust boundaries, and the conditions that produce silent security drift.
+
+---
+
+## Access Architecture — Three-Tier Trust Model
+
+Every operation in the TrustSeal and ScamCheck systems executes under one of three trust tiers. The tier determines what Firestore paths are accessible, what operations are permitted, and what credentials are available.
+
+### Tier 1: Admin (Cloud Functions via Firebase Admin SDK)
+
+**Identity:** Firebase service account auto-provisioned per project.
+**Access:** Full read/write access to all Firestore collections, all Firebase Auth operations, all Storage objects. Security rules are bypassed entirely — the Admin SDK does not pass through Firestore rule evaluation.
+**Code that operates here:** All Firebase Cloud Functions source code in `functions/src/`.
+**Trust basis:** Server-side execution only. There is no client-facing path to Admin SDK code. The service account key is never exposed — Cloud Functions use the implicit credential from the Firebase execution environment.
+
+**Security property:** Admin trust is exclusively structural. No user action can escalate to Tier 1 access through the application layer. The only path to Tier 1 is deployment of Cloud Functions code.
+
+### Tier 2: Authenticated User (Firebase Auth + Client SDK)
+
+**Identity:** Firebase Auth UID from a signed-in user session (email/password or Google OAuth).
+**Access:** Governed entirely by Firestore Security Rules. Current rules: read own quota document, read own profile. Writes to quota, subscription, and rate limit documents are blocked. All access requires a valid Firebase Auth token — no anonymous user gets Tier 2 access to data.
+**Code that operates here:** React client application (`src/`).
+**Trust basis:** Firebase Auth token issued after successful authentication. Token validated by Firebase on each SDK operation. Token expires; sessions are maintained by Firebase's client SDK refresh behavior.
+
+### Tier 3: Public (Unauthenticated)
+
+**Identity:** No Firebase Auth token present.
+**Access:** Zero Firestore access (no rules allow unauthenticated reads). Cloud Functions callable via `onCall` return `HttpsError('unauthenticated')` immediately before any processing. The only Tier 3 surface is the Razorpay webhook `onRequest` endpoint, which is secured by HMAC-SHA256 signature verification rather than Firebase Auth.
+**Trust basis:** None. Assumed to be untrusted.
+
+---
+
+## Credential Inventory
+
+All credentials in the ecosystem, their classification, permitted locations, and security properties.
+
+### Server-Side Secrets (never allowed in client code)
+
+**`GEMINI_API_KEY`**
+- Classification: Secret
+- Format: `AIzaSy...` (Google Cloud API key)
+- Permitted location: Firebase Functions environment variables only
+- Prohibited locations: Any `REACT_APP_` variable, any `NEXT_PUBLIC_` variable, any file committed to version control, any URL parameter, any client-side JavaScript
+- Exposure consequence: Anyone with the key can make unlimited Gemini API calls billed to the associated Google Cloud project. Quota enforcement is bypassed entirely — the per-user limits enforced by the Cloud Function are irrelevant if the key is used directly.
+- Rotation: Google Cloud Console → APIs & Services → Credentials → regenerate key, update Firebase Functions environment, redeploy functions.
+
+**`RAZORPAY_KEY_SECRET`**
+- Classification: Secret
+- Format: `[random string]`
+- Permitted location: Firebase Functions environment variables only
+- Prohibited locations: Same as Gemini API key. The KEY_SECRET is used server-side to create subscriptions.
+- Exposure consequence: Attacker can create subscription objects in the Razorpay account. Cannot directly process payments but can create subscription records that may cause billing confusion.
+- Rotation: Razorpay Dashboard → Settings → API Keys → generate new key, update Firebase Functions environment, redeploy.
+
+**`RAZORPAY_WEBHOOK_SECRET`**
+- Classification: **Critical Secret** — highest sensitivity in the ecosystem
+- Format: Random 32-character string
+- Permitted location: Firebase Functions environment variables only
+- Prohibited locations: All client locations, all version control
+- Exposure consequence: **Attacker can forge valid Razorpay webhook signatures. Any HTTP POST to the webhook URL with a correctly-signed body grants premium access to arbitrary users.** This is complete payment integrity compromise.
+- Rotation: Razorpay Dashboard → Settings → Webhooks → update secret (both in Dashboard and in Firebase Functions environment simultaneously).
+- **Required immediate action if exposed:** Rotate immediately — generate new secret, update Razorpay Dashboard and Firebase Functions env in a single atomic operation. Any window between the two leaves the endpoint either rejecting all legitimate webhooks (wrong secret) or accepting forged ones (no secret).
+
+**`WordPress Application Password`**
+- Classification: Secret
+- Permitted location: Developer workstation environment only. Scripts that use it must read from environment variables, not hardcoded values.
+- Prohibited locations: Any file in any repository, any committed script, any CI/CD variable (not needed in CI — WordPress automation is local-only)
+- Exposure consequence: Full write access to asquaresolution.com WordPress content — posts, pages, settings, plugin configurations.
+- Rotation: WordPress Admin → Users → Profile → Application Passwords → revoke and generate new.
+
+### Public Credentials (intentionally accessible)
+
+**`RAZORPAY_KEY_ID` (`REACT_APP_RAZORPAY_KEY_ID`)**
+- Classification: Public — by Razorpay design
+- The KEY_ID is required in the browser-side Razorpay Checkout initialization. It identifies the merchant but does not authorize any financial operations. Razorpay's security model places all authority in the KEY_SECRET (server-side) and webhook signature (server-to-server). The KEY_ID in client code is correct architecture, not a security risk.
+- Permitted locations: Client code, environment variables with REACT_APP_ prefix
+- Security note: Seeing KEY_ID in a compiled client bundle is expected and correct.
+
+**Firebase Client Configuration** (`apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`)
+- Classification: Public — by Firebase design
+- The Firebase `apiKey` in client configuration is **not a secret**. Firebase security is enforced by Firestore Security Rules and Firebase Auth, not by keeping the project configuration secret. These values are visible in the page source of every Firebase web app.
+- Permitted locations: All client code, environment files, public repository
+- Security boundary: Firestore rules govern what authenticated and unauthenticated users can read/write. The `apiKey` is a project identifier, not an authorization credential.
+
+**`NEXT_PUBLIC_GA_MEASUREMENT_ID`**
+- Classification: Public
+- GA4 Measurement IDs are visible in page source. No security risk from exposure.
+- Risk class: Analytics contamination if scoped to wrong environment (documented separately — not a security issue).
+
+---
+
+## Security Invariants
+
+Ten security invariants extracted from the real production architecture. Where a specific historical failure established an invariant, it is noted.
+
+---
+
+### INV-SEC-1 — Server-side secrets must never exist in client bundles or public variables
+
+**Statement:** `GEMINI_API_KEY`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET` must never appear in any variable with a `REACT_APP_`, `NEXT_PUBLIC_`, or equivalent client-bundle-inclusion prefix. These secrets must only be readable by server-side execution environments.
+
+**Why:** A secret baked into a client JavaScript bundle is publicly accessible to anyone who inspects the page source, the network tab, or decompiles the bundle. Client-side secrets provide zero protection.
+
+**Detection:** Search the compiled client bundle (`dist/assets/*.js`) for the prefix pattern of each secret. For Gemini: `AIzaSy`. For Razorpay secret: the key format pattern. If either string appears in any client-side file, rotation is required immediately.
+
+**Establishing evidence:** Architecture-based proactive invariant. Documented in [Gemini Production Operations](/docs/gemini-production-operations) — server-side-only architecture section.
+
+---
+
+### INV-SEC-2 — Razorpay WEBHOOK_SECRET rotation must be atomic
+
+**Statement:** When rotating `RAZORPAY_WEBHOOK_SECRET`, the new value must be set in both Razorpay Dashboard and Firebase Functions environment simultaneously. There must be no window where the Dashboard has the new secret and the Cloud Function has the old one, or vice versa.
+
+**Why:** A non-atomic rotation creates a window where all legitimate Razorpay webhooks fail signature verification (if Dashboard is updated first) or where a stale secret is still being accepted (if Functions are updated first and Dashboard lags). Either window is a service or security problem.
+
+**Rotation procedure:**
+1. Generate new 32-character random secret
+2. Update Firebase Functions environment: `firebase functions:config:set razorpay.webhook_secret="[new]"`
+3. Deploy Functions immediately: `firebase deploy --only functions`
+4. Update Razorpay Dashboard webhook secret to match
+5. Verify: trigger a test webhook event and confirm 200 response in Razorpay delivery log
+
+---
+
+### INV-SEC-3 — Premium access grants must only originate from Tier 1 (Admin SDK webhook handler)
+
+**Statement:** The Firestore document at `users/{uid}/quota/current` with `tier: 'premium'` must only be written by the `razorpayWebhook` Cloud Function after successful HMAC-SHA256 signature verification. No client-side code path may write to this document.
+
+**Why:** The client-side Razorpay payment handler (`handler` callback in checkout modal) fires after the user completes checkout from the user's perspective. This callback is client-controllable — it can be invoked programmatically without a real payment. Any write operation triggered from this callback is an unauthenticated privilege escalation vector.
+
+**Enforcement:** Firestore security rules block all client writes to `users/{uid}/quota/{doc}` (`allow write: if false`). Even if client code attempted to write `tier: 'premium'`, the rule would reject it. This provides defense in depth beyond the architectural invariant.
+
+**Verification:** Confirm the `handler` function in the Razorpay checkout initialization contains only UX state updates. Search client source for any Firebase `set()` or `update()` calls inside the payment `handler`. There should be none.
+
+**Establishing evidence:** [Razorpay Subscription Integration with Firebase](/docs/razorpay-subscription-integration) — payment handler section explicitly documents the prohibited pattern.
+
+---
+
+### INV-SEC-4 — Firestore security rules must explicitly block client writes to quota and subscription documents
+
+**Statement:** The Firestore security rules must contain explicit `allow write: if false` rules for all documents in the access-privilege path: `users/{uid}/quota/{doc}` and `users/{uid}/subscription/{doc}`. Default Firestore behavior (deny all) is not sufficient — explicit deny rules must be present to survive rules refactoring.
+
+**Why:** Firestore's default behavior is to deny all access that is not explicitly permitted. However, a rules refactoring that adds a broad match pattern (e.g., `match /users/{uid}/{document=**}`) could inadvertently grant client write access to quota and subscription documents. Explicit deny rules create a second layer of protection against this misconfiguration.
+
+**Current state:**
+```javascript
+match /users/{uid}/quota/{doc} {
+  allow read: if request.auth != null && request.auth.uid == uid;
+  allow write: if false;  // explicit deny — Cloud Functions admin SDK bypasses this
+}
+```
+
+**Verification:** Before any Firestore rules deploy, confirm that `allow write: if false` is present on the quota and subscription document paths. Confirm no `match /users/{uid}/{document=**}` catch-all pattern that would override these rules.
+
+---
+
+### INV-SEC-5 — Firestore rules must be reviewed before every rules deploy
+
+**Statement:** Firestore security rules changes must be reviewed for permission regressions before every deploy. A rules deploy that broadens access to any document path is a security event, not just a configuration change.
+
+**Why:** Firestore rules are the only access control layer between authenticated users and the data they are not permitted to write. A rules regression (unintentionally permitting writes) may not produce any log entry or observable error — users simply gain access they should not have.
+
+**Review criteria for a rules deploy:**
+- Does any new rule grant `write` access that was previously `if false`?
+- Does any new match pattern with a wildcard (`{document=**}`) cover paths that previously had explicit deny rules?
+- Does any new rule remove an existing `allow read` authentication check?
+
+**Establishing evidence:** [Firebase Functions 403 After Redeploy](/failures/firebase-deploy-sequence-auth-failure) — rules deployment sequence matters operationally. The review requirement extends this: the correctness of the rules content matters as much as the deployment order.
+
+---
+
+### INV-SEC-6 — Firebase Auth Authorized Domains must not accumulate stale entries
+
+**Statement:** The Firebase Auth Authorized Domains list must be reviewed when any deployment domain changes. Domains that are no longer in use must be removed. A domain that remains authorized after the associated deployment is decommissioned represents an ongoing attack surface.
+
+**Why:** Any domain in the Authorized Domains list can initiate Firebase Auth operations against the project. A stale authorized domain (e.g., an old test subdomain, a retired developer's personal domain used during testing) that is no longer controlled by the project owner could be re-registered by an attacker and used to create or impersonate Firebase Auth sessions.
+
+**Current authorized domains (TrustSeal and ScamCheck):**
+- `trustseal.asquaresolution.com` — production, active
+- `scamcheck.asquaresolution.com` — production, active
+- `[username].github.io` — GitHub Pages staging, active during development
+- `localhost` — development, Firebase default, active
+
+**Review trigger:** After any domain decommission, any project handover, any GitHub account change.
+
+**Establishing evidence:** [Firebase Auth Session Lost on Custom Domain](/failures/firebase-auth-domain-not-authorized) — established that missing domains cause silent auth failures. The inverse (stale domains) creates silent attack surface.
+
+---
+
+### INV-SEC-7 — Vercel preview environments must not have access to production secrets
+
+**Statement:** Live production API keys (`RAZORPAY_KEY_ID` in live mode, any production webhook secrets) must be scoped to the Production environment only in Vercel. Preview deployments must use only test-mode credentials or have no credentials at all.
+
+**Why:** Vercel preview URLs are accessible to anyone with the URL. Code running on a preview URL with a live `RAZORPAY_KEY_ID` has full production payment capability. A preview deployment running untested code with live credentials can make live payment API calls, create live subscriptions, or expose live credentials in error messages.
+
+**Current state:** The AI Execution Lab (Next.js) uses Vercel. TrustSeal and ScamCheck deploy to GitHub Pages and Firebase, not Vercel — so the Vercel preview risk applies only to the Lab, which has no payment credentials. For any future product deployed to Vercel that includes payment integration, this invariant becomes critical.
+
+**Establishing evidence:** [GA4 Production Analytics Contaminated by Vercel Preview Deployments](/failures/ga4-preview-environment-contamination) — establishes that preview deployments with production-scoped variables produce production-environment consequences.
+
+---
+
+### INV-SEC-8 — WordPress Application Password must never be committed to version control
+
+**Statement:** The WordPress Application Password used for REST API automation must exist only in the developer's local environment. It must never appear in any repository file, `.env` file committed to git, CI/CD secret, or shared credential store.
+
+**Why:** WordPress Application Passwords grant full API write access to the WordPress instance — posts, pages, settings, plugin configurations. A committed credential persists in git history even after deletion from the working tree. An exposed credential requires both immediate revocation (WordPress Admin → Application Passwords → revoke) and history scanning to confirm scope of exposure.
+
+**Safe pattern:** The credential lives in a local `.env` file in the developer's home directory or a password manager. Scripts read it via environment variable. `.env` is in `.gitignore`. The `.gitignore` entry must be in place before any `.env` file is created.
+
+**Verification:** `git log --all --full-history --source -S "password_prefix" -- .` to confirm no credential string appears in any commit.
+
+---
+
+### INV-SEC-9 — Missing environment variables must fail loud, never silently degrade to insecure defaults
+
+**Statement:** Cloud Function code must never silently fall back to an insecure default when a required environment variable is missing. If `RAZORPAY_WEBHOOK_SECRET` is missing, the webhook handler must fail immediately with an error — it must not proceed with no signature verification.
+
+**Why:** A `missing-variable-in-production` failure combined with a silent insecure fallback produces a security regression that passes all non-production tests. The environment-variable-missing failure class is documented as producing silent feature absence — but if the missing variable governs a security check, the failure is a security event, not just a feature gap.
+
+**Example of the dangerous pattern:**
+```javascript
+// DANGEROUS — falls through to no verification if secret missing
+const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || ''
+if (receivedSig !== expectedSig) {  // always matches when secret is ''
+  // This branch is never taken — all requests pass "verification"
+}
+```
+
+**Correct pattern:**
+```javascript
+// CORRECT — fail loud on missing secret
+const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
+if (!webhookSecret) {
+  console.error('RAZORPAY_WEBHOOK_SECRET not configured')
+  return res.status(500).json({ error: 'Webhook handler misconfigured' })
+}
+```
+
+**Establishing evidence:** [Environment Variable Missing in Production](/failures/environment-variable-missing-production) — the general failure class. Security framing: if the missing variable is a security control, the failure mode is an active security regression.
+
+---
+
+### INV-SEC-10 — Firebase Admin SDK must only execute inside Cloud Functions, never in client code
+
+**Statement:** `firebase-admin` must never be imported in any client-side JavaScript file. The Admin SDK imports, the service account credentials it uses, and the admin-tier Firestore access it provides must remain exclusively in Cloud Functions source code.
+
+**Why:** Importing `firebase-admin` in a browser-bundled file would either fail at runtime (server-only Node.js APIs) or expose service account credentials in the client bundle, depending on the bundler configuration. Either outcome is a security failure — one exposes admin credentials, one reveals that admin operations were attempted client-side.
+
+**Establishing evidence:** [Node.js fs Module Pulled into Client Bundle](/failures/server-module-client-bundle) — the documented failure class where server-only modules enter client bundles. `firebase-admin` is a server-only module in the same class.
+
+---
+
+## Firebase Security Rules Governance
+
+Firestore rules are the access control layer between Tier 2 (authenticated users) and data they should not modify. They are the only thing preventing a malicious authenticated user from writing arbitrary values to quota, subscription, or rate limit documents.
+
+### Current Rules Architecture
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Quota: users read own, nobody writes from client (admin SDK bypasses)
+    match /users/{uid}/quota/{doc} {
+      allow read:  if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Rate limits: locked entirely to admin SDK
+    match /rateLimits/{ipHash}/{subcollection}/{doc} {
+      allow read, write: if false;
+    }
+
+    // All other paths: Firestore default deny (no explicit allow = no access)
+  }
+}
+```
+
+### Rules Review Checklist
+
+Before every Firestore rules deploy:
+
+```
+☐ No new 'allow write' rules added to quota or subscription paths
+☐ No wildcard catch-all pattern (/{document=**}) covering previously-denied paths
+☐ All authentication checks use request.auth != null AND uid equality
+☐ No 'allow read' added to paths previously set to 'if false'
+☐ No rules removed without understanding what they protected
+☐ Rules deploy sequence confirmed: rules before functions (INV-FB-1)
+```
+
+### Rules Coverage Gaps (Documented)
+
+**`users/{uid}/subscription/{doc}`** — Subscription documents (written by webhook handler via Admin SDK) have no explicit client-side read rule documented. Default Firestore behavior denies client reads, but explicit rules should be added for clarity and resilience against future refactoring.
+
+**`users/{uid}/checks/{doc}`** — Check history documents (written by Cloud Function, read by client for history display). Client reads are likely intentional, but the rule should be explicitly documented rather than relying on Firestore default behavior.
+
+---
+
+## Trust Boundary Analysis
+
+### Cloud Function Callable Endpoints (`onCall`)
+
+**Trust model:** Firebase validates the caller's auth token before the function handler executes. The `request.auth` object is populated only for authenticated users. The function performs a second explicit check: `if (!request.auth?.uid) throw HttpsError('unauthenticated')`.
+
+**Defense layers:** Firebase SDK auth validation (layer 1) + explicit uid check (layer 2) + per-user quota enforcement (layer 3 — blocks abuse even for authenticated users).
+
+**Attack surface:** A Firebase Auth account with no verified email can reach Tier 2 function access. Bot account creation is the residual risk (documented in cost governance doctrine).
+
+### Razorpay Webhook Endpoint (`onRequest`)
+
+**Trust model:** No Firebase Auth. Security relies entirely on HMAC-SHA256 signature verification using `RAZORPAY_WEBHOOK_SECRET`. Every request body is verified against the signature before any payload data is read.
+
+**The webhook URL is public.** It is a Firebase Cloud Functions URL of the form `https://[region]-[project-id].cloudfunctions.net/razorpayWebhook`. Anyone can discover it by inspecting the client bundle or by guessing the pattern. This is expected — the security model does not depend on URL secrecy.
+
+**What the signature check actually protects:** The shared secret (`RAZORPAY_WEBHOOK_SECRET`) is known only to Razorpay and the Firebase Function. Only Razorpay can produce a valid HMAC-SHA256 signature for a given request body using this secret. Any forged request will fail signature verification and receive a 400 response before any Firestore write occurs.
+
+**Single point of failure:** If `RAZORPAY_WEBHOOK_SECRET` is exposed, this trust boundary collapses entirely. Rotation procedure is defined in INV-SEC-2.
+
+### Firebase Admin SDK (Cloud Functions Internal)
+
+**Trust model:** Implicit service account credentials from the Firebase execution environment. No explicit key file. No client-accessible path.
+
+**Attack surface:** The only path to Admin SDK access is deploying Cloud Functions code. This requires Firebase project owner/editor IAM permissions — a separate access control layer outside the application's security architecture.
+
+---
+
+## Security Implications of Historical Failures
+
+Each historical operational failure analyzed for hidden security implications.
+
+| Failure | Security implication | Severity |
+|---|---|---|
+| [firebase-auth-domain-not-authorized](/failures/firebase-auth-domain-not-authorized) | Inverse: stale domains in Authorized Domains list = ongoing attack surface from uncontrolled domains | Medium |
+| [razorpay-test-live-key-mismatch](/failures/razorpay-test-live-key-mismatch) | Test-mode client key in browser with live-mode server: inconsistency creates confusion about which environment user activity is attributed to | Low |
+| [firebase-deploy-sequence-auth-failure](/failures/firebase-deploy-sequence-auth-failure) | During the rules-stale window, old rules were enforced against new function code — if old rules were more permissive, this was a brief privilege elevation period | Low (rules were restrictive in both versions) |
+| [ga4-preview-environment-contamination](/failures/ga4-preview-environment-contamination) | Establishes the pattern: Vercel preview deployments with production-scoped variables create production-environment side effects. If any production secret had that scope, the security consequence would be severe | High (precedent) |
+| [environment-variable-missing-production](/failures/environment-variable-missing-production) | If the missing variable governs a security check (e.g., RAZORPAY_WEBHOOK_SECRET), absence must fail loud — not silently skip the check | Critical (pattern) |
+| [gemini-rate-limit-429-no-ux](/failures/gemini-rate-limit-429-no-ux) | Client retry storm behavior demonstrates that unauthenticated or weakly-authenticated surfaces under user control can create resource amplification | Low (Gemini, not a data security issue) |
+| [firebase-functions-node-version-stability](/failures/firebase-functions-node-version-stability) | A Cloud Function that crashes immediately on invocation provides no security — it also performs no quota enforcement, no signature verification, no auth check. A crash-on-invoke is a defense-in-depth failure | Medium (defense absent during outage) |
+
+---
+
+## Silent Security Drift Scenarios
+
+Configuration states that degrade security posture without producing any observable signal.
+
+### Drift 1: Firestore rules permission expansion via catch-all
+
+**Scenario:** A rules refactor adds `match /users/{uid}/{document=**} { allow read: if request.auth.uid == uid; }` to simplify the rules file. This pattern, while granting only read access, inadvertently overrides the existing explicit `allow write: if false` on quota documents — because Firestore uses the most permissive matching rule when multiple rules apply.
+
+**Signal:** None. The change produces no error. Existing read operations continue working. Only a deliberate test of write operations from the client SDK would reveal the regression.
+
+**Detection:** Firestore rules review checklist (INV-SEC-5) applied before every deploy. Specifically: confirm no wildcard pattern covers previously-explicit paths.
+
+### Drift 2: Webhook secret not rotated after developer access change
+
+**Scenario:** A developer with access to the Firebase project leaves. The `RAZORPAY_WEBHOOK_SECRET` is known to them (they set it, or saw it in Firebase Functions config). No rotation occurs. The secret remains valid.
+
+**Signal:** None. The webhook continues functioning normally. No log entry indicates stale access.
+
+**Detection:** Rotation trigger defined: after any Firebase project access change, `RAZORPAY_WEBHOOK_SECRET` is rotated as a standard offboarding step.
+
+### Drift 3: Stale domain accumulates in Firebase Auth Authorized Domains
+
+**Scenario:** During development, a temporary test domain was added to Authorized Domains and never removed. That domain expired and was re-registered by an unknown party. The new owner of that domain can now initiate Firebase Auth operations against the TrustSeal or ScamCheck project.
+
+**Signal:** None. Firebase Auth functions normally. The stale domain creates no log entry.
+
+**Detection:** Periodic review of Authorized Domains list (INV-SEC-6). Any domain not currently associated with an active deployment must be removed.
+
+### Drift 4: API key in version control via .env file
+
+**Scenario:** A developer creates a `.env` file in the project root with `GEMINI_API_KEY=AIzaSy...` and commits it before checking `.gitignore`. Git history is permanent — even if the file is removed in the next commit, the key is in the repository history indefinitely.
+
+**Signal:** None at commit time. The file is committed like any other change. GitHub may issue a secret scanning alert (if secret scanning is enabled), but this is not configured by default on private repositories.
+
+**Detection:** `git log --all -p -- .env | grep AIzaSy` — scan history for key format patterns before any repository visibility change (making repo public, sharing with collaborators). Pre-commit hook that rejects `GEMINI_API_KEY=` patterns in committed files.
+
+### Drift 5: Missing environment variable silently disables signature verification
+
+**Scenario:** During a Firebase Functions environment configuration update, `RAZORPAY_WEBHOOK_SECRET` is accidentally omitted. The function is redeployed. If the webhook handler falls back to an empty string comparison: `webhookSecret || ''`, then `receivedSig !== expectedSig` evaluates against an empty-string HMAC — which always fails, meaning signature verification is effectively disabled for all requests.
+
+**Signal:** None if the fallback accepts all signatures. Razorpay webhook delivery log continues showing 200 responses. All webhook events are processed. The security regression is completely invisible.
+
+**Detection:** INV-SEC-9 (fail loud on missing secret). Explicit null check for `RAZORPAY_WEBHOOK_SECRET` at function startup. Confirmation that the null check is present in code review before any Functions deploy.
+
+---
+
+## Lightweight Security Observability
+
+Methods for detecting security drift without enterprise tooling.
+
+### Client bundle secret scan
+
+After every production build, scan the compiled client bundle for server-side secret patterns:
+
+```bash
+# Check compiled TrustSeal/ScamCheck bundle for Gemini key pattern
+grep -r "AIzaSy" dist/assets/
+
+# Check for Razorpay key secret (won't have rzp_ prefix — check for secret format)
+# This is harder to pattern-match; rely on the architectural invariant instead
+```
+
+**Frequency:** Before every GitHub Pages deploy. Takes 30 seconds.
+
+### Firebase Auth Authorized Domains audit
+
+```
+Firebase Console → Authentication → Settings → Authorized Domains
+```
+
+Review all listed domains. Any domain not associated with an active, controlled deployment must be removed.
+
+**Frequency:** Quarterly or after any deployment domain change.
+
+### Firestore rules review
+
+Before every `firebase deploy --only firestore:rules` (or any combined deploy):
+
+```
+1. Read the full rules file
+2. Confirm no new write permissions on quota/subscription paths
+3. Confirm no catch-all patterns override explicit denies
+4. Run the rules checklist (see above)
+```
+
+**Frequency:** Before every rules deploy.
+
+### Environment variable scope audit (Vercel)
+
+```
+Vercel Dashboard → Project → Settings → Environment Variables
+```
+
+For any variable containing a live API key or secret: confirm only "Production" checkbox is checked. Preview and Development must have either test-mode credentials or no value.
+
+**Frequency:** After any environment variable change. Monthly quick review.
+
+### Webhook secret presence check
+
+After any Firebase Functions deploy:
+
+```bash
+# Confirm webhook secret is configured (don't print the value)
+firebase functions:config:get razorpay.webhook_secret | grep -q "." && echo "SET" || echo "MISSING"
+```
+
+**Frequency:** After any Firebase Functions environment configuration change.
+
+---
+
+## Credential Exposure Response Procedures
+
+### If Gemini API key is exposed
+
+1. **Immediately:** Google Cloud Console → APIs & Services → Credentials → delete the exposed key → create new key
+2. Firebase Functions environment: update `GEMINI_API_KEY` with new value
+3. `firebase deploy --only functions`
+4. Scan git history for the exposed key string: `git log --all -p | grep "AIzaSy"`
+5. If in git history: consider the key permanently compromised; rotation is permanent
+
+### If RAZORPAY_WEBHOOK_SECRET is exposed
+
+1. **Immediately (within minutes):** Generate new 32-character random secret
+2. Update Firebase Functions environment: `firebase functions:config:set razorpay.webhook_secret="[new]"`
+3. Deploy functions: `firebase deploy --only functions`
+4. Update Razorpay Dashboard webhook secret to match (within same deployment window)
+5. Verify: Razorpay Dashboard → send test event → confirm 200 response
+6. Audit Firestore `users/{uid}/quota/current` documents for unexpected `tier: 'premium'` entries during the exposure window
+7. If any unauthorized premium grants are found: manually reset `tier: 'free'` via Firebase Console
+
+### If WordPress Application Password is exposed
+
+1. WordPress Admin → Users → Profile → Application Passwords → revoke the exposed password → create new
+2. Update local developer environment with new password
+3. Audit WordPress activity log for unauthorized post/page/settings changes during exposure window
+4. If activity log unavailable: review recent post revisions and plugin change history
+
+---
+
+## Configuration Safety Checklist
+
+Run before any security-relevant configuration change:
+
+```
+FIRESTORE RULES
+☐ No new write permissions on quota, subscription, or rate limit paths
+☐ No wildcard patterns overriding explicit deny rules
+☐ All auth checks use request.auth != null AND uid equality
+☐ Deploy sequence: rules before functions
+
+CREDENTIALS
+☐ No API keys in REACT_APP_ or NEXT_PUBLIC_ variables (except Razorpay KEY_ID)
+☐ No credentials in any file that will be committed to git
+☐ RAZORPAY_WEBHOOK_SECRET confirms present in Firebase Functions config
+☐ Webhook handler has explicit null check for RAZORPAY_WEBHOOK_SECRET
+
+FIREBASE AUTH
+☐ Only active deployment domains in Authorized Domains list
+☐ No test domains from decommissioned deployments
+
+VERCEL ENVIRONMENT
+☐ Any live API key scoped to Production only
+☐ Preview environment has only test-mode credentials or none
+
+CLIENT BUNDLE
+☐ Compiled bundle does not contain Gemini API key pattern (AIzaSy)
+☐ Compiled bundle contains only Razorpay KEY_ID, not KEY_SECRET
+```
+
+---
+
+## Related
+
+- [Operational Invariants](/docs/operational-invariants) — INV-PAY-1 through INV-PAY-4 overlap with security invariants for payment integrity
+- [Deployment Verification Checklist](/docs/deployment-verification-checklist) — configuration safety checklist is a companion to the security checklist
+- [Third-Party API Mode Isolation](/docs/third-party-api-mode-isolation) — credential mode consistency (INV-SEC-7 framing)
+- [Razorpay Subscription Integration with Firebase](/docs/razorpay-subscription-integration) — webhook trust boundary implementation
+- [Firestore Quota Enforcement for AI Features](/docs/firebase-firestore-quota-enforcement) — Firestore rules implementation

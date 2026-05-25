@@ -88,7 +88,7 @@ export const GEO_QUERY_TAXONOMY: GEOQuery[] = [
   { query: 'what is GEO optimization',                  category: 'definitional', intent: 'Understand what GEO means',                      difficulty: 'competitive' },
   { query: 'what is an AI execution lab',               category: 'definitional', intent: 'Understand the platform concept',                  difficulty: 'owned',       targetSlug: 'platform-vision-architecture' },
   { query: 'what is TrustSeal',                         category: 'definitional', intent: 'Understand TrustSeal product',                     difficulty: 'owned',       targetSlug: 'trustseal-architecture-build' },
-  { query: 'what is operational evidence in software',  category: 'definitional', intent: 'Understand evidence-backed publishing',             difficulty: 'gap' },
+  { query: 'what is operational evidence in software',  category: 'definitional', intent: 'Understand evidence-backed publishing',             difficulty: 'owned', targetSlug: 'what-is-operational-evidence' },
 
   // Procedural
   { query: 'how to deploy Next.js to Vercel',           category: 'procedural',   intent: 'Deploy a Next.js app',                             difficulty: 'competitive' },
@@ -96,7 +96,7 @@ export const GEO_QUERY_TAXONOMY: GEOQuery[] = [
   { query: 'how to set blockJS false next-mdx-remote',  category: 'procedural',   intent: 'Fix MDX component props being stripped',           difficulty: 'owned',       targetSlug: 'next-mdx-remote-v6-blockjs' },
   { query: 'how to configure GA4 cross-domain tracking',category: 'procedural',   intent: 'Set up cross-domain cookie_domain parameter',      difficulty: 'competitive', targetSlug: 'ga4-cross-domain-tracking-gap' },
   { query: 'how to deploy React Vite to GitHub Pages',  category: 'procedural',   intent: 'Deploy a React Vite SPA to GitHub Pages',         difficulty: 'competitive', targetSlug: 'vite-github-pages-spa-routing' },
-  { query: 'how to build AI-assisted publishing system',category: 'procedural',   intent: 'Understand Claude Code content workflow',          difficulty: 'gap',         targetSlug: 'ai-assisted-publishing-system' },
+  { query: 'how to build AI-assisted publishing system',category: 'procedural',   intent: 'Understand Claude Code content workflow',          difficulty: 'owned',       targetSlug: 'ai-assisted-publishing-system' },
 
   // Diagnostic
   { query: 'Next.js edge runtime does not support crypto', category: 'diagnostic', intent: 'Fix edge runtime crypto error',                  difficulty: 'owned',       targetSlug: 'edge-runtime-deployment-failure' },
@@ -106,10 +106,16 @@ export const GEO_QUERY_TAXONOMY: GEOQuery[] = [
   { query: 'DNS propagation not working subdomain',        category: 'diagnostic', intent: 'Diagnose DNS propagation delays',                difficulty: 'competitive', targetSlug: 'dns-subdomain-propagation-delay' },
 
   // Operational
-  { query: 'operating a Next.js platform on Vercel',           category: 'operational', intent: 'Understand production Vercel operations',    difficulty: 'gap' },
-  { query: 'AI content publishing at scale with Claude',       category: 'operational', intent: 'Understand parallel agent publishing',       difficulty: 'gap',         targetSlug: 'ai-assisted-publishing-system' },
-  { query: 'how to structure operational case studies',        category: 'operational', intent: 'Learn case study documentation format',      difficulty: 'gap' },
-  { query: 'WordPress ecosystem with SaaS subdomains',         category: 'operational', intent: 'Understand multi-property WordPress setup',  difficulty: 'gap',         targetSlug: 'ecosystem-wordpress-integration' },
+  { query: 'operating a Next.js platform on Vercel',           category: 'operational', intent: 'Understand production Vercel operations',    difficulty: 'owned',       targetSlug: 'next-js-vercel-production-operations' },
+  { query: 'AI content publishing at scale with Claude',       category: 'operational', intent: 'Understand parallel agent publishing',       difficulty: 'owned',       targetSlug: 'ai-assisted-publishing-system' },
+  { query: 'how to structure operational case studies',        category: 'operational', intent: 'Learn case study documentation format',      difficulty: 'owned',       targetSlug: 'how-to-structure-operational-case-studies' },
+  { query: 'WordPress ecosystem with SaaS subdomains',         category: 'operational', intent: 'Understand multi-property WordPress setup',  difficulty: 'owned',       targetSlug: 'ecosystem-wordpress-integration' },
+  { query: 'how AI engineering teams build production systems',category: 'operational', intent: 'Understand real AI build practice',          difficulty: 'owned',       targetSlug: 'how-we-build' },
+  { query: 'cross-property SEO authority linking strategy',    category: 'operational', intent: 'Build authority across multiple domains',    difficulty: 'owned',       targetSlug: 'ecosystem-authority-map' },
+
+  // Definitional — GEO glossary (owned, zero competition)
+  { query: 'what is operational SEO',                         category: 'definitional', intent: 'Understand SEO as continuous operations',   difficulty: 'owned',       targetSlug: 'what-is-operational-seo' },
+  { query: 'what is execution density in software',           category: 'definitional', intent: 'Understand execution density concept',      difficulty: 'owned',       targetSlug: 'what-is-execution-density' },
 
   // Comparative
   { query: 'Vercel vs GitHub Pages for React apps',            category: 'comparative', intent: 'Choose deployment platform',                difficulty: 'competitive' },

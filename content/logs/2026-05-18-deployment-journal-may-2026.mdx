@@ -7,6 +7,21 @@ status: published
 log_type: "deployment"
 duration: "30m"
 outcome: "Clean deployment: 424 pages, confidence scoring live, execution pathways live, /ops observability upgraded."
+affected_systems:
+  - vercel
+  - next.js
+systems_touched:
+  - ai-execution-lab
+  - google-search-console
+linked_incidents:
+  - claude-code-context-exhaustion
+  - gsc-index-coverage-drop
+related_failures:
+  - claude-code-context-exhaustion
+  - gsc-index-coverage-drop
+related_docs:
+  - operational-memory-architecture
+  - failure-intelligence-architecture
 ---
 
 Production deployment of the Operational Intelligence Layer — the largest single capability addition to the AI Execution Lab platform since the Failure Archive launch. This journal covers what was shipped, the one pre-deploy incident that was caught and fixed, and the post-deploy verification state.

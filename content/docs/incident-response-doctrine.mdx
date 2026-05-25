@@ -1,0 +1,464 @@
+---
+title: "Incident Response and Recovery Doctrine — A Square Solutions"
+description: "Recovery invariants, incident classification, blast radius model, and recovery posture for the A Square Solutions ecosystem. Extracted from real production incidents across TrustSeal, ScamCheck, AI Execution Lab, and WordPress. Answers the question: when production behavior diverges from expected state, how do we restore safe operation predictably and without making the incident worse?"
+date: "2026-05-25"
+tags: ["reliability", "firebase", "gemini", "razorpay", "deployment", "production", "trustseal", "scamcheck"]
+status: published
+related_docs:
+  - operational-invariants
+  - production-observability-doctrine
+  - deployment-verification-checklist
+  - incident-detection-playbook
+---
+
+An incident is any condition where production behavior has diverged from expected safe operation. This doctrine defines how incidents are classified, how blast radius is assessed, what recovery posture applies to each failure class, and how restored state is confirmed.
+
+Ten recovery invariants are defined here — extracted from the same production failure history that produced the [Operational Invariants](/docs/operational-invariants). Each recovery invariant addresses a failure mode that recovery actions themselves can introduce.
+
+---
+
+## Recovery Invariant Index
+
+| ID | Statement | Failure Class |
+|---|---|---|
+| INV-REC-1 | Fix-forward is the default recovery posture; rollback is not available on most platforms | All |
+| INV-REC-2 | Configuration recovery must be attempted before code recovery | Firebase, WordPress, GA4 |
+| INV-REC-3 | Recovery verification requires a real production request, not a log scan | All |
+| INV-REC-4 | Blast radius must be assessed before any recovery action is taken | All |
+| INV-REC-5 | Razorpay webhook retry is safe and must not be disabled during incidents | Payment |
+| INV-REC-6 | Recovery deploys must follow the same sequencing rules as forward deploys | Firebase |
+| INV-REC-7 | Auth failures require behavioral verification, not log-only confirmation | Firebase Auth |
+| INV-REC-8 | Quota-exhausted degraded mode is preferable to uncontrolled retry | Gemini |
+| INV-REC-9 | Time-bound failures have no acceleratable recovery; verify state and wait | DNS, cache |
+| INV-REC-10 | Recovery is not complete until the restored state has passed one full verification cycle | All |
+
+---
+
+## Recovery Invariants
+
+### INV-REC-1 — Fix-forward is the default recovery posture
+
+**Statement:** For every platform in this ecosystem, fix-forward (apply the correct configuration or code and redeploy) is the operationally correct recovery posture. Rollback to a prior deployment is not a reliable recovery path for any system.
+
+**Why it exists:** Every documented recovery in the archive was fix-forward. No incident was resolved by rolling back to a previous deploy. The reasons are platform-specific:
+
+- **Firebase:** A rollback deploy has the same risk as a forward deploy — it must follow the same rules-first, functions-second deploy ordering. A rollback that ignores deploy sequencing would reproduce the original incident. Additionally, a rollback may reintroduce old Firestore rules against new function code, creating a different version mismatch.
+- **Vercel:** Vercel's instant rollback reverts code but not environment variables. If the incident involves env var scope (as [ga4-preview-environment-contamination](/failures/ga4-preview-environment-contamination) did), code rollback does not fix the configuration.
+- **GitHub Pages:** Rollback would require reverting the `gh-pages` branch commit, which undoes all content changes including legitimate ones.
+- **WordPress:** PHP changes are applied via WPCode snippets, not through a version-controlled deploy pipeline. "Rollback" means deactivating the snippet, which is a forward action, not a reversion.
+
+**Violation consequence:** Attempting rollback under incident pressure often introduces a second failure (stale config, wrong sequencing, incomplete environment state) that compounds the original incident.
+
+**Recovery posture:** Identify the minimum change that restores correct behavior. Apply it. Verify. This is always faster and safer than rollback in this ecosystem.
+
+---
+
+### INV-REC-2 — Configuration recovery must be attempted before code recovery
+
+**Statement:** When an incident is diagnosed, the first recovery attempt must check whether the failure is recoverable through configuration change alone (Firebase Console, Vercel Dashboard, Razorpay Dashboard, WordPress Admin) before initiating any code change or redeploy.
+
+**Why it exists:** Multiple incident classes in the archive were recoverable in under 2 minutes through a single UI action with no code change or redeploy:
+
+| Incident | Configuration recovery action | Time to recover |
+|---|---|---|
+| firebase-auth-domain-not-authorized | Firebase Console → Auth → Authorized Domains → add domain | ~2 min |
+| litespeed-client-cache-bypass-ignored | LiteSpeed → Purge All | ~30 seconds |
+| razorpay-test-live-key-mismatch | Update all four credentials in Firebase env + redeploy | ~8 min |
+| wordpress-sitemap-404 | WordPress → Settings → Permalinks → Save Changes | ~1 min |
+| ga4-preview-environment-contamination | Vercel → Environment Variables → uncheck Preview | ~2 min |
+
+A code recovery path for any of these incidents would have taken 15–30 minutes for diagnosis, code change, deploy, and verification. Configuration recovery is 10× faster and introduces no new code change risk.
+
+**Violation consequence:** Code recovery attempted when configuration recovery was sufficient — longer downtime, unnecessary code change, additional deploy risk.
+
+**Verification:** Before writing any code in response to an incident, check whether the relevant system's configuration surface (dashboard, console, admin panel) can restore correct state directly.
+
+---
+
+### INV-REC-3 — Recovery verification requires a real production request
+
+**Statement:** Recovery is not confirmed until at least one real production request through the affected system has returned a successful response. Log cleanliness, dashboard green status, and emulator passing are not sufficient recovery confirmation.
+
+**Why it exists:** Every major incident in the archive that originated from an infrastructure state divergence (Firebase deploy sequence, Node runtime, Auth domains) was also *confirmed resolved* by real request, not by logs. Firebase logs showed 403 errors stopping — but the absence of new 403 entries does not confirm that a 200 would succeed. Only an actual request through the full stack confirms it.
+
+**The rule that makes this necessary:** [INV-DEP-5](/docs/operational-invariants#inv-dep-5) — a deploy is not safe until a real production request succeeds. The same logic applies to recovery: a recovery is not complete until a real production request succeeds.
+
+**Platform-specific confirmation:**
+
+| Platform | Recovery confirmation signal |
+|---|---|
+| Firebase Functions | One real AI analysis request returns HTTP 200 (not from emulator) |
+| Firebase Auth | Sign in → hard reload → session persists |
+| GitHub Pages SPA | Navigate directly to non-root route → React app loads |
+| Vercel | Navigate to affected page on production domain → content renders |
+| WordPress | Affected behavior verified in fresh private browser window after cache purge |
+| Razorpay | Webhook fires and Firestore updates after one test transaction |
+
+---
+
+### INV-REC-4 — Blast radius must be assessed before any recovery action
+
+**Statement:** Before taking any recovery action, the engineer must identify: (1) which functions are completely broken, (2) which functions are degraded but operational, and (3) which functions are unaffected. Recovery actions must address (1) without disrupting (2) or (3).
+
+**Why it exists:** Every incident in the archive had a smaller blast radius than it initially appeared. When Firebase Functions returned 403, the static GitHub Pages site, Firebase Auth state, and Razorpay Dashboard were all fully operational. When Gemini quota was exhausted, the auth flow, payment flow, and history pages still worked. When LiteSpeed cache was serving stale content, the WordPress REST API and all backend functions were unaffected.
+
+**Blast radius catalog by failure class:**
+
+| Failure class | Broken | Degraded | Unaffected |
+|---|---|---|---|
+| Firebase Functions 403 | AI analysis calls | None | Auth state, static pages, Firestore data |
+| Gemini quota exhausted | New AI analyses | None | Auth, history, payments, static pages |
+| Firebase Auth domain missing | Session persistence after reload | Sign-in appears to work | All static content, AI analysis (if already authenticated) |
+| Razorpay webhook down | New premium upgrades | None | Existing premium users, AI analysis, auth |
+| GitHub Pages SPA routing | Non-root routes on direct nav | Root route | Firebase, Razorpay, GA4 |
+| WordPress REST API 401 | Content automation pipeline | None | WordPress admin, sitemap, front-end |
+| Vercel deployment error | AI Execution Lab pages | None | TrustSeal, ScamCheck, WordPress |
+| GA4 contamination | Data quality | Analytics still fires | All product functionality |
+
+**Recovery implication:** A Firebase Functions incident does not require touching auth, Firestore, or Razorpay. Scoping recovery to the actual blast radius prevents recovery actions from introducing second-order failures.
+
+---
+
+### INV-REC-5 — Razorpay webhook retry is safe and must not be disabled
+
+**Statement:** During any incident involving Razorpay webhook delivery failure, the correct posture is to restore the webhook handler so it returns HTTP 200 — not to disable Razorpay's retry behavior. The idempotent write pattern (INV-PAY-3) makes webhook replay safe.
+
+**Why it exists:** Razorpay automatically retries webhook delivery on non-200 responses. The `set(data, { merge: true })` write pattern means duplicate delivery of the same event is a no-op — the second write produces the same Firestore state as the first. Disabling retry behavior or marking events as "do not redeliver" during an incident would mean payments processed successfully in Razorpay are never reflected in Firestore.
+
+**Recovery posture for Razorpay webhook incidents:**
+1. Restore the webhook handler (fix Firebase Functions)
+2. Confirm webhook endpoint returns HTTP 200
+3. Check Razorpay Dashboard → Webhooks → Delivery attempts — confirm pending retries fire and succeed
+4. Verify Firestore: affected users' `quota/current.tier` has been updated to `'premium'`
+
+**Do not:** configure Razorpay to suppress retries, manually update Firestore as a shortcut, or grant premium access directly as a recovery action. The correct state is always webhook → Firestore, not manual grant.
+
+---
+
+### INV-REC-6 — Recovery deploys must follow forward-deploy sequencing rules
+
+**Statement:** When a recovery requires a Firebase redeploy, the deploy sequence must be identical to a correct forward deploy: Firestore rules first if rules are involved, functions second. Recovery under incident pressure must not use combined deploy commands.
+
+**Why it exists:** [firebase-deploy-sequence-auth-failure](/failures/firebase-deploy-sequence-auth-failure) was caused by a combined deploy command. Recovery from this incident requires a correct-sequence redeploy. The temptation under incident pressure is to use the fastest command — `firebase deploy` — which is precisely the command that caused the incident. A recovery deploy using the wrong sequence would reproduce the same 403 window.
+
+**Concrete rule:** The commands that caused the incident must not appear in the recovery procedure.
+
+```bash
+# NEVER use during recovery from a deploy-sequence incident:
+firebase deploy
+firebase deploy --only firestore:rules,functions
+
+# CORRECT recovery deploy sequence:
+firebase deploy --only firestore:rules   # Step 1 — rules first
+# wait ~60 seconds
+firebase deploy --only functions          # Step 2 — functions after rules propagate
+```
+
+**Violation consequence:** A recovery deploy that uses the wrong sequence reproduced the same incident class — a second 403 window follows the recovery attempt, extending total downtime by another 12 minutes.
+
+---
+
+### INV-REC-7 — Auth failures require behavioral verification, not log-only confirmation
+
+**Statement:** Any recovery from a Firebase Auth failure must be verified by performing the full auth flow in a browser (sign in → navigate → hard reload → confirm session persists), regardless of what Firebase Console logs show.
+
+**Why it exists:** [firebase-auth-domain-not-authorized](/failures/firebase-auth-domain-not-authorized) produces no error in Firebase Functions logs. The failure is entirely at the browser/Firebase Auth client SDK level. After adding the domain to Authorized Domains, the Firebase Console shows no errors — but it showed no errors before the fix either. Only the behavioral test (sign in → reload → session persists) confirms that auth is now working correctly.
+
+**Log-only trap:** After adding a custom domain to Authorized Domains, checking Firebase Functions logs and seeing no 403 errors does not confirm the auth failure is resolved. The logs were clean both before and after the fix (this is an absent-signal failure class per the [Production Observability Doctrine](/docs/production-observability-doctrine)).
+
+**Required behavioral test:**
+```
+1. Open a fresh browser window (not a tab — a window, to clear any cached auth state)
+2. Navigate to the production domain
+3. Sign in with a test account
+4. Observe the URL (should remain on the app, not redirect)
+5. Perform a hard reload (Ctrl+Shift+R / Cmd+Shift+R)
+6. Confirm: user is still signed in after the hard reload
+7. Navigate to an auth-gated route
+8. Confirm: auth-gated content is accessible
+```
+
+Steps 5–6 are the specific verification of the auth domain fix. If the session survives a hard reload, auth is working.
+
+---
+
+### INV-REC-8 — Quota-exhausted degraded mode is preferable to uncontrolled retry
+
+**Statement:** When Gemini API quota is exhausted (daily free tier or per-minute rate limit), the correct degraded-mode behavior is to return `{ rateLimited: true }` to the client and display a user-visible message. Auto-retry, exponential backoff against an exhausted quota, or disabling quota enforcement to "allow through" are all incorrect recovery actions.
+
+**Why it exists:** The Gemini free tier allows 1,500 requests/day. Once exhausted, every retry is wasted — it either immediately fails or adds to per-minute rate pressure during partial exhaustion. Auto-retry of failed Gemini calls is documented as prohibited in [AI Cost Governance](/docs/ai-cost-governance) (INV-COST-3). During quota exhaustion, the *product* is in a recoverable degraded state (analysis unavailable, everything else works). Uncontrolled retry converts a clean degraded state into amplified cost pressure.
+
+**Correct degraded operation during Gemini quota exhaustion:**
+- AI analysis: unavailable — user sees "Analysis service temporarily unavailable. Please try again later."
+- Auth flow: fully operational
+- History: fully operational  
+- Payments (TrustSeal): fully operational
+- Static content: fully operational
+
+**Daily quota exhaustion (free tier):** Recovery is time-bound — quota resets at midnight UTC. No acceleratable recovery path. Correct posture: verify quota is the cause, inform affected users if necessary, wait for reset.
+
+**Per-minute rate limit:** Recovery is 60 seconds. Do not retry during those 60 seconds.
+
+---
+
+### INV-REC-9 — Time-bound failures have no acceleratable recovery
+
+**Statement:** DNS propagation failures and server-side cache warm-up have no developer-accessible force-flush. The correct recovery posture is: verify the configuration is correct, then wait. Repeated verification during the propagation window does not accelerate recovery and may produce false readings.
+
+**Why it exists:** [dns-subdomain-propagation-delay](/failures/dns-subdomain-propagation-delay) has a propagation window of up to TTL duration (up to 1 hour for TTL 3600). The developer can verify the DNS record is correctly configured at the registrar, but cannot force resolver refresh for global resolvers. Checking dnschecker.org every 5 minutes does not change propagation speed. LiteSpeed cache TTL is set server-side; `Cache-Control: no-cache` from the client is ignored (INV-DEP-3).
+
+**Time-bound failure classes:**
+
+| Failure | Recovery window | Acceleratable? | Correct posture |
+|---|---|---|---|
+| DNS propagation | TTL duration (up to 4 hours) | No | Verify record is correct; wait |
+| GitHub Pages HTTPS cert | 15–30 min after DNS resolves | No | Wait for "Enforce HTTPS" to become available |
+| Firebase IAM propagation | ~60 seconds after rules deploy | No | Wait before deploying functions |
+| Gemini daily quota | Until midnight UTC | No | Inform users; wait |
+| Gemini per-minute rate | 60 seconds | No | Wait before retrying |
+
+**Violation consequence:** Repeated verification attempts during propagation windows can produce misleading "seems to be working" signals from early-propagating resolvers, leading to premature go-live announcements or declarations that recovery is complete when global availability is still partial.
+
+---
+
+### INV-REC-10 — Recovery is not complete until the restored state passes a full verification cycle
+
+**Statement:** After any recovery action, the full post-deploy verification checklist for the affected platform must be run before the incident is declared resolved. Partial verification (one request succeeded) is not sufficient.
+
+**Why it exists:** Three incidents in the archive had multiple simultaneous failure modes that were discovered sequentially during recovery:
+
+- [razorpay-test-live-key-mismatch](/failures/razorpay-test-live-key-mismatch) — fixing the key_id mismatch also required fixing key_secret, plan_id, and client-side key. Fixing one credential and declaring recovery would have left three others wrong.
+- [firebase-auth-domain-not-authorized](/failures/firebase-auth-domain-not-authorized) — adding the custom domain was necessary but the GitHub Pages staging domain also needed adding. Partial fix would have broken auth on staging.
+- Any Firebase deployment incident — after the recovery deploy, both the rules-first sequencing and the post-deploy functional test must be confirmed.
+
+**Recovery is complete when:**
+1. One real production request through the full affected stack returns a successful response
+2. All items on the relevant platform's post-deploy checklist are confirmed
+3. No new errors appear in the relevant console for 5 minutes after recovery action
+
+---
+
+## Incident Classification
+
+### P0 — Total Function Loss
+
+**Definition:** No user can complete the core function of the affected product. All requests to the affected system fail.
+
+**A Square Solutions P0 examples:**
+- All Firebase Cloud Functions returning 500 (product non-functional)
+- Firebase project deleted or access revoked (complete data loss risk)
+- Vercel deployment producing blank page with no content at any route
+
+**Correct posture:** Identify the simplest configuration or code change that restores function. Fix-forward immediately. Do not analyze root cause before restoring service — that comes after.
+
+**Blast radius check:** Confirm which of TrustSeal / ScamCheck / AI Execution Lab / WordPress are affected. A Firebase P0 does not affect Vercel or WordPress.
+
+---
+
+### P1 — Partial Function Loss
+
+**Definition:** Core function is unavailable for a subset of users, a specific operation, or a time-bounded window. Most documented incidents fall into this class.
+
+**A Square Solutions P1 examples:**
+- firebase-deploy-sequence-auth-failure: AI analysis unavailable for 12 minutes
+- firebase-functions-node-version-stability: All Cloud Function calls fail (100% but self-contained to Firebase, not other platforms)
+- razorpay-test-live-key-mismatch: Payments complete but access not granted (payment flow appears to work; upgrade flow silently broken)
+
+**Correct posture:** Assess blast radius. Identify configuration or code recovery path. Fix-forward. Verify with real request.
+
+---
+
+### P2 — Degraded Operation
+
+**Definition:** Core function works but with reduced quality, missing features, or degraded data. Users can still accomplish their goal.
+
+**A Square Solutions P2 examples:**
+- Gemini quota exhausted: analysis unavailable, auth/history/payments still work
+- wordpress-sitemap-404: Sitemap inaccessible (SEO impact), site fully functional
+- vite-github-pages-spa-routing: Non-root routes return 404 on direct navigation, root route works
+
+**Correct posture:** Confirm that the degraded state is stable (not actively worsening). Identify and apply fix. Verify restoration.
+
+---
+
+### P3 — Silent Configuration Drift
+
+**Definition:** System appears fully functional but underlying configuration is in an incorrect state that will produce failures under specific conditions.
+
+**A Square Solutions P3 examples (all detected through proactive verification, not user reports):**
+- ga4-preview-environment-contamination: Analytics fires correctly but contaminates production data
+- ga4-cross-domain-tracking-gap: Sessions track but cross-subdomain navigation appears as new sessions
+- firebase-auth-domain-not-authorized: Auth appears to work on sign-in but sessions lost on reload
+- INV-SEC-7 violation: Webhook signature verification silently disabled by `|| ''` fallback
+
+**Correct posture:** P3 incidents are most dangerous precisely because they appear normal. Detection requires proactive verification (behavioral tests, not log reads). Recovery is configuration-only in most P3 cases. Priority after recovery: add the P3 to the detection checklist so it does not recur silently.
+
+---
+
+## Recovery Posture Decision Tree
+
+```
+Incident detected
+      │
+      ▼
+1. Assess blast radius
+   → What is broken vs. degraded vs. unaffected?
+      │
+      ▼
+2. Is this a P3 (silent drift) or a functional failure?
+   P3: → Configuration-only fix, no urgency to interrupt service
+   Functional: → Continue to step 3
+      │
+      ▼
+3. Is this time-bound? (DNS, cache, quota reset, IAM propagation)
+   Yes: → Verify configuration is correct; wait; do not retry
+   No:  → Continue to step 4
+      │
+      ▼
+4. Can this be fixed by configuration change alone?
+   Yes: → Configuration-only recovery (no redeploy needed)
+        → Verify with real production request after config change
+        → Done
+   No:  → Continue to step 5
+      │
+      ▼
+5. Code change + redeploy required
+   Firebase: → Follow rules-first deploy sequence (INV-REC-6)
+   Vercel:   → Push to main; wait for "Ready" status
+   GitHub Pages: → npm run build → push to gh-pages
+   WordPress: → WPCode edit → activate → LiteSpeed purge
+      │
+      ▼
+6. Post-recovery verification
+   → Run full post-deploy checklist for affected platform
+   → Confirm one real production request succeeds
+   → Monitor relevant console for 5 minutes (no new errors)
+   → Declare recovery complete
+```
+
+---
+
+## Historical Incident → Recovery Analysis
+
+How each documented production incident was actually recovered, and what the recovery behavior revealed.
+
+### firebase-deploy-sequence-auth-failure
+**Recovery action:** Redeployed Firestore rules (`firebase deploy --only firestore:rules`). Firebase Functions were not redeployed — the function code was already correct; only the rules state was wrong.  
+**Recovery type:** Configuration/deployment, not code change.  
+**Recovery time:** ~3 minutes after diagnosis.  
+**Verification:** One trust check request returned HTTP 200.  
+**Recovery intelligence:** The recovery proved that the original function code was correct — the 403 was entirely caused by rules state, not function logic. Fix-forward with correct sequencing, not rollback.
+
+### firebase-functions-node-version-stability
+**Recovery action:** Added `"runtime": "nodejs22"` to `firebase.json`, redeployed functions.  
+**Recovery type:** Configuration change + redeploy.  
+**Recovery time:** ~5 minutes.  
+**Verification:** One Cloud Function invocation succeeded.  
+**Recovery intelligence:** This is the fastest possible Firebase P0 recovery — one line in firebase.json, one deploy. No code change required.
+
+### firebase-auth-domain-not-authorized
+**Recovery action:** Added custom domain to Firebase Console → Authentication → Settings → Authorized Domains.  
+**Recovery type:** Configuration-only. No code change, no redeploy.  
+**Recovery time:** ~2 minutes.  
+**Verification (critical):** Sign in → hard reload → session persists (INV-REC-7). Log scan would not have confirmed recovery.  
+**Recovery intelligence:** This is the fastest possible Firebase P1 recovery for auth issues. Console UI change only.
+
+### razorpay-test-live-key-mismatch
+**Recovery action:** Updated all four Razorpay credentials to live mode simultaneously (INV-PAY-2 — all four must match).  
+**Recovery type:** Configuration change + functions redeploy (credentials are env vars).  
+**Recovery time:** ~8 minutes.  
+**Verification:** One real payment completed → webhook fired → Firestore updated → UI upgraded.  
+**Recovery intelligence:** Fixing one credential without fixing all four would have produced a second failure mode. The recovery checklist must treat all four credentials as an atomic unit.
+
+### gemini-rate-limit-429-no-ux
+**Recovery action:** Added `finally{}` loading state clear and submit button disabling during request.  
+**Recovery type:** Code change + redeploy.  
+**Recovery time:** ~15 minutes.  
+**Verification:** 429 response now shows error message and re-enables submit.  
+**Recovery intelligence:** The immediate degraded state (user-facing spinner) was the failure being recovered; the 429 itself is a time-bound failure. The code change addressed the UX failure class so future 429 events produce correct degraded behavior.
+
+### litespeed-client-cache-bypass-ignored
+**Recovery action:** LiteSpeed Cache → Purge All. Already applied.  
+**Recovery type:** Configuration-only. 30-second action.  
+**Recovery time:** 30 seconds.  
+**Verification:** Change visible in fresh private browser window.  
+**Recovery intelligence:** This failure is often misdiagnosed as "the code change didn't work." The failure is in the verification methodology (viewing cached response), not in the code change. Recovery is verification correction, not code correction.
+
+### vite-github-pages-spa-routing
+**Recovery action:** Created `public/404.html` and `public/CNAME`, redeployed to gh-pages.  
+**Recovery type:** File creation + redeploy.  
+**Recovery time:** ~10 minutes.  
+**Verification:** Direct navigation to non-root route → React app loads.  
+**Recovery intelligence:** This is a common post-deploy regression. Recovery is always the same two-file creation in `public/`. The fix is simple; the detection is the hard part.
+
+### wordpress-sitemap-404
+**Recovery action:** WordPress Admin → Settings → Permalinks → Save Changes (flushes rewrite rules).  
+**Recovery type:** Configuration-only. One UI click.  
+**Recovery time:** ~1 minute.  
+**Verification:** `curl` or direct browser to `/sitemap_index.xml` returns HTTP 200.  
+**Recovery intelligence:** This is the most counterintuitive recovery in the archive — the fix (saving Permalinks) appears unrelated to sitemaps. It works because it flushes WordPress's URL handler registration. This must be documented as a recovery procedure or it will be rediscovered every time.
+
+---
+
+## Degraded-Mode Operation Catalog
+
+For each failure class, what the correct degraded state looks like while recovery is in progress.
+
+| System in failure | Safe degraded state | What stays operational |
+|---|---|---|
+| Firebase Functions (all failing) | AI analysis unavailable; display "Service temporarily unavailable" | Auth state, static pages, history (read), payment records |
+| Gemini quota exhausted | Analysis unavailable; display "Usage limit reached. Service available tomorrow." | Auth, history, premium status display, payments |
+| Razorpay webhook down | New upgrades not processing; existing premium users unaffected | All AI analysis for premium users, auth, history |
+| GitHub Pages SPA routing broken | Root route works; non-root routes 404 | Firebase, Razorpay, all backend functions |
+| Firebase Auth domain missing | New sign-ins appear to work; sessions lost on reload | Static content, any currently-active auth session |
+| WordPress REST API down | Automation pipeline fails; no data published | WordPress admin, front-end, sitemap, all three apps |
+| GA4 contaminated | Analytics data degraded; product fully functional | All TrustSeal, ScamCheck, and Lab functionality |
+| Vercel deployment broken | AI Execution Lab inaccessible; all other products unaffected | TrustSeal, ScamCheck, WordPress |
+| DNS propagation in progress | Custom domain partially resolving; GitHub Pages fallback URL works | All Firebase, Razorpay, and backend functions |
+
+**Principle:** In every failure class, at least two-thirds of the ecosystem's functionality remains operational. No single failure class takes down the entire ecosystem simultaneously. This is a structural property of the architecture — Firebase, Vercel, GitHub Pages, and WordPress are independent deployment targets with no shared runtime dependencies.
+
+---
+
+## Highest-Risk Recovery Mistakes
+
+Ranked by potential to extend downtime or introduce a second failure.
+
+### Mistake 1 — Using combined Firebase deploy during deploy-sequence incident recovery
+Using `firebase deploy` or `firebase deploy --only firestore:rules,functions` to recover from a deploy sequence 403 will reproduce the same 403 window. The recovery deploy must use the same rules-first, functions-second two-command sequence that correct forward deploys use (INV-REC-6).
+
+### Mistake 2 — Declaring recovery complete after logs go quiet without a real request test
+Firebase Functions 403 errors stop when rules propagate. But log cleanliness does not confirm that subsequent requests succeed. Only an actual request through the live system confirms recovery (INV-REC-3).
+
+### Mistake 3 — Fixing one Razorpay credential and redeploying
+If the incident is razorpay-test-live-key-mismatch, fixing only `RAZORPAY_KEY_ID` and redeploying still leaves `RAZORPAY_KEY_SECRET`, `RAZORPAY_PLAN_ID`, and `REACT_APP_RAZORPAY_KEY_ID` wrong. All four must switch simultaneously. A partial fix produces a second silent failure mode.
+
+### Mistake 4 — Retrying Gemini calls during quota exhaustion
+Auto-retry during daily quota exhaustion makes recovery longer (quota resets at midnight; retries before midnight do nothing). Per-minute rate limit recovery is 60 seconds. Any retry before 60 seconds extends the rate-limited window. The correct action is to return a structured error to the user and wait.
+
+### Mistake 5 — Verifying cache behavior without purging LiteSpeed first
+Testing a WordPress PHP change without LiteSpeed → Purge All produces a false negative. The test observes cached HTML that predates the fix. This is not a new failure; it is the original [litespeed-client-cache-bypass-ignored](/failures/litespeed-client-cache-bypass-ignored) failure occurring within the recovery procedure itself.
+
+---
+
+## Residual Risk After Recovery
+
+Even correctly recovered incidents leave residual risk that should be acknowledged.
+
+| Recovery completed | Residual risk | Mitigation |
+|---|---|---|
+| firebase-deploy-sequence-auth-failure | The 14 requests that failed during the window are lost. No retry mechanism exists for user-initiated Cloud Function calls. | Inform affected users (if identifiable) |
+| ga4-preview-environment-contamination | Historical GA4 data from contamination period is corrupted. Retroactive correction is not available. | Create annotation in GA4 noting contamination dates |
+| ga4-cross-domain-tracking-gap | Historical attribution data from before the fix is unreliable. | Create annotation noting incorrect period |
+| razorpay-test-live-key-mismatch | Users who attempted payment during the incident did not get upgraded. Razorpay shows completed payments but no webhook fired. | Check Razorpay Dashboard for uncredited payments; manually verify Firestore state for affected UIDs |
+| gemini-quota-exhausted (daily) | Users who tried during quota exhaustion received no result. No auto-retry or queue. | No automated recovery; user must resubmit tomorrow |
+
+---
+
+## Related
+
+- [Operational Invariants](/docs/operational-invariants) — the reliability doctrine this recovery doctrine is derived from
+- [Production Observability Doctrine](/docs/production-observability-doctrine) — how incidents are detected before recovery procedures apply
+- [Incident Detection Playbook](/playbooks/incident-detection-playbook) — system-by-system detection procedures
+- [Recovery Runbook](/playbooks/recovery-runbook) — lightweight recovery procedures per system
+- [Deployment Verification Checklist](/docs/deployment-verification-checklist) — verification checklist used after recovery

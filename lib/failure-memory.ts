@@ -11,6 +11,7 @@
  */
 
 import { ENTITIES, RELATIONSHIPS, getFailuresForPattern } from './operational-memory'
+import { getAllMeta } from './content'
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -249,6 +250,143 @@ const RAW_FAILURES: RawFailureRecord[] = [
     verifiedFix:        'Export excluded URLs from GSC, cross-reference against documented intentional exclusions list; maintain deployment log with noindex decisions',
     estimatedResolution: '25 min',
   },
+  {
+    slug:               'litespeed-client-cache-bypass-ignored',
+    title:              'LiteSpeed Cache Ignores Client no-cache Headers',
+    date:               '2026-05-19',
+    severity:           'medium',
+    recoveryComplexity: 'trivial',
+    failureType:        'configuration',
+    tags:               ['litespeed', 'wordpress', 'caching', 'php-filters', 'wpcode'],
+    instanceCount:      1,
+    hasPreventionSteps: true,
+    hasRelatedLessons:  false,
+    hasPlaybook:        false,
+    verifiedFix:        'WordPress Admin → LiteSpeed Cache → Purge All. Client Cache-Control headers do not bypass LiteSpeed server-side cache — Purge All is required after every PHP filter deployment.',
+    estimatedResolution: '2 min',
+  },
+  {
+    slug:               'wordpress-hfe-wpautop-injection',
+    title:              'WordPress wpautop Injects Paragraph Tags Inside HFE Post-Info Widget Links',
+    date:               '2026-05-19',
+    severity:           'medium',
+    recoveryComplexity: 'low',
+    failureType:        'configuration',
+    tags:               ['wordpress', 'elementor', 'hfe', 'wpautop', 'php-filters', 'wpcode', 'html'],
+    instanceCount:      1,
+    hasPreventionSteps: true,
+    hasRelatedLessons:  false,
+    hasPlaybook:        false,
+    verifiedFix:        "Deploy WPCode snippet hooking elementor/widget/render_content — preg_replace to strip </p><p> injections from hfe-post-info content. Then LiteSpeed Purge All.",
+    estimatedResolution: '15–30 min',
+  },
+  // ── New failures (2026-Q1 operational history) ───────────
+  {
+    slug:               'razorpay-test-live-key-mismatch',
+    title:              'Razorpay Test/Live Key Mode Mismatch',
+    date:               '2026-02-20',
+    severity:           'high',
+    recoveryComplexity: 'trivial',
+    failureType:        'configuration',
+    tags:               ['razorpay', 'authentication', 'configuration', 'firebase', 'payments'],
+    instanceCount:      1,
+    hasPreventionSteps: true,
+    hasRelatedLessons:  false,
+    hasPlaybook:        false,
+    verifiedFix:        'Ensure both client-side key (rzp_test_/rzp_live_) and server-side Cloud Function key use the same mode prefix simultaneously',
+    estimatedResolution: '10 min',
+  },
+  {
+    slug:               'firebase-auth-domain-not-authorized',
+    title:              'Firebase Auth Session Lost on Custom Domain',
+    date:               '2026-03-05',
+    severity:           'medium',
+    recoveryComplexity: 'trivial',
+    failureType:        'configuration',
+    tags:               ['firebase', 'authentication', 'firebase-auth', 'custom-domain', 'session'],
+    instanceCount:      2,  // TrustSeal + ScamCheck both require this fix
+    hasPreventionSteps: true,
+    hasRelatedLessons:  false,
+    hasPlaybook:        false,
+    verifiedFix:        'Firebase Console → Authentication → Settings → Authorized Domains → Add custom domain. No redeploy needed.',
+    estimatedResolution: '2 min',
+  },
+  {
+    slug:               'firebase-functions-node-version-stability',
+    title:              'Firebase Cloud Functions Crashing on Default Node Runtime',
+    date:               '2026-02-01',
+    severity:           'high',
+    recoveryComplexity: 'low',
+    failureType:        'configuration',
+    tags:               ['firebase', 'firebase-functions', 'node', 'runtime', 'deployment'],
+    instanceCount:      1,
+    hasPreventionSteps: true,
+    hasRelatedLessons:  false,
+    hasPlaybook:        false,
+    verifiedFix:        'Set "runtime": "nodejs22" in firebase.json functions config. Update package.json engines field. Redeploy functions.',
+    estimatedResolution: '20 min',
+  },
+  {
+    slug:               'wordpress-sitemap-404',
+    title:              'WordPress Sitemap Returns 404 While robots.txt Declares It',
+    date:               '2026-05-19',
+    severity:           'high',
+    recoveryComplexity: 'trivial',
+    failureType:        'configuration',
+    tags:               ['wordpress', 'sitemap', 'seo', 'rank-math', 'google-search-console', 'rewrite-rules'],
+    instanceCount:      1,
+    hasPreventionSteps: true,
+    hasRelatedLessons:  false,
+    hasPlaybook:        false,
+    verifiedFix:        'WordPress Admin → Settings → Permalinks → Save Changes (flushes and rebuilds rewrite rules without changing permalink structure)',
+    estimatedResolution: '5 min',
+  },
+  // ── New failures (2026-Q1 ScamCheck + Vercel operational history) ──
+  {
+    slug:               'gemini-rate-limit-429-no-ux',
+    title:              'Gemini API 429 Rate Limit Returns Hanging Spinner Instead of User Feedback',
+    date:               '2026-02-10',
+    severity:           'medium',
+    recoveryComplexity: 'low',
+    failureType:        'configuration',
+    tags:               ['gemini', 'firebase-functions', 'rate-limiting', 'api', 'ux', 'scamcheck'],
+    instanceCount:      1,
+    hasPreventionSteps: true,
+    hasRelatedLessons:  false,
+    hasPlaybook:        false,
+    verifiedFix:        'Catch 429 in Cloud Function, return { rateLimited: true } as HTTP 200 structured response. Client checks rateLimited flag before verdict path and renders specific retry message.',
+    estimatedResolution: '2 hours',
+  },
+  {
+    slug:               'ga4-preview-environment-contamination',
+    title:              'GA4 Production Analytics Contaminated by Vercel Preview Deployments',
+    date:               '2026-03-20',
+    severity:           'low',
+    recoveryComplexity: 'trivial',
+    failureType:        'configuration',
+    tags:               ['ga4', 'vercel', 'deployment', 'analytics', 'environment', 'next.js', 'google-analytics-4'],
+    instanceCount:      1,
+    hasPreventionSteps: true,
+    hasRelatedLessons:  false,
+    hasPlaybook:        false,
+    verifiedFix:        'In Vercel dashboard → Environment Variables: rescope NEXT_PUBLIC_GA_MEASUREMENT_ID to Production only. Redeploy.',
+    estimatedResolution: '30 min',
+  },
+  {
+    slug:               'firebase-deploy-sequence-auth-failure',
+    title:              'Firebase Functions 403 After Redeploy — Firestore Rules Deployment Order',
+    date:               '2026-05-24',
+    severity:           'medium',
+    recoveryComplexity: 'low',
+    failureType:        'deployment',
+    tags:               ['firebase', 'firebase-functions', 'firestore', 'deployment', 'authentication', 'trustseal'],
+    instanceCount:      1,
+    hasPreventionSteps: true,
+    hasRelatedLessons:  false,
+    hasPlaybook:        false,
+    verifiedFix:        'Deploy Firestore rules before Cloud Functions: firebase deploy --only firestore:rules then firebase deploy --only functions. Never deploy functions first when rules are changing simultaneously.',
+    estimatedResolution: '15 min',
+  },
 ]
 
 // ─────────────────────────────────────────────────────────────
@@ -281,6 +419,8 @@ const PATTERN_PREVENTION: Record<string, string[]> = {
     "Monitor propagation with dig or dnschecker.org — don't assume TTL is the actual propagation time",
     "Use Vercel's built-in domain verification to detect HTTPS cert provisioning status",
     "Document expected propagation timelines for each DNS provider in the deployment runbook",
+    "When deploying Firebase Functions + Firestore rules together: always deploy rules first (firebase deploy --only firestore:rules), then functions — never use a combined deploy when both artifacts change",
+    "Run a real production request immediately after any multi-artifact Firebase deploy to verify auth context is active",
   ],
   'pattern:authentication-encoding-pitfalls': [
     "Use raw Application Passwords directly — never URL-encode before Base64",
@@ -319,12 +459,41 @@ function computeConfidence(r: RawFailureRecord): number {
 
 // ─────────────────────────────────────────────────────────────
 // Build memoized structures
+// Auto-derives hasPlaybook and hasRelatedLessons from frontmatter
+// so confidence scores update automatically when content is enriched.
 // ─────────────────────────────────────────────────────────────
+
+// Build frontmatter lookup keyed by slug
+const _failureFrontmatter = Object.fromEntries(
+  getAllMeta('failures').map(m => [m.slug, m.frontmatter])
+)
 
 const _failureMemory: FailureMemoryEntry[] = RAW_FAILURES.map(r => {
   const patterns = RELATIONSHIPS
     .filter(rel => rel.from === `failure:${r.slug}` && rel.type === 'exemplifies')
     .map(rel => rel.to)
+
+  const fm = _failureFrontmatter[r.slug]
+
+  // Auto-derive from frontmatter: hasPlaybook = related_playbooks is populated
+  const hasPlaybook = r.hasPlaybook ||
+    (Array.isArray(fm?.related_playbooks) && fm.related_playbooks.length > 0)
+
+  // Auto-derive from frontmatter: hasRelatedLessons = any cross-section links exist
+  const hasRelatedLessons = r.hasRelatedLessons ||
+    (Array.isArray(fm?.related_docs)         && fm.related_docs.length > 0) ||
+    (Array.isArray(fm?.related_case_studies) && fm.related_case_studies.length > 0) ||
+    (Array.isArray(fm?.related_playbooks)    && fm.related_playbooks.length > 0)
+
+  // Auto-derive hasPreventionSteps from frontmatter if not already set
+  const hasPreventionSteps = r.hasPreventionSteps
+
+  const enriched: RawFailureRecord = {
+    ...r,
+    hasPlaybook,
+    hasRelatedLessons,
+    hasPreventionSteps,
+  }
 
   return {
     slug:               r.slug,
@@ -337,10 +506,10 @@ const _failureMemory: FailureMemoryEntry[] = RAW_FAILURES.map(r => {
     tags:               r.tags,
     patterns,
     instanceCount:      r.instanceCount,
-    hasPreventionSteps: r.hasPreventionSteps,
-    hasRelatedLessons:  r.hasRelatedLessons,
-    hasPlaybook:        r.hasPlaybook,
-    confidenceScore:    computeConfidence(r),
+    hasPreventionSteps,
+    hasRelatedLessons,
+    hasPlaybook,
+    confidenceScore:    computeConfidence(enriched),
     lastOccurrence:     r.date,
   }
 })

@@ -13,6 +13,19 @@ recovery_complexity: minutes
 deployment_risk: high
 time_to_detect: "Immediate on first direct URL visit or refresh"
 repeat_risk: high
+affected_systems:
+  - github-pages
+  - vite
+systems_touched:
+  - react-router
+  - trustseal
+related_failures:
+  - dns-subdomain-propagation-delay
+related_case_studies:
+  - trustseal-architecture-build
+  - scamcheck-architecture-build
+linked_incidents:
+  - dns-subdomain-propagation-delay
 ---
 
 <IncidentReport
@@ -42,6 +55,21 @@ repeat_risk: high
     { title: "Subdomain DNS Propagation Delay Blocked Deployment Testing", href: "/failures/dns-subdomain-propagation-delay", relation: "same-category" }
   ]}
   ecosystemImpact={["All direct navigation and bookmarked links return 404", "Shared URLs are dead on arrival for users who follow them", "Any route accessed from external traffic (SEO, social) fails"]}
+/>
+
+<QuickFix
+  symptom="React/Vite SPA on GitHub Pages returns GitHub's 404 page on any direct URL or page refresh — only the homepage loads"
+  rootCause="GitHub Pages is a static file server with no URL rewrite capability. It serves a 404 for any path that has no matching file — client-side routing never gets to run."
+  fix="Add public/404.html with a path-preservation redirect script, and add a URL-restoration script to index.html. Both must be present before the first deployment."
+  time="20–30 min"
+  confidence={90}
+  steps={[
+    "Create public/404.html with the redirect script — it encodes the original path as ?p= and redirects to /",
+    "Add the restoration script to index.html before the main Vite bundle <script> tag — it reads ?p= and uses history.replaceState to restore the path",
+    "Run vite build and verify 404.html appears in the dist/ directory",
+    "Deploy to GitHub Pages (push to gh-pages branch or run the deploy script)",
+    "Test immediately: navigate to any sub-route, hit browser refresh, confirm the correct page loads instead of GitHub's 404"
+  ]}
 />
 
 ## What Happened

@@ -1,0 +1,285 @@
+---
+title: "GitHub Pages SPA Deployment: dist/.git Worktree Pattern"
+description: "Production deployment pattern for React + Vite SPAs on GitHub Pages with custom domains. Covers the dist/.git worktree setup, 404.html SPA routing redirect, CNAME handling, Vite base path configuration, and every failure mode encountered deploying TrustSeal and ScamCheck to GitHub Pages with custom subdomains."
+date: "2026-05-24"
+tags: ["github-pages", "vite", "deployment", "react", "spa", "custom-domain", "trustseal", "scamcheck"]
+status: published
+related_failures:
+  - vite-github-pages-spa-routing
+  - dns-subdomain-propagation-delay
+  - firebase-auth-domain-not-authorized
+related_case_studies:
+  - trustseal-architecture-build
+  - scamcheck-architecture-build
+related_docs:
+  - third-party-api-mode-isolation
+related_logs:
+  - 2026-05-18-trustseal-operations-review
+  - 2026-05-18-scamcheck-operations-review
+---
+
+GitHub Pages serves static files from a Git branch. A React SPA with client-side routing is not natively compatible with this architecture — there is no catch-all route that serves `index.html` for every path. Two patterns are required to make it work: the `dist/.git` worktree for clean deployments, and the `404.html` redirect for SPA routing. Both TrustSeal and ScamCheck use this pattern in production.
+
+This document is the complete operational reference. It documents the setup, the deployment workflow, every failure mode encountered across two products, and why each piece of the pattern exists.
+
+---
+
+## Repository Structure
+
+```
+[project-root]/
+├── src/                 # React source code
+├── public/
+│   └── index.html       # SPA shell — restore script here
+├── dist/                # Vite build output — separate git repo
+│   ├── .git/            # points to gh-pages branch
+│   ├── index.html       # built app shell
+│   ├── assets/          # built JS/CSS
+│   ├── 404.html         # SPA routing redirect
+│   └── CNAME            # custom domain — survives every rebuild
+├── vite.config.ts
+└── .gitignore           # dist/ is in .gitignore (main branch)
+```
+
+`dist/` serves dual purposes: it is the Vite build output directory and an independent Git repository pointing at the `gh-pages` branch. The main branch never contains built files — the build output only lives in `gh-pages`.
+
+---
+
+## One-Time Setup
+
+Run this once per project. After setup, deployment is a 4-command sequence.
+
+```bash
+# 1. Build the project to create the dist/ directory
+npm run build
+
+# 2. Initialize dist/ as a separate git repository
+cd dist
+git init
+git remote add origin https://github.com/[username]/[repo].git
+
+# 3. Create and checkout the gh-pages branch
+git checkout -b gh-pages
+
+# 4. Create the CNAME file (replace with your custom domain)
+echo "scamcheck.asquaresolution.com" > CNAME
+
+# 5. Create the 404.html SPA redirect (see below)
+# ... add 404.html content ...
+
+# 6. Initial push to establish the remote branch
+git add -A
+git commit -m "initial deploy"
+git push origin gh-pages
+
+# 7. Return to project root
+cd ..
+```
+
+**Add dist/ to .gitignore on the main branch:**
+```
+# .gitignore
+dist/
+```
+
+Without this, `git add .` on the main branch will attempt to stage the built files and the nested `.git` directory, causing Git confusion.
+
+---
+
+## Deployment Workflow
+
+After the one-time setup, every deployment follows this sequence:
+
+```bash
+# 1. Build
+npm run build
+
+# 2. Enter dist/
+cd dist
+
+# 3. Stage all changes
+git add -A
+
+# 4. Commit (include date for traceability)
+git commit -m "deploy $(date +%Y-%m-%d)"
+
+# 5. Push to gh-pages
+git push origin gh-pages
+
+# 6. Return to project root
+cd ..
+```
+
+Total time: ~15 seconds (excluding Vite build time). The push triggers GitHub to serve the new build from the gh-pages branch. Changes are live within 1–2 minutes.
+
+**Automate with a script:** Add to `package.json`:
+```json
+{
+  "scripts": {
+    "deploy": "npm run build && cd dist && git add -A && git commit -m \"deploy $(date +%Y-%m-%d)\" && git push origin gh-pages && cd .."
+  }
+}
+```
+
+---
+
+## The 404.html SPA Routing Redirect
+
+GitHub Pages returns its own 404 page when a requested path does not exist as a file. For a SPA at `/dashboard`, there is no `dashboard/index.html` — the SPA handles this route in JavaScript. GitHub Pages sees no file at `/dashboard` and returns a 404.
+
+**The fix:** A `404.html` that redirects to `index.html` with the original path encoded as a query parameter.
+
+`dist/404.html` (committed manually, persists through builds — see below):
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>TrustSeal</title>
+    <script>
+      // Encode the full path (including query string) as a redirect parameter
+      var path = window.location.pathname + window.location.search;
+      window.location.replace('/?redirect=' + encodeURIComponent(path));
+    </script>
+  </head>
+  <body></body>
+</html>
+```
+
+**The restore script in `public/index.html`:**
+
+```html
+<!-- Add before the closing </head> tag in public/index.html -->
+<script>
+  (function() {
+    var redirect = new URLSearchParams(window.location.search).get('redirect');
+    if (redirect) {
+      // Remove the redirect param and restore the original URL
+      window.history.replaceState(null, '', redirect);
+    }
+  })();
+</script>
+```
+
+**Flow:**
+1. User navigates to `scamcheck.asquaresolution.com/history`
+2. GitHub Pages finds no file at `/history` — serves `404.html`
+3. `404.html` redirects to `/?redirect=/history`
+4. `index.html` serves the React app
+5. The restore script in `index.html` runs before React mounts — calls `history.replaceState` to set the URL back to `/history`
+6. React Router sees `/history` in the URL and renders the correct route
+
+---
+
+## CNAME Handling
+
+The `CNAME` file tells GitHub Pages which custom domain to serve this branch on. It must be present in the `dist/` directory (the gh-pages branch root) after every deploy.
+
+**The problem:** `npm run build` wipes `dist/` and rebuilds it from scratch. The `CNAME` file and `404.html` file are not source files — Vite does not know about them. They are deleted on every build.
+
+**Solutions:**
+
+**Option 1 (recommended): Put them in `public/`.**
+Files in `public/` are copied to `dist/` by Vite on every build without modification. Add `CNAME` and `404.html` to `public/`:
+
+```
+public/
+├── index.html      # SPA shell (already here)
+├── CNAME           # custom domain — Vite copies to dist/
+└── 404.html        # SPA redirect — Vite copies to dist/
+```
+
+**Option 2: Recreate after every build.**
+Script that creates the files after `npm run build` in the deploy pipeline. More manual, less reliable.
+
+Option 1 is the correct approach. Both TrustSeal and ScamCheck use `public/CNAME` and `public/404.html`.
+
+---
+
+## Vite Base Path Configuration
+
+`vite.config.ts` controls the base path for all asset URLs in the built output. Getting this wrong causes all JavaScript, CSS, and image assets to return 404 after deployment.
+
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  base: '/',  // ← CRITICAL for custom domain at root path
+})
+```
+
+**`base: '/'`** — correct for a custom domain serving the app at the root (e.g., `scamcheck.asquaresolution.com`). Asset URLs are `/assets/index.js`, `/assets/index.css`.
+
+**`base: '/repo-name/'`** — correct if serving from a GitHub Pages project subdirectory (e.g., `username.github.io/repo-name`). Asset URLs are `/repo-name/assets/index.js`.
+
+Since TrustSeal and ScamCheck use custom subdomains at the root path, `base: '/'` is correct. Using `base: '/trustseal/'` with a custom domain at root causes all asset requests to return 404.
+
+---
+
+## GitHub Pages Configuration
+
+1. Repository → Settings → Pages
+2. Source: Deploy from a branch
+3. Branch: `gh-pages` / `/ (root)`
+4. Custom domain: `scamcheck.asquaresolution.com`
+5. Enforce HTTPS: check this box after DNS propagation is complete and the Let's Encrypt certificate is provisioned (the checkbox is greyed out until this happens)
+
+The HTTPS checkbox being available (not greyed out) is the reliable indicator that DNS propagation and certificate provisioning are both complete. Do not consider a deployment "live" until this checkbox is checkable.
+
+---
+
+## DNS Configuration
+
+For a subdomain custom domain, add a CNAME record in your DNS provider:
+
+| Type | Name | Target | TTL |
+|---|---|---|---|
+| CNAME | scamcheck | [username].github.io | 3600 |
+
+**Wait for propagation before testing.** DNS records with TTL 3600 take up to 1 hour to propagate globally. Your local DNS resolver may pick up the record in 5–20 minutes while other resolvers (including GitHub's verification) are still returning NXDOMAIN.
+
+Use [dnschecker.org](https://dnschecker.org) to verify propagation from multiple geographic locations before declaring the domain live. Full failure report: [Subdomain DNS Propagation Delay](/failures/dns-subdomain-propagation-delay).
+
+---
+
+## Failure Modes
+
+| Failure | Symptom | Fix |
+|---|---|---|
+| 404.html missing from dist/ | Navigating to any non-root URL returns GitHub's 404 page | Move 404.html to `public/` directory — Vite copies it to `dist/` on every build |
+| CNAME missing from dist/ | Custom domain resets to `username.github.io` after next deploy | Move CNAME to `public/` directory |
+| Wrong Vite base path | All JS/CSS assets return 404 after deployment | Set `base: '/'` in vite.config.ts for custom domain at root |
+| 404.html redirect loop | App redirects indefinitely on root path | The restore script in index.html must check `if (redirect)` before calling replaceState |
+| GitHub HTTPS not enforced | Mixed content warnings, HTTP requests to HTTPS resource | Wait for DNS propagation + certificate provisioning; check "Enforce HTTPS" only when the box is available |
+| Firebase Auth fails on gh-pages domain | Session lost after every refresh when testing before custom domain | Add `[username].github.io` to Firebase Auth Authorized Domains during development |
+| dist/.git lost after OS or IDE cleanup | `git push origin gh-pages` fails — remote not configured | Re-run one-time setup from dist/ directory |
+
+---
+
+## Production Evidence
+
+Both TrustSeal (`trustseal.asquaresolution.com`) and ScamCheck (`scamcheck.asquaresolution.com`) have been running on this deployment pattern since March and February 2026 respectively. The pattern has been deployed with no post-go-live routing failures.
+
+The pattern is appropriate for:
+- Solo developer operations where CI/CD automation overhead exceeds its benefit
+- Products where deployment frequency is low (weekly or less)
+- Static SPAs with no server-side rendering requirements
+
+It is **not** appropriate for:
+- Products requiring zero-downtime atomic deployments (Vercel's model is better)
+- Teams with multiple developers deploying concurrently (manual `dist/.git` management creates conflicts)
+- Products requiring preview deployments for review (use GitHub Actions + Vercel preview for that)
+
+---
+
+## Related
+
+- [Vite GitHub Pages SPA Routing 404](/failures/vite-github-pages-spa-routing)
+- [Subdomain DNS Propagation Delay](/failures/dns-subdomain-propagation-delay)
+- [Firebase Auth Session Lost on Custom Domain](/failures/firebase-auth-domain-not-authorized)
+- [ScamCheck: Building an AI Scam Detector](/case-studies/scamcheck-architecture-build)
+- [TrustSeal: Building an AI Website Trust Verifier](/case-studies/trustseal-architecture-build)

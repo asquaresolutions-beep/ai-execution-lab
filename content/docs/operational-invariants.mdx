@@ -1,0 +1,412 @@
+---
+title: "Operational Invariants — A Square Solutions Reliability Doctrine"
+description: "The 20 operational invariants governing the A Square Solutions ecosystem, extracted from real production failures and operational history. Each invariant is a condition that must remain true for the system to behave safely and predictably — an explicit reliability contract derived from TrustSeal, ScamCheck, AI Execution Lab, and WordPress production experience."
+date: "2026-05-25"
+tags: ["reliability", "deployment", "firebase", "gemini", "razorpay", "authentication", "production", "trustseal", "scamcheck"]
+status: published
+related_failures:
+  - firebase-deploy-sequence-auth-failure
+  - firebase-functions-node-version-stability
+  - firebase-auth-domain-not-authorized
+  - razorpay-test-live-key-mismatch
+  - gemini-json-parse-failure
+  - gemini-rate-limit-429-no-ux
+  - ga4-preview-environment-contamination
+  - dns-subdomain-propagation-delay
+related_docs:
+  - deployment-verification-checklist
+  - failure-pattern-library
+  - third-party-api-mode-isolation
+  - gemini-production-operations
+  - razorpay-subscription-integration
+  - firebase-firestore-quota-enforcement
+---
+
+An operational invariant is a condition that must remain true for the system to behave safely and predictably. These are not aspirational guidelines — they are production-derived reliability contracts. Each one was extracted from a real failure or a real architectural decision whose violation would produce a documented failure class.
+
+Twenty invariants are documented here, organized into five clusters. Every invariant includes the failure or production event that established it, the consequence of violation, and the verification method.
+
+---
+
+## Invariant Index
+
+| ID | Statement | Cluster | Establishing Failure |
+|---|---|---|---|
+| INV-AI-1 | Quota must be checked before AI API call | AI Execution | [gemini-rate-limit-429-no-ux](/failures/gemini-rate-limit-429-no-ux) |
+| INV-AI-2 | AI output must be validated before UI rendering | AI Execution | [gemini-json-parse-failure](/failures/gemini-json-parse-failure) |
+| INV-AI-3 | Gemini API key must never be exposed to client | AI Execution | Architecture — proactive |
+| INV-AI-4 | Loading state must be cleared in finally{} regardless of outcome | AI Execution | [gemini-rate-limit-429-no-ux](/failures/gemini-rate-limit-429-no-ux) |
+| INV-AI-5 | AI prompt must embed explicit output schema | AI Execution | [gemini-json-parse-failure](/failures/gemini-json-parse-failure) |
+| INV-FB-1 | Firestore rules must deploy before Cloud Functions | Firebase | [firebase-deploy-sequence-auth-failure](/failures/firebase-deploy-sequence-auth-failure) |
+| INV-FB-2 | Firebase Functions must explicitly declare Node 22 runtime | Firebase | [firebase-functions-node-version-stability](/failures/firebase-functions-node-version-stability) |
+| INV-FB-3 | Custom domains must be in Auth Authorized Domains before first auth use | Firebase | [firebase-auth-domain-not-authorized](/failures/firebase-auth-domain-not-authorized) |
+| INV-PAY-1 | Razorpay webhook signature must be verified before payload processing | Payment | Architecture — proactive |
+| INV-PAY-2 | Razorpay key mode must be consistent across all credentials | Payment | [razorpay-test-live-key-mismatch](/failures/razorpay-test-live-key-mismatch) |
+| INV-PAY-3 | Webhook-triggered Firestore writes must be idempotent | Payment | Architecture — proactive |
+| INV-PAY-4 | Access grants must never execute in client-side payment handler | Payment | Architecture — proactive |
+| INV-ENV-1 | Analytics measurement IDs must be scoped to Production environment only | Environment | [ga4-preview-environment-contamination](/failures/ga4-preview-environment-contamination) |
+| INV-ENV-2 | GA4 cookie_domain must be set to root domain from first install | Environment | [ga4-cross-domain-tracking-gap](/failures/ga4-cross-domain-tracking-gap) |
+| INV-ENV-3 | All third-party credentials must match production mode before deploy | Environment | [razorpay-test-live-key-mismatch](/failures/razorpay-test-live-key-mismatch), [firebase-auth-domain-not-authorized](/failures/firebase-auth-domain-not-authorized) |
+| INV-DEP-1 | DNS propagation must be verified at 90%+ before go-live announcement | Deployment | [dns-subdomain-propagation-delay](/failures/dns-subdomain-propagation-delay) |
+| INV-DEP-2 | CNAME and 404.html must live in public/ not dist/ | Deployment | [vite-github-pages-spa-routing](/failures/vite-github-pages-spa-routing) |
+| INV-DEP-3 | LiteSpeed cache must be purged after every PHP filter or WPCode change | Deployment | [litespeed-client-cache-bypass-ignored](/failures/litespeed-client-cache-bypass-ignored) |
+| INV-DEP-4 | WordPress Application Password must not be URL-encoded before Base64 | Deployment | [wordpress-rest-api-auth-failure](/failures/wordpress-rest-api-auth-failure) |
+| INV-DEP-5 | A real production request must succeed before any deploy is declared safe | Deployment | [firebase-deploy-sequence-auth-failure](/failures/firebase-deploy-sequence-auth-failure) |
+
+---
+
+## Cluster 1: AI Execution Invariants
+
+These invariants govern how AI API calls are made, how output is handled, and how the system protects itself against AI service failure modes.
+
+---
+
+### INV-AI-1 — Quota must be checked before AI API call
+
+**Statement:** The user's quota must be read and enforced before the Gemini API call is made. The AI call must never execute if the quota check has not passed.
+
+**Why it exists:** Each Gemini API call consumes quota and costs money. On the free tier, a single user making rapid sequential calls can exhaust the daily quota for all users. On paid tiers, unchecked AI calls produce unbounded cost exposure.
+
+**Violation consequence:** Free tier daily quota exhausted by one abusive session; all other users blocked until quota resets. On paid tiers: uncontrolled billing.
+
+**Establishing evidence:** [Firestore Quota Enforcement for AI Features](/docs/firebase-firestore-quota-enforcement) — the enforced architecture; [Gemini 429 Rate Limit](/failures/gemini-rate-limit-429-no-ux) — the observable consequence of absent enforcement.
+
+**Verification:** Confirm `quotaRef.get()` appears before `callGemini()` in Cloud Function source. Confirm `quotaExceeded: true` return path exits before the AI call on every code path.
+
+---
+
+### INV-AI-2 — AI output must be validated before UI rendering
+
+**Statement:** Gemini API output must pass through pre-parse cleaning, JSON.parse() in a try/catch, and required-field validation before any data from it is rendered to the UI.
+
+**Why it exists:** Gemini 1.5-flash intermittently wraps JSON output in markdown code fences or prepends explanation text. `JSON.parse()` throws `SyntaxError` on decorated output. An uncaught exception propagates through the Cloud Function as an unhandled error, the client receives no structured response, and the UI spinner runs indefinitely.
+
+**Violation consequence:** Uncaught `SyntaxError` in Cloud Function; client receives HTTP 500 or empty response; UI enters permanent loading state; user has no actionable feedback.
+
+**Establishing evidence:** [Gemini API Returns Malformed JSON](/failures/gemini-json-parse-failure) — 6% of unguarded calls fail in production; [Gemini Structured Output Reliability Lab](/labs/gemini-structured-output-reliability) — failure rate data across 4 prompt iterations.
+
+**Verification:** Confirm `cleanGeminiOutput()` precedes `JSON.parse()`; confirm `JSON.parse()` is inside a try/catch that returns `{ parseError: true }` as HTTP 200; confirm required fields are checked after parsing.
+
+---
+
+### INV-AI-3 — Gemini API key must never be exposed to client
+
+**Statement:** The Gemini API key must exist only in server-side environment (Firebase Functions environment or Vercel server-side variables). It must never appear in client bundle, client JavaScript, or any URL parameter.
+
+**Why it exists:** A client-exposed Gemini key allows any user to make unlimited API calls outside the application's quota enforcement layer — bypassing INV-AI-1 entirely. The key is also exposed to the public internet and can be extracted from source-inspected JavaScript.
+
+**Violation consequence:** Quota bypassed; unlimited billing liability; API key rotation required; all calls since key exposure are potentially fraudulent.
+
+**Establishing evidence:** [Gemini Production Operations](/docs/gemini-production-operations) — architecture section establishes server-side-only as a hard requirement. No production failure from this invariant violation (proactive architectural enforcement).
+
+**Verification:** Confirm `GEMINI_API_KEY` is not in any `NEXT_PUBLIC_` or `REACT_APP_` variable. Confirm Gemini initialization is inside `firebase-functions` source, not client source. Search client bundle for the key prefix (`AIzaSy`) to confirm absence.
+
+---
+
+### INV-AI-4 — Loading state must be cleared in finally{} regardless of outcome
+
+**Statement:** Every code path that sets `loading: true` (or equivalent) before an AI call must clear it in a `finally {}` block — not in the success handler alone.
+
+**Why it exists:** AI calls have multiple failure paths: network error, uncaught exception, rate limit (429), parse failure, schema validation failure. Any path that exits without clearing loading state leaves the UI in a permanent loading state with no user-recoverable path.
+
+**Violation consequence:** Spinner runs indefinitely after any error condition; submit button disabled permanently; page requires hard reload to recover.
+
+**Establishing evidence:** [Gemini 429 Rate Limit — Infinite Spinner](/failures/gemini-rate-limit-429-no-ux) — the original incident; [Gemini API Returns Malformed JSON](/failures/gemini-json-parse-failure) — same UX failure class from a different error path.
+
+**Verification:** Audit every component that calls a Cloud Function. Confirm `setLoading(false)` appears in `finally {}`, not only in `.then()` or the success handler.
+
+```javascript
+// Required pattern
+try {
+  const result = await analyzeContent({ input })
+  // handle result
+} catch (err) {
+  setError('Analysis failed. Please try again.')
+} finally {
+  setLoading(false)  // ← must be here, not only in success path
+}
+```
+
+---
+
+### INV-AI-5 — AI prompt must embed explicit output schema
+
+**Statement:** The Gemini prompt must include the exact expected JSON output structure as a literal example AND must explicitly instruct the model not to wrap output in code fences or add surrounding text.
+
+**Why it exists:** Without explicit schema embedding and format suppression instructions, Gemini produces decorated output (markdown code fences, explanation text) approximately 6% of the time. This triggers INV-AI-2 violations at a measurable frequency.
+
+**Violation consequence:** Parse failure rate ~6% of production calls without schema embedding; ~2% with schema embedding but without format suppression. With both: under 1%.
+
+**Establishing evidence:** [Gemini Structured Output Reliability Lab](/labs/gemini-structured-output-reliability) — 4-iteration measured experiment; [Gemini API Returns Malformed JSON](/failures/gemini-json-parse-failure) — production failure root cause.
+
+**Verification:** Confirm prompt contains: (1) a literal JSON structure example, (2) the instruction "Return ONLY the JSON object. Do not wrap it in code fences. Do not add any text before or after the JSON."
+
+---
+
+## Cluster 2: Firebase Deployment Invariants
+
+These invariants govern how Firebase infrastructure is deployed. All three are production-verified failure modes that pass local testing undetected.
+
+---
+
+### INV-FB-1 — Firestore rules must deploy before Cloud Functions
+
+**Statement:** When a release includes changes to both Firestore security rules and Cloud Functions, rules must deploy first (`firebase deploy --only firestore:rules`) before functions deploy (`firebase deploy --only functions`). A combined `firebase deploy` command must not be used for releases that touch both artifacts.
+
+**Why it exists:** Firebase's IAM propagation for Cloud Functions depends on the state of Firestore rules. When functions deploy first, new function code runs against stale IAM/rules state, causing auth context failures that return 403 to all callers. The local emulator does not simulate this propagation sequence — emulator tests always pass regardless of deploy order.
+
+**Violation consequence:** 403 errors for all Cloud Function calls for the duration of rules propagation (observed: 12 minutes). Production outage proportional to traffic volume.
+
+**Establishing evidence:** [Firebase Functions 403 After Redeploy](/failures/firebase-deploy-sequence-auth-failure) — TrustSeal production incident, 14 failed requests, 12-minute window.
+
+**Verification:** Release notes must document deploy sequence when both artifacts change. Post-deploy verification: one real functional request must return HTTP 200 within 2 minutes of functions deploy completing.
+
+---
+
+### INV-FB-2 — Firebase Functions must explicitly declare Node 22 runtime
+
+**Statement:** Every Firebase Cloud Functions project must contain `"runtime": "nodejs22"` in the `functions` section of `firebase.json` before the first deploy. The default Node 18 runtime must never be allowed to take effect.
+
+**Why it exists:** Firebase Functions defaults to Node 18. The npm packages used in TrustSeal and ScamCheck (firebase-functions v2, google-generativeai, razorpay) are incompatible with Node 18. All Cloud Function invocations fail immediately at runtime with no informative error — the function appears to deploy successfully but crashes on first call.
+
+**Violation consequence:** 100% of Cloud Function invocations fail. Every AI analysis call, payment webhook, and quota check fails. Product is non-functional despite successful deploy.
+
+**Establishing evidence:** [Firebase Cloud Functions Crashing on Default Node Runtime](/failures/firebase-functions-node-version-stability) — TrustSeal production incident; proactively applied to ScamCheck before first deploy.
+
+**Verification:** Confirm `firebase.json` contains `"runtime": "nodejs22"` before every deploy to a new Firebase project. Confirm by running one Cloud Function invocation after first deploy.
+
+---
+
+### INV-FB-3 — Custom domains must be in Auth Authorized Domains before first auth use
+
+**Statement:** Before a product is deployed to a custom domain and Firebase Auth is used on that domain, the custom domain must be added to Firebase Console → Authentication → Settings → Authorized Domains.
+
+**Why it exists:** Firebase Auth only accepts auth operations from domains explicitly listed in Authorized Domains. If the domain is missing, Firebase Auth silently fails — sign-in appears to succeed but the session token is not persisted. Every page refresh loses the auth session.
+
+**Violation consequence:** Users can sign in but are logged out on every page refresh. Session state cannot be maintained. Auth-gated features are inaccessible after the first navigation.
+
+**Establishing evidence:** [Firebase Auth Session Lost on Custom Domain](/failures/firebase-auth-domain-not-authorized) — affected TrustSeal go-live; proactively addressed in ScamCheck by adding both the custom domain and the GitHub Pages `*.github.io` subdomain before first deploy.
+
+**Verification:** Firebase Console → Authentication → Settings → Authorized Domains must list the custom production domain AND the GitHub Pages staging domain before any auth feature is tested on either domain.
+
+---
+
+## Cluster 3: Payment Integrity Invariants
+
+These invariants govern the Razorpay + Firebase payment flow. Two are architectural proactive decisions; two are established by production failures.
+
+---
+
+### INV-PAY-1 — Razorpay webhook signature must be verified before payload processing
+
+**Statement:** Every Razorpay webhook request must have its `x-razorpay-signature` header verified against an HMAC-SHA256 of the request body before any payload data is read or acted upon.
+
+**Why it exists:** The webhook endpoint URL is public — it must accept POST requests from Razorpay's servers. Without signature verification, any HTTP client can POST a crafted `subscription.charged` event and self-grant premium access. This is an unauthenticated privilege escalation vector.
+
+**Violation consequence:** Any actor with the webhook URL can grant arbitrary users premium access without payment. Complete payment integrity compromise.
+
+**Establishing evidence:** [Razorpay Subscription Integration with Firebase](/docs/razorpay-subscription-integration) — signature verification section. No production failure (proactive architectural enforcement).
+
+**Verification:** Confirm `crypto.createHmac('sha256', webhookSecret).update(JSON.stringify(req.body)).digest('hex')` appears before any `req.body.payload` access. Confirm `return res.status(400)` on signature mismatch.
+
+---
+
+### INV-PAY-2 — Razorpay key mode must be consistent across all credentials
+
+**Statement:** All four Razorpay credentials (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_PLAN_ID`, and the client-side `REACT_APP_RAZORPAY_KEY_ID`) must all be the same mode — either all `rzp_test_` or all `rzp_live_`. No mixing.
+
+**Why it exists:** Razorpay test-mode credentials only interact with test-mode infrastructure. If one credential is in the wrong mode (e.g., live `key_id` with test `key_secret`), the subscription creation request is accepted but the resulting subscription is in the wrong environment — the checkout modal opens, the user appears to complete payment, but no webhook fires to grant access.
+
+**Violation consequence:** Silent payment failure — users pay (in test environment) but receive no access upgrade. No error is visible. The failure only becomes apparent when access is not granted after apparent payment success.
+
+**Establishing evidence:** [Razorpay Test/Live Key Mode Mismatch](/failures/razorpay-test-live-key-mismatch) — TrustSeal production go-live incident.
+
+**Verification:** Before any production deploy: audit all four credentials for the `rzp_live_` prefix. After mode switch: place one real transaction and confirm webhook fires and Firestore updates.
+
+---
+
+### INV-PAY-3 — Webhook-triggered Firestore writes must be idempotent
+
+**Statement:** All Firestore writes triggered by Razorpay webhook events must use `set()` with `{ merge: true }` on specific fields, never overwrite-all `set()` or read-increment-write patterns. Writes must be safe to execute N times.
+
+**Why it exists:** Razorpay retries webhooks on network failure or non-200 responses. A webhook event for `subscription.charged` can be delivered 2–3 times. Non-idempotent writes (e.g., `update({ checksThisMonth: current + 1 })`) executed twice corrupt quota state.
+
+**Violation consequence:** Duplicate webhook delivery corrupts quota counts or subscription status. Premium access granted twice, quota reset prematurely, or subscription state overwritten with stale data.
+
+**Establishing evidence:** [Razorpay Subscription Integration with Firebase](/docs/razorpay-subscription-integration) — idempotency section.
+
+**Verification:** Confirm all webhook handler Firestore writes use `set(data, { merge: true })` or `update()` with specific fields. Confirm no read-before-write patterns in webhook handler.
+
+---
+
+### INV-PAY-4 — Access grants must never execute in client-side payment handler
+
+**Statement:** The `handler` callback in the Razorpay checkout modal must never update Firestore or grant premium access. Access grants must only occur in the server-side webhook handler after signature verification.
+
+**Why it exists:** The `handler` callback fires client-side after the checkout modal reports success. A user can invoke this callback programmatically without completing a real payment. Any access grant in the `handler` is a client-controllable privilege escalation.
+
+**Violation consequence:** Users can self-grant premium access by invoking the payment handler without completing a real payment. Complete payment integrity bypass.
+
+**Establishing evidence:** [Razorpay Subscription Integration with Firebase](/docs/razorpay-subscription-integration) — checkout modal section explicitly documents this as a prohibited pattern. No production failure (proactive architectural enforcement).
+
+**Verification:** Confirm the `handler` function contains only UX state updates (`setUpgrading(false)`, `setShowSuccessMessage(true)`). Confirm no Firebase calls in `handler`. The only path to premium access is `razorpayWebhook` Cloud Function → Firestore write → `onSnapshot` listener update.
+
+---
+
+## Cluster 4: Environment and Analytics Invariants
+
+These invariants govern how environment configuration is scoped and how analytics data remains clean across deployment environments.
+
+---
+
+### INV-ENV-1 — Analytics measurement IDs must be scoped to Production environment only
+
+**Statement:** `NEXT_PUBLIC_GA_MEASUREMENT_ID` and any analytics tracking variable must be scoped to the Production environment only in Vercel. Preview and Development deployments must not have this variable defined.
+
+**Why it exists:** `NEXT_PUBLIC_` variables are baked into the JavaScript bundle at build time. If an analytics ID is in scope for Preview deployments, every Vercel preview URL that is accessed fires real analytics events to the production GA4 property — contaminating production session counts, acquisition attribution, and funnel data with internal development traffic.
+
+**Violation consequence:** Production analytics data permanently contaminated with internal traffic. Historical data cannot be retroactively corrected. All reports from the contamination period are unreliable.
+
+**Establishing evidence:** [GA4 Production Analytics Contaminated by Vercel Preview Deployments](/failures/ga4-preview-environment-contamination) — Production analytics contaminated for approximately 6 weeks before detection.
+
+**Verification:** Vercel Dashboard → Project → Settings → Environment Variables → `NEXT_PUBLIC_GA_MEASUREMENT_ID` → confirm only "Production" checkbox is checked.
+
+---
+
+### INV-ENV-2 — GA4 cookie_domain must be set to root domain from first install
+
+**Statement:** When installing GA4 across multiple subdomains of a root domain, `cookie_domain` must be set to the root domain (e.g., `asquaresolution.com`) in every property's `gtag` initialization from the first deploy. It must never be left at the default (which scopes to the hostname).
+
+**Why it exists:** GA4's default cookie scope is the hostname. Each subdomain gets its own separate cookie, so a user navigating from `scamcheck.asquaresolution.com` to `asquaresolution.com` starts a new session attributed to "direct" traffic — even if they arrived via a paid campaign. Funnel analysis, attribution, and session counts are all silently wrong.
+
+**Violation consequence:** All cross-subdomain navigation appears as new sessions with "direct" attribution. Historical funnel data is uncorrectable. Campaign ROI calculations are systematically incorrect.
+
+**Establishing evidence:** [GA4 Cross-Domain Tracking Not Unified Across Subdomains](/failures/ga4-cross-domain-tracking-gap) — required retroactive correction across all four A Square Solutions properties.
+
+**Verification:** Inspect `gtag('config', ...)` call on each property. Confirm `cookie_domain: 'asquaresolution.com'` is present. Verify with GA4 Realtime → navigate between subdomains → confirm one continuous session is tracked.
+
+---
+
+### INV-ENV-3 — All third-party credentials must match production mode before deploy
+
+**Statement:** Before any production deployment, all third-party integration credentials (Razorpay key mode, Firebase Auth domain list, GA4 property ID scope, environment variable Production checkboxes) must be verified in their production-mode state as a unit — not individually and not as an afterthought.
+
+**Why it exists:** Third-party integration failures are silent in the specific way that makes them hardest to debug: the application deploys successfully, runs without errors, and accepts user interactions — but the underlying service operation silently fails or produces wrong results. Each credential travels through its own configuration surface (Razorpay Dashboard, Firebase Console, Vercel Dashboard) and each must be checked independently.
+
+**Violation consequence:** At least three distinct silent production failures from this invariant class: [razorpay-test-live-key-mismatch](/failures/razorpay-test-live-key-mismatch), [firebase-auth-domain-not-authorized](/failures/firebase-auth-domain-not-authorized), [ga4-preview-environment-contamination](/failures/ga4-preview-environment-contamination).
+
+**Establishing evidence:** [Third-Party API Mode Isolation](/docs/third-party-api-mode-isolation) — documents all four variant failure modes.
+
+**Verification:** Run the full [Deployment Verification Checklist](/docs/deployment-verification-checklist) before every production deploy. Do not deploy until all third-party credential states are confirmed in production mode.
+
+---
+
+## Cluster 5: Deployment Integrity Invariants
+
+These invariants govern the mechanics of deployment across all three platform targets.
+
+---
+
+### INV-DEP-1 — DNS propagation must be verified at 90%+ before go-live announcement
+
+**Statement:** Before announcing a custom domain as live, propagation must be verified to 90%+ of geographic locations using [dnschecker.org](https://dnschecker.org) or equivalent. Local browser success is not sufficient verification.
+
+**Why it exists:** The developer's DNS resolver propagates new records faster than global resolvers — typically within 20 minutes. The developer sees the site load and announces it as live. Users on slower resolvers (a majority) continue to see "site not found" for the full TTL duration (up to 4 hours for TTL 3600).
+
+**Violation consequence:** Go-live announcement precedes actual availability for most users. Support requests arrive before the site is reachable. HTTPS certificate provisioning (chained dependency on DNS) is also delayed.
+
+**Establishing evidence:** [DNS Subdomain Propagation Delay Blocked Deployment Testing](/failures/dns-subdomain-propagation-delay).
+
+**Verification:** [dnschecker.org](https://dnschecker.org) → enter the subdomain → confirm ✓ across 90%+ of listed locations before any announcement. For GitHub Pages: confirm "Enforce HTTPS" checkbox is uncheckable → available → that sequence signals both DNS completion and certificate provisioning.
+
+---
+
+### INV-DEP-2 — CNAME and 404.html must live in public/ not dist/
+
+**Statement:** For all GitHub Pages SPA deployments using Vite, the `CNAME` file and `404.html` SPA redirect must be placed in `public/` (not created directly in `dist/`). Vite copies `public/` contents to `dist/` on every build without modification.
+
+**Why it exists:** `npm run build` wipes and rebuilds `dist/` from scratch. Any file created directly in `dist/` is deleted on every build. After the next deploy, the custom domain resets (CNAME gone) and SPA routing breaks (404.html gone). These failures are non-obvious because the deploy succeeds — the missing files are only discovered when the deployed site is accessed.
+
+**Violation consequence:** Custom domain reverts to `[username].github.io` after next deploy. All non-root SPA routes return GitHub's 404 page instead of the React app.
+
+**Establishing evidence:** [Vite GitHub Pages SPA Routing 404](/failures/vite-github-pages-spa-routing); [GitHub Pages SPA Deployment](/docs/github-pages-spa-deployment).
+
+**Verification:** Confirm `public/CNAME` and `public/404.html` exist in version control. Confirm neither file is listed in `.gitignore`. After any deploy, navigate to a non-root route and verify routing works.
+
+---
+
+### INV-DEP-3 — LiteSpeed cache must be purged after every PHP filter or WPCode change
+
+**Statement:** After any WordPress PHP filter deployment (via WPCode or theme functions.php), LiteSpeed Cache → Purge All must be run before any verification of the change. Verification without purging produces false results.
+
+**Why it exists:** LiteSpeed Cache operates at the server level and caches full HTML responses. It ignores client-sent `Cache-Control: no-cache` headers — these only control browser cache behavior. After a PHP filter change, the cached HTML still reflects the pre-change state. Every verification request hits the cache and appears to confirm the old behavior, making the change appear to have no effect.
+
+**Violation consequence:** PHP filter changes appear to have no effect during verification. Engineer either re-deploys the same change (wasting time) or incorrectly concludes the approach is wrong. Actual change is live but unverifiable until cache is purged.
+
+**Establishing evidence:** [LiteSpeed Cache Ignores Client no-cache Headers](/failures/litespeed-client-cache-bypass-ignored).
+
+**Verification:** The verification sequence is always: deploy WPCode change → LiteSpeed → Purge All → verify. Any verification step that precedes Purge All is invalid.
+
+---
+
+### INV-DEP-4 — WordPress Application Password must not be URL-encoded before Base64
+
+**Statement:** WordPress Application Password credential strings must be passed to the Base64 encoder raw — with spaces intact, without URL-encoding. The correct pipeline is: `username:password_with_spaces` → Base64 encode → `Authorization: Basic [encoded]`.
+
+**Why it exists:** Application Passwords are displayed with spaces between character groups (e.g., `AbcD EfgH IjkL`). The spaces are part of the credential. URL-encoding the spaces to `%20` before Base64 produces a different Base64 hash that WordPress always rejects with a 401 — with no diagnostic detail indicating the credential format is wrong.
+
+**Violation consequence:** All WordPress REST API calls return 401 Unauthorized. No automation or content pipeline that depends on the REST API functions. Error message gives no indication that encoding is the cause.
+
+**Establishing evidence:** [WordPress REST API Authorization Header Failure](/failures/wordpress-rest-api-auth-failure).
+
+**Verification:** `curl -u "username:raw password with spaces" https://site.com/wp-json/wp/v2/posts?per_page=1` must return HTTP 200 before writing any automation against the endpoint.
+
+---
+
+### INV-DEP-5 — A real production request must succeed before any deploy is declared safe
+
+**Statement:** No deployment — regardless of build success, test suite pass, or emulator verification — is declared complete until at least one real production request through the full application stack has returned a successful response.
+
+**Why it exists:** Three distinct failure classes in the archive pass all pre-deploy checks (build, emulator, local testing) and only manifest in production through a real request: Firebase deploy order (INV-FB-1), Firebase Node runtime (INV-FB-2), and Firebase Auth domain (INV-FB-3). "Build succeeded" and "tests passed" do not verify runtime infrastructure state.
+
+**Violation consequence:** Production outages discovered by users rather than by deployment verification. The developer declares victory on build success; users report errors minutes later.
+
+**Establishing evidence:** [firebase-deploy-sequence-auth-failure](/failures/firebase-deploy-sequence-auth-failure), [firebase-functions-node-version-stability](/failures/firebase-functions-node-version-stability), [firebase-auth-domain-not-authorized](/failures/firebase-auth-domain-not-authorized) — all three pass emulator/build checks and fail only on real production requests.
+
+**Verification:** For every Firebase deploy: invoke one Cloud Function via the live product UI (not the emulator) and confirm the response. For every GitHub Pages deploy: navigate to the deployed URL on the custom domain and confirm content loads. For every Vercel deploy: click through at least one dynamic route on the production domain.
+
+---
+
+## Incident → Invariant Mapping
+
+Every major failure in the archive maps to at least one invariant that was unknown or unenforced at the time.
+
+| Failure | Invariant Violated | Known beforehand? | Emerged from incident? |
+|---|---|---|---|
+| firebase-functions-node-version-stability | INV-FB-2 | No | Yes |
+| firebase-auth-domain-not-authorized | INV-FB-3 | No | Yes |
+| razorpay-test-live-key-mismatch | INV-PAY-2, INV-ENV-3 | No | Yes |
+| firebase-deploy-sequence-auth-failure | INV-FB-1, INV-DEP-5 | No | Yes |
+| gemini-rate-limit-429-no-ux | INV-AI-1, INV-AI-4 | Partial | Yes (INV-AI-4) |
+| gemini-json-parse-failure | INV-AI-2, INV-AI-5 | No | Yes |
+| ga4-preview-environment-contamination | INV-ENV-1 | No | Yes |
+| ga4-cross-domain-tracking-gap | INV-ENV-2 | No | Yes |
+| dns-subdomain-propagation-delay | INV-DEP-1 | No | Yes |
+| vite-github-pages-spa-routing | INV-DEP-2 | No | Yes |
+| litespeed-client-cache-bypass-ignored | INV-DEP-3 | No | Yes |
+| wordpress-rest-api-auth-failure | INV-DEP-4 | No | Yes |
+
+Every invariant in this document was unknown before the failure that established it. None were proactively defined from first principles — all were extracted from production experience.
+
+The four proactive invariants (INV-AI-3, INV-PAY-1, INV-PAY-3, INV-PAY-4) were established architecturally without a prior failure — but each was informed by the failure patterns in adjacent systems.
+
+---
+
+## Related
+
+- [Deployment Verification Checklist](/docs/deployment-verification-checklist) — the operational companion: what to verify before declaring each platform deploy safe
+- [Failure Pattern Library](/docs/failure-pattern-library) — the pattern taxonomy these invariants were extracted from
+- [Third-Party API Mode Isolation](/docs/third-party-api-mode-isolation) — deep-dive on ENV cluster invariants
+- [Gemini Production Operations](/docs/gemini-production-operations) — AI cluster invariant implementation
+- [Razorpay Subscription Integration with Firebase](/docs/razorpay-subscription-integration) — Payment cluster invariant implementation
+- [Firestore Quota Enforcement for AI Features](/docs/firebase-firestore-quota-enforcement) — INV-AI-1 implementation

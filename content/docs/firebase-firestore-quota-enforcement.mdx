@@ -1,0 +1,308 @@
+---
+title: "Firestore Quota Enforcement for AI Features"
+description: "Production pattern for per-user quota tracking, monthly reset logic, atomic increment, pre-AI-call enforcement, and abuse prevention using Firestore. Implemented in TrustSeal (10 free checks/month, premium tier) and ScamCheck (unlimited free after sign-up). Covers the data model, the enforcement code, the reset mechanism, and the cost protection logic that prevents free-tier Gemini quota from being exhausted by a single user."
+date: "2026-05-24"
+tags: ["firestore", "firebase", "firebase-functions", "rate-limiting", "gemini", "trustseal", "scamcheck", "production"]
+status: published
+related_failures:
+  - gemini-rate-limit-429-no-ux
+  - environment-variable-missing-production
+related_case_studies:
+  - scamcheck-architecture-build
+  - trustseal-architecture-build
+related_docs:
+  - razorpay-subscription-integration
+  - gemini-production-operations
+  - firebase-firestore-quota-enforcement
+---
+
+Quota enforcement for AI features serves two purposes: product monetization (limiting what free users can do to drive upgrade) and cost protection (preventing a single user from exhausting the Gemini free tier quota for all users).
+
+This document describes the Firestore quota enforcement pattern used in TrustSeal and ScamCheck. The pattern is simple, operationally reliable, and requires no additional infrastructure beyond Firestore.
+
+---
+
+## Data Model
+
+The quota state lives in a dedicated Firestore document per user:
+
+```
+users/{uid}/
+  quota/
+    current/                     ← single document per user
+      checksThisMonth: number    ← incremented atomically on each check
+      tier: 'free' | 'premium'   ← updated by Razorpay webhook (TrustSeal)
+      resetDate: timestamp       ← first day of next calendar month
+      updatedAt: timestamp
+```
+
+**Why a dedicated subcollection path (`quota/current`) instead of a field on the user document:**
+- Quota is updated on every check — high write frequency
+- Separating quota from user profile avoids updating the user document on every check
+- Firestore security rules can target `users/{uid}/quota/{doc}` independently from `users/{uid}` — quota writes from Cloud Functions are admin-privileged, while user profile reads may have different rules
+
+---
+
+## Enforcement in the Cloud Function
+
+Quota is checked **before** the Gemini API call. This prevents free-tier quota from being consumed before the limit is enforced.
+
+```javascript
+// functions/src/analyzeContent.js
+const FREE_TIER_LIMIT = 10  // checks per calendar month
+
+exports.analyzeContent = functions.onCall(async (request) => {
+  const uid = request.auth?.uid
+  if (!uid) throw new functions.HttpsError('unauthenticated', 'Login required')
+
+  const db       = getFirestore()
+  const quotaRef = db.doc(`users/${uid}/quota/current`)
+  const quotaDoc = await quotaRef.get()
+
+  // Initialize quota document if it doesn't exist yet
+  if (!quotaDoc.exists) {
+    await quotaRef.set({
+      checksThisMonth: 0,
+      tier:            'free',
+      resetDate:       getNextMonthFirstDay(),
+      updatedAt:       FieldValue.serverTimestamp(),
+    })
+  }
+
+  const quota = quotaDoc.data() ?? { checksThisMonth: 0, tier: 'free' }
+
+  // Check if monthly reset is due
+  const now = new Date()
+  if (quota.resetDate && now >= quota.resetDate.toDate()) {
+    await quotaRef.update({
+      checksThisMonth: 0,
+      resetDate:       getNextMonthFirstDay(),
+      updatedAt:       FieldValue.serverTimestamp(),
+    })
+    quota.checksThisMonth = 0
+  }
+
+  // Enforce limit for free tier users
+  if (quota.tier === 'free' && quota.checksThisMonth >= FREE_TIER_LIMIT) {
+    return {
+      quotaExceeded: true,
+      tier:          'free',
+      checksUsed:    quota.checksThisMonth,
+      limit:         FREE_TIER_LIMIT,
+    }
+  }
+
+  // ── Proceed with AI call ─────────────────────────────────
+  const result = await callGemini(request.data.input)
+  if (!result.ok) return result  // return rate limit / parse errors
+
+  // Increment quota atomically AFTER successful analysis
+  await quotaRef.update({
+    checksThisMonth: FieldValue.increment(1),
+    updatedAt:       FieldValue.serverTimestamp(),
+  })
+
+  return { ok: true, verdict: result.verdict }
+})
+
+function getNextMonthFirstDay() {
+  const now  = new Date()
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  return next
+}
+```
+
+---
+
+## Atomic Increment
+
+`FieldValue.increment(1)` is the correct tool for quota counting. It is an atomic server-side operation — concurrent requests from the same user cannot race past the limit by incrementing simultaneously.
+
+**Do not use:**
+```javascript
+// WRONG — read-increment-write is not atomic
+const current = (await quotaRef.get()).data().checksThisMonth
+await quotaRef.update({ checksThisMonth: current + 1 })
+```
+
+**Do use:**
+```javascript
+// CORRECT — atomic server-side increment
+await quotaRef.update({ checksThisMonth: FieldValue.increment(1) })
+```
+
+For high-concurrency scenarios, the pre-call quota check + atomic increment combination is not 100% race-proof at the check boundary (two concurrent requests could both pass the pre-call check if they arrive simultaneously). For consumer products at typical traffic levels, this is acceptable. For strict quota enforcement, wrap the check and increment in a Firestore transaction:
+
+```javascript
+await db.runTransaction(async (transaction) => {
+  const doc     = await transaction.get(quotaRef)
+  const current = doc.data()?.checksThisMonth ?? 0
+
+  if (quota.tier === 'free' && current >= FREE_TIER_LIMIT) {
+    throw new functions.HttpsError('resource-exhausted', 'Quota exceeded')
+  }
+
+  transaction.update(quotaRef, { checksThisMonth: FieldValue.increment(1) })
+})
+```
+
+---
+
+## Monthly Reset Logic
+
+The `resetDate` field stores the first day of the next calendar month. The quota check in the Cloud Function compares the current time against `resetDate`. If the current time has passed `resetDate`, the quota is reset and the `resetDate` is advanced.
+
+This approach is:
+- **Server-side:** The reset happens in the Cloud Function on the first check after the reset date, not on a scheduled cron job
+- **Lazy:** No scheduled function needed; reset happens on demand
+- **Accurate:** Reset triggers on the first use after the calendar month boundary
+
+**Alternative: Cloud Scheduler cron reset**
+
+If you want exact midnight resets rather than lazy resets, use Firebase Cloud Scheduler:
+```javascript
+// Runs at 00:00 UTC on the first day of every month
+exports.resetMonthlyQuota = functions.pubsub
+  .schedule('0 0 1 * *')
+  .onRun(async () => {
+    const db    = getFirestore()
+    const batch = db.batch()
+    const users = await db.collection('users').listDocuments()
+
+    for (const userRef of users) {
+      const quotaRef = userRef.collection('quota').doc('current')
+      batch.update(quotaRef, { checksThisMonth: 0 })
+    }
+
+    await batch.commit()
+  })
+```
+
+The lazy approach (used in TrustSeal and ScamCheck) is operationally simpler — no scheduled function to maintain, no batch write over all users.
+
+---
+
+## Client-Side Quota Display
+
+The client reads quota state in real time via `onSnapshot`:
+
+```javascript
+useEffect(() => {
+  if (!currentUser) return
+
+  const unsubscribe = db
+    .doc(`users/${currentUser.uid}/quota/current`)
+    .onSnapshot((doc) => {
+      const data = doc.data()
+      setChecksUsed(data?.checksThisMonth ?? 0)
+      setTier(data?.tier ?? 'free')
+      setResetDate(data?.resetDate?.toDate() ?? null)
+    })
+
+  return unsubscribe
+}, [currentUser])
+
+// In JSX:
+{tier === 'free' && (
+  <div className="quota-display">
+    {checksUsed} / {FREE_TIER_LIMIT} checks used this month
+    {checksUsed >= FREE_TIER_LIMIT && (
+      <button onClick={handleUpgradeClick}>Upgrade to Premium</button>
+    )}
+  </div>
+)}
+```
+
+The `onSnapshot` listener updates the quota display in real time — when a check completes and the Cloud Function increments the counter, the client UI updates without a page reload.
+
+---
+
+## Unauthenticated Rate Limiting (IP-Based)
+
+For unauthenticated access (if the product allows limited guest use), Firestore can enforce per-IP rate limits:
+
+```javascript
+// IP-based rate limiting document
+// Path: rateLimits/{ipHash}/daily/{date}
+const ip      = req.ip || req.headers['x-forwarded-for']
+const ipHash  = crypto.createHash('sha256').update(ip).digest('hex')
+const today   = new Date().toISOString().slice(0, 10)  // YYYY-MM-DD
+const limitRef = db.doc(`rateLimits/${ipHash}/daily/${today}`)
+
+await db.runTransaction(async (transaction) => {
+  const doc   = await transaction.get(limitRef)
+  const count = doc.data()?.count ?? 0
+
+  if (count >= GUEST_DAILY_LIMIT) {
+    throw new functions.HttpsError('resource-exhausted', 'Daily guest limit reached')
+  }
+
+  transaction.set(limitRef, {
+    count:     FieldValue.increment(1),
+    expiresAt: new Date(Date.now() + 86400000),  // TTL: 24 hours
+  }, { merge: true })
+})
+```
+
+Configure Firestore TTL policy on `rateLimits` collection to auto-delete expired documents — prevents unbounded storage growth from rate limit records.
+
+---
+
+## Firestore Security Rules
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can read their own quota; Cloud Functions write with admin SDK (bypasses rules)
+    match /users/{uid}/quota/{doc} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;  // writes only from Cloud Functions (admin SDK)
+    }
+
+    // Rate limit documents: read/write only from Cloud Functions
+    match /rateLimits/{ipHash}/{subcollection}/{doc} {
+      allow read, write: if false;
+    }
+  }
+}
+```
+
+Cloud Functions use the Firebase Admin SDK, which bypasses security rules entirely. These rules govern direct client SDK access only.
+
+---
+
+## Cost Protection Pattern
+
+The ordering of operations in the Cloud Function matters for cost protection:
+
+```
+1. Authenticate user (fast, free)
+2. Check quota (Firestore read — 1 read unit)
+3. Return quotaExceeded if limit reached (saves Gemini API cost)
+4. Call Gemini API (variable cost — only reached if quota not exceeded)
+5. Increment quota (Firestore write — 1 write unit)
+```
+
+Never call the Gemini API before checking quota. A single user hammering the endpoint before quota enforcement is applied can exhaust the daily free tier for all users.
+
+---
+
+## Production Numbers (TrustSeal / ScamCheck)
+
+| Product | Free Tier | Quota Enforcement | Tier Change |
+|---|---|---|---|
+| TrustSeal | 10 checks/month | Firestore pre-call check | Razorpay webhook → Firestore |
+| ScamCheck | Unlimited after sign-up | None (authenticated users unlimited) | N/A |
+
+ScamCheck does not enforce a per-user check limit for authenticated users — the product is free. Rate limiting for ScamCheck is done at the Gemini API level (per-minute RPM limit) with UX handling for 429 responses. See [Gemini API 429 Rate Limit Returns Hanging Spinner](/failures/gemini-rate-limit-429-no-ux).
+
+---
+
+## Related
+
+- [Razorpay Subscription Integration with Firebase](/docs/razorpay-subscription-integration) — Razorpay webhook handler that updates Firestore tier
+- [Gemini Production Operations](/docs/gemini-production-operations) — rate limit handling pattern
+- [ScamCheck: Building an AI Scam Detector](/case-studies/scamcheck-architecture-build)
+- [TrustSeal: Building an AI Website Trust Verifier](/case-studies/trustseal-architecture-build)

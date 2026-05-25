@@ -13,6 +13,19 @@ recovery_complexity: hours
 deployment_risk: low
 time_to_detect: "Noticed in GA4 reports — unusually high new session rate for direct traffic"
 repeat_risk: medium
+affected_systems:
+  - google-analytics-4
+systems_touched:
+  - asquaresolution.com
+  - trustseal
+  - scamcheck
+  - ai-execution-lab
+related_case_studies:
+  - ecosystem-wordpress-integration
+related_logs:
+  - 2026-05-18-wordpress-seo-operations
+related_docs:
+  - analytics-setup
 ---
 
 <IncidentReport
@@ -42,6 +55,21 @@ repeat_risk: medium
     { title: "Missing Production Environment Variable Caused Silent Feature Failure", href: "/failures/environment-variable-missing-production", relation: "same-category" }
   ]}
   ecosystemImpact={["Session counts inflated across all properties", "Cross-property user journey analysis is unreliable", "Direct traffic attribution overstated — actual referral sources masked"]}
+/>
+
+<QuickFix
+  symptom="GA4 Realtime shows two separate active users when navigating between subdomains. Acquisition report shows unusually high direct traffic."
+  rootCause="GA4 cookie is scoped to the exact hostname by default. Navigating from subdomain-a.example.com to subdomain-b.example.com starts a new session attributed to direct traffic."
+  fix="Add the parent domain to GA4's cross-domain measurement configuration, and set cookie_domain to the parent domain in every property's gtag config."
+  time="30 min"
+  confidence={80}
+  steps={[
+    "GA4 Admin → Data Streams → Web stream → Configure Tag Settings → Configure your domains",
+    "Add your parent domain (e.g., example.com) — GA4 automatically covers all subdomains",
+    "In each property's gtag config, add: cookie_domain: 'example.com'",
+    "Deploy the updated gtag snippet to all subdomains",
+    "Verify in GA4 Realtime: navigate from one subdomain to another — should show one continuous user, not two separate sessions"
+  ]}
 />
 
 ## What Happened

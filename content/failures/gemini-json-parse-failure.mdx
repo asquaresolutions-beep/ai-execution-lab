@@ -1,0 +1,260 @@
+---
+title: "Gemini API Returns Malformed JSON — Cloud Function Parse Failure"
+description: "Gemini 1.5-flash intermittently wraps JSON output in markdown code fences or includes explanation text before/after the JSON object. JSON.parse() throws SyntaxError, Cloud Function crashes, client receives no response and shows infinite spinner. Fix: pre-parse cleaning + structured error return."
+date: "2026-02-15"
+tags: ["gemini", "firebase-functions", "structured-output", "scamcheck", "trustseal", "json", "cloud-functions"]
+severity: medium
+status: published
+project: scamcheck
+symptom: "Cloud Function throws SyntaxError on JSON.parse(). Client receives HTTP 500 or empty response. UI spinner runs indefinitely. Firebase Functions logs show: SyntaxError: Unexpected token ` in JSON at position 0"
+root_cause: "Gemini 1.5-flash does not guarantee raw JSON output. Without explicit output format constraints in the prompt, the model intermittently wraps JSON in markdown code fences (```json ... ```) or prepends explanation text. JSON.parse() cannot handle either format."
+verified_fix: "Pre-parse cleaning: strip markdown code fences and extract JSON substring before calling JSON.parse(). Wrap in try/catch and return { parseError: true } as HTTP 200 structured response. Client checks parseError flag and renders retry UI instead of hanging."
+linked_incidents:
+  - gemini-rate-limit-429-no-ux
+related_case_studies:
+  - scamcheck-architecture-build
+  - trustseal-architecture-build
+related_docs:
+  - gemini-production-operations
+  - ai-output-structure-validation
+---
+
+Gemini is a language model, not a JSON serializer. It produces text that looks like JSON most of the time, but it can and does add decoration — markdown code fences, explanation sentences, commentary after the closing brace — especially when the prompt does not explicitly constrain the output format. `JSON.parse()` treats all of this as fatal.
+
+This failure was first observed in ScamCheck (February 2026) during heavy testing after the Gemini integration was initially working. The model was returning valid JSON for most inputs but failing on a subset of inputs, particularly those that triggered longer model reasoning about ambiguous scam signals.
+
+---
+
+## What Actually Happens
+
+Gemini's text output for a requested JSON response can look like any of these:
+
+**Expected (valid):**
+```
+{"verdict":"LIKELY_SCAM","probability":0.85,"signals":["urgency","financial_request"],"explanation":"..."}
+```
+
+**Observed failure — markdown code fence:**
+````
+```json
+{"verdict":"LIKELY_SCAM","probability":0.85,"signals":["urgency","financial_request"],"explanation":"..."}
+```
+````
+
+**Observed failure — explanation prefix:**
+```
+Here is the analysis result:
+{"verdict":"LIKELY_SCAM","probability":0.85,"signals":["urgency","financial_request"],"explanation":"..."}
+```
+
+**Observed failure — trailing commentary:**
+```
+{"verdict":"LIKELY_SCAM","probability":0.85,"signals":["urgency","financial_request"],"explanation":"..."}
+Note: this input contained multiple overlapping scam patterns.
+```
+
+`JSON.parse()` throws `SyntaxError` on all three. Without error handling, the Cloud Function crashes with an unhandled exception.
+
+---
+
+<QuickFix
+  symptom="Firebase Functions log: SyntaxError: Unexpected token ` in JSON at position 0. Client shows infinite spinner. Cloud Function returns HTTP 500 or no response body."
+  rootCause="Gemini wraps JSON output in markdown code fences or adds explanation text. JSON.parse() cannot parse decorated output."
+  fix="1. Add pre-parse cleaning to strip markdown code fences. 2. Extract JSON substring using first { and last } positions. 3. Wrap JSON.parse() in try/catch. 4. Return { parseError: true } as HTTP 200 on SyntaxError. 5. Client checks parseError flag and renders retry UI."
+  verified="true"
+  severity="medium"
+/>
+
+---
+
+## Pre-Parse Cleaning
+
+This function handles the three observed failure modes before `JSON.parse()` is called:
+
+```javascript
+// functions/src/utils/cleanGeminiOutput.js
+
+function cleanGeminiOutput(raw) {
+  if (typeof raw !== 'string') return raw
+
+  let text = raw.trim()
+
+  // Strip markdown code fences: ```json ... ``` or ``` ... ```
+  text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+
+  // Extract JSON substring — find first { and last }
+  const firstBrace = text.indexOf('{')
+  const lastBrace  = text.lastIndexOf('}')
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    text = text.slice(firstBrace, lastBrace + 1)
+  }
+
+  return text
+}
+
+module.exports = { cleanGeminiOutput }
+```
+
+---
+
+## Cloud Function Error Handling
+
+Wrap `JSON.parse()` in a try/catch, return a structured error response instead of letting the exception propagate:
+
+```javascript
+// functions/src/analyzeContent.js
+const { cleanGeminiOutput } = require('./utils/cleanGeminiOutput')
+
+async function callGemini(input) {
+  const model    = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+  const prompt   = buildPrompt(input)
+  const result   = await model.generateContent(prompt)
+  const rawText  = result.response.text()
+
+  // Clean before parsing
+  const cleanedText = cleanGeminiOutput(rawText)
+
+  let parsed
+  try {
+    parsed = JSON.parse(cleanedText)
+  } catch (err) {
+    console.error('Gemini JSON parse failure:', {
+      rawLength:     rawText.length,
+      rawPreview:    rawText.slice(0, 200),
+      cleanedPreview: cleanedText.slice(0, 200),
+      error:         err.message,
+    })
+    return { ok: false, parseError: true }
+  }
+
+  // Schema validation — check required fields exist
+  if (!parsed.verdict || typeof parsed.probability !== 'number') {
+    console.error('Gemini output missing required fields:', parsed)
+    return { ok: false, parseError: true }
+  }
+
+  return { ok: true, verdict: parsed }
+}
+```
+
+**Log the raw output on failure.** The `rawPreview` log is critical for diagnosing new output format variations after model updates.
+
+---
+
+## Client-Side Handling
+
+```javascript
+// React component
+const result = await analyzeContent({ input: userInput })
+
+if (result.data.parseError) {
+  setError('Could not parse analysis result. Please try again.')
+  setLoading(false)
+  return
+}
+
+if (result.data.rateLimited) {
+  setError('Rate limit reached — please wait a few seconds and try again.')
+  setLoading(false)
+  return
+}
+
+// Happy path
+setVerdict(result.data.verdict)
+setLoading(false)
+```
+
+**The `finally` block is mandatory:**
+
+```javascript
+try {
+  const result = await analyzeContent({ input: userInput })
+  // handle result
+} catch (err) {
+  setError('Analysis failed. Please try again.')
+} finally {
+  setLoading(false)  // CRITICAL — always clear the spinner
+}
+```
+
+Without the `finally` block, any unhandled error path leaves `loading: true` forever. The spinner becomes permanent.
+
+---
+
+## Prompt Constraints That Reduce Frequency
+
+The pre-parse cleaning handles failures after the fact. Reducing their frequency requires tighter prompt constraints:
+
+**Ineffective:**
+```
+Analyze this input and return a JSON response.
+```
+
+**Effective — embed exact schema in the prompt:**
+```
+You are a scam detection system. Analyze the following input and return ONLY a JSON object with no other text, no markdown formatting, no code fences, and no explanation.
+
+Required output format:
+{
+  "verdict": "LIKELY_SCAM" | "UNLIKELY_SCAM" | "UNCERTAIN",
+  "probability": <number between 0 and 1>,
+  "signals": [<array of signal strings>],
+  "explanation": "<plain language explanation>"
+}
+
+Return ONLY the JSON object. Do not wrap it in code fences. Do not add any text before or after the JSON.
+```
+
+The explicit instruction "Do not wrap it in code fences. Do not add any text before or after the JSON" measurably reduces the incidence of decorated output. It does not eliminate it — the pre-parse cleaning layer is still required.
+
+---
+
+## Why This Happens
+
+Gemini is a text generation model trained to produce helpful, well-formatted responses. In chat contexts, JSON wrapped in markdown code fences is correct behavior — it improves readability. The model has no inherent awareness that it is being called from a Cloud Function where markdown is fatal.
+
+The model's tendency toward decorated output increases when:
+- The input is ambiguous and the model is uncertain (longer reasoning → more explanation text appended)
+- The prompt is short and does not explicitly forbid decoration
+- The input itself contains code or structured data (model mirrors the format of the input)
+
+This is not a bug that will be fixed in a model update. It is a fundamental property of how text generation models work. The defensive handling must be in the calling code.
+
+---
+
+## Failure Frequency
+
+In production (ScamCheck, ScamCheck historical data):
+- Clean JSON output: ~94% of calls
+- Markdown code fence wrapping: ~4% of calls
+- Explanation prefix/suffix: ~2% of calls
+
+Before pre-parse cleaning was implemented, ~6% of all analysis requests resulted in a failed response. After cleaning, the parse success rate on real inputs reached 100% across the tested dataset.
+
+---
+
+## Prevention Checklist
+
+```
+☐ Embed exact JSON schema in the prompt (not just a description)
+☐ Explicitly instruct: "Return ONLY the JSON object — no code fences, no text before or after"
+☐ Pre-parse cleaning: strip markdown code fences before JSON.parse()
+☐ Pre-parse cleaning: extract first { to last } substring
+☐ JSON.parse() wrapped in try/catch — never let it throw uncaught
+☐ Return { parseError: true } as HTTP 200 structured response (not 500)
+☐ Client checks parseError flag and renders retry UI
+☐ finally { setLoading(false) } in all client paths — no permanent spinners
+☐ Log rawPreview on parse failure for diagnosing new failure patterns
+☐ Schema validation on parsed output (check required fields exist and have correct types)
+```
+
+---
+
+## Related
+
+- [Gemini 429 Rate Limit — Infinite Spinner](/failures/gemini-rate-limit-429-no-ux) — the other Cloud Function failure mode from the same ScamCheck integration
+- [Gemini Production Operations](/docs/gemini-production-operations) — complete Cloud Function defensive architecture
+- [AI Output Structure Validation](/docs/ai-output-structure-validation) — 4-layer defensive pattern
+- [ScamCheck: Building an AI Scam Detector](/case-studies/scamcheck-architecture-build)
+- [TrustSeal: Building an AI Website Trust Verifier](/case-studies/trustseal-architecture-build)

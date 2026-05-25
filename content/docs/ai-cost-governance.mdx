@@ -1,0 +1,338 @@
+---
+title: "AI Cost Governance and Resource Discipline — A Square Solutions"
+description: "Operational cost governance doctrine for TrustSeal and ScamCheck. Documents where costs originate, concrete free-tier economics, the 7 cost invariants that prevent runaway resource consumption, scaling thresholds with upgrade triggers, abuse containment strategy, and silent cost escalation vectors. All figures derived from real architecture — Gemini 1.5-flash free tier, Firebase Spark plan, Razorpay transaction fees."
+date: "2026-05-25"
+tags: ["gemini", "firebase", "firebase-functions", "firestore", "razorpay", "reliability", "production", "trustseal", "scamcheck", "rate-limiting"]
+status: published
+related_docs:
+  - operational-invariants
+  - firebase-firestore-quota-enforcement
+  - gemini-production-operations
+  - razorpay-subscription-integration
+related_failures:
+  - gemini-rate-limit-429-no-ux
+  - firebase-functions-node-version-stability
+  - firebase-deploy-sequence-auth-failure
+---
+
+The primary cost question for an AI-native product is not "how much does infrastructure cost?" — it is "what operational conditions create unexpected cost?" For TrustSeal and ScamCheck, most infrastructure costs are zero at current scale. The risk is not steady-state cost. The risk is a specific failure mode, abuse pattern, or scaling event that silently accelerates consumption beyond sustainable thresholds.
+
+This document formalizes the cost architecture, the operational invariants that govern resource consumption, the concrete scaling economics, and the abuse containment strategy derived from the real production architecture.
+
+---
+
+## Cost Architecture — Where Money Comes From
+
+Four cost sources exist across TrustSeal and ScamCheck. Only one matters significantly at current scale.
+
+### 1. Gemini API — Primary Cost Driver
+
+Every AI analysis call (trust verification on TrustSeal, scam detection on ScamCheck) consumes one Gemini 1.5-flash API call.
+
+**Free tier limits:**
+- 15 requests per minute (RPM)
+- 1,500 requests per day
+- ~1 million tokens per day
+
+**Paid tier pricing (if free tier is exceeded):**
+- Input: $0.075 per 1 million tokens
+- Output: $0.30 per 1 million tokens
+- Average per analysis: ~500 input tokens + ~200 output tokens = ~$0.0001 per call
+
+**Cost at scale:**
+| Daily analyses | Monthly Gemini cost |
+|---|---|
+| 1,500 (free tier max) | $0 |
+| 5,000 | ~$15/month |
+| 15,000 | ~$45/month |
+| 50,000 | ~$150/month |
+
+The free tier supports approximately 1,500 analyses per day across both products combined. This is the binding constraint — not Firebase infrastructure.
+
+### 2. Firebase Cloud Functions — Negligible Cost Driver
+
+**Free tier (Spark plan):**
+- 2,000,000 invocations per month
+- 400,000 GB-seconds per month
+
+**Per-analysis consumption:**
+- 1 invocation
+- ~3 seconds at 128MB = 0.384 GB-seconds
+
+**Free tier capacity:** 400,000 ÷ 0.384 ≈ **1,040,000 analyses per month** before GB-second limit. The invocation limit (2M/month) is not reached first.
+
+**Cost beyond free tier:** $0.40 per 1 million invocations + $0.0000025 per GB-second. At 5,000 analyses/day: ~$0.60/month total Functions cost.
+
+Firebase Functions cost is negligible compared to Gemini at every scale where both are on paid tiers.
+
+### 3. Firestore — Negligible Cost Driver
+
+**Free tier:**
+- 50,000 reads per day
+- 20,000 writes per day
+- 1 GB storage
+
+**Per-analysis consumption:**
+- ~2-3 reads (quota check, user doc, subscription status)
+- ~2 writes (quota increment, check history record)
+- IP rate limit documents (if unauthenticated access): 1 read + 1 write per request
+
+**Free tier capacity:** 20,000 writes ÷ 2 writes/analysis = **10,000 analyses per day** before Firestore costs begin. Paid: $0.18 per 100K writes — at 5,000 analyses/day, ~$0.05/month.
+
+Firestore costs are negligible at all scales where Gemini is the cost concern.
+
+### 4. Razorpay — Transaction Cost, Not Volume Cost
+
+- Transaction fees: approximately 2% per successful payment
+- No monthly fixed cost
+- No volume caps
+- Risk class: chargebacks and failed payment retries, not scaling costs
+
+---
+
+## Scaling Ceiling Analysis
+
+**Gemini exhausts free tier at 100× lower usage than Firebase resources.**
+
+| Resource | Free tier daily limit | Analyses/day at limit | Upgrade trigger |
+|---|---|---|---|
+| Gemini API | 1,500 requests/day | 1,500 | First |
+| Firestore writes | 20,000 writes/day | ~10,000 | Second |
+| Firebase Functions GB-seconds | ~33,700/day equivalent | ~33,700 | Third |
+| Firebase Functions invocations | ~66,600/day | ~66,600 | Never before others |
+
+**Operational implication:** All cost governance strategy should focus on Gemini quota. Firebase infrastructure is not a cost concern until Gemini is comfortably on a paid tier and producing sufficient revenue to cover infrastructure costs at 10× the Gemini upgrade threshold.
+
+---
+
+## Cost Invariants
+
+Seven operational invariants governing resource consumption. All are derived from real architectural decisions and production behavior — not theoretical risk.
+
+---
+
+### INV-COST-1 — Gemini quota is shared: every unprotected endpoint path exhausts it for all users
+
+**Statement:** No code path may reach a Gemini API call without having first passed quota enforcement. Gemini's free-tier daily limit is a global shared resource across all users of both products. One user making 1,500 rapid requests consumes the entire daily allocation.
+
+**Economics:** At 1,500 requests/day free tier: a single user making 100 rapid sequential requests consumes 6.7% of the daily global Gemini budget. A single session without quota enforcement can exhaust the resource in 10-15 minutes of rapid usage.
+
+**Safeguards in place:** Per-user monthly quota (TrustSeal: 10 free checks/month), authenticated-user-only access (ScamCheck), Cloud Function auth check (`request.auth?.uid`). Quota document read occurs before Gemini call in every code path.
+
+**Violation consequence:** Free tier daily quota exhausted. All analysis requests return rate limit errors until midnight UTC reset. Platform-wide service degradation from one user's uncontrolled usage.
+
+**Verification:** Confirm `quotaRef.get()` and quota comparison appear before `callGemini()` in every Cloud Function code path. Confirm unauthenticated requests are rejected before quota check.
+
+---
+
+### INV-COST-2 — Submit button must be disabled during in-flight Cloud Function call
+
+**Statement:** The analysis submit button (and any equivalent trigger) must be disabled immediately when a request is submitted and must remain disabled until the Cloud Function response is received. Concurrent duplicate submissions must be structurally impossible.
+
+**Economics:** One duplicate submission = one additional Gemini call = one additional invocation of the entire quota consumption chain. Without this protection, a user who clicks submit, sees no immediate response (during cold start), and clicks again creates 2× the Gemini cost for one analysis. Three impatient clicks = 3× cost, 3× quota consumption.
+
+**Observed behavior in archive:** ScamCheck explicitly implemented submit-button disabling during in-flight requests as a UX hardening measure after the 429 rate limit incident. The incident demonstrated that rapid successive submissions are a real user behavior pattern, not a theoretical concern.
+
+**Safeguards in place:** `setIsSubmitting(true)` on request start, button disabled while `isSubmitting === true`, cleared in `finally {}`. Verified in ScamCheck implementation.
+
+**Violation consequence:** Each cold start (2-4 seconds) is a window where impatient users click again. Under normal operation: 2-3× Gemini calls per user analysis attempt. Under frustration: 5-10× calls.
+
+---
+
+### INV-COST-3 — Parse errors and rate limit errors must not trigger automatic client retry
+
+**Statement:** When a Cloud Function returns `{ parseError: true }` or `{ rateLimited: true }`, the client must render an error state and require explicit user action to retry. Automatic retry without user intent must not occur.
+
+**Economics:** Each parse error is already one consumed Gemini call. An automatic retry on parse error doubles the cost: 2 Gemini calls for 0 successful analyses. If parse errors occur at 1% frequency (current production baseline) and each triggers one auto-retry: effective parse failure rate rises to 2% of Gemini budget consumed without value. Rate limit errors auto-retried immediately produce a second 429 and a second wasted Cloud Function invocation.
+
+**Safeguards in place:** Client code renders specific error messages on `parseError` and `rateLimited` flags, re-enables submit button for explicit user retry. No `setTimeout` auto-retry logic exists in current client code.
+
+**Violation consequence:** 2× Gemini consumption on every parse failure. On rate limit: auto-retry storm where each retry triggers another 429, each 429 triggers another retry — exponential until daily quota is exhausted or user closes the tab.
+
+---
+
+### INV-COST-4 — Firestore rate limit documents must have TTL configured
+
+**Statement:** All Firestore documents created for IP-based rate limiting (path: `rateLimits/{ipHash}/daily/{date}`) must have an `expiresAt` timestamp field, and the Firestore TTL policy must be configured on the `rateLimits` collection to auto-delete expired documents.
+
+**Economics:** Without TTL, rate limit documents accumulate indefinitely. At 1,000 unique IP requests per day: 365,000 documents per year → ~365K documents × ~1KB average = ~365 MB/year → costs begin when storage exceeds the 1 GB free tier. With TTL configured (24-hour expiry): storage stabilizes at ~1,000 active documents at any time — permanent zero cost.
+
+**Safeguards in place:** `expiresAt: new Date(Date.now() + 86400000)` field set on document creation (documented in quota enforcement reference). TTL policy on `rateLimits` collection must be configured in Firebase Console.
+
+**Verification:** Firebase Console → Firestore → TTL policies → confirm `rateLimits` collection has TTL policy targeting the `expiresAt` field.
+
+---
+
+### INV-COST-5 — Subscription creation must be guarded against rapid-click duplicates
+
+**Statement:** The "Upgrade to Premium" button must be disabled immediately on click and must not be re-enabled until the Razorpay checkout modal is open. Rapid-click duplicate subscription creation calls must be prevented at the UI layer.
+
+**Economics:** Each subscription creation call invokes `razorpay.subscriptions.create()` via the Cloud Function. Duplicate calls create multiple Razorpay subscription objects in the test/live environment. Orphaned subscriptions (created but never completed via checkout) accumulate in Razorpay Dashboard, creating confusion during reconciliation and potentially triggering unexpected billing events if a subscription enters an active state.
+
+**Safeguards in place:** `setUpgrading(true)` disables the Upgrade button on click. Button is re-enabled only in the modal `ondismiss` handler. Rapid-click creation of multiple subscription objects is prevented for typical interaction patterns.
+
+**Verification:** Confirm Upgrade button has a disabled state tied to `upgrading` state. Confirm button is not re-enabled between `createSubscription()` call and `rzp.open()` being called.
+
+---
+
+### INV-COST-6 — Webhook Cloud Function must acknowledge within 5 seconds to prevent Razorpay retry amplification
+
+**Statement:** The `razorpayWebhook` Cloud Function must return HTTP 200 within 5 seconds of receiving any webhook event. If heavy Firestore operations risk exceeding this window, they must be performed asynchronously after the 200 acknowledgement.
+
+**Economics:** Razorpay retries unacknowledged webhooks. Each retry = one additional Cloud Function invocation + one additional set of Firestore reads/writes. A 6-second cold start on the webhook function would cause Razorpay to retry every incoming webhook event, doubling the Firestore write cost for subscription lifecycle events. If Razorpay performs 5 retry attempts before marking the webhook as failed: 5× the write cost per event.
+
+**Observed risk:** Firebase Functions cold start is 2-4 seconds. The webhook handler adds ~1 second of Firestore write time. Total: 3-5 seconds — within the 5-second window when warm, marginally at risk on cold start.
+
+**Safeguards in place:** Webhook handler is lightweight (Firestore writes only, no Gemini calls). Executes well within 5 seconds when warm. Cold start risk remains the marginal case.
+
+**Verification:** Firebase Functions → Logs → filter for webhook invocations → confirm execution duration < 5 seconds. If cold start consistently approaches 4 seconds, move heavy writes to a background task triggered after the 200 response.
+
+---
+
+### INV-COST-7 — Gemini upgrade must be triggered at 80% quota utilization, not at service failure
+
+**Statement:** The decision to upgrade Gemini from free tier to Pay-As-You-Go must be triggered when daily usage consistently exceeds 1,200 requests/day (80% of 1,500 free tier limit) — not when the free tier is exhausted and users are experiencing service denial.
+
+**Economics:** Upgrading at 80% provides a 300-request/day buffer — approximately 20 minutes of peak capacity protection. Upgrading after exhaustion means users have already experienced at least one full service outage (all requests failing until midnight UTC reset). The cost of upgrading early: ~$3-5/month at 1,200-1,500 analyses/day. The cost of upgrading late: user trust damage from service outage.
+
+**Monitoring signal:** Firebase Functions logs filtered for `errorType: '429'` appearing more than 3 times in a single hour consistently indicates approaching daily quota pressure. Firestore quota documents showing `checksThisMonth` across the user base trending toward monthly limits also signals volume growth.
+
+---
+
+## Abuse Containment Strategy
+
+Abuse is the primary mechanism by which cost escalates faster than legitimate usage. Three abuse vectors are documented from the real architecture.
+
+### Vector 1: Rapid unauthenticated request abuse
+
+**Mechanism:** Any endpoint reachable without Firebase Auth can make unlimited Gemini calls. If a guest-access flow exists or if auth enforcement is bypassed, one script can exhaust the daily 1,500-call budget in under 2 minutes at 15 RPM.
+
+**Current containment:** Both TrustSeal and ScamCheck require Firebase Auth sign-in before reaching any analysis endpoint. Cloud Function auth check (`if (!uid) throw HttpsError('unauthenticated')`) is the first operation in every handler.
+
+**Residual risk:** Bot accounts — new Firebase Auth accounts created programmatically to bypass per-user quota. Each account gets 10 free TrustSeal checks. 150 new accounts/day = full daily Gemini budget. Mitigation requires email verification or CAPTCHA on account creation (not currently implemented).
+
+### Vector 2: Client retry storm on repeated errors
+
+**Mechanism:** A user experiencing consecutive errors (429, parse failure, cold start timeout) retries aggressively, amplifying Gemini calls. Without submit-button disabling: 10 frustrated clicks = 10 Gemini calls, possibly 10 rate limit responses.
+
+**Current containment:** Submit button disabled during in-flight requests (ScamCheck, verified). Error messages require explicit user retry. `finally {}` always re-enables button after response. No automatic retry logic.
+
+**Residual risk:** Cold starts. During the 2-4 second cold start window before the function begins executing, the user sees no visible response. If the button re-enables too early (e.g., on a UI timeout that fires before the Cloud Function responds), a retry is possible.
+
+### Vector 3: Webhook endpoint abuse
+
+**Mechanism:** The Razorpay webhook endpoint is a public URL that accepts POST requests. Without signature verification, any caller can invoke the Cloud Function and trigger Firestore writes for free. With signature verification, the endpoint correctly rejects unsigned requests — but each rejected request still counts as one Cloud Function invocation (minimal cost, but non-zero).
+
+**Current containment:** HMAC-SHA256 signature verification is the first operation in the webhook handler (INV-PAY-1). Unsigned requests return HTTP 400 within milliseconds.
+
+**Residual risk:** Sustained high-volume spoofed webhook requests would create a small Cloud Function invocation cost. At current scale this is not a concern. At scale, a WAF or Razorpay IP allowlist would be appropriate.
+
+---
+
+## Hidden Cost Implications of Historical Failures
+
+Mapping each historical incident to its cost amplification risk.
+
+| Failure | Direct cost implication | Amplification risk |
+|---|---|---|
+| [firebase-deploy-sequence-auth-failure](/failures/firebase-deploy-sequence-auth-failure) | 14 wasted Cloud Function invocations (quota consumed, no analysis delivered) | If users retried during the 12-minute window: potentially 14-42 wasted Gemini calls |
+| [gemini-rate-limit-429-no-ux](/failures/gemini-rate-limit-429-no-ux) | 0 Gemini calls (429 means quota was already at limit) | Retry storm risk: if spinner didn't clear, users would resubmit, adding Cloud Function invocations without Gemini calls |
+| [gemini-json-parse-failure](/failures/gemini-json-parse-failure) | 1 Gemini call consumed, 0 successful analyses | If auto-retry implemented: 2× Gemini calls per parse failure at ~6% frequency = 6% budget waste |
+| [firebase-functions-node-version-stability](/failures/firebase-functions-node-version-stability) | All Cloud Function invocations fail immediately | Wasted invocations, but fast fail = minimal GB-seconds consumed |
+| [firebase-auth-domain-not-authorized](/failures/firebase-auth-domain-not-authorized) | Auth token exchange fails silently | No direct cost; user cannot reach analysis endpoint if auth fails |
+| [razorpay-test-live-key-mismatch](/failures/razorpay-test-live-key-mismatch) | 0 webhook delivery → subscription creation costs without revenue | Users retrying payment after no access granted: multiple subscription objects created in Razorpay |
+| [environment-variable-missing-production](/failures/environment-variable-missing-production) | Feature absent, but failed Cloud Function returns immediately | Minimal cost; fast fail prevents quota consumption |
+
+**Pattern:** The highest cost amplification risk comes from failures that produce a visible spinner without clearing it — this is the state most likely to trigger user retry behavior. INV-COST-2 (submit button disabled) and INV-AI-4 (finally{} clears loading state) together address this.
+
+---
+
+## Scaling Upgrade Triggers
+
+Defined thresholds for each resource upgrade decision.
+
+### Trigger 1: Gemini Pay-As-You-Go upgrade
+
+**Trigger condition:** Daily Gemini calls consistently exceed 1,200/day (80% of 1,500 free tier limit) for 3 consecutive days.
+
+**Detection signal:** Firebase Functions logs filtered for `event: 'gemini_call'` count approaching 1,200 per calendar day. Alternatively: 429 errors appearing in Functions logs more than 3 times in any single hour.
+
+**Action:** Google Cloud Console → enable billing on the Firebase project → Gemini API quota increases automatically on Pay-As-You-Go.
+
+**Monthly cost at upgrade trigger:** ~$3.60/month (1,200 calls/day × 30 days × $0.0001/call).
+
+### Trigger 2: Firebase Blaze (pay-as-you-go) upgrade
+
+**Trigger condition:** Firestore writes approaching 15,000/day (75% of 20,000 free tier limit). This only occurs at ~7,500 analyses/day — well beyond the Gemini free tier.
+
+**Note:** Firebase Blaze upgrade is required when Cloud Functions are used with external APIs (Gemini) on a production Firebase project regardless of quota. TrustSeal and ScamCheck must be on Blaze to call external APIs from Cloud Functions. This is an architectural requirement, not a cost trigger.
+
+**Action:** Firebase Console → Spark plan → Upgrade to Blaze. Cost at trigger point: negligible (Gemini is already on paid tier at this scale).
+
+### Trigger 3: Razorpay volume pricing review
+
+**Trigger condition:** Monthly Razorpay transaction volume exceeds ₹5,00,000 (INR 500K). At this volume, negotiated lower rates may apply.
+
+**Not a scaling emergency — Razorpay scales without caps.**
+
+---
+
+## Lightweight Cost Observability
+
+Methods for monitoring cost behavior without enterprise tooling.
+
+### Gemini quota burn rate
+
+**Check:** Firebase Functions logs → filter by `event: 'gemini_call'` → count entries in the last 24 hours. Compare against 1,500/day limit.
+
+**Frequency:** Daily check during active usage periods. Weekly during low-traffic periods.
+
+**Warning threshold:** >1,200 calls in any 24-hour window.
+
+```bash
+# Approximate method — count Cloud Function invocations as proxy
+# Firebase Console → Functions → Dashboard → Invocation count (last 24h)
+# Each invocation ≈ one Gemini call for analysis endpoints
+```
+
+### Firestore write amplification check
+
+**Check:** Firebase Console → Firestore → Usage → Writes per day. Compare against 20,000/day free tier limit.
+
+**Warning threshold:** >15,000 writes/day. At current scale, this threshold is unreachable. Only relevant after Gemini scale exceeds 7,500+ analyses/day.
+
+### Razorpay subscription health
+
+**Check:** Razorpay Dashboard → Subscriptions → filter by status "active". Count should match expected paying user count in Firestore.
+
+**Warning signal:** Active subscription count in Razorpay differs from `tier: 'premium'` document count in Firestore by more than 2. Discrepancy indicates webhook delivery failures or orphaned subscriptions.
+
+**Frequency:** Monthly reconciliation.
+
+### Firebase Functions error rate as cost proxy
+
+**Check:** Firebase Console → Functions → Dashboard → Error rate. An elevated error rate means Cloud Function invocations are consuming quota without delivering analysis results.
+
+**Warning threshold:** Error rate >2% during normal operation. A 10% error rate means 10% of Gemini calls are consumed without producing value for users.
+
+---
+
+## Operational Sustainability Principles
+
+The cost architecture across TrustSeal and ScamCheck follows three sustainability principles derived from operational experience:
+
+**1. Gemini is the economic unit of production.** Every cost governance decision traces back to Gemini call count. Firestore writes, Cloud Function invocations, and Firebase Auth operations are near-zero cost at any scale where Gemini is the constraint. Design, optimize, and monitor around Gemini calls.
+
+**2. Abuse resistance is a prerequisite for scaling.** A product that can be abused at scale cannot be scaled. The current quota enforcement architecture (per-user monthly limits + auth requirement + submit-button disabling) makes uncontrolled Gemini consumption structurally difficult for authenticated users. Bot account farming is the remaining unmitigated risk.
+
+**3. Upgrade thresholds must be defined before they are needed.** The Gemini quota upgrade trigger (1,200/day sustained) must be known and acted on before the free tier exhausts. Acting at exhaustion means users have already experienced a failure. Acting at 80% means the transition happens invisibly to users.
+
+---
+
+## Related
+
+- [Firestore Quota Enforcement for AI Features](/docs/firebase-firestore-quota-enforcement) — Per-user quota data model and enforcement code (INV-COST-1 implementation)
+- [Gemini Production Operations](/docs/gemini-production-operations) — Structured logging implementation (INV-COST-3 and INV-DET-8)
+- [Razorpay Subscription Integration with Firebase](/docs/razorpay-subscription-integration) — Webhook handler and payment flow (INV-COST-5, INV-COST-6)
+- [Operational Invariants](/docs/operational-invariants) — INV-AI-1 (quota before AI call) is the reliability framing of INV-COST-1
+- [Production Observability Doctrine](/docs/production-observability-doctrine) — INV-DET-7 (quota threshold monitoring)

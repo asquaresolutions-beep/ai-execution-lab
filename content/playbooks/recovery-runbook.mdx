@@ -1,0 +1,505 @@
+---
+title: "Recovery Runbook — A Square Solutions"
+description: "Lightweight, system-specific recovery procedures for every documented failure class across the A Square Solutions ecosystem. For each failure: the minimum recovery action, the correct recovery sequence, how to confirm the system is restored, and what residual risk remains. Companion to the Incident Detection Playbook."
+date: "2026-05-25"
+tags: ["reliability", "firebase", "gemini", "razorpay", "deployment", "production", "trustseal", "scamcheck"]
+status: published
+related_docs:
+  - incident-response-doctrine
+  - incident-detection-playbook
+  - operational-invariants
+  - deployment-verification-checklist
+---
+
+This runbook assumes an incident has already been detected and classified. For detection procedures, see the [Incident Detection Playbook](/playbooks/incident-detection-playbook). For recovery doctrine and invariants, see the [Incident Response Doctrine](/docs/incident-response-doctrine).
+
+Each section: what you need to do, in what order, and what signal confirms the system is restored.
+
+---
+
+## How to Use This Runbook
+
+**Match the symptom** to the closest recovery procedure below.
+
+**Run only the affected platform's procedure.** Firebase recovery procedures are independent of Vercel; GitHub Pages recovery is independent of Firebase. Do not touch unaffected systems.
+
+**"Safe state"** in each section means: one real production request succeeded. Not "logs are clean." Not "build passed." A real request.
+
+---
+
+## Recovery 1: Firebase Functions returning 403 or 500
+
+**Blast radius:** AI analysis unavailable. Auth, static pages, and Firestore data unaffected.
+
+**Classify first:**
+```
+Firebase Console → Functions → Logs → filter last 30 minutes
+→ If "missing auth context" or 403: deploy sequence failure (go to step A)
+→ If "runtime error" or 500 with stack trace: code error (go to step B)
+→ If "module not found": Node runtime or dependency issue (go to step C)
+```
+
+**Step A — Deploy sequence recovery (403 / missing auth context):**
+```bash
+# DO NOT use: firebase deploy (this caused the incident)
+# DO NOT use: firebase deploy --only firestore:rules,functions
+
+# Step 1: Rules first
+firebase deploy --only firestore:rules
+
+# Step 2: Wait ~60 seconds for IAM propagation
+# Step 3: Functions second
+firebase deploy --only functions
+```
+
+**Step B — Code error recovery (500 with stack trace):**
+```
+1. Read the full stack trace in Firebase Console → Functions → Logs
+2. Identify the failing line in the Cloud Function source
+3. Fix the code error
+4. firebase deploy --only functions
+```
+
+**Step C — Runtime/dependency recovery:**
+```
+1. Confirm firebase.json contains "runtime": "nodejs22"
+2. If missing: add it
+3. firebase deploy --only functions
+```
+
+**Safe state confirmation:**
+```
+☐ Firebase Console → Functions → no new 403 or 500 in last 5 minutes
+☐ Submit one real TrustSeal analysis request → HTTP 200 returned
+☐ Submit one real ScamCheck analysis request → verdict returned
+```
+
+**Residual risk:** Requests that failed during the incident are lost. Users who received error responses must resubmit.
+
+---
+
+## Recovery 2: Firebase Auth — Session Lost on Page Reload
+
+**Blast radius:** Auth-gated features inaccessible after page reload. Sign-in appears to work initially. No error in Firebase Functions logs.
+
+**Recovery action (configuration-only — no redeploy):**
+```
+1. Firebase Console → Authentication → Settings → Authorized Domains
+2. Confirm the production custom domain is listed
+   (e.g., trustseal.asquaresolution.com, scamcheck.asquaresolution.com)
+3. Confirm the GitHub Pages staging domain is listed
+   (e.g., [username].github.io)
+4. If either is missing: click Add domain → enter domain → save
+5. No redeploy required — change takes effect immediately
+```
+
+**Safe state confirmation (behavioral test required — logs will not show this):**
+```
+1. Open a fresh browser window (not a tab)
+2. Navigate to the production domain
+3. Sign in with any account
+4. Perform a hard reload (Ctrl+Shift+R)
+5. ☐ User is still signed in after hard reload
+6. Navigate to an auth-gated feature
+7. ☐ Auth-gated content is accessible
+```
+
+**Residual risk:** None. Auth domain fix takes effect immediately. No data loss.
+
+---
+
+## Recovery 3: Gemini Quota Exhausted
+
+**Blast radius:** AI analysis unavailable. All other product functions (auth, history, payments, static pages) unaffected.
+
+**Classify first:**
+```
+Firebase Console → Functions → Logs → filter "429" or "rateLimited"
+→ 3+ entries in last hour: approaching per-minute rate limit
+→ Every call fails with 429: daily free tier quota likely exhausted
+→ No 429 but analysis hangs: different failure — check loading state (INV-AI-4)
+```
+
+**Per-minute rate limit (quota not exhausted, just rate-limited):**
+```
+Correct action: wait 60 seconds
+Recovery: none needed — limit resets per minute
+Do NOT: retry aggressively, disable rate limiting, change any configuration
+Verification: submit one analysis 60+ seconds after last failure → succeeds
+```
+
+**Daily free tier quota exhausted:**
+```
+Correct action: wait for midnight UTC reset
+Do NOT: auto-retry (wastes quota on failure), disable quota enforcement, 
+         change Gemini plan mid-incident without testing
+Degraded mode: analysis returns { quotaExceeded: true } → UI displays 
+               "Analysis limit reached. Service available tomorrow."
+Verification: submit one analysis after midnight UTC → succeeds
+```
+
+**If upgrading to paid Gemini tier during incident:**
+```
+1. Update GEMINI_API_KEY in Firebase Functions environment with paid-tier key
+2. firebase deploy --only functions
+3. Verify one analysis request returns HTTP 200 (not 429)
+4. Monitor Firebase Console → Functions for cost signals
+```
+
+**Safe state confirmation:**
+```
+☐ One analysis request returns HTTP 200 with structured verdict
+☐ No 429 entries in Firebase Functions logs in last 5 minutes
+```
+
+---
+
+## Recovery 4: Razorpay Payment Completed — No Access Granted
+
+**Blast radius:** Premium upgrade flow broken. Existing premium users unaffected. All AI analysis for current quota unaffected.
+
+**Classify first:**
+```
+Razorpay Dashboard → Webhooks → select endpoint → Delivery attempts
+→ No entry for the payment timestamp: key mode mismatch or wrong webhook URL
+→ Entry present with non-200 response: webhook handler error
+→ Entry present with 200 but Firestore not updated: uid extraction failure
+```
+
+**Case A — No webhook delivery entry (key mode mismatch):**
+```
+Update ALL FOUR credentials simultaneously:
+  Firebase Functions env: RAZORPAY_KEY_ID → rzp_live_...
+  Firebase Functions env: RAZORPAY_KEY_SECRET → live secret
+  Firebase Functions env: RAZORPAY_PLAN_ID → live plan ID
+  Client env: REACT_APP_RAZORPAY_KEY_ID → rzp_live_...
+  Razorpay Dashboard → Webhooks: confirm webhook URL is registered in LIVE mode
+
+firebase deploy --only functions
+
+Verification: place one test transaction → confirm webhook fires
+```
+
+**Case B — Webhook delivery failing (non-200 response):**
+```
+1. Firebase Console → Functions → Logs → filter razorpayWebhook
+2. Read the error in the webhook handler logs
+3. Fix the handler error
+4. firebase deploy --only functions
+5. Razorpay Dashboard → Delivery attempts → Retry failed webhooks
+   (Razorpay retries automatically, but manual retry accelerates recovery)
+6. Confirm retry delivers with 200 response
+```
+
+**Case C — Webhook fires 200 but Firestore not updated:**
+```
+1. Firebase Console → Functions → Logs → find the webhook invocation log
+2. Check: was subscription.notes.uid present and correctly extracted?
+3. Check: Firestore → users/{uid}/quota/current → tier field
+4. If uid extraction failed: fix handler → redeploy
+5. Affected users: manually verify Firestore state for their UID
+   Firestore → users/{uid}/quota/current → set tier: 'premium' if warranted
+```
+
+**Safe state confirmation:**
+```
+☐ Razorpay Dashboard → Webhooks → Delivery attempts shows 200 for recent events
+☐ Firestore → users/{affected_uid}/quota/current → tier: 'premium'
+☐ Affected user's UI shows premium features (via onSnapshot — no reload needed)
+```
+
+**Residual risk:** Users who attempted payment during the incident and received no upgrade need to be identified (via Razorpay Dashboard → Payments) and their Firestore quota state verified manually.
+
+---
+
+## Recovery 5: GitHub Pages — Non-Root Routes Return 404
+
+**Blast radius:** SPA routing broken on direct navigation and hard refresh. Root route (`/`) still works. Firebase and Razorpay unaffected.
+
+**Classify first:**
+```
+Navigate directly to [domain]/history or [domain]/dashboard
+→ GitHub "404 - File not found" page: missing 404.html (go to Step A)
+→ Custom domain reverted to github.io URL: missing CNAME (go to Step B)
+→ Firebase "project not found" page: wrong vite base config (go to Step C)
+```
+
+**Step A — 404.html missing:**
+```bash
+# Verify:
+# Does public/404.html exist in the project root?
+# If not, create it with the SPA redirect script
+
+# Then redeploy:
+npm run build
+cd dist
+git add -A
+git commit -m "restore 404.html"
+git push origin gh-pages
+cd ..
+```
+
+**Step B — CNAME missing (custom domain reverted):**
+```bash
+# Verify:
+# Does public/CNAME exist with correct domain (no https://, just domain)?
+# If not: echo "trustseal.asquaresolution.com" > public/CNAME
+
+# Then redeploy:
+npm run build
+cd dist
+git add -A
+git commit -m "restore CNAME"
+git push origin gh-pages
+cd ..
+
+# Also: GitHub Pages Settings → Custom domain → re-enter domain if cleared
+```
+
+**Step C — Wrong base config:**
+```
+Check vite.config.ts: base should be '/' for custom domain deployment
+If base is '/repo-name/': change to '/' and redeploy
+```
+
+**Safe state confirmation:**
+```
+☐ Navigate directly to [domain]/history → React app loads (not GitHub 404)
+☐ Hard refresh on [domain]/history → app reloads correctly
+☐ Firebase Auth: sign in → navigate → session persists
+☐ One AI analysis request succeeds
+```
+
+**Residual risk:** None. Routing regression does not affect Firebase data or user state.
+
+---
+
+## Recovery 6: WordPress Cache Serving Stale Content
+
+**Blast radius:** PHP filter or WPCode change appears to have no effect. WordPress admin fully functional. All products unaffected.
+
+**Recovery action (this is often the verification procedure being wrong, not the change itself):**
+```
+1. Confirm the WPCode snippet is Active (not Inactive or broken)
+2. LiteSpeed Cache → Purge All   ← MUST happen before any verification
+3. Wait 5 seconds
+4. Open a fresh private browser window (File → New Private Window)
+5. Navigate to the affected page
+```
+
+**If change now visible:** The original change was correct. The "failure" was the verification methodology — testing before cache purge. Recovery is complete.
+
+**If still not visible after purge:**
+```
+1. Check WPCode snippet for PHP syntax errors
+   (WPCode automatically deactivates snippets with syntax errors)
+2. If deactivated with error: fix the syntax error, save, re-activate
+3. LiteSpeed → Purge All again
+4. Verify in private window
+```
+
+**Safe state confirmation:**
+```
+☐ Change visible in fresh private browser window (not a cached browser)
+☐ WPCode snippet shows Active status
+☐ LiteSpeed → Purge All confirmed after most recent change
+```
+
+---
+
+## Recovery 7: WordPress REST API Returning 401
+
+**Blast radius:** Content automation pipeline fails. WordPress admin, front-end, and all three apps unaffected.
+
+**Classify first:**
+```bash
+# Test raw auth before any code changes:
+curl -s -o /dev/null -w "%{http_code}" \
+  -u "username:raw password with spaces no url encoding" \
+  https://asquaresolution.com/wp-json/wp/v2/posts?per_page=1
+→ 200: auth works; problem is in application code encoding pipeline
+→ 401: auth itself is wrong — check encoding or credentials
+```
+
+**If curl returns 401:**
+```
+1. Confirm no URL-encoding of spaces before Base64
+   → Password must contain literal spaces, not %20
+   → Correct: "AbcD EfgH IjkL" → Base64 encode → correct hash
+   → Wrong: "AbcD%20EfgH%20IjkL" → Base64 encode → WordPress rejects
+2. If encoding is correct but still 401:
+   → Application Password may be revoked
+   → WordPress Admin → Users → Profile → Application Passwords → generate new one
+   → Update credential in automation code
+3. Re-run curl test with updated credential
+```
+
+**If curl returns 200 but application code returns 401:**
+```
+1. Problem is in the application's encoding pipeline
+2. Trace where the password is transformed before Base64:
+   → Print the raw password string before encoding
+   → Confirm spaces are present, not %20
+3. Fix encoding in application code
+```
+
+**Safe state confirmation:**
+```
+☐ curl test returns 200 with correct credentials
+☐ Application-level API call returns 200
+☐ Automation pipeline produces expected output
+```
+
+---
+
+## Recovery 8: GA4 Analytics Contamination
+
+**Blast radius:** Analytics data quality degraded. All product functionality fully operational. Not an urgent recovery.
+
+**Note:** GA4 contamination recovery addresses only future data — historical data from the contamination period cannot be retroactively corrected.
+
+**If Vercel preview deployments contaminating production GA4:**
+```
+1. Vercel Dashboard → Project → Settings → Environment Variables
+2. Find NEXT_PUBLIC_GA_MEASUREMENT_ID
+3. Uncheck: Preview and Development environment checkboxes
+4. Confirm: only Production checkbox is checked
+5. Trigger a new Vercel deployment (env var change requires redeploy)
+6. Wait for new deployment to go live
+7. Create annotation in GA4 noting contamination dates and resolution
+```
+
+**If cross-subdomain sessions fragmented:**
+```
+1. GA4 → Admin → Data Streams → select the stream
+2. More tagging settings → confirm cookie_domain is set to asquaresolution.com
+3. If wrong: update to asquaresolution.com
+4. Update gtag config in all affected properties with cookie_domain parameter
+5. Redeploy affected properties
+```
+
+**Safe state confirmation:**
+```
+☐ GA4 Realtime → Active users on site: no traffic from vercel.app domains
+☐ Submit one analysis on lab.asquaresolution.com → event fires from correct domain
+☐ Navigate between subdomains → GA4 Realtime shows continuous session (not new session per subdomain)
+```
+
+---
+
+## Recovery 9: Vercel Deployment Error
+
+**Blast radius:** AI Execution Lab inaccessible. TrustSeal, ScamCheck, WordPress fully operational.
+
+**Classify first:**
+```
+Vercel Dashboard → Deployments → latest deploy → Build logs
+→ "Module not found": server module pulled into client bundle
+→ Edge runtime error: incompatible module used in edge context
+→ TypeScript error: type error not caught before push
+→ MDX rendering error: MDX configuration or content issue
+```
+
+**Server module in client bundle:**
+```
+1. Find the component that imports a Node.js module (fs, path, crypto, etc.)
+2. Check: does the component have 'use client' directive?
+   → If yes + Node.js import: remove 'use client' OR remove Node import from client
+3. Fix the module boundary
+4. Run: node ./node_modules/typescript/bin/tsc --noEmit
+5. git push origin main
+6. Wait for Vercel "Ready" status
+```
+
+**TypeScript build error:**
+```
+1. Run locally: node ./node_modules/typescript/bin/tsc --noEmit
+2. Fix all reported type errors
+3. git push origin main
+```
+
+**MDX rendering error:**
+```
+1. Check recently added .mdx files for syntax errors
+2. Check: is blockJS: false set in MDX configuration?
+3. Fix the MDX content or configuration
+4. git push origin main
+```
+
+**Safe state confirmation:**
+```
+☐ Vercel Dashboard shows "Ready" status for the deploy
+☐ Navigate to lab.asquaresolution.com → homepage loads
+☐ Navigate to one failure page → content renders
+☐ Navigate to one tag page → entity description visible
+☐ Browser console: no errors
+```
+
+---
+
+## Recovery 10: DNS / Custom Domain Not Resolving
+
+**Blast radius:** Custom domain inaccessible globally or partially. GitHub Pages fallback URL (`[username].github.io/[repo]`) still works. Firebase, Razorpay, and all backend functions unaffected.
+
+**Classify first:**
+```
+Navigate to [username].github.io/[repo] URL (not custom domain)
+→ Site loads: deployment is correct; issue is DNS propagation or domain config
+→ Site does not load: deployment issue, not DNS issue
+```
+
+**If deployment is correct and DNS is the issue:**
+```
+1. dnschecker.org → enter the subdomain
+2. If <90% resolving: propagation in progress — wait for TTL (up to 1 hour for TTL 3600)
+   → Do NOT make additional DNS changes during propagation
+   → Do NOT announce as live until 90%+ resolving
+3. If 0% resolving: DNS record may be missing or wrong
+   → DNS registrar → check CNAME record for the subdomain
+   → Value should be: [username].github.io (no trailing slash)
+   → If missing: add it; wait for propagation
+4. If all resolving but HTTPS not working:
+   → GitHub Pages Settings → Custom domain → check for "DNS check failed" warning
+   → GitHub Pages Settings → "Enforce HTTPS" checkbox: if greyed out, wait for cert provisioning
+```
+
+**Safe state confirmation:**
+```
+☐ dnschecker.org shows 90%+ locations resolving
+☐ Navigate to custom domain → site loads over HTTPS
+☐ No browser certificate warning
+☐ "Enforce HTTPS" checkbox is checked and uncheckable (not greyed out)
+```
+
+**Residual risk:** Users who tried the custom domain during propagation were unreachable. No data loss.
+
+---
+
+## Recovery Completion Checklist
+
+For any recovery, confirm all three conditions before declaring the incident resolved:
+
+```
+☐ 1. One real production request through the full affected stack returned a successful response
+      (not emulator, not localhost, not build success — a live request on the production domain)
+
+☐ 2. The full post-deploy verification checklist for the affected platform was run
+      (see: Deployment Verification Checklist)
+
+☐ 3. No new errors appeared in the relevant console for 5 minutes after recovery action
+      Firebase: Functions logs clean
+      Vercel: Function logs and build logs clean  
+      WordPress: no new 4xx in REST API test
+      Razorpay: webhook delivery log shows 200 for subsequent events
+```
+
+If any of the three items above is not confirmed, the incident is not resolved — it is in a partially recovered state that should be treated as still active.
+
+---
+
+## Related
+
+- [Incident Response Doctrine](/docs/incident-response-doctrine) — recovery invariants, incident classification, blast radius model, recovery posture
+- [Incident Detection Playbook](/playbooks/incident-detection-playbook) — system-by-system detection procedures
+- [Deployment Verification Checklist](/docs/deployment-verification-checklist) — the verification checklist run after recovery
+- [Operational Invariants](/docs/operational-invariants) — the reliability contracts recovery procedures enforce

@@ -1,0 +1,395 @@
+---
+title: "Production Observability Doctrine — A Square Solutions"
+description: "Detection invariants, signal taxonomy, and monitoring doctrine for the A Square Solutions ecosystem. Extracted from real production failure history across TrustSeal, ScamCheck, AI Execution Lab, and WordPress. Documents how 15 historical failures were detected, what signals were missing, and what detection rules prevent the same classes from being discovered by user reports instead of operators."
+date: "2026-05-25"
+tags: ["reliability", "deployment", "firebase", "gemini", "observability", "production", "monitoring", "trustseal", "scamcheck"]
+status: published
+related_docs:
+  - operational-invariants
+  - deployment-verification-checklist
+  - failure-pattern-library
+related_failures:
+  - firebase-deploy-sequence-auth-failure
+  - firebase-auth-domain-not-authorized
+  - razorpay-test-live-key-mismatch
+  - gemini-rate-limit-429-no-ux
+  - ga4-preview-environment-contamination
+  - ga4-cross-domain-tracking-gap
+---
+
+Observability is the property of a system that allows its internal state to be inferred from its outputs. In operational terms: **can we know the system is broken before a user tells us?**
+
+For the A Square Solutions ecosystem, the answer has historically been: sometimes. This document formalizes what detection capability exists, what is currently a blind spot, and what detection rules convert blind spots into observable signals. All detection invariants are extracted from the real failure archive — none are theoretical.
+
+---
+
+## Signal Taxonomy
+
+Three signal classes exist across the ecosystem:
+
+**Hard signals** — Immediate, unambiguous, impossible to miss. Require no active monitoring.
+- HTTP 500/403/401 error codes
+- Build pipeline failures
+- Uncaught exceptions in Firebase Functions logs
+- Vercel deployment error state
+
+**Soft signals** — Present in a specific console or log, but require active observation. Will be missed without a deliberate check within a defined time window after deploy.
+- Firebase Functions error count in Cloud Console
+- Firebase Functions log entries (429, SyntaxError, missing auth context)
+- Razorpay Dashboard webhook delivery log
+- GA4 Realtime view showing unexpected traffic sources
+- Vercel environment variable scope configuration
+
+**Absent signals** — The failure produces no signal at all. The system appears to function but key behavior is silently broken. Detection requires behavioral testing, not log reading.
+- Firebase Auth session loss on page refresh (no log entry — auth appears to succeed)
+- Razorpay key mode mismatch (checkout completes, no webhook fires, no error logged)
+- DNS propagation incompleteness (developer browser sees success, global resolvers see NXDOMAIN)
+- GA4 cookie_domain misconfiguration (events fire correctly, session attribution is silently wrong)
+- CNAME/404.html deleted by Vite build (deploy succeeds, routing breaks on next request)
+
+The absent signal class is the highest operational risk. Every failure in this class was discovered by a user before the operator.
+
+---
+
+## Detection Invariants
+
+Eight detection invariants extracted from the production failure archive. Each defines a minimum detection capability — a check that, if run, would have surfaced a historical failure before a user report.
+
+---
+
+### INV-DET-1 — Firebase Function errors must be checked in logs within 5 minutes of deploy
+
+**Statement:** After every Firebase Functions deployment, Firebase Console → Functions → Logs must be checked for error entries within 5 minutes. Any 403, 500, or SyntaxError is a critical signal.
+
+**Why it exists:** Three production failures (deploy sequence auth gap, Node runtime crash, Gemini parse failure) are visible as log errors within seconds of first invocation. All three passed pre-deploy checks. The log is the first and fastest available signal — but only if it is read.
+
+**Missing signal in archive:** [firebase-deploy-sequence-auth-failure](/failures/firebase-deploy-sequence-auth-failure) produced 403 errors in logs. The errors were visible. They were not proactively read during the 12-minute window.
+
+**Detection rule:** Within 5 minutes of functions deploy completion → open Firebase Console → Functions → Logs → filter "All time: last 5 minutes" → confirm no 403, 500, or SyntaxError entries.
+
+**Warning state:** Any error entry in Functions logs within 5 minutes of deploy.
+**Critical state:** 403 or auth context error — indicates INV-FB-1 violation in progress.
+
+---
+
+### INV-DET-2 — Auth session persistence must be manually verified after any Firebase Auth config change
+
+**Statement:** After any change to Firebase Auth configuration (adding/removing authorized domains, changing auth providers, updating security rules), the full auth flow must be manually tested: sign in → hard reload the page → confirm session persists.
+
+**Why it exists:** Firebase Auth domain authorization failures produce **no log entry**. Sign-in appears to succeed. The session token is issued. It is only lost on page reload because the token cannot be validated against a domain that isn't in the Authorized Domains list. No automated system catches this.
+
+**Missing signal in archive:** [firebase-auth-domain-not-authorized](/failures/firebase-auth-domain-not-authorized) — failure was silent in all logs. Detection required a human noticing that refreshing the page returned them to the login screen.
+
+**Detection rule:** After any Firebase Auth config change → sign in on the affected domain → hard reload (Ctrl+Shift+R) → confirm the authenticated state is preserved.
+
+**Warning state:** Authenticated user is returned to login screen after hard reload.
+**Critical state:** Any TrustSeal or ScamCheck user is logged out on every page navigation.
+
+---
+
+### INV-DET-3 — Webhook delivery must be confirmed in Razorpay Dashboard after first live payment
+
+**Statement:** After any Razorpay payment mode switch or webhook configuration change, the first live payment must be followed immediately by a check in Razorpay Dashboard → Webhooks → Delivery logs to confirm the event was delivered and received a 200 response.
+
+**Why it exists:** Razorpay test/live key mode mismatch produces **no error output**. The checkout modal opens and completes normally. No webhook fires. No access is granted. No log entry is generated. The only available signal is the absence of a delivery log entry in the Razorpay Dashboard.
+
+**Missing signal in archive:** [razorpay-test-live-key-mismatch](/failures/razorpay-test-live-key-mismatch) — failure was completely silent on both client and server. No indication anywhere that the payment flow was broken.
+
+**Detection rule:** After first live payment → Razorpay Dashboard → Webhooks → select webhook → Delivery attempts → confirm entry with timestamp matching the payment, response code 200.
+
+**Warning state:** No delivery log entry appears within 60 seconds of payment completion.
+**Critical state:** Delivery log shows failed delivery (non-200 response).
+
+---
+
+### INV-DET-4 — GA4 session baseline must be documented before any analytics configuration change
+
+**Statement:** Before making any change to GA4 configuration (cookie_domain, cross-domain measurement, measurement ID scope, event parameters), the current 7-day session count and top acquisition channels must be documented as a baseline.
+
+**Why it exists:** Analytics contamination and session attribution errors are only detectable as anomalies against a known baseline. Without a baseline, inflated session counts and wrong attribution are indistinguishable from legitimate traffic changes. GA4 preview contamination persisted for approximately 6 weeks before the anomaly was recognized.
+
+**Missing signal in archive:** [ga4-preview-environment-contamination](/failures/ga4-preview-environment-contamination) and [ga4-cross-domain-tracking-gap](/failures/ga4-cross-domain-tracking-gap) both produced silent data corruption. Detection required retrospective analysis of metric anomalies, not a real-time signal.
+
+**Detection rule:** Before any GA4 config change → document in ops log: (1) 7-day session count, (2) top 3 acquisition channels and their percentages, (3) direct traffic percentage. After change → compare same metrics 48 hours later.
+
+**Warning state:** Session count increases >20% with no corresponding traffic event; direct traffic percentage increases >5 points.
+**Critical state:** Traffic from vercel.app or internal IP ranges appears in GA4 Realtime.
+
+---
+
+### INV-DET-5 — Non-root SPA route must be directly navigated to after every GitHub Pages deploy
+
+**Statement:** After every GitHub Pages deployment, at least one non-root React Router route (e.g., `/history`, `/settings`, `/dashboard`) must be navigated to directly via the browser address bar AND tested with a hard refresh.
+
+**Why it exists:** CNAME and 404.html deletion are silent deployment failures. The deploy succeeds, the commit pushes, the homepage loads. But every non-root route returns GitHub's 404 page because the SPA redirect mechanism no longer exists. This failure is invisible from the homepage.
+
+**Missing signal in archive:** [vite-github-pages-spa-routing](/failures/vite-github-pages-spa-routing) — homepage success was a false positive. The SPA routing failure was only discovered by navigating to a non-root route.
+
+**Detection rule:** After GitHub Pages deploy → navigate directly to a non-root route on the custom domain → confirm React app loads (not GitHub's "404 - File not found" page) → perform hard refresh → confirm app reloads correctly.
+
+**Warning state:** GitHub 404 page appears on non-root route navigation.
+**Critical state:** All non-root routes inaccessible — full SPA routing broken.
+
+---
+
+### INV-DET-6 — DNS propagation must be externally verified before go-live announcement
+
+**Statement:** Before announcing any custom domain as live to users, propagation must be verified from multiple geographic locations using an external DNS propagation checker. Local browser success is an invalid propagation signal.
+
+**Why it exists:** The developer's DNS resolver is typically among the fastest to propagate new records. Browser success after 20 minutes is accurate for the developer's resolver and misleading for global state. DNS propagation failures surface as user reports of "site not found" — the worst possible detection signal.
+
+**Missing signal in archive:** [dns-subdomain-propagation-delay](/failures/dns-subdomain-propagation-delay) — site was announced as live based on local browser success. First detection signal was user reports of inaccessibility. No internal signal existed.
+
+**Detection rule:** Before go-live announcement → [dnschecker.org](https://dnschecker.org) → enter subdomain → confirm 90%+ of listed global locations show correct CNAME target. GitHub Pages: confirm "Enforce HTTPS" checkbox is available (not greyed out) — this is the terminal readiness signal.
+
+**Warning state:** Under 90% global propagation shown on dnschecker.org.
+**Critical state:** DNS not resolving for majority of geographic locations.
+
+---
+
+### INV-DET-7 — Quota state must be readable and thresholded before hard limit
+
+**Statement:** For every AI product with a per-user quota, the quota state must be readable in Firestore and a warning threshold must be defined below the hard limit. Quota exhaustion must produce a warning state before producing a service denial.
+
+**Why it exists:** Hard quota limits produce an abrupt, user-visible denial of service with no warning. A warning threshold at 80% of capacity (e.g., 8/10 checks used for TrustSeal free tier) allows an operator to observe approaching exhaustion before users are blocked.
+
+**Establishing evidence:** [Firestore Quota Enforcement for AI Features](/docs/firebase-firestore-quota-enforcement) — quota document is readable; [Gemini 429 Rate Limit](/failures/gemini-rate-limit-429-no-ux) — rate limit exhaustion as the analogous per-minute signal.
+
+**Detection rule:** TrustSeal free tier: if `checksThisMonth >= 8`, quota is in warning state. Daily Gemini free tier: check Firebase Functions log for 429 rate within the past hour — increasing frequency signals approaching daily limit.
+
+**Warning state:** TrustSeal user at ≥8/10 checks this month. Gemini 429 rate >2 per hour.
+**Critical state:** TrustSeal user at 10/10. Gemini returning 429 on majority of calls (daily quota exhaustion).
+
+---
+
+### INV-DET-8 — Gemini API call outcomes must be logged with structured error type
+
+**Statement:** Every Gemini API call in a Cloud Function must log its outcome with a structured error type field: `{ success: boolean, errorType: '429' | 'parse' | 'schema' | 'timeout' | null }`. This enables failure trend detection without requiring active monitoring.
+
+**Why it exists:** Intermittent parse failures and rate limit events are invisible without structured logging. A spike in parse failures after a Gemini model update, or increasing 429 frequency approaching a daily limit, cannot be trended without per-call outcome data. The log is the only signal source available at the current scale.
+
+**Establishing evidence:** [Gemini API Returns Malformed JSON](/failures/gemini-json-parse-failure) — parse failures logged inconsistently; [Gemini 429 Rate Limit](/failures/gemini-rate-limit-429-no-ux) — 429 events were visible in logs but not counted or trended.
+
+**Detection rule:** Firebase Functions logs must contain a structured outcome entry for every Gemini call. Periodically filter logs by `errorType: 'parse'` to detect frequency changes. Filter by `errorType: '429'` to detect rate limit trends.
+
+**Warning state:** Parse error rate >1% of calls in past 24 hours. More than 3 rate limit (429) events in past hour.
+**Critical state:** Parse error rate >5%. Rate limit events on majority of calls (daily quota).
+
+---
+
+## Historical Failure Detection Audit
+
+How each documented production failure was first detected and what earlier detection was possible.
+
+| Failure | First detection | Detection latency | Was earlier detection possible? | Detection gap |
+|---|---|---|---|---|
+| [firebase-deploy-sequence-auth-failure](/failures/firebase-deploy-sequence-auth-failure) | Firebase logs (403s) | ~2 minutes | Yes — INV-DET-1 would catch it immediately | Logs existed but weren't read |
+| [firebase-functions-node-version-stability](/failures/firebase-functions-node-version-stability) | Function invocation failure | First invocation | Yes — post-deploy invocation test (INV-DEP-5) | No post-deploy test run |
+| [firebase-auth-domain-not-authorized](/failures/firebase-auth-domain-not-authorized) | Session lost on reload | Unknown (testing) | Yes — INV-DET-2: sign in + reload test | Auth flow not tested after config change |
+| [razorpay-test-live-key-mismatch](/failures/razorpay-test-live-key-mismatch) | No access after payment | First payment | Yes — INV-DET-3: Razorpay Dashboard delivery log | Webhook log not checked after payment |
+| [gemini-rate-limit-429-no-ux](/failures/gemini-rate-limit-429-no-ux) | Hanging spinner (testing) | During testing | Yes — INV-DET-8: structured error logging | No structured outcome logging |
+| [gemini-json-parse-failure](/failures/gemini-json-parse-failure) | SyntaxError in logs | During testing | Yes — INV-DET-8 + pre-parse cleaning | No raw output logging on failure |
+| [ga4-preview-environment-contamination](/failures/ga4-preview-environment-contamination) | Anomalous metrics (weeks) | ~6 weeks | Yes — INV-DET-4: baseline before change | No baseline documented before deployment |
+| [ga4-cross-domain-tracking-gap](/failures/ga4-cross-domain-tracking-gap) | Anomalous metrics (weeks) | ~weeks | Yes — INV-DET-4: Realtime session test | Session stitching not verified at launch |
+| [dns-subdomain-propagation-delay](/failures/dns-subdomain-propagation-delay) | User reports | After go-live announcement | Yes — INV-DET-6: dnschecker.org | Relied on local browser as propagation signal |
+| [vite-github-pages-spa-routing](/failures/vite-github-pages-spa-routing) | GitHub 404 on navigation | First non-root visit | Yes — INV-DET-5: navigate to non-root route | Verification stopped at homepage load |
+| [litespeed-client-cache-bypass-ignored](/failures/litespeed-client-cache-bypass-ignored) | Change appeared ineffective | Immediately | Partially — required knowing to purge first | Cache invalidation not in verification sequence |
+| [wordpress-rest-api-auth-failure](/failures/wordpress-rest-api-auth-failure) | 401 on API call | First API call | N/A — 401 is a hard signal | None needed; hard signal was immediate |
+| [environment-variable-missing-production](/failures/environment-variable-missing-production) | Feature absent in production | First production use | Yes — env var audit before deploy | No pre-deploy env var scope check |
+
+**Pattern from the audit:** 10 of 13 failures with non-trivial detection latency had a signal that existed but was not being read. Only 3 failures produced no signal (absent signal class). The primary observability gap is not signal absence — it is the absence of a protocol that mandates reading available signals.
+
+---
+
+## Lightweight Monitoring Strategy
+
+Operationally sustainable monitoring for a solo developer operation. No enterprise tooling required. Each recommendation uses native tooling that already exists in the ecosystem.
+
+### Firebase Functions — Native Console Monitoring
+
+**What to check:** Firebase Console → Functions → Dashboard shows invocation count, error count, and median latency. The error percentage is the primary health signal.
+
+**Normal state:** Error percentage under 1%. Latency under 5 seconds median.
+**Warning state:** Error percentage >1%. Latency >8 seconds median.
+**Critical state:** Error percentage >5%. Any sustained 403 or 500 spike.
+
+**When to check:**
+- Within 5 minutes of every Functions deploy (INV-DET-1)
+- After any suspicious user report involving TrustSeal or ScamCheck analysis
+
+**Native tooling:** Firebase Console → Functions → select function → Logs tab → filter last 30 minutes. Zero setup required.
+
+---
+
+### Gemini API — Structured Log Monitoring
+
+**What to check:** Firebase Functions logs filtered for Gemini call outcomes. Structured logging makes this a one-query operation.
+
+**Recommended log structure (already in place or to add):**
+```javascript
+console.log(JSON.stringify({
+  event:       'gemini_call',
+  success:     result.ok,
+  errorType:   result.ok ? null : (result.rateLimited ? '429' : result.parseError ? 'parse' : 'unknown'),
+  inputLength: input.length,
+  uid:         uid,
+}))
+```
+
+**Normal state:** errorType null on >99% of calls. No 429 events in current hour.
+**Warning state:** errorType 'parse' on >1% of calls. 3+ 429 events in current hour.
+**Critical state:** errorType 'parse' on >5%. 429 on majority of calls (daily limit approaching).
+
+**When to check:** After any Gemini model update announcement. When users report ScamCheck/TrustSeal analysis failures.
+
+---
+
+### Razorpay Webhooks — Dashboard Log Monitoring
+
+**What to check:** Razorpay Dashboard → Webhooks → select webhook endpoint → Delivery attempts. Shows every event, delivery timestamp, and response code.
+
+**Normal state:** All recent events show 200 response. Delivery within 5 seconds.
+**Warning state:** Any failed delivery (non-200 response). Retry visible in log.
+**Critical state:** Consistent non-200 responses. Events marked as failed.
+
+**When to check:**
+- After any payment mode switch (INV-DET-3) — check within 5 minutes of first live payment
+- After any Firebase Functions redeploy that touches the webhook handler
+- If users report payment succeeded but access not granted
+
+**No setup required:** Razorpay Dashboard provides this natively.
+
+---
+
+### Firestore Quota — Direct Document Inspection
+
+**What to check:** Firestore Console → users → (any uid) → quota → current. The `checksThisMonth` and `tier` fields are the direct quota state.
+
+**TrustSeal quota health:**
+- `checksThisMonth < 8` and `tier: 'free'` → healthy
+- `checksThisMonth >= 8` and `tier: 'free'` → warning state (approaching limit)
+- `checksThisMonth >= 10` and `tier: 'free'` → at limit (user is blocked)
+- `tier: 'premium'` → quota enforcement bypassed
+
+**When to check:** If users report "quota exceeded" unexpectedly. After any quota enforcement code change.
+
+---
+
+### GA4 Analytics — Realtime and Report Monitoring
+
+**What to check:**
+1. GA4 Realtime → confirm traffic sources are expected (organic, direct) and not from vercel.app URLs
+2. GA4 Reports → Acquisition → Traffic by source → compare against documented baseline (INV-DET-4)
+
+**Normal state:** Traffic attributed to expected sources. No vercel.app or github.io domains in reports. Cross-subdomain navigation shows as single session.
+
+**Warning state:** Direct traffic percentage increases >5 points vs. baseline. Vercel.app URLs appear in referral report. Session count increases >20% with no event trigger.
+
+**Critical state:** Vercel.app traffic visible in Realtime view (active preview contamination). GA4 receiving events from non-production environments.
+
+**When to check:**
+- 48 hours after any analytics configuration change
+- Weekly quick check of Realtime during active development periods
+- Monthly acquisition report comparison against baseline
+
+---
+
+### GSC Indexing — Coverage Report Monitoring
+
+**What to check:** Google Search Console → Pages → Coverage report. Valid pages count and indexed pages count.
+
+**Normal state:** Valid pages count stable or growing. No unexpected "Excluded" status changes.
+**Warning state:** Indexed pages count drops >10% within 7 days without a planned noindex change.
+**Critical state:** Sitemap returns 404 (GSC will report this directly).
+
+**When to check:**
+- 3–7 days after any noindex change or sitemap modification
+- After any WordPress SEO plugin change
+
+---
+
+### WordPress REST API — Periodic Auth Verification
+
+**What to check:** One authenticated GET request to the WordPress REST API.
+
+```bash
+curl -s -o /dev/null -w "%{http_code}" \
+  -u "username:application_password" \
+  https://asquaresolution.com/wp-json/wp/v2/posts?per_page=1
+```
+
+**Normal state:** HTTP 200.
+**Critical state:** HTTP 401 — credential encoding broken or Application Password revoked.
+
+**When to check:** Before running any WordPress automation. After any WordPress user or Application Password change.
+
+---
+
+## Silent Failure Taxonomy
+
+Silent failures are the highest operational risk class — they produce no signal, appear functional, and are only detected through deliberate behavioral testing or retrospective metric analysis.
+
+### Currently Silent Failure Modes
+
+| System | Silent Failure Mode | Detection Method |
+|---|---|---|
+| Firebase Auth | Session loss on page refresh when domain not in Authorized Domains | Manual: sign in → hard reload → verify auth state |
+| Razorpay | Payment completes but no webhook fires (key mode mismatch) | Manual: Razorpay Dashboard delivery log within 5 min of payment |
+| GA4 | Analytics data attributed to wrong sessions (cookie_domain error) | Manual: Realtime cross-domain session test; metric baseline comparison |
+| GA4 | Preview traffic contaminating production analytics | Manual: check Vercel env var scope; Realtime for vercel.app traffic |
+| GitHub Pages | SPA routing broken (CNAME/404.html deleted by build) | Manual: direct navigation to non-root route |
+| DNS | Subdomain not resolving for majority of global users | Manual: dnschecker.org external propagation check |
+| Firestore | Quota document missing for new user (first use fails silently) | Automated: Cloud Function initializes quota doc if missing |
+| WordPress | PHP filter change not reflected (LiteSpeed cache serving old HTML) | Manual: purge cache before verification |
+
+**Structural property of silent failures:** All silent failures are configuration or infrastructure state failures, not code failures. They produce no exception, no stack trace, and no log entry because the code is running correctly against a configuration that doesn't match the intended state.
+
+Silent failures cannot be caught by:
+- Unit tests
+- Integration tests
+- Build pipelines
+- Emulator runs
+- Code review
+
+They can only be caught by behavioral tests in the production environment against the actual production configuration.
+
+---
+
+## Observability Gaps (Current)
+
+**Gap 1 — No persistent error rate baseline.** Firebase Functions error counts are visible in the console but not persisted. If the error rate changes, there is no historical comparison available without scrolling logs manually. No trend data.
+
+**Gap 2 — No automated post-deploy verification.** INV-DET-1 (check logs after deploy) and INV-DEP-5 (real request after deploy) are documented procedures but require manual execution. A missed deploy check produces no alert.
+
+**Gap 3 — No Gemini daily quota threshold alert.** The daily free tier quota for Gemini is global (not per-user) and not directly readable from Firestore. There is currently no signal for approaching daily exhaustion before it happens.
+
+**Gap 4 — No Razorpay recurring webhook health check.** Only the first payment after a mode switch is actively monitored. Monthly subscription renewal webhooks are not systematically verified — a failed renewal would only surface when a user reports loss of premium access.
+
+**Gap 5 — No SEO regression baseline.** GSC coverage counts are checked reactively (after a noindex change or reported SEO issue) but not proactively compared against a documented weekly baseline.
+
+---
+
+## Detection Priority Matrix
+
+Ordered by risk × detection latency:
+
+| Failure class | Risk | Current detection latency | Priority |
+|---|---|---|---|
+| Razorpay silent webhook failure | High (revenue impact) | User report | Highest |
+| Firebase Auth silent session loss | High (product unusable) | User report | Highest |
+| GA4 analytics contamination | Medium (data integrity) | Weeks | High |
+| Firebase Functions error spike | High (product degraded) | Minutes (if logs checked) | High |
+| Gemini daily quota exhaustion | Medium (service interruption) | First user blocked | High |
+| GitHub Pages SPA routing break | High (non-root routes 404) | First non-root navigation | Medium |
+| DNS propagation failure | High (site unreachable) | User report | Medium |
+| WordPress cache serving stale content | Low (content incorrect) | During verification | Low |
+
+---
+
+## Related
+
+- [Operational Invariants](/docs/operational-invariants) — the reliability doctrine these detection rules enforce
+- [Deployment Verification Checklist](/docs/deployment-verification-checklist) — the operational companion for pre/post-deploy checks
+- [Incident Detection Playbook](/playbooks/incident-detection-playbook) — step-by-step detection procedures for each system
+- [Failure Pattern Library](/docs/failure-pattern-library) — the taxonomy that detection rules map to
+- [Gemini Production Operations](/docs/gemini-production-operations) — structured logging implementation

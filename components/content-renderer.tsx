@@ -26,6 +26,8 @@ import {
   FailureIntelligence,
   // Evidence framework
   EvidenceBlock,
+  // Quick fix block
+  QuickFix,
   // Execution media system
   TerminalRecording,
   YouTubeWalkthrough,
@@ -79,6 +81,8 @@ const allComponents = {
   FailureIntelligence,
   // Evidence framework component
   EvidenceBlock,
+  // Quick fix block
+  QuickFix,
   // Execution media system
   TerminalRecording,
   YouTubeWalkthrough,

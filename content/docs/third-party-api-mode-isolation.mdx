@@ -1,0 +1,196 @@
+---
+title: "Third-Party API Mode Isolation"
+description: "Operational pattern for managing test vs. live mode separation across payment processors, analytics platforms, and authentication providers. Covers the full failure surface: mode-mixed credentials, preview environment contamination, domain authorization gaps, and the unifying root cause — credentials or configuration valid in one scope that are absent, wrong, or mismatched in production."
+date: "2026-05-24"
+tags: ["razorpay", "firebase", "authentication", "google-analytics-4", "deployment", "configuration", "patterns", "vercel"]
+status: published
+related_failures:
+  - razorpay-test-live-key-mismatch
+  - firebase-auth-domain-not-authorized
+  - ga4-preview-environment-contamination
+  - environment-variable-missing-production
+related_case_studies:
+  - trustseal-architecture-build
+  - ecosystem-wordpress-integration
+  - vercel-deployment-evolution
+related_docs:
+  - failure-pattern-library
+---
+
+Third-party integrations — payment processors, analytics platforms, authentication providers — operate in multiple modes: test vs. live, development vs. production, authorized vs. unauthorized. The failure pattern across all of them is structurally identical: a credential, configuration, or authorization that is valid in one scope is absent, incorrect, or mismatched in another.
+
+The four failures in the archive that exemplify this pattern each cost between 2 minutes and 2 hours to diagnose. They were all preventable with scope-verification steps at deployment time. This document names the pattern, describes each variant, and gives the specific prevention procedure for each.
+
+---
+
+## The Pattern: Mode/Scope Boundary Violation
+
+**Definition:** A third-party integration requires that credentials, configuration, or authorization be registered or scoped to the specific environment, mode, or domain where the code runs. When the registration is incomplete — present in development but absent in production, or correct in one mode but wrong in another — the integration fails silently or produces misleading behavior.
+
+### The Four Variants
+
+All four variants share a common structure:
+
+```
+Development context: credential/config/auth [PRESENT and CORRECT]
+Production context: credential/config/auth [ABSENT or MISMATCHED]
+Symptom: works in dev, fails in production
+Error signal: silent, misleading, or buried in network tab
+```
+
+---
+
+## Variant 1: Payment Processor Mode Mismatch
+
+**The failure:** Razorpay has two credential modes — test (`rzp_test_...`) and live (`rzp_live_...`). Client-side and server-side keys must both be from the same mode simultaneously. Using a test client key with a live server key (or vice versa) produces a checkout modal that opens successfully but fires no webhook on payment. The payment appears to go through from the user's perspective; the server receives nothing.
+
+**Why it's silent:** The Razorpay checkout modal validates against the client-side key only. The webhook is dispatched based on the server-side key's mode. If the modes are mismatched, the webhook event is either not sent or sent to the wrong environment — no error appears in the checkout flow.
+
+**Archive entry:** [Razorpay Test/Live Key Mode Mismatch](/failures/razorpay-test-live-key-mismatch) — TrustSeal build, 2026-02-20.
+
+**Prevention:**
+- Never change Razorpay mode on one side without simultaneously updating the other
+- Keep both keys in the same environment variable group: `RAZORPAY_KEY_ID` (client) and `RAZORPAY_KEY_SECRET` (server) — update them together or not at all
+- After switching to live keys: verify a real webhook fires by placing a test transaction with live test cards
+- Add to deployment checklist: "Both Razorpay keys are `rzp_live_` — yes/no"
+
+```javascript
+// Verification: check that key prefixes match mode
+const clientKey  = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID    // must match
+const serverKey  = process.env.RAZORPAY_KEY_SECRET             // must match
+const clientMode = clientKey.startsWith('rzp_live_') ? 'live' : 'test'
+const serverMode = serverKey.startsWith('rzp_live_') ? 'live' : 'test'
+if (clientMode !== serverMode) throw new Error('Razorpay key mode mismatch')
+```
+
+---
+
+## Variant 2: Authentication Domain Authorization Gap
+
+**The failure:** Firebase Auth requires that every domain from which the application runs authentication requests be explicitly registered in Firebase Console → Authentication → Settings → Authorized Domains. The default list includes `localhost` and the Firebase hosting subdomains. It does not include custom domains, GitHub Pages subdomains, or any other domain used in deployment.
+
+When a custom domain is omitted:
+- Login completes successfully
+- The user appears authenticated immediately after login
+- On the next page refresh, the auth session is gone
+- The browser console (network tab) shows a 400 UNAUTHORIZED_DOMAIN on the token refresh call
+- No visible error appears in the UI — the user is simply returned to the login screen
+
+This is a session loss failure, not a login failure. The login succeeds because the initial sign-in request may go through a different code path. The token refresh fails because it runs from the production custom domain, which is unauthorized.
+
+**Archive entry:** [Firebase Auth Session Lost on Custom Domain](/failures/firebase-auth-domain-not-authorized) — TrustSeal build (2026-03-05), ScamCheck build (same pattern, fixed preemptively after TrustSeal incident).
+
+**Prevention:**
+- Add authorized domains in Firebase Console before deploying to any new domain
+- Add both the custom domain AND the GitHub Pages testing subdomain during development — testing on the GitHub Pages subdomain before the custom domain is configured reveals this failure early rather than in production
+- Post-deployment auth verification checklist: log in → navigate to a different route → refresh page → confirm still logged in
+- Do not declare a custom domain "live" until the refresh persistence test passes
+
+```
+Firebase Console checklist for new domain deployment:
+☐ Firebase Console → [project] → Authentication → Settings → Authorized Domains
+☐ Add: [custom-domain].asquaresolution.com
+☐ Add: [username].github.io (if testing via GitHub Pages before DNS cutover)
+☐ Test: login → page refresh → confirm session persists
+```
+
+---
+
+## Variant 3: Analytics Environment Scope Leak
+
+**The failure:** `NEXT_PUBLIC_GA_MEASUREMENT_ID` was set in Vercel with all-environments scope. Vercel inlines `NEXT_PUBLIC_` variables at build time — not at request time. Every preview deployment received the production measurement ID baked into its JavaScript bundle. Developer and build-verification traffic on preview URLs fired to the production analytics property.
+
+Unlike the other variants, this failure has no immediate symptom — the application works correctly in all environments. The damage is data contamination: production session counts, traffic sources, and conversion metrics are inflated by developer activity for the duration before the scope is corrected.
+
+**Archive entry:** [GA4 Production Analytics Contaminated by Vercel Preview Deployments](/failures/ga4-preview-environment-contamination) — AI Execution Lab, 2026-03-20.
+
+**Prevention:**
+- Analytics measurement IDs are the one category of `NEXT_PUBLIC_` variable that must never be in Preview or Development scope
+- Scope rule: `NEXT_PUBLIC_GA_MEASUREMENT_ID` → Production only
+- Guard the analytics script block with `{GA_ID && (...)}` so undefined (preview/dev) cleanly disables analytics rather than firing with `undefined` as the measurement ID
+- Verify: open a Vercel preview deployment → open GA4 Realtime → confirm you are NOT visible as an active user
+
+```typescript
+// Safe analytics initialization — only fires when GA_ID is defined (production)
+const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
+{GA_ID && (
+  <Script id="ga4-init" strategy="afterInteractive">
+    {`gtag('config', '${GA_ID}', { cookie_domain: 'asquaresolution.com' })`}
+  </Script>
+)}
+```
+
+---
+
+## Variant 4: Environment Variable Missing in Production
+
+**The failure:** An API key or configuration value exists in `.env.local` (development) and is used throughout the application. When the application deploys to Vercel, the variable is absent because only the Development scope was configured. The feature that depends on it fails silently in production with a generic catch-block error message.
+
+This is the most common variant. The application works perfectly in development. In production, any code path that calls the API returns an error. The error message from the downstream API call provides no indication that the root cause is a missing environment variable.
+
+**Archive entry:** [Missing Production Environment Variable Caused Silent Feature Failure](/failures/environment-variable-missing-production).
+
+**Prevention:**
+- When adding any new env var to `.env.local`: open Vercel dashboard in another tab and add it to Production scope before writing any more code
+- Maintain a `validateEnv()` function that throws immediately on startup for any missing required variable — surfaces the error in the first function log entry rather than in a buried catch block
+
+```typescript
+function validateEnv() {
+  const required = ['GEMINI_API_KEY', 'RAZORPAY_KEY_SECRET']
+  const missing  = required.filter(k => !process.env[k])
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
+  }
+}
+// Call at the top of each Cloud Function handler before any business logic
+```
+
+---
+
+## The Unifying Principle
+
+All four variants share the same root cause: **the assumption that a credential or configuration registered for one scope is automatically available in all scopes.**
+
+| Integration | Scope that matters | What breaks when missing |
+|---|---|---|
+| Razorpay | Credential mode (test/live) | Webhook not fired — payment appears to succeed, server receives nothing |
+| Firebase Auth | Domain authorization | Session lost on every page refresh |
+| GA4 / Vercel | Variable environment scope | Production analytics data contaminated |
+| Vercel env vars | Environment checkbox (Production) | Feature silently fails in production only |
+
+The prevention pattern for all four is identical: **explicit scope verification at the point of deployment**, not at the point of development.
+
+---
+
+## Deployment Checklist: Third-Party Mode Isolation
+
+Copy this into your deployment checklist for any project with third-party integrations:
+
+```
+PAYMENT PROCESSOR
+☐ Both client key and server key carry the same mode prefix (rzp_test_ or rzp_live_)
+☐ After switching to live: one real webhook verified before deploying to users
+
+AUTHENTICATION
+☐ Production custom domain added to [service] Authorized Domains
+☐ Test: login → refresh page → session persists
+
+ANALYTICS
+☐ Measurement ID scoped to Production only in Vercel (or equivalent)
+☐ Verify: open preview deployment → check Realtime → confirm no events firing
+
+ENVIRONMENT VARIABLES
+☐ Every variable in .env.local also exists in Vercel Production scope
+☐ validateEnv() throws on missing variables at startup
+☐ .env.example is up-to-date with all required variable names
+```
+
+---
+
+## Related
+
+- [Failure Pattern Library](/docs/failure-pattern-library) — Pattern 3: Runtime Environment Scope Drift includes all six exemplar failures
+- [Razorpay Test/Live Key Mode Mismatch](/failures/razorpay-test-live-key-mismatch)
+- [Firebase Auth Session Lost on Custom Domain](/failures/firebase-auth-domain-not-authorized)
+- [GA4 Production Analytics Contaminated by Vercel Preview Deployments](/failures/ga4-preview-environment-contamination)
+- [Missing Production Environment Variable Caused Silent Feature Failure](/failures/environment-variable-missing-production)

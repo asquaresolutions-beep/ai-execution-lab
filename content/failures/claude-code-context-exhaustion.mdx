@@ -14,6 +14,14 @@ recovery_complexity: "moderate"
 deployment_risk: "low"
 time_to_detect: "At context limit — Claude Code surfaced a continuation summary instead of continuing"
 repeat_risk: "high"
+affected_systems:
+  - claude-code
+systems_touched:
+  - ai-execution-lab
+related_logs:
+  - 2026-05-18-deployment-journal-may-2026
+  - 2026-05-18-operational-memory-infrastructure
+deployment_ref: 2026-05-18-deployment-journal-may-2026
 ---
 
 <FailureIntelligence
@@ -52,6 +60,22 @@ repeat_risk: "high"
 <Callout type="info" title="session-state-management is a new failure pattern type">
 The `recurringPattern` field above uses `session-state-management` — a pattern type not previously documented in this platform's failure library. The existing pattern `runtime-environment-scope-drift` describes how runtime context gets lost at environment boundaries. This failure is a variant at the AI session layer: operational state accumulated in a Claude Code session is not persisted outside that session's context window, and long sessions will exhaust that window. The pattern is: **scope boundaries exist at the session level, and state must be explicitly checkpointed to cross them**.
 </Callout>
+
+<QuickFix
+  symptom="Claude Code session ends mid-task with a continuation summary instead of completing. Uncommitted file changes exist on disk. Agent task IDs are unreachable."
+  rootCause="Long agentic sessions fill the context window with accumulated tool call results: file reads, write confirmations, bash outputs, agent results. No interim commits means all in-progress work is orphaned from git."
+  fix="Run git diff and git status to surface all uncommitted changes. Read the continuation summary for what was in progress. Commit everything in a logical state, then start a new session with a structured state-reconstruction prompt."
+  time="30–45 min"
+  confidence={75}
+  steps={[
+    "Run: git diff — this surfaces all uncommitted file changes written during the session",
+    "Run: git status — shows new files and modified files not yet staged",
+    "Read the continuation summary Claude provided — it lists the general state but may lack specifics",
+    "Check .claude/ or the temp output paths for any background agent results (the task notification history shows file paths)",
+    "Commit all changes in their current state with a descriptive message noting the session was interrupted",
+    "Start a new session: lead with 'Continuing from context exhaustion — here is current state:' and enumerate the committed files and remaining tasks explicitly"
+  ]}
+/>
 
 ## What Happened
 

@@ -7,6 +7,23 @@ status: published
 log_type: "deployment"
 duration: "75 min"
 outcome: "Organization + WebSite schema deployed via WPCode. Three Gutenberg homepage sections added: AI Execution Lab feature, ecosystem architecture (3-column), authority CTA. Footer 'Our Work' widget live. About page 'Built in Public' paragraph added. Internal links added to 5 top posts. LiteSpeed full cache purge completed. All 7 verification gates passed."
+affected_systems:
+  - wordpress
+  - litespeed
+systems_touched:
+  - asquaresolution.com
+  - wpcode
+  - elementor
+linked_incidents:
+  - wordpress-hfe-wpautop-injection
+  - litespeed-client-cache-bypass-ignored
+related_failures:
+  - wordpress-hfe-wpautop-injection
+  - litespeed-client-cache-bypass-ignored
+related_case_studies:
+  - ecosystem-wordpress-integration
+related_docs:
+  - ecosystem-wordpress-integration
 evidence_images:
   - /evidence/wordpress-rollout/wordpress-nav-link.png
   - /evidence/wordpress-rollout/homepage-ai-lab-section.png

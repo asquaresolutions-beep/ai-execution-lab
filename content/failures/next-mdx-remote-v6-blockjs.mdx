@@ -14,6 +14,18 @@ recovery_complexity: "hours"
 deployment_risk: "low"
 time_to_detect: "Manual visual inspection post-deploy — build succeeded"
 repeat_risk: "medium"
+affected_systems:
+  - next.js
+  - next-mdx-remote
+systems_touched:
+  - vercel
+  - mdx-pipeline
+related_case_studies:
+  - ai-execution-lab-platform-launch
+  - vercel-deployment-evolution
+related_docs:
+  - failure-pattern-library
+deployment_ref: 2026-05-14-tracks-failure-archive-build
 ---
 
 <FailureIntelligence
@@ -51,6 +63,21 @@ repeat_risk: "medium"
 />
 
 ---
+
+<QuickFix
+  symptom="After upgrading next-mdx-remote to v6, MDX components render their shell structure but all content is empty — array and object props are undefined inside components"
+  rootCause="next-mdx-remote v6 defaults blockJS: true, which activates removeJavaScriptExpressions during MDX serialization. Array literals like items={['a','b','c']} are stripped from JSX props before the component receives them."
+  fix="Add blockJS: false to the compileMDX options object in your content renderer. Document the reason at the call site so it is never removed as 'dead code'."
+  time="5 min"
+  confidence={85}
+  steps={[
+    "Confirm the symptom: add a temporary console.log(props) inside the failing MDX component — the array prop will be undefined, not empty",
+    "Open the file where compileMDX is called (commonly lib/content-renderer.tsx or similar)",
+    "Add blockJS: false to the options object passed to compileMDX",
+    "Add an inline comment explaining why: blockJS: true strips JSX array/object props — opt out for author-controlled MDX",
+    "Deploy and verify components now receive their props correctly"
+  ]}
+/>
 
 ## What Happened
 

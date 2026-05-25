@@ -1,0 +1,254 @@
+---
+title: "AI Output Structure Validation"
+description: "Operational pattern for handling structured output from AI APIs (Gemini, GPT, Claude) in production. Covers the failure surface when AI output is used as data: JSON parse failures, schema drift, missing fields, type mismatches, markdown code fence wrapping, and the architectural patterns that make AI-driven data pipelines robust against model output variation."
+date: "2026-05-24"
+tags: ["gemini", "ai", "structured-output", "patterns", "firebase-functions", "scamcheck", "trustseal", "production"]
+status: published
+related_failures:
+  - gemini-rate-limit-429-no-ux
+  - firebase-functions-node-version-stability
+related_case_studies:
+  - scamcheck-architecture-build
+  - trustseal-architecture-build
+related_docs:
+  - gemini-production-operations
+  - failure-pattern-library
+---
+
+AI APIs return text. When you need structured data — a JSON object with typed fields, an array of categorized items, a numeric score — you are parsing AI-generated text and treating it as a data contract. This is a reliability problem: the text that an AI model generates varies across calls, model versions, temperature settings, and prompt variations. Your parser does not vary. Every mismatch between the model's output format and your parser's expectations is a production failure.
+
+This document names the failure pattern, describes the specific ways it manifests in production, and gives the architectural patterns that make AI output parsing robust.
+
+---
+
+## The Pattern: AI Output Structure Failure
+
+**Definition:** An AI API call succeeds (HTTP 200, no exception) but the response text does not conform to the expected structure. The application's parser — typically `JSON.parse()` or a schema validator — throws or produces incorrect results. Depending on where the failure is caught, the result ranges from a user-visible error to a silent data corruption.
+
+### Failure Modes by Type
+
+**Type 1 — Parse failure:** The response is not valid JSON. Common causes:
+- Markdown code fences around the JSON: ` ```json { ... } ``` ` — `JSON.parse()` throws on the backticks
+- Trailing explanation text after the JSON object — `JSON.parse()` throws on extra characters
+- Single quotes instead of double quotes — valid-looking JSON but invalid per spec
+- JavaScript-style `undefined` in values — not valid JSON
+
+**Type 2 — Schema drift:** The response is valid JSON but does not match the expected schema. Common causes:
+- Different field name casing: `scamProbability` vs `scam_probability` vs `ScamProbability`
+- Extra fields not in schema — downstream code ignores them, but unexpected structure signals prompt drift
+- Missing optional fields — code assumes presence without a default, crashes on `undefined.property`
+- Numeric string instead of number: `"probability": "85"` vs `"probability": 85`
+
+**Type 3 — Semantic failure:** The response is valid JSON matching the expected schema but contains semantically invalid values. Common causes:
+- Probability score outside the specified 0–100 range
+- Enum field value not in the allowed set
+- Array items missing required subfields
+- Timestamps in an unexpected format
+
+---
+
+## Why This Happens
+
+AI models are generative — they produce the most likely next token given the prompt, not a deterministic structured object. Two properties make this problematic for data pipelines:
+
+**Non-determinism:** The same prompt with the same input produces slightly different output on different calls. In most cases the output is semantically equivalent. In edge cases, it varies structurally — different key names, additional explanation text, different numeric precision.
+
+**Model drift:** Model updates (even minor version updates) can change output format patterns. A prompt that reliably produced clean JSON on model version A may add markdown formatting on version B.
+
+**Prompt-format feedback loops:** If the schema is not explicitly specified in the prompt, the model infers the expected format from the role description and examples. Inference is less reliable than explicit specification. A prompt that says "return the analysis as JSON" produces less consistent output than a prompt that embeds the exact schema.
+
+---
+
+## The Architecture That Makes It Robust
+
+### Layer 1: Schema in the Prompt
+
+The most impactful change is embedding the exact expected schema in the system prompt. Not a description of the schema — the schema itself, with field names in the exact casing expected by the parser, with allowed values listed explicitly.
+
+```javascript
+// Weak — model infers format from context
+const prompt = `Analyze this text for scam indicators and return your analysis as JSON.`
+
+// Strong — model is given the exact contract
+const prompt = `
+Analyze this text for scam indicators.
+
+Return ONLY a JSON object with this exact structure:
+{
+  "probability": <number 0-100>,
+  "label": <"Safe" | "Probably Safe" | "Uncertain" | "Likely Scam" | "High Risk">,
+  "patterns": [
+    { "category": <string>, "description": <string> }
+  ],
+  "action": <string, 1-2 sentences>
+}
+
+Return JSON only. No markdown code fences. No explanation text outside the JSON.
+`
+```
+
+The explicit "no markdown code fences" and "no explanation text" instructions address the most common causes of Type 1 parse failures.
+
+### Layer 2: Pre-Parse Cleaning
+
+Even with explicit instructions, some models occasionally wrap output in code fences on edge cases. A cleaning step before `JSON.parse()` handles this without requiring the prompt instructions to be 100% reliable:
+
+```javascript
+function cleanGeminiOutput(text) {
+  return text
+    .trim()
+    .replace(/^```json\s*/i, '')   // strip opening code fence
+    .replace(/^```\s*/,     '')    // strip opening bare fence
+    .replace(/\s*```$/,     '')    // strip closing code fence
+    .trim()
+}
+
+function parseStructuredResponse(text) {
+  const cleaned = cleanGeminiOutput(text)
+  return JSON.parse(cleaned)  // still throws if not valid JSON — caught by Layer 3
+}
+```
+
+This adds one function call and handles the most common format deviation without making the parser more complex.
+
+### Layer 3: Structured Error Returns
+
+Never let a parse failure propagate as an unhandled exception to the client. The exception will be caught by the Firebase callable SDK as an `internal` error with no useful payload. The client receives an opaque error object and the loading state is never resolved.
+
+```javascript
+// Cloud Function handler pattern
+async function analyzeContent(data, context) {
+  const geminiText = await callGeminiAPI(data.input)
+
+  let verdict
+  try {
+    verdict = parseStructuredResponse(geminiText)
+  } catch (parseError) {
+    // Parse failure — return structured error, not an exception
+    return {
+      ok:         false,
+      parseError: true,
+      message:    'Analysis result could not be structured. Please try again.',
+    }
+  }
+
+  // Schema validation — catch Type 2 and Type 3 failures
+  const validated = validateVerdictSchema(verdict)
+  if (!validated.ok) {
+    return {
+      ok:            false,
+      schemaError:   true,
+      message:       'Analysis returned an unexpected format. Please try again.',
+    }
+  }
+
+  return { ok: true, verdict: validated.data }
+}
+```
+
+The client checks `response.data.ok` before accessing `response.data.verdict`. Every failure mode has a specific structured response that the client can display with a meaningful message and a retry path.
+
+### Layer 4: Schema Validation
+
+For production AI output, validate the parsed JSON against the expected schema before using it. This catches Type 2 failures — valid JSON that does not match the contract.
+
+A lightweight manual validation is sufficient for most cases:
+
+```javascript
+function validateVerdictSchema(data) {
+  const VALID_LABELS = ['Safe', 'Probably Safe', 'Uncertain', 'Likely Scam', 'High Risk']
+
+  if (typeof data.probability !== 'number') {
+    return { ok: false, error: 'probability must be a number' }
+  }
+  if (data.probability < 0 || data.probability > 100) {
+    return { ok: false, error: 'probability must be 0–100' }
+  }
+  if (!VALID_LABELS.includes(data.label)) {
+    return { ok: false, error: `label must be one of: ${VALID_LABELS.join(', ')}` }
+  }
+  if (!Array.isArray(data.patterns)) {
+    return { ok: false, error: 'patterns must be an array' }
+  }
+  if (typeof data.action !== 'string') {
+    return { ok: false, error: 'action must be a string' }
+  }
+
+  return { ok: true, data }
+}
+```
+
+This is ~15 lines of code that prevents every Type 2 and Type 3 failure from reaching the client silently.
+
+---
+
+## Client-Side Handling Pattern
+
+The client is responsible for handling every structured error type the server can return. No error type should leave the loading state unresolved.
+
+```javascript
+async function submitAnalysis(input) {
+  setLoading(true)
+  setError(null)
+
+  try {
+    const { data } = await analyzeContent({ input })
+
+    if (data.rateLimited) {
+      setError('Rate limit reached — please wait a few seconds and try again')
+      return
+    }
+    if (data.parseError || data.schemaError) {
+      setError('Analysis returned an unexpected result — please try again')
+      return
+    }
+    if (!data.ok) {
+      setError('Analysis failed — please try again')
+      return
+    }
+
+    setVerdict(data.verdict)
+
+  } catch (networkError) {
+    setError('Connection error — please check your network and try again')
+  } finally {
+    setLoading(false)  // always reset loading, regardless of outcome
+  }
+}
+```
+
+The `finally` block ensures `setLoading(false)` is called regardless of what happens. This is the most common bug in AI integration UX: a loading state that never resolves because an error path forgets to reset it.
+
+---
+
+## Testing AI Output Parsing
+
+Manual testing against live AI APIs is insufficient for validating output parsing robustness. The failure modes — code fences, schema drift, edge cases — occur at low frequency on normal inputs. They occur at higher frequency on edge case inputs.
+
+**Recommended test approach:**
+
+1. **Golden output tests:** Collect 10–20 real API responses from production. Parse them with the production parser. Confirm all pass. Add them to a test fixture file and run on every deployment.
+
+2. **Adversarial input tests:** Test with inputs that the model is likely to handle inconsistently — very short inputs, non-English text, inputs that mention the output format, inputs with special characters.
+
+3. **Format fault injection:** Test your parser against manually crafted malformed responses: code-fenced JSON, truncated JSON, JSON with extra explanation text, JSON with wrong field types. The parser should return structured errors for all of these, not throw unhandled exceptions.
+
+---
+
+## Real Production Evidence
+
+Both ScamCheck and TrustSeal use this architecture in production:
+
+**ScamCheck** — Gemini analyzes user-submitted messages, URLs, and descriptions. The three-part prompt structure (role + schema, signal taxonomy, edge cases) and the JSON cleaning + parse + validate pipeline produced reliable structured output for all normal inputs. The one documented production parse failure was during development, not after the full pipeline was in place.
+
+**TrustSeal** — Gemini analyzes a structured dataset of domain signals. The schema in the prompt includes the full trust verdict structure with all required field names in exact casing. The validate-before-return pattern catches any model-version drift before it reaches the user.
+
+Full implementation detail: [ScamCheck: Building an AI Scam Detector](/case-studies/scamcheck-architecture-build)
+
+---
+
+## Related
+
+- [Gemini Production Operations](/docs/gemini-production-operations) — server-side key handling, Node runtime, cold start, and full production checklist
+- [Gemini API 429 Rate Limit Returns Hanging Spinner](/failures/gemini-rate-limit-429-no-ux)
+- [Third-Party API Mode Isolation](/docs/third-party-api-mode-isolation)

@@ -13,6 +13,21 @@ recovery_complexity: minutes
 deployment_risk: low
 time_to_detect: "Immediate — first API call returns 401"
 repeat_risk: high
+affected_systems:
+  - wordpress
+systems_touched:
+  - claude-code
+  - asquaresolution.com
+related_failures:
+  - environment-variable-missing-production
+related_playbooks:
+  - wp-rest-api-automation-playbook
+related_case_studies:
+  - ecosystem-wordpress-integration
+related_docs:
+  - claude-code-wp-rest-api
+linked_incidents:
+  - environment-variable-missing-production
 ---
 
 <IncidentReport
@@ -42,6 +57,21 @@ repeat_risk: high
     { title: "Missing Production Environment Variable Caused Silent Feature Failure", href: "/failures/environment-variable-missing-production", relation: "same-category" }
   ]}
   ecosystemImpact={["Blocks all programmatic WordPress content operations", "Automation scripts relying on REST API writes are non-functional until fixed"]}
+/>
+
+<QuickFix
+  symptom="WordPress REST API returns 401 Unauthorized on every request using an Application Password"
+  rootCause="Application Password spaces were URL-encoded to %20 before Base64 encoding. WordPress expects the raw credential string with spaces preserved — URL-encoding corrupts the hash."
+  fix="Pass the Application Password to base64 without any prior encoding. The spaces shown in the WordPress dashboard are part of the credential and must remain."
+  time="10–15 min"
+  confidence={85}
+  steps={[
+    "Copy the Application Password exactly as shown in WordPress Admin → Users → Profile → Application Passwords",
+    "Build the auth string: 'username:ApplicationPassword with spaces intact'",
+    "Base64 encode the full string — NO URL encoding: echo -n 'user:Kbqw 8P2T QLnS p3Co SlOT SNAb' | base64",
+    "Test with curl: curl -H 'Authorization: Basic <base64result>' https://yoursite.com/wp-json/wp/v2/posts",
+    "If GET returns 200, the auth is correct — use the same construction in your automation script"
+  ]}
 />
 
 ## What Happened
