@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { getItem, getAllSlugs, getNeighbors } from '@/lib/content'
 import { ContentPage } from '@/components/content-page'
 import { DebugContextPanel } from '@/components/operational/debug-context-panel'
@@ -41,6 +42,26 @@ export default async function FailurePage({ params }: Props) {
         next={next}
         afterContent={
           <div className="flex flex-col gap-8 mt-10">
+            {/* Recovery procedure callout — links all failure pages to the runbook */}
+            <Link
+              href="/playbooks/recovery-runbook"
+              className="not-prose flex items-center justify-between rounded-lg border border-yellow-500/20 bg-yellow-500/[0.04] px-4 py-3 transition-colors hover:border-yellow-500/35 hover:bg-yellow-500/[0.07] group"
+            >
+              <div>
+                <p className="text-xs font-mono uppercase tracking-widest text-yellow-500/60 mb-0.5">
+                  Recovery Procedure
+                </p>
+                <p className="text-sm font-medium text-white/70 group-hover:text-white/90 transition-colors">
+                  Recovery Runbook — A Square Solutions
+                </p>
+                <p className="text-xs text-white/35 mt-0.5">
+                  System-specific recovery steps for every documented failure class
+                </p>
+              </div>
+              <span className="text-yellow-500/50 group-hover:text-yellow-500/80 transition-colors ml-4 shrink-0 text-sm">
+                →
+              </span>
+            </Link>
             <LinkedIncidents section="failures" slug={slug} />
             <CrossRelated section="failures" slug={slug} />
             <DebugContextPanel slug={slug} />

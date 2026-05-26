@@ -106,7 +106,7 @@ export function EcosystemFooter() {
               ) : (
                 <Link
                   key={link.href}
-                  href="/"
+                  href={link.href}
                   className="group flex items-start gap-1.5"
                 >
                   <div>
