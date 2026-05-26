@@ -1,0 +1,139 @@
+---
+title: "GEO vs SEO: What Actually Changed"
+description: "Why traditional SEO thinking fails in AI search and what replaces it — the structural differences in how keyword ranking and AI citation work, with concrete before/after examples."
+date: "2026-05-26"
+tags: ["geo", "seo", "ai-search", "generative-engine-optimization", "citation", "search-strategy"]
+status: "published"
+---
+
+<LessonMeta difficulty="beginner" updated="2026-05-26" />
+
+<LessonObjectives items={[
+  "Identify the three core mechanisms that make GEO structurally different from SEO",
+  "Explain why keyword density optimization is counterproductive for AI citation",
+  "Distinguish between ranking (traditional SEO) and citation (GEO) as separate goals",
+  "Apply the verifiable claim pattern to an existing piece of content",
+  "Evaluate a page for AI citation readiness using a four-point checklist"
+]} />
+
+Traditional SEO is built on one mechanism: ranking. Get your page into the top results for a query, get the click. The entire discipline — keyword density, backlink acquisition, domain authority, click-through rate optimization — exists in service of that single goal: position in the SERP.
+
+GEO (Generative Engine Optimization) is built on a different mechanism: citation. When an AI system answers a query, it synthesizes information from multiple sources into a generated response. Individual sources are not ranked against each other. They are either used — cited, quoted, paraphrased — or they are not. The competitive dynamic changes from "beat the other results to position 1" to "be extractable and trustworthy enough to be used."
+
+These are not incremental differences. They require different content decisions.
+
+---
+
+## What SEO Optimizes For (and Why That Changes)
+
+Traditional SEO optimizes for:
+
+1. **Keyword match** — does the page contain the query phrase and related terms?
+2. **Domain authority** — does the site have enough backlinks to be trusted?
+3. **On-page signals** — title tags, H1 headers, meta descriptions, schema markup
+4. **User behavior signals** — CTR, dwell time, bounce rate as proxies for content quality
+
+These signals work for a ranking algorithm that processes millions of pages and assigns positions based on comparative signals. The algorithm asks: *which page deserves position 1?*
+
+AI search systems — Perplexity, ChatGPT with browsing, Google AI Overviews, Gemini — do not rank pages against each other in the same way. They retrieve a set of sources based on semantic relevance, extract structured information from those sources, and synthesize a response. The question they ask is different: *what specific claim does this source make that I can use in my answer?*
+
+---
+
+## The Three Structural Differences
+
+### 1. Keyword density vs. semantic specificity
+
+In traditional SEO, using your target keyword 8–12 times across a 1,500-word page improves relevance signals (up to a point). The algorithm sees keyword frequency as evidence of topical relevance.
+
+In AI search, the indexing step converts text into vector embeddings — numerical representations of meaning. A page is retrieved not because it contains specific words but because its semantic content is close to the query's semantic content. A page that explains exactly how cloud GPU billing works — without using the phrase "cloud GPU billing" once — will retrieve for that query if the meaning is clearly expressed. A page optimized to rank for "cloud GPU billing" but padded with thin explanations may not retrieve at all.
+
+**Practical implication:** Stop counting keyword instances. Start asking: does this paragraph answer a specific question completely and accurately?
+
+### 2. Authority signals vs. verifiable claims
+
+Traditional SEO authority is measured in backlinks and domain-level metrics. A site with 10,000 backlinks from high-DA domains has strong authority signals.
+
+AI systems cannot verify backlink graphs. What they can assess is whether the claims in your content are internally consistent, specific, and falsifiable. A claim like "AI is transforming digital marketing" is unverifiable — it is an assertion. A claim like "In February 2026, Perplexity's web retrieval returned sources that included Schema.org `Article` markup in 68% of cited results, compared to 41% for pages without structured markup" is verifiable — it is a specific observation with a date, a platform, and a measurement.
+
+AI systems are designed to minimize hallucination by grounding their responses in verifiable sources. Content that makes verifiable claims — specific data, named dates, explicit conditions — is more citable because it reduces the model's risk of generating false information.
+
+**Practical implication:** Every major claim in a GEO-targeted page should answer: what is the specific value, when was it measured, under what conditions?
+
+### 3. SERP ranking vs. answer inclusion
+
+In traditional SEO, success is measured in position: position 1 gets ~28% of clicks, position 2 gets ~15%, and so on down the page.
+
+In AI search, success is binary: your source was used in the answer, or it was not. There is no position 1 through 10. There is cited and uncited.
+
+This changes the optimization frame. Instead of asking "how do I outrank page X for query Y?" you ask "is my content structured so that an AI system can extract a specific, accurate claim and attribute it to me?" The latter question is about extraction quality, not comparative positioning.
+
+---
+
+## What GEO Optimizes For
+
+**1. Extractable claims**
+
+Each section of content should contain at least one claim that can be lifted verbatim into an AI answer and remain accurate and complete. If removing your page from the answer would require the AI to rewrite rather than just cut, your content is providing unique extractable value.
+
+**2. Attribution clarity**
+
+AI systems cite sources. To be cited, you need a clear entity relationship: who wrote this, where is it published, when was it accurate? Schema markup (`@type: Article`, `author`, `datePublished`, `publisher`) makes these relationships machine-readable.
+
+**3. Factual density**
+
+Thin descriptive content — "SEO is important for businesses" — has no extraction value. Dense factual content — "Pages with structured FAQ schema received AI Overview placements 2.4x more frequently than equivalent pages without schema, in a sample of 340 queries tracked in GSC between January and April 2026" — has high extraction value.
+
+**4. Entity coherence**
+
+AI knowledge graphs connect named entities: people, organizations, products, concepts. Content that consistently names the same entities — uses "A Square Solutions" not "asquaresolution.com" interchangeably, always refers to the same product by the same name — is easier to incorporate into a knowledge graph without ambiguity.
+
+---
+
+## A Before/After Example
+
+**Original paragraph (SEO-optimized, low GEO value):**
+
+> Search engine optimization is a key digital marketing strategy that helps businesses improve their online visibility. By optimizing your website for relevant keywords, you can drive more organic traffic and increase your chances of converting visitors into customers. SEO is essential in today's competitive digital landscape.
+
+This paragraph:
+- Contains no verifiable claim
+- Names no entities
+- Is not attributable (any site could have written this)
+- Has no extractable fact an AI could use
+
+**Revised paragraph (GEO-optimized):**
+
+> Google AI Overviews reduced organic click-through rates by an average of 34.5% for informational queries in a study of 1,200 search queries tracked between October 2025 and March 2026 (Semrush Search Analytics). For businesses that relied on informational content for 60%+ of their organic traffic, this represents a direct revenue impact — not a hypothetical future shift. Adapting requires understanding how AI systems select sources, not how to rank higher in a diminishing result set.
+
+This paragraph:
+- Contains a specific, dated, sourced claim
+- Names a measurable entity (Google AI Overviews)
+- Provides context that makes the claim extractable
+- Is attributable — the source and conditions are stated
+
+---
+
+## The GEO Readiness Checklist
+
+Before publishing any content intended for AI citation:
+
+- [ ] **Every major claim includes a specific value** (number, date, named condition)
+- [ ] **Entity names are consistent** throughout the document — no informal variations
+- [ ] **At least one `Answer-First` paragraph** — starts with the direct answer to the section's implied question, before supporting detail
+- [ ] **Schema markup applied** — at minimum `Article` with `author`, `datePublished`, `publisher`
+- [ ] **Sourced assertions** — claims based on data reference the data source, even informally in-text
+- [ ] **No padding** — remove any sentence that could be removed without affecting a reader's ability to extract a specific, accurate answer
+
+---
+
+## What This Does Not Change
+
+GEO does not make traditional SEO irrelevant. Organic search still drives meaningful traffic for navigational and transactional queries where AI Overviews do not appear. Backlink authority still influences which sources AI systems retrieve — domain credibility is not irrelevant, it is just a baseline condition rather than the primary competitive variable.
+
+The accurate framing: traditional SEO remains necessary but is no longer sufficient. A page that ranks well in traditional search but makes no verifiable claims will not be cited. A page with excellent GEO content but no indexing signals may not even be retrieved. Both conditions need to be met.
+
+---
+
+<Callout type="info" title="Related content">
+The RAG pipeline lesson explains the technical retrieval mechanism behind AI citation. The Citation Signals lesson covers the specific content and authority signals that increase retrieval probability.
+</Callout>
