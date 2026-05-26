@@ -248,6 +248,7 @@ export default function StartHerePage() {
             { goal: 'I want to automate repetitive content operations', href: '/tracks/ai-automation-systems', label: '→ AI Automation Systems track' },
             { goal: 'I want to understand what production AI engineering looks like', href: '/failures', label: '→ Start with the Failure Archive' },
             { goal: 'I want to see how a real AI platform was built', href: '/logs', label: '→ Start with Execution Logs' },
+            { goal: 'I have a specific goal — show me a structured execution sequence', href: '/pathways', label: '→ Execution Pathways' },
           ].map(({ goal, href, label }) => (
             <Link
               key={href}

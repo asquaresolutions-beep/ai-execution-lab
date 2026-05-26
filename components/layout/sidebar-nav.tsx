@@ -37,6 +37,7 @@ const NAV = [
     items: [
       { href: '/playbooks', label: 'Playbooks' },
       { href: '/tracks',    label: 'Tracks'    },
+      { href: '/pathways',  label: 'Pathways'  },
     ],
   },
   {
