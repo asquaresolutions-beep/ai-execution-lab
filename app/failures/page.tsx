@@ -276,8 +276,17 @@ export default function FailuresPage() {
           Documented production failures from real AI execution work. Every entry has a root cause analysis,
           resolution timeline, prevention pattern, and a confidence score for the verified fix.
         </p>
-        <p className="mt-2 text-xs font-mono text-surface-600">
-          No fabricated incidents. Everything here happened.
+        <p className="mt-1.5 text-xs text-surface-600 leading-relaxed">
+          These failures occurred while building{' '}
+          <a href="https://trustseal.asquaresolution.com" target="_blank" rel="noopener noreferrer"
+            className="text-surface-500 hover:text-surface-300 transition-colors">TrustSeal</a>
+          {', '}
+          <a href="https://scamcheck.asquaresolution.com" target="_blank" rel="noopener noreferrer"
+            className="text-surface-500 hover:text-surface-300 transition-colors">ScamCheck</a>
+          {', and AI Execution Lab — real products built by '}
+          <a href="https://asquaresolution.com" target="_blank" rel="noopener noreferrer"
+            className="text-surface-500 hover:text-surface-300 transition-colors">A Square Solutions</a>
+          {'. No fabricated incidents.'}
         </p>
       </div>
 
