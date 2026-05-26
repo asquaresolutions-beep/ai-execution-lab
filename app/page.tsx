@@ -174,6 +174,43 @@ export default function HomePage() {
         ))}
       </div>
 
+      {/* ── Topic cluster ───────────────────────────────────── */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600">
+            Explore by topic
+          </h2>
+          <Link
+            href="/tags"
+            className="text-[10px] font-mono text-surface-600 hover:text-brand-400 transition-colors"
+          >
+            All topics →
+          </Link>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { tag: 'firebase',     label: 'Firebase',       color: 'text-amber-400  border-amber-500/20  bg-amber-500/[0.04]  hover:border-amber-500/35'  },
+            { tag: 'deployment',   label: 'Deployment',     color: 'text-indigo-400 border-indigo-500/20 bg-indigo-500/[0.04] hover:border-indigo-500/35' },
+            { tag: 'gemini',       label: 'Gemini API',     color: 'text-blue-400   border-blue-500/20   bg-blue-500/[0.04]   hover:border-blue-500/35'   },
+            { tag: 'observability',label: 'Observability',  color: 'text-red-400    border-red-500/20    bg-red-500/[0.04]    hover:border-red-500/35'    },
+            { tag: 'recovery',     label: 'Recovery',       color: 'text-yellow-400 border-yellow-500/20 bg-yellow-500/[0.04] hover:border-yellow-500/35' },
+            { tag: 'security',     label: 'Security',       color: 'text-green-400  border-green-500/20  bg-green-500/[0.04]  hover:border-green-500/35'  },
+            { tag: 'trustseal',    label: 'TrustSeal',      color: 'text-blue-300   border-blue-400/20   bg-blue-400/[0.04]   hover:border-blue-400/35'   },
+            { tag: 'scamcheck',    label: 'ScamCheck',      color: 'text-amber-300  border-amber-400/20  bg-amber-400/[0.04]  hover:border-amber-400/35'  },
+            { tag: 'claude-code',  label: 'Claude Code',    color: 'text-brand-400  border-brand-500/20  bg-brand-500/[0.04]  hover:border-brand-500/35'  },
+            { tag: 'reliability',  label: 'Reliability',    color: 'text-surface-400 border-white/[0.08] bg-white/[0.02]      hover:border-white/[0.15]'  },
+          ].map(({ tag, label, color }) => (
+            <Link
+              key={tag}
+              href={`/tags/${tag}`}
+              className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-mono transition-all ${color}`}
+            >
+              #{label}
+            </Link>
+          ))}
+        </div>
+      </div>
+
       {/* ── Featured failures ────────────────────────────────── */}
       <FeaturedFailures />
 

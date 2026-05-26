@@ -40,6 +40,7 @@ const PERSONAS = [
       { label: 'Build Failure Diagnosis', href: '/tracks/claude-code-operator/vercel-deployment/build-failure-diagnosis', type: 'Playbook' },
     ],
     alsoRead: [
+      { label: 'Operational Onboarding Guide', href: '/docs/operational-onboarding-guide', note: '— how A Square Solutions operates its systems' },
       { label: 'Failure Archive', href: '/failures', note: '— real production incidents with exact fixes' },
       { label: 'WordPress REST API Playbook', href: '/playbooks/wp-rest-api-automation-playbook', note: '— if you automate WordPress' },
     ],
@@ -147,6 +148,12 @@ const PLATFORM_SECTIONS = [
     accent: 'text-amber-400',
   },
   {
+    label: 'Docs',
+    href: '/docs',
+    desc: 'Reference documentation grouped by intent — governance, deployment, AI reliability, and more.',
+    accent: 'text-emerald-400',
+  },
+  {
     label: 'Execution Logs',
     href: '/logs',
     desc: 'Dated records of real work sessions — what was built, decided, and why.',
@@ -163,6 +170,12 @@ const PLATFORM_SECTIONS = [
     href: '/systems',
     desc: 'Reference documentation for production systems that are live.',
     accent: 'text-green-400',
+  },
+  {
+    label: 'Topics',
+    href: '/tags',
+    desc: 'Browse by topic — firebase, deployment, gemini, observability, and more.',
+    accent: 'text-surface-400',
   },
 ]
 
