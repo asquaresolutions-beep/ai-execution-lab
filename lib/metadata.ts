@@ -85,16 +85,22 @@ export function buildHowToSchema(item: ContentItem): Record<string, unknown> {
   const fm      = item.frontmatter
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 
+  const ORG_ID  = `${AUTHOR_URL}/#organization`
+  const pageUrl = `${siteUrl}/failures/${item.slug}`
+
   return {
     '@context': 'https://schema.org',
     '@type': 'HowTo',
+    '@id': `${pageUrl}#howto`,
     name: `How to fix: ${fm.title}`,
     description: fm.description,
-    url: `${siteUrl}/failures/${item.slug}`,
+    url: pageUrl,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl },
     datePublished: fm.date,
     dateModified: fm.updated ?? fm.date,
     author: {
       '@type': 'Organization',
+      '@id': ORG_ID,
       name: AUTHOR_NAME,
       url: AUTHOR_URL,
     },

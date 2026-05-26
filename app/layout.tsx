@@ -70,12 +70,16 @@ export const metadata: Metadata = {
 const websiteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
+  // @id used as co-reference target in per-article isPartOf fields
+  '@id': `${SITE_URL}/#website`,
   name: 'AI Execution Lab',
   url: SITE_URL,
   description:
     'A practical AI systems lab by A Square Solutions. Real workflows, real tools, real results — built while shipping production AI systems, SEO engineering pipelines, and GEO strategies.',
   publisher: {
     '@type': 'Organization',
+    // Co-reference to the canonical org entity on asquaresolution.com
+    '@id': 'https://asquaresolution.com/#organization',
     name: 'A Square Solutions',
     url: 'https://asquaresolution.com',
     sameAs: [
@@ -95,6 +99,8 @@ const websiteSchema = {
 const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
+  // Co-reference to the canonical org entity defined on asquaresolution.com
+  '@id': 'https://asquaresolution.com/#organization',
   name: 'A Square Solutions',
   url: 'https://asquaresolution.com',
   description: 'AI execution, GEO/AI-search strategy, and production WordPress engineering.',

@@ -28,29 +28,60 @@ export async function ContentPage({ item, prev, next, afterContent }: ContentPag
   const canonicalUrl = `${SITE_URL}${sectionMeta.href}/${item.slug}`
 
   // ── Article JSON-LD ───────────────────────────────────────
-  const articleType = item.section === 'docs' || item.section === 'systems' ? 'TechArticle' : 'Article'
+  const articleType =
+    item.section === 'docs' || item.section === 'systems'
+      ? 'TechArticle'
+      : item.section === 'case-studies'
+        ? 'Article'   // CaseStudy is not a Schema.org type; Article + articleSection is correct
+        : 'Article'
+
+  // Shared entity references — co-reference with asquaresolution.com org entity
+  const ORG_ID    = 'https://asquaresolution.com/#organization'
+  const SITE_ID   = 'https://lab.asquaresolution.com/#website'
+  const ogImageUrl = `${SITE_URL}/api/og?${new URLSearchParams({
+    title:       fm.title,
+    section:     sectionMeta.label,
+    description: fm.description ?? '',
+  }).toString()}`
+
   const articleSchema = {
     '@context': 'https://schema.org',
     '@type': articleType,
+    '@id': `${canonicalUrl}#article`,
     headline: fm.title,
     description: fm.description,
     url: canonicalUrl,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
     datePublished: fm.date,
     dateModified: fm.updated ?? fm.date,
+    image: {
+      '@type': 'ImageObject',
+      url: ogImageUrl,
+      width: 1200,
+      height: 630,
+    },
     author: {
       '@type': 'Organization',
+      '@id': ORG_ID,
       name: 'A Square Solutions',
       url: 'https://asquaresolution.com',
     },
     publisher: {
       '@type': 'Organization',
+      '@id': ORG_ID,
       name: 'A Square Solutions',
       url: 'https://asquaresolution.com',
     },
+    isPartOf: { '@id': SITE_ID },
     keywords: fm.tags?.join(', '),
     articleSection: sectionMeta.title,
-    ...(fm.impact   ? { abstract: fm.impact }   : {}),
-    ...(fm.goal     ? { description: `${fm.description} Goal: ${fm.goal}` } : {}),
+    // Surface operational evidence for GEO citation
+    ...(fm.impact      ? { abstract: fm.impact }                                    : {}),
+    ...(fm.goal        ? { description: `${fm.description} Goal: ${fm.goal}` }      : {}),
+    ...(fm.stack       ? { about: fm.stack.map((s: string) => ({ '@type': 'SoftwareApplication', name: s })) } : {}),
+    ...(fm.result      ? { additionalProperty: { '@type': 'PropertyValue', name: 'experimentResult', value: fm.result } } : {}),
+    // Labs: link hypothesis → result for AI citation eligibility
+    ...(fm.hypothesis  ? { description: `${fm.description} Hypothesis: ${fm.hypothesis}` } : {}),
   }
 
   return (
