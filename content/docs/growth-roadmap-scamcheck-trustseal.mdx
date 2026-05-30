@@ -1,0 +1,74 @@
+---
+title: "Growth Roadmap — ScamCheck + TrustSeal (Programmatic SEO, AI Overviews, Discover)"
+description: "The next growth phase: ~250 statically-generated programmatic scam pages (by type, city, bank, UPI app, platform), AI-Overview/Discover/featured-snippet formatting, an authority + citation system tied to 1930/cybercrime.gov.in, an internal-linking engine, and India-first bilingual GEO — all on a lightweight, Vercel-hobby-friendly, near-zero-cost architecture. Includes highest-ROI opportunities, traffic-growth potential, and fastest-ranking keywords."
+date: "2026-05-30"
+tags: ["seo", "geo", "programmatic-seo", "ai-overview", "google-discover", "scamcheck", "trustseal", "india", "growth", "cost"]
+status: published
+related_docs:
+  - content-distribution-engine
+  - scam-intelligence-ingestion
+  - vertex-ai-migration
+  - low-cost-autonomous-operation
+---
+
+This phase turns ScamCheck + TrustSeal from single-page tools into a **topical authority** on scams in India, using programmatic SEO that is structurally optimized for Google's AI Overviews and Discover — at near-zero running cost.
+
+## Why programmatic pages live in the Next.js engine (not the SPAs)
+The consumer apps are client-rendered Vite SPAs on GitHub Pages. Client-only pages are **not reliably indexed, cited by AI Overviews, or eligible for Discover**. The new pages are **statically generated (SSG)** in the Next.js engine — real HTML at build time, zero runtime cost — served at `/scams/...` (lab today; map a scam subdomain via `NEXT_PUBLIC_SCAM_BASE_URL` when ready).
+
+## What shipped in this phase (foundation)
+
+### A) Programmatic SEO — ~250 static pages
+Generated deterministically from a structured India-first data layer (`lib/seo/facets.ts`) — **no AI cost, no hallucination**:
+- **By scam type** (12): UPI, OTP, KYC, phishing, fake-job, investment, loan-app, courier, electricity-bill, lottery, tech-support, romance.
+- **By city** (25 metros + tier-2), **bank** (12 most-impersonated), **UPI app** (8), **platform** (8: WhatsApp, Telegram, etc.).
+- **Combos** (type × top-20 cities) for long-tail intent like "UPI fraud in Mumbai".
+
+### B) AI Overview optimization (structural, every page)
+`directAnswer` lead block (≤320 chars) → **verdict snippet** → **quick bullets** → **FAQ-first** (`FAQPage` JSON-LD) → structured summary table. This is the exact shape answer engines lift.
+
+### C) Discover optimization
+Honest, scannable headlines (no clickbait), truthful emotional hooks, freshness labels, `max-image-preview:large`, and a ≥1200px OG image recommendation per page (`lib/seo/discover.ts`).
+
+### D) Authority system
+Every page cites real sources — **helpline 1930**, **cybercrime.gov.in**, **RBI Sachet**, **SEBI**, **Sanchar Saathi** — plus a transparent **trust score** badge (`lib/seo/authority.ts`). Strong E-E-A-T → higher ranking + citation odds.
+
+### E) Internal-linking engine
+Each page links to related scams, trending (tier-1) scams, facet cross-links, and the live alerts hub (`buildInternalLinks`) — building a tight topical cluster.
+
+### F) GEO optimization
+Bilingual: English + हिन्दी direct-answer/verdict on every page; multilingual embeddings; India-first terms (₹, UPI, 1930). Default region India.
+
+### G) Ads optimization (wired next)
+Plan for the consumer apps (the `AdUnit` already gates paid users): in-content placement after the verdict block (highest viewability), lazy-load below the fold, one anchor + one in-article unit max (avoid intrusive layouts → protects Core Web Vitals + RPM), auto-removed for paid users. **Implementation is the next step.**
+
+### H) Lightweight architecture
+SSG (no per-request compute), zero AI on the programmatic path, sitemap auto-includes all pages, Firestore untouched by these pages, Vercel-hobby compatible.
+
+## Highest-ROI traffic opportunities (ranked)
+1. **Tier-1 scam-type pages** (UPI/OTP/KYC/phishing) — highest search volume, evergreen, low competition for "how to" + "verdict" intent. **Do first.**
+2. **"is this a scam" + verdict intent** — AI Overviews increasingly answer these; our direct-answer/verdict blocks are built to be the cited source.
+3. **City combos for metros** (Mumbai/Delhi/Bengaluru × UPI/OTP) — long-tail, low competition, local intent.
+4. **Bank/UPI-app impersonation pages** — brand + "fraud/scam" queries have steady volume and high CTR.
+5. **Hindi variants** — large underserved query space; our bilingual blocks capture it cheaply.
+
+## Traffic-growth potential (planning estimate)
+~250 pages × a conservative 15–60 clicks/page/month at maturity (3–6 months to rank long-tail) ≈ **4k–15k incremental organic clicks/month**, compounding as topical authority builds and Discover/AI-Overview placements land. Tier-1 type pages can individually exceed this range. *Estimates, not guarantees — depend on indexing, competition, and link signals.*
+
+## Fastest-ranking keywords (low competition, high intent)
+- "is [X] message a scam", "[bank] KYC update message real or fake"
+- "[UPI app] refund scam", "received collect request from unknown"
+- "[city] cyber fraud helpline number", "report UPI fraud [city]"
+- "fake job telegram task scam", "electricity bill disconnection sms scam"
+- Hindi: "UPI धोखाधड़ी कैसे बचें", "OTP scam क्या है", "1930 पर शिकायत कैसे करें"
+These win fastest because intent is specific, our pages answer directly, and authority citations + FAQ schema match what ranks today.
+
+## Roadmap (next steps)
+1. **Now → wire ads** in ScamCheck/TrustSeal per section G (after-verdict in-content unit, lazy below-fold, paid-user removal).
+2. **Connect live data**: feed the scam-intel trending clusters into the programmatic pages' "trending/latest" links and add fresh dated alert entries (freshness boost for Discover).
+3. **OG image route**: implement `/api/og` rendering for the recommended 1200×630 images (Discover/social CTR).
+4. **Submit + monitor**: submit the sitemap in Search Console; track impressions/CTR per cluster; expand combos where data shows demand.
+5. **Authority links**: earn a few external citations to the hub to accelerate ranking.
+
+## Cost
+Programmatic pages add **$0 AI cost** (deterministic) and **$0 Firestore** (static). Build time grows linearly (~250 pages prerender in seconds). Fully Vercel-hobby compatible. The only ongoing AI cost remains the autonomous alert pipeline, already capped and cached (see low-cost doc).
