@@ -19,11 +19,25 @@ export interface AlertInput {
 
 export interface AlertFormats {
   twitter: string         // ≤ 280 chars
+  twitterThread: string[] // multi-tweet breakdown
   linkedin: string
   whatsapp: string        // forward-friendly, emoji headers
   telegram: string        // Markdown
   shortsHook: string      // first 3 seconds of a reel
+  carousel: string[]      // slide hooks (IG/LinkedIn carousel)
   hashtags: string[]
+}
+
+// scam-intel category id → SEO facet type id (slugs differ for some).
+export const CATEGORY_TO_TYPE: Record<string, string> = {
+  upi_fraud: 'upi-fraud', otp_fraud: 'otp-fraud', kyc_fraud: 'kyc-fraud', phishing: 'phishing',
+  fake_job: 'fake-job', investment_fraud: 'investment-fraud', loan_scam: 'loan-scam',
+  lottery_prize: 'lottery-scam', tech_support: 'tech-support-scam', romance: 'romance-scam',
+  courier_customs: 'courier-scam', whatsapp_scam: 'phishing',
+}
+
+export function formatAlertForCategory(category: string, place?: string, url?: string): AlertFormats | null {
+  return formatAlert({ typeId: CATEGORY_TO_TYPE[category] || category, place, url })
 }
 
 const BASE = (process.env.NEXT_PUBLIC_SCAM_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://scamcheck.asquaresolution.com').replace(/\/$/, '')
@@ -67,7 +81,23 @@ export function formatAlert(input: AlertInput): AlertFormats | null {
 
   const shortsHook = `Got this message? It could be a ${t.name.toLowerCase()}. Here's the one sign that gives it away…`
 
-  return { twitter, linkedin, whatsapp, telegram, shortsHook, hashtags }
+  const twitterThread = [
+    clip(`🚨 ${t.name}${place} is spreading. A quick thread on how to spot it 🧵`, 280),
+    clip(`1/ How it works:\n${t.hook}`, 280),
+    ...t.signs.slice(0, 3).map((s, i) => clip(`${i + 2}/ Red flag: ${s}`, 280)),
+    clip(`✅ Stay safe: ${t.protect.join('. ')}.`, 280),
+    clip(`If targeted, report to 1930 & cybercrime.gov.in.\nFull guide → ${url}\n${hashtags.slice(0, 3).map((h) => '#' + h).join(' ')}`, 280),
+  ]
+
+  const carousel = [
+    `${t.name}${place}`,
+    `How it works: ${t.hook}`,
+    ...t.signs.slice(0, 3).map((s) => `🚩 ${s}`),
+    `✅ ${protect}`,
+    `Report → 1930 · cybercrime.gov.in`,
+  ]
+
+  return { twitter, twitterThread, linkedin, whatsapp, telegram, shortsHook, carousel, hashtags }
 }
 
 function buildHashtags(t: ScamType, place?: string): string[] {

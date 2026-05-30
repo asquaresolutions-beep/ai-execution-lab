@@ -23,6 +23,7 @@ import { enqueue } from '@/lib/distribution/queue'
 import { allowBundle, THROTTLE } from '@/lib/distribution/throttle'
 import { scoreBundleQuality } from '@/lib/distribution/quality'
 import { assertWithinBudget } from '@/lib/ai/budget'
+import { formatAlertForCategory } from '@/lib/distribution/alert-formats'
 import type { Channel } from '@/lib/distribution/integrations'
 import type { ScamInput, Severity } from '@/lib/distribution/types'
 import { rankByFreshness } from './freshness'
@@ -103,6 +104,15 @@ export async function runAutopilot(maxItems = THROTTLE.autopilotPerRun): Promise
 
       await enqueue(bundle.id, { channels: PUBLISH_CHANNELS })
       await enqueue(bundle.id, { channels: [SHORTS_CHANNEL] }) // Shorts script job
+      // Auto-distribution: store deterministic per-channel snippets (X thread,
+      // carousel, WhatsApp, Telegram, Shorts hook) for the social pipeline.
+      const formats = formatAlertForCategory(cluster.category, chooseRegion(cluster, report))
+      if (formats) {
+        await store.set('distribution_alerts', bundle.id, {
+          id: bundle.id, clusterId: cluster.id, category: cluster.category,
+          formats: formats as unknown as Record<string, unknown>, createdAt: now,
+        })
+      }
       await store.update(CLUSTERS, cluster.id, { bundleId: bundle.id })
       generated.push({ clusterId: cluster.id, bundleId: bundle.id, title: input.title, freshness: cluster.freshness.score, quality: quality.score })
       log.info({ event: 'autopilot.generated', clusterId: cluster.id, bundleId: bundle.id, freshness: cluster.freshness.score, quality: quality.score })
