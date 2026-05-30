@@ -122,6 +122,10 @@ export interface TrendingItem {
   velocity: number       // reports in trailing window
   platforms: string[]
   regions: string[]
+  viral: boolean         // momentum spike → "viral" badge
+  momentum: number       // 0..1 normalized growth signal
+  lastSeen: number       // last report timestamp (freshness)
+  active: boolean        // reported within the active window
 }
 
 export interface HeatmapCell {

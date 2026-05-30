@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import type { PageModel, InternalLink } from '@/lib/seo/programmatic'
 import { AdSenseScript } from '@/components/ads/adsense-script'
 import { AdUnit } from '@/components/ads/ad-unit'
+import { TrendingStrip } from '@/components/scam/trending-strip'
 
 const SLOT_BELOW_VERDICT = process.env.NEXT_PUBLIC_ADSENSE_SLOT_BELOW_VERDICT || ''
 const SLOT_IN_CONTENT = process.env.NEXT_PUBLIC_ADSENSE_SLOT_IN_CONTENT || ''
@@ -86,6 +87,9 @@ export function ProgrammaticPage({ model }: { model: PageModel }) {
           {model.quickBullets.map((b, i) => <li key={i} className="flex gap-2"><span className="text-indigo-400">•</span>{b}</li>)}
         </ul>
       </section>
+
+      {/* Live trending scams (static-first; hydrates from cached API) */}
+      <TrendingStrip limit={6} />
 
       {/* Structured summary */}
       <section className="mb-6 overflow-hidden rounded-lg border border-neutral-800">

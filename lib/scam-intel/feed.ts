@@ -30,24 +30,46 @@ export async function publicFeed(opts: { limit?: number; category?: string; regi
 }
 
 // ── Trending dashboard ─────────────────────────────────────────────
+const ACTIVE_WINDOW_MS = 72 * 3_600_000 // 72h = "active scam alert"
+
 export async function trending(limit = 20, windowDays = 7): Promise<TrendingItem[]> {
   const now = Date.now()
   const cutoff = now - windowDays * 86_400_000
   const clusters = (await getStore().query<ScamCluster>(CLUSTERS, { limit: 1000 })).map((r) => r.data)
-  return clusters
-    .map((c) => ({
-      clusterId: c.id,
-      title: c.title,
-      category: c.category,
-      reportCount: c.reportCount,
-      severity: c.severity,
-      trendScore: c.lastSeen >= cutoff ? c.trendScore : computeTrend(c.reportCount, c.firstSeen, now) * 0.5,
-      velocity: c.lastSeen >= cutoff ? c.reportCount : 0,
-      platforms: c.platforms,
-      regions: c.regions,
-    }))
-    .sort((a, b) => b.trendScore - a.trendScore)
-    .slice(0, limit)
+  const items = clusters.map((c) => toTrendingItem(c, now, cutoff))
+  // Normalize momentum across the set, then flag viral (top momentum + recent).
+  const maxScore = Math.max(1, ...items.map((i) => i.trendScore))
+  for (const it of items) {
+    it.momentum = +(it.trendScore / maxScore).toFixed(3)
+    it.viral = it.active && it.momentum >= 0.6 && it.reportCount >= 3
+  }
+  return items.sort((a, b) => b.trendScore - a.trendScore).slice(0, limit)
+}
+
+function toTrendingItem(c: ScamCluster, now: number, cutoff: number): TrendingItem {
+  const active = c.lastSeen >= now - ACTIVE_WINDOW_MS
+  return {
+    clusterId: c.id, title: c.title, category: c.category,
+    reportCount: c.reportCount, severity: c.severity,
+    trendScore: c.lastSeen >= cutoff ? c.trendScore : computeTrend(c.reportCount, c.firstSeen, now) * 0.5,
+    velocity: c.lastSeen >= cutoff ? c.reportCount : 0,
+    platforms: c.platforms, regions: c.regions,
+    viral: false, momentum: 0, lastSeen: c.lastSeen, active,
+  }
+}
+
+// Cheap read of the materialized snapshot written by the update-trending
+// cron. One read instead of scanning all clusters — keeps the public
+// trending API near-free (Vercel-hobby / Firestore-Spark safe).
+export async function latestTrendingSnapshot(limit = 12): Promise<{ generatedAt: number; items: TrendingItem[] }> {
+  const rows = await getStore().query<{ generatedAt: number; items: TrendingItem[] }>('trending_snapshots', {
+    orderBy: { field: 'generatedAt', dir: 'desc' }, limit: 1,
+  })
+  if (rows[0]?.data?.items?.length) {
+    return { generatedAt: rows[0].data.generatedAt, items: rows[0].data.items.slice(0, limit) }
+  }
+  // Cold start: compute once (snapshot will exist after the next cron run).
+  return { generatedAt: Date.now(), items: await trending(limit) }
 }
 
 // ── Heatmap (region × category) ────────────────────────────────────
