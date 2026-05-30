@@ -21,6 +21,8 @@ import { audit } from '@/lib/ai/audit'
 import { generateBundle } from '@/lib/distribution/engine'
 import { enqueue } from '@/lib/distribution/queue'
 import { allowBundle, THROTTLE } from '@/lib/distribution/throttle'
+import { scoreBundleQuality } from '@/lib/distribution/quality'
+import { assertWithinBudget } from '@/lib/ai/budget'
 import type { Channel } from '@/lib/distribution/integrations'
 import type { ScamInput, Severity } from '@/lib/distribution/types'
 import { rankByFreshness } from './freshness'
@@ -39,8 +41,9 @@ const MIN_FRESHNESS = Number(process.env.AUTOPILOT_MIN_FRESHNESS) || 25
 export interface AutopilotResult {
   considered: number
   eligible: number
-  generated: Array<{ clusterId: string; bundleId: string; title: string; freshness: number }>
+  generated: Array<{ clusterId: string; bundleId: string; title: string; freshness: number; quality: number }>
   skippedExisting: number
+  skippedLowQuality: number
   budgetReached: boolean
   message: string
 }
@@ -56,6 +59,7 @@ export async function runAutopilot(maxItems = THROTTLE.autopilotPerRun): Promise
 
   const generated: AutopilotResult['generated'] = []
   let skippedExisting = 0
+  let skippedLowQuality = 0
   let budgetReached = false
   let eligible = 0
 
@@ -70,6 +74,10 @@ export async function runAutopilot(maxItems = THROTTLE.autopilotPerRun): Promise
     // Respect the daily bundle budget (cost guard).
     if (!(await allowBundle())) { budgetReached = true; break }
 
+    // Vertex daily-spend circuit breaker — stop the run, don't crash.
+    try { await assertWithinBudget() }
+    catch { budgetReached = true; break }
+
     const report = await loadCanonicalReport(cluster)
     if (!report) continue
 
@@ -83,11 +91,21 @@ export async function runAutopilot(maxItems = THROTTLE.autopilotPerRun): Promise
 
     try {
       const bundle = await generateBundle(input, { locales: ['en', 'hi'] })
+
+      // Quality gate — never publish thin/mock pages. Leave unstamped so a
+      // later run (with live AI) can retry this cluster.
+      const quality = scoreBundleQuality(bundle)
+      if (!quality.pass) {
+        skippedLowQuality++
+        log.warn({ event: 'autopilot.low_quality', clusterId: cluster.id, score: quality.score, issues: quality.issues })
+        continue
+      }
+
       await enqueue(bundle.id, { channels: PUBLISH_CHANNELS })
       await enqueue(bundle.id, { channels: [SHORTS_CHANNEL] }) // Shorts script job
       await store.update(CLUSTERS, cluster.id, { bundleId: bundle.id })
-      generated.push({ clusterId: cluster.id, bundleId: bundle.id, title: input.title, freshness: cluster.freshness.score })
-      log.info({ event: 'autopilot.generated', clusterId: cluster.id, bundleId: bundle.id, freshness: cluster.freshness.score })
+      generated.push({ clusterId: cluster.id, bundleId: bundle.id, title: input.title, freshness: cluster.freshness.score, quality: quality.score })
+      log.info({ event: 'autopilot.generated', clusterId: cluster.id, bundleId: bundle.id, freshness: cluster.freshness.score, quality: quality.score })
     } catch (err) {
       log.error({ event: 'autopilot.generate_failed', clusterId: cluster.id, error: (err as Error).message })
     }
@@ -96,7 +114,7 @@ export async function runAutopilot(maxItems = THROTTLE.autopilotPerRun): Promise
   await audit({
     action: 'distribution.bundle', actor: 'autopilot', ok: true,
     message: `autopilot run: ${generated.length} generated`,
-    meta: { generated: generated.length, skippedExisting, budgetReached },
+    meta: { generated: generated.length, skippedExisting, skippedLowQuality, budgetReached },
   })
 
   return {
@@ -104,8 +122,9 @@ export async function runAutopilot(maxItems = THROTTLE.autopilotPerRun): Promise
     eligible,
     generated,
     skippedExisting,
+    skippedLowQuality,
     budgetReached,
-    message: `Generated ${generated.length} alert bundle(s); skipped ${skippedExisting} already-produced; ${budgetReached ? 'daily budget reached' : 'within budget'}.`,
+    message: `Generated ${generated.length} alert bundle(s); skipped ${skippedExisting} existing, ${skippedLowQuality} low-quality; ${budgetReached ? 'budget/quota reached' : 'within budget'}.`,
   }
 }
 
