@@ -113,6 +113,25 @@ export function ProgrammaticPage({ model }: { model: PageModel }) {
         </section>
       ))}
 
+      {/* Scam vs legitimate comparison — strong featured-snippet / AI-Overview target */}
+      {model.comparison.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-2 text-lg font-semibold text-white">Scam vs. legitimate: how to tell</h2>
+          <div className="overflow-hidden rounded-lg border border-neutral-800">
+            <div className="grid grid-cols-2 bg-neutral-900/60 text-xs font-semibold uppercase tracking-wide">
+              <div className="px-3 py-2 text-red-400">🚩 Likely a scam</div>
+              <div className="px-3 py-2 text-green-400">✅ Legitimate</div>
+            </div>
+            {model.comparison.map((row, i) => (
+              <div key={i} className="grid grid-cols-2 border-t border-neutral-800 text-sm">
+                <div className="px-3 py-2 text-neutral-300">{row.scam}</div>
+                <div className="px-3 py-2 text-neutral-300">{row.legit}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Ad — in-content (fluid/in-article), before the FAQ */}
       {SLOT_IN_CONTENT && <AdUnit slot={SLOT_IN_CONTENT} format="fluid" layout="in-article" minHeight={280} />}
 

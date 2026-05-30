@@ -43,6 +43,8 @@ export interface PageModel {
   structuredSummary: { label: string; value: string }[]
   sections: { heading: string; body: string[] }[]
   faq: FaqItem[]                // FAQ-first
+  comparison: { scam: string; legit: string }[]  // scam-vs-safe (AI Overview / snippet)
+  entities: string[]            // extracted entities (machine-readable)
   references: Reference[]
   internalLinks: InternalLink[]
   breadcrumb: { name: string; href: string }[]
@@ -153,7 +155,7 @@ function assemble(a: AssembleArgs): PageModel {
     ? `${t.name}${place ? ` ${dim === 'city' ? 'in' : 'on'} ${place}` : ''}: How It Works & How to Stay Safe`
     : `${facetTopic(facet!, dim!)} Scams: How to Spot, Avoid & Report`
 
-  const schema = buildSchema({ title, metaDescription, canonical, h1, faq, breadcrumb, updatedAt: UPDATED_AT, image: `${BASE}${discover.imageRecommendation.ogImagePath}` })
+  const schema = buildSchema({ title, metaDescription, canonical, h1, faq, breadcrumb, updatedAt: UPDATED_AT, image: `${BASE}${discover.imageRecommendation.ogImagePath}`, entities: buildEntities(t, facet), trustScore: trust.score })
 
   return {
     kind: a.kind, path, canonical, title, metaDescription, h1,
@@ -161,7 +163,10 @@ function assemble(a: AssembleArgs): PageModel {
     riskLevel: t && t.searchVolumeTier === 1 ? 'High' : 'Medium',
     quickBullets,
     structuredSummary: buildStructuredSummary(t, facet, dim),
-    sections, faq, references, internalLinks, breadcrumb, trust, discover, hi,
+    sections, faq,
+    comparison: buildComparison(t),
+    entities: buildEntities(t, facet),
+    references, internalLinks, breadcrumb, trust, discover, hi,
     updatedAt: UPDATED_AT, schema,
   }
 }
@@ -246,10 +251,11 @@ function buildBreadcrumb(a: AssembleArgs): { name: string; href: string }[] {
   return crumbs
 }
 
-function buildSchema(o: { title: string; metaDescription: string; canonical: string; h1: string; faq: FaqItem[]; breadcrumb: { name: string; href: string }[]; updatedAt: number; image: string }): object[] {
+function buildSchema(o: { title: string; metaDescription: string; canonical: string; h1: string; faq: FaqItem[]; breadcrumb: { name: string; href: string }[]; updatedAt: number; image: string; entities?: string[]; trustScore?: number }): object[] {
   const iso = new Date(o.updatedAt).toISOString()
   const org = { '@type': 'Organization', name: 'A Square Solutions', url: 'https://asquaresolution.com' }
   const imageObject = { '@type': 'ImageObject', url: o.image, width: 1200, height: 630 }
+  const mentions = (o.entities ?? []).slice(0, 12).map((name) => ({ '@type': 'Thing', name }))
   return [
     {
       '@context': 'https://schema.org', '@type': 'Article',
@@ -260,6 +266,12 @@ function buildSchema(o: { title: string; metaDescription: string; canonical: str
       speakable: { '@type': 'SpeakableSpecification', cssSelector: ['h1', '.direct-answer'] },
       mainEntityOfPage: { '@type': 'WebPage', '@id': o.canonical },
       author: org, publisher: { ...org, logo: { '@type': 'ImageObject', url: 'https://asquaresolution.com/logo.png' } },
+      // Machine-readable trust + entity signals (E-E-A-T / AI surfaces).
+      isAccessibleForFree: true,
+      creditText: 'ScamCheck by A Square Solutions',
+      publishingPrinciples: `${BASE}/editorial-policy`,
+      ...(mentions.length ? { mentions } : {}),
+      ...(o.trustScore != null ? { additionalProperty: [{ '@type': 'PropertyValue', name: 'trustScore', value: o.trustScore, maxValue: 100 }] } : {}),
     },
     {
       '@context': 'https://schema.org', '@type': 'FAQPage',
@@ -273,6 +285,26 @@ function buildSchema(o: { title: string; metaDescription: string; canonical: str
 }
 
 // ── helpers ────────────────────────────────────────────────────────
+// Universal scam-vs-legitimate comparison (accurate for every scam type).
+const BASE_COMPARISON: { scam: string; legit: string }[] = [
+  { scam: 'Creates urgency or threatens immediate consequences', legit: 'Gives you time; never threatens instant action' },
+  { scam: 'Asks for your OTP, UPI PIN, or card/CVV', legit: 'Never asks for OTP, UPI PIN, or CVV' },
+  { scam: 'Sends links from unofficial numbers/domains', legit: 'Directs you to the official app or website' },
+  { scam: 'Requests an upfront fee to "verify" or "release" money', legit: 'No upfront payment to receive money you are owed' },
+]
+
+function buildComparison(t?: ScamType): { scam: string; legit: string }[] {
+  const head = t ? [{ scam: t.hook, legit: 'A genuine bank, company, or government body will not behave this way.' }] : []
+  return [...head, ...BASE_COMPARISON]
+}
+
+function buildEntities(t?: ScamType, facet?: Facet): string[] {
+  const base = ['scam', 'fraud', 'India', 'UPI', 'OTP', '1930', 'cybercrime.gov.in']
+  const extra = t ? [t.name, t.nameHi, ...t.aka] : []
+  if (facet) extra.push(facet.name)
+  return [...new Set([...extra, ...base].map((s) => s?.trim()).filter(Boolean) as string[])]
+}
+
 function subjectLine(t?: ScamType, facet?: Facet, dim?: Dimension): string {
   if (t && facet) return `${t.name} ${dim === 'city' ? 'in' : 'on'} ${facet.name}`
   if (t) return t.name
@@ -338,7 +370,10 @@ export function buildHubPage(): PageModel {
     sections: [
       { heading: 'Browse scams by type', body: SCAM_TYPES.map((t) => `${t.name}: ${t.hook}`) },
     ],
-    faq, references, internalLinks, breadcrumb, trust,
+    faq,
+    comparison: buildComparison(),
+    entities: buildEntities(),
+    references, internalLinks, breadcrumb, trust,
     discover,
     hi: {
       h1: 'स्कैम अलर्ट और धोखाधड़ी से बचाव (भारत)',
@@ -346,7 +381,7 @@ export function buildHubPage(): PageModel {
       verdict: 'नतीजा: अनचाहा + जल्दबाज़ी + पैसे/कोड की मांग = संभावित स्कैम।',
     },
     updatedAt: UPDATED_AT,
-    schema: buildSchema({ title: 'Scam Alerts (India)', metaDescription: clip(directAnswer, 158), canonical, h1: 'Scam Alerts & Fraud Protection (India)', faq, breadcrumb, updatedAt: UPDATED_AT, image: `${BASE}${discover.imageRecommendation.ogImagePath}` }),
+    schema: buildSchema({ title: 'Scam Alerts (India)', metaDescription: clip(directAnswer, 158), canonical, h1: 'Scam Alerts & Fraud Protection (India)', faq, breadcrumb, updatedAt: UPDATED_AT, image: `${BASE}${discover.imageRecommendation.ogImagePath}`, entities: buildEntities(), trustScore: trust.score }),
   }
 }
 
@@ -388,10 +423,13 @@ export function buildScamHub(hubId: string): PageModel | null {
       { label: 'Languages', value: 'English + हिन्दी' },
     ],
     sections: [{ heading: 'Scams in this cluster', body: types.map((t) => `${t.name}: ${t.hook}`) }],
-    faq, references, internalLinks, breadcrumb, trust, discover,
+    faq,
+    comparison: buildComparison(types[0]),
+    entities: buildEntities(types[0]),
+    references, internalLinks, breadcrumb, trust, discover,
     hi: { h1: hub.titleHi, directAnswer: `${hub.titleHi}: OTP/UPI पिन कभी साझा न करें, आधिकारिक ऐप में जांचें, और 1930 पर रिपोर्ट करें।`, verdict: 'नतीजा: अनचाहा + जल्दबाज़ी + पैसे/कोड की मांग = संभावित स्कैम।' },
     updatedAt: UPDATED_AT,
-    schema: buildSchema({ title: hub.title, metaDescription: clip(directAnswer, 158), canonical, h1: hub.title, faq, breadcrumb, updatedAt: UPDATED_AT, image: `${BASE}${discover.imageRecommendation.ogImagePath}` }),
+    schema: buildSchema({ title: hub.title, metaDescription: clip(directAnswer, 158), canonical, h1: hub.title, faq, breadcrumb, updatedAt: UPDATED_AT, image: `${BASE}${discover.imageRecommendation.ogImagePath}`, entities: buildEntities(types[0]), trustScore: trust.score }),
   }
 }
 
