@@ -1,6 +1,16 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import type { PageModel, InternalLink } from '@/lib/seo/programmatic'
+import { AdSenseScript } from '@/components/ads/adsense-script'
+import { AdUnit } from '@/components/ads/ad-unit'
+
+const SLOT_BELOW_VERDICT = process.env.NEXT_PUBLIC_ADSENSE_SLOT_BELOW_VERDICT || ''
+const SLOT_IN_CONTENT = process.env.NEXT_PUBLIC_ADSENSE_SLOT_IN_CONTENT || ''
+
+const RISK_BADGE: Record<string, string> = {
+  High: 'text-red-400 border-red-500/30 bg-red-500/10',
+  Medium: 'text-amber-400 border-amber-500/30 bg-amber-500/10',
+}
 
 const TRUST_BADGE: Record<string, string> = {
   authoritative: 'text-green-400 border-green-500/30 bg-green-500/10',
@@ -35,25 +45,39 @@ export function ProgrammaticPage({ model }: { model: PageModel }) {
         ))}
       </nav>
 
+      <AdSenseScript />
+
       <header className="mb-6">
         <h1 className="text-2xl font-semibold text-white sm:text-3xl">{model.h1}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
-          <span className="text-neutral-500">{model.discover.freshnessLabel}</span>
+        {/* CTR badge row — severity, trust, freshness (all truthful) */}
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className={cn('rounded border px-2 py-0.5 font-medium', RISK_BADGE[model.riskLevel])}>
+            ⚠ {model.riskLevel} risk
+          </span>
           <span className={cn('rounded border px-2 py-0.5 font-medium', TRUST_BADGE[model.trust.band])}>
-            Trust: {model.trust.band} ({model.trust.score})
+            ✓ Trust: {model.trust.band} ({model.trust.score})
+          </span>
+          <span className="rounded border border-neutral-700 bg-neutral-800/50 px-2 py-0.5 text-neutral-400">
+            🕑 {model.discover.freshnessLabel}
+          </span>
+          <span className="rounded border border-neutral-700 bg-neutral-800/50 px-2 py-0.5 text-neutral-400">
+            EN · हिन्दी
           </span>
         </div>
       </header>
 
-      {/* Direct answer — leads the page for AI Overviews */}
+      {/* Direct answer — leads the page for AI Overviews + speakable */}
       <section className="mb-5 rounded-lg border border-indigo-500/25 bg-indigo-500/10 p-4">
-        <p className="text-[15px] leading-relaxed text-neutral-100">{model.directAnswer}</p>
+        <p className="direct-answer text-[15px] leading-relaxed text-neutral-100">{model.directAnswer}</p>
       </section>
 
       {/* Verdict snippet */}
       <p className="mb-5 rounded-md border-l-2 border-amber-400 bg-amber-500/5 px-3 py-2 text-sm font-medium text-amber-200">
         {model.verdict}
       </p>
+
+      {/* Ad — below the verdict (highest-viewability in-content slot) */}
+      {SLOT_BELOW_VERDICT && <AdUnit slot={SLOT_BELOW_VERDICT} format="auto" minHeight={250} />}
 
       {/* Quick bullets */}
       <section className="mb-6">
@@ -84,6 +108,9 @@ export function ProgrammaticPage({ model }: { model: PageModel }) {
           </ul>
         </section>
       ))}
+
+      {/* Ad — in-content (fluid/in-article), before the FAQ */}
+      {SLOT_IN_CONTENT && <AdUnit slot={SLOT_IN_CONTENT} format="fluid" layout="in-article" minHeight={280} />}
 
       {/* FAQ — FAQ-first formatting */}
       <section className="mb-6">

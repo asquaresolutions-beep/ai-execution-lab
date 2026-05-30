@@ -37,6 +37,7 @@ export interface PageModel {
   h1: string
   directAnswer: string          // ≤ 320 chars, leads the page (AI Overview)
   verdict: string               // one-line "verdict snippet"
+  riskLevel: 'High' | 'Medium'  // severity label for CTR badge
   quickBullets: string[]        // scannable summary
   structuredSummary: { label: string; value: string }[]
   sections: { heading: string; body: string[] }[]
@@ -147,7 +148,9 @@ function assemble(a: AssembleArgs): PageModel {
 
   return {
     kind: a.kind, path, canonical, title, metaDescription, h1,
-    directAnswer, verdict, quickBullets,
+    directAnswer, verdict,
+    riskLevel: t && t.searchVolumeTier === 1 ? 'High' : 'Medium',
+    quickBullets,
     structuredSummary: buildStructuredSummary(t, facet, dim),
     sections, faq, references, internalLinks, breadcrumb, trust, discover, hi,
     updatedAt: UPDATED_AT, schema,
@@ -304,6 +307,7 @@ export function buildHubPage(): PageModel {
     h1: 'Scam Alerts & Fraud Protection (India)',
     directAnswer,
     verdict: 'Verdict: Unexpected + urgent + asks for money or codes = likely scam. Pause and verify.',
+    riskLevel: 'High',
     quickBullets: [
       'Most common: UPI fraud, OTP fraud, KYC fraud, phishing.',
       'Never share OTP, UPI PIN, or CVV with anyone.',
