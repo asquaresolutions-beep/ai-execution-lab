@@ -4,7 +4,11 @@ import { type NextRequest } from 'next/server'
 // Keep on Node.js runtime — edge runtime cannot use crypto (required by ImageResponse internals)
 export const runtime = 'nodejs'
 
-export const dynamic = 'force-static'
+// Per-URL dynamic render (must read query params), but each unique URL is
+// cached at the CDN for a year via Cache-Control (cheap, edge-friendly).
+export const dynamic = 'force-dynamic'
+
+const CACHE_HEADERS = { 'Cache-Control': 'public, max-age=86400, s-maxage=31536000, immutable' }
 
 // ─────────────────────────────────────────────────────────────
 // Section accent colours (inline styles — OG uses JSX, not Tailwind)
@@ -22,6 +26,33 @@ const SECTION_ACCENTS: Record<string, { color: string; bg: string; border: strin
 
 const DEFAULT_ACCENT = { color: '#fb923c', bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.25)' }
 
+// Severity → accent for scam OG cards.
+const SEVERITY_ACCENT: Record<string, { color: string; glow: string }> = {
+  high:     { color: '#f87171', glow: 'rgba(239,68,68,0.22)' },
+  critical: { color: '#ef4444', glow: 'rgba(239,68,68,0.30)' },
+  medium:   { color: '#fbbf24', glow: 'rgba(245,158,11,0.20)' },
+  low:      { color: '#60a5fa', glow: 'rgba(59,130,246,0.18)' },
+}
+
+// ─────────────────────────────────────────────────────────────
+// Devanagari font (for Hindi subtitles). Fetched once, cached in
+// module scope. Fails gracefully → English-only render if unavailable.
+// ─────────────────────────────────────────────────────────────
+let _devanagari: ArrayBuffer | null | undefined
+async function loadDevanagari(): Promise<ArrayBuffer | null> {
+  if (_devanagari !== undefined) return _devanagari
+  try {
+    // Noto Sans Devanagari (woff binary from Google Fonts static host).
+    const url = 'https://fonts.gstatic.com/s/notosansdevanagari/v26/TuGoUUFzXI5FBtUq5a8bjKYTZjtRU6Sgv3NaV_SNmI0b8QQCQmHn6B2OHHpimSncE.woff'
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(String(res.status))
+    _devanagari = await res.arrayBuffer()
+  } catch {
+    _devanagari = null
+  }
+  return _devanagari
+}
+
 // ─────────────────────────────────────────────────────────────
 // Route handler
 // ─────────────────────────────────────────────────────────────
@@ -32,6 +63,17 @@ export async function GET(req: NextRequest) {
   const title       = searchParams.get('title')       ?? 'AI Execution Lab'
   const section     = searchParams.get('section')     ?? ''     // e.g. "FAILURE"
   const description = searchParams.get('description') ?? ''
+
+  // ── Scam template (Discover/social-optimized) ──────────────────
+  if ((searchParams.get('template') ?? '') === 'scam') {
+    return scamCard({
+      title,
+      severity: (searchParams.get('sev') ?? 'high').toLowerCase(),
+      place: searchParams.get('place') ?? '',
+      verdict: searchParams.get('verdict') ?? '',
+      hi: searchParams.get('hi') ?? '',
+    })
+  }
 
   const accent = SECTION_ACCENTS[section.toUpperCase()] ?? DEFAULT_ACCENT
 
@@ -196,6 +238,66 @@ export async function GET(req: NextRequest) {
         />
       </div>
     ),
-    { width: 1200, height: 630 }
+    { width: 1200, height: 630, headers: CACHE_HEADERS }
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// Scam OG card — severity-coloured, bilingual, with helpline footer.
+// ─────────────────────────────────────────────────────────────
+async function scamCard(o: { title: string; severity: string; place: string; verdict: string; hi: string }) {
+  const sev = SEVERITY_ACCENT[o.severity] ?? SEVERITY_ACCENT.high
+  const displayTitle = o.title.length > 70 ? o.title.slice(0, 68) + '…' : o.title
+  const verdict = o.verdict.length > 110 ? o.verdict.slice(0, 108) + '…' : o.verdict
+
+  // Load Devanagari font only if a Hindi line is present. We render the
+  // Hindi line ONLY when the font loaded (avoids tofu + the "no fonts"
+  // crash from passing an empty fonts array — satori needs its default).
+  const devanagari = o.hi ? await loadDevanagari() : null
+  const showHi = !!(o.hi && devanagari)
+  const imgOptions: ConstructorParameters<typeof ImageResponse>[1] = { width: 1200, height: 630, headers: CACHE_HEADERS }
+  if (devanagari) {
+    imgOptions.fonts = [{ name: 'Noto Sans Devanagari', data: devanagari, style: 'normal', weight: 700 }]
+  }
+
+  return new ImageResponse(
+    (
+      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '56px 68px', background: '#05080f', fontFamily: 'system-ui, sans-serif', position: 'relative', overflow: 'hidden' }}>
+        {/* Severity glow */}
+        <div style={{ position: 'absolute', top: -80, right: -80, width: 520, height: 420, background: `radial-gradient(ellipse at top right, ${sev.glow} 0%, transparent 65%)` }} />
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+
+        {/* Top row: brand + severity badge */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 40, height: 40, background: '#6366f1', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, color: 'white' }}>S</div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#a5b4fc', letterSpacing: '0.14em', textTransform: 'uppercase' }}>ScamCheck</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {o.place && <span style={{ fontSize: 16, color: '#94a3b8' }}>{o.place}</span>}
+            <div style={{ padding: '6px 16px', borderRadius: 999, background: `${sev.color}22`, border: `2px solid ${sev.color}`, fontSize: 16, fontWeight: 800, color: sev.color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              ⚠ {o.severity} risk
+            </div>
+          </div>
+        </div>
+
+        {/* Title + verdict + Hindi */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ fontSize: displayTitle.length > 48 ? 56 : 66, fontWeight: 800, color: '#f8fafc', lineHeight: 1.1, letterSpacing: '-1.5px', marginBottom: 18, maxWidth: 1050 }}>{displayTitle}</div>
+          {verdict && <div style={{ fontSize: 26, color: sev.color, fontWeight: 600, lineHeight: 1.35, maxWidth: 980, marginBottom: o.hi ? 14 : 0 }}>{verdict}</div>}
+          {showHi && <div style={{ fontSize: 24, color: '#cbd5e1', lineHeight: 1.4, maxWidth: 980, fontFamily: 'Noto Sans Devanagari' }}>{o.hi}</div>}
+        </div>
+
+        {/* Footer: helpline */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 18, color: '#64748b' }}>
+          <span style={{ color: '#34d399', fontWeight: 700 }}>Report fraud → 1930</span>
+          <span>·</span>
+          <span>cybercrime.gov.in</span>
+        </div>
+
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg, ${sev.color} 0%, transparent 70%)` }} />
+      </div>
+    ),
+    imgOptions,
   )
 }

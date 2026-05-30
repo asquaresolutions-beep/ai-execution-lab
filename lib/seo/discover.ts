@@ -29,6 +29,10 @@ export function buildDiscoverMeta(opts: {
   typeName: string            // e.g. "UPI Fraud"
   region?: string
   updatedAt: number
+  severity?: string           // low|medium|high|critical → OG card colour
+  place?: string              // city/bank/platform label for the OG card
+  verdict?: string            // verdict line for the OG card
+  hiTitle?: string            // Hindi subtitle for the OG card
 }): DiscoverMeta {
   const { subject, typeName, region, updatedAt } = opts
   const place = region && region !== 'India' ? ` in ${region}` : ''
@@ -46,6 +50,13 @@ export function buildDiscoverMeta(opts: {
   const ageDays = (Date.now() - updatedAt) / 86_400_000
   const isFresh = ageDays <= FRESH_WINDOW_DAYS
 
+  // Build the dynamic scam OG image URL (severity-coloured, bilingual).
+  const q = new URLSearchParams({ template: 'scam', title: headline })
+  if (opts.severity) q.set('sev', opts.severity)
+  if (opts.place) q.set('place', opts.place)
+  if (opts.verdict) q.set('verdict', opts.verdict.replace(/^Verdict:\s*/i, ''))
+  if (opts.hiTitle) q.set('hi', opts.hiTitle)
+
   return {
     headline,
     altHeadlines,
@@ -56,8 +67,8 @@ export function buildDiscoverMeta(opts: {
       minWidth: 1200,
       aspectRatio: '1.91:1',
       altText: `Illustration: how a ${subject} works and how to stay safe`,
-      ogImagePath: `/api/og?title=${encodeURIComponent(headline)}`,
-      guidance: 'Use a single high-quality ≥1200px image (no logos/text overlay spam). Mark large image preview via robots max-image-preview:large (set in metadata).',
+      ogImagePath: `/api/og?${q.toString()}`,
+      guidance: 'Single high-quality ≥1200px image; robots max-image-preview:large set in metadata for Discover.',
     },
   }
 }

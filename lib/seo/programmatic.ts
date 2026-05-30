@@ -119,7 +119,15 @@ function assemble(a: AssembleArgs): PageModel {
     bilingual: true,
   })
 
-  const discover = buildDiscoverMeta({ subject, typeName: titleSubject, region: dim === 'city' ? place : undefined, updatedAt: UPDATED_AT })
+  const discover = buildDiscoverMeta({
+    subject, typeName: titleSubject,
+    region: dim === 'city' ? place : undefined,
+    updatedAt: UPDATED_AT,
+    severity: t && t.searchVolumeTier === 1 ? 'high' : 'medium',
+    place: place || undefined,
+    verdict,
+    hiTitle: t ? t.nameHi : undefined,
+  })
 
   const title = clip(t
     ? `${t.name}${place ? ` ${dim === 'city' ? 'in' : 'on'} ${place}` : ''} — Warning Signs & How to Stay Safe | ${BRAND}`
@@ -144,7 +152,7 @@ function assemble(a: AssembleArgs): PageModel {
     ? `${t.name}${place ? ` ${dim === 'city' ? 'in' : 'on'} ${place}` : ''}: How It Works & How to Stay Safe`
     : `${facetTopic(facet!, dim!)} Scams: How to Spot, Avoid & Report`
 
-  const schema = buildSchema({ title, metaDescription, canonical, h1, faq, breadcrumb, updatedAt: UPDATED_AT })
+  const schema = buildSchema({ title, metaDescription, canonical, h1, faq, breadcrumb, updatedAt: UPDATED_AT, image: `${BASE}${discover.imageRecommendation.ogImagePath}` })
 
   return {
     kind: a.kind, path, canonical, title, metaDescription, h1,
@@ -237,14 +245,18 @@ function buildBreadcrumb(a: AssembleArgs): { name: string; href: string }[] {
   return crumbs
 }
 
-function buildSchema(o: { title: string; metaDescription: string; canonical: string; h1: string; faq: FaqItem[]; breadcrumb: { name: string; href: string }[]; updatedAt: number }): object[] {
+function buildSchema(o: { title: string; metaDescription: string; canonical: string; h1: string; faq: FaqItem[]; breadcrumb: { name: string; href: string }[]; updatedAt: number; image: string }): object[] {
   const iso = new Date(o.updatedAt).toISOString()
   const org = { '@type': 'Organization', name: 'A Square Solutions', url: 'https://asquaresolution.com' }
+  const imageObject = { '@type': 'ImageObject', url: o.image, width: 1200, height: 630 }
   return [
     {
       '@context': 'https://schema.org', '@type': 'Article',
       headline: o.h1, description: o.metaDescription, inLanguage: 'en-IN',
       datePublished: iso, dateModified: iso,
+      image: imageObject,
+      // Speakable: lets assistants read the answer aloud (voice + AI surfaces).
+      speakable: { '@type': 'SpeakableSpecification', cssSelector: ['h1', '.direct-answer'] },
       mainEntityOfPage: { '@type': 'WebPage', '@id': o.canonical },
       author: org, publisher: { ...org, logo: { '@type': 'ImageObject', url: 'https://asquaresolution.com/logo.png' } },
     },
@@ -300,6 +312,7 @@ export function buildHubPage(): PageModel {
   const references = referencesForType('upi-fraud')
   const trust = trustScore({ hasOfficialRefs: true, citationCount: references.length, hasHelpline: true, hasLastUpdated: true, factCount: 4, bilingual: true })
   const breadcrumb = [{ name: 'Scams', href: '/scams' }]
+  const discover = buildDiscoverMeta({ subject: 'scams in India', typeName: 'Scam Alerts', region: 'India', updatedAt: UPDATED_AT, severity: 'high', verdict: 'Unexpected + urgent + asks for money or codes = likely scam.', hiTitle: 'स्कैम अलर्ट' })
   return {
     kind: 'hub', path, canonical,
     title: 'Scam Alerts & Fraud Protection Guides (India) | ' + BRAND,
@@ -324,14 +337,14 @@ export function buildHubPage(): PageModel {
       { heading: 'Browse scams by type', body: SCAM_TYPES.map((t) => `${t.name}: ${t.hook}`) },
     ],
     faq, references, internalLinks, breadcrumb, trust,
-    discover: buildDiscoverMeta({ subject: 'scams in India', typeName: 'Scam Alerts', region: 'India', updatedAt: UPDATED_AT }),
+    discover,
     hi: {
       h1: 'स्कैम अलर्ट और धोखाधड़ी से बचाव (भारत)',
       directAnswer: 'भारत में सबसे आम स्कैम: UPI धोखाधड़ी, OTP धोखाधड़ी, KYC अपडेट धोखाधड़ी और फ़िशिंग। किसी भी अनचाहे मैसेज को आधिकारिक ऐप में जांचें, OTP या UPI पिन कभी साझा न करें, और धोखाधड़ी की रिपोर्ट 1930 पर करें।',
       verdict: 'नतीजा: अनचाहा + जल्दबाज़ी + पैसे/कोड की मांग = संभावित स्कैम।',
     },
     updatedAt: UPDATED_AT,
-    schema: buildSchema({ title: 'Scam Alerts (India)', metaDescription: clip(directAnswer, 158), canonical, h1: 'Scam Alerts & Fraud Protection (India)', faq, breadcrumb, updatedAt: UPDATED_AT }),
+    schema: buildSchema({ title: 'Scam Alerts (India)', metaDescription: clip(directAnswer, 158), canonical, h1: 'Scam Alerts & Fraud Protection (India)', faq, breadcrumb, updatedAt: UPDATED_AT, image: `${BASE}${discover.imageRecommendation.ogImagePath}` }),
   }
 }
 
