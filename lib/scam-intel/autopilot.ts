@@ -1,0 +1,128 @@
+// ─────────────────────────────────────────────────────────────────
+// lib/scam-intel/autopilot.ts
+// Autonomous scam-alert generation pipeline.
+//
+// Flow (per run, budget-capped):
+//   1. read clusters  → 2. rank by freshness/trending
+//   3. skip clusters that ALREADY produced a bundle (dup prevention)
+//   4. for the top N within the daily budget:
+//        build ScamInput from the canonical report
+//        → generateBundle (article + Hindi + GEO + FAQ + schema + social)
+//        → enqueue publishing  → enqueue Shorts script
+//        → stamp cluster.bundleId so it is never regenerated
+//
+// Designed to be cheap: small N per run, dedup avoids rework, all
+// generation is cache-backed, and India is the default region.
+// ─────────────────────────────────────────────────────────────────
+
+import { getStore } from '@/lib/store/adapter'
+import { log } from '@/lib/observability/logger'
+import { audit } from '@/lib/ai/audit'
+import { generateBundle } from '@/lib/distribution/engine'
+import { enqueue } from '@/lib/distribution/queue'
+import { allowBundle, THROTTLE } from '@/lib/distribution/throttle'
+import type { Channel } from '@/lib/distribution/integrations'
+import type { ScamInput, Severity } from '@/lib/distribution/types'
+import { rankByFreshness } from './freshness'
+import type { ScamCluster, ScamReport } from './types'
+
+const CLUSTERS = 'scam_clusters'
+const REPORTS = 'scam_reports'
+
+// Channels to publish to + Shorts queued separately.
+const PUBLISH_CHANNELS: Channel[] = ['internal-store', 'markdown-export', 'wordpress']
+const SHORTS_CHANNEL: Channel = 'youtube-shorts'
+
+const DEFAULT_REGION = process.env.AUTOPILOT_REGION || 'India'
+const MIN_FRESHNESS = Number(process.env.AUTOPILOT_MIN_FRESHNESS) || 25
+
+export interface AutopilotResult {
+  considered: number
+  eligible: number
+  generated: Array<{ clusterId: string; bundleId: string; title: string; freshness: number }>
+  skippedExisting: number
+  budgetReached: boolean
+  message: string
+}
+
+type ClusterWithBundle = ScamCluster & { bundleId?: string }
+
+export async function runAutopilot(maxItems = THROTTLE.autopilotPerRun): Promise<AutopilotResult> {
+  const store = getStore()
+  const now = Date.now()
+
+  const clusters = (await store.query<ClusterWithBundle>(CLUSTERS, { limit: 1000 })).map((r) => r.data)
+  const ranked = rankByFreshness(clusters, now)
+
+  const generated: AutopilotResult['generated'] = []
+  let skippedExisting = 0
+  let budgetReached = false
+  let eligible = 0
+
+  for (const cluster of ranked) {
+    if (generated.length >= maxItems) break
+    if (cluster.freshness.score < MIN_FRESHNESS) break // ranked desc → rest are staler
+
+    // Dup prevention: one bundle per scam pattern.
+    if (cluster.bundleId) { skippedExisting++; continue }
+    eligible++
+
+    // Respect the daily bundle budget (cost guard).
+    if (!(await allowBundle())) { budgetReached = true; break }
+
+    const report = await loadCanonicalReport(cluster)
+    if (!report) continue
+
+    const input: ScamInput = {
+      title: cluster.title?.replace(/^Likely\s+/i, '').replace(/\.$/, '') || 'Scam alert',
+      description: report.text,
+      platform: report.platform || cluster.platforms[0] || 'unknown',
+      region: chooseRegion(cluster, report),
+      severity: cluster.severity as Severity,
+    }
+
+    try {
+      const bundle = await generateBundle(input, { locales: ['en', 'hi'] })
+      await enqueue(bundle.id, { channels: PUBLISH_CHANNELS })
+      await enqueue(bundle.id, { channels: [SHORTS_CHANNEL] }) // Shorts script job
+      await store.update(CLUSTERS, cluster.id, { bundleId: bundle.id })
+      generated.push({ clusterId: cluster.id, bundleId: bundle.id, title: input.title, freshness: cluster.freshness.score })
+      log.info({ event: 'autopilot.generated', clusterId: cluster.id, bundleId: bundle.id, freshness: cluster.freshness.score })
+    } catch (err) {
+      log.error({ event: 'autopilot.generate_failed', clusterId: cluster.id, error: (err as Error).message })
+    }
+  }
+
+  await audit({
+    action: 'distribution.bundle', actor: 'autopilot', ok: true,
+    message: `autopilot run: ${generated.length} generated`,
+    meta: { generated: generated.length, skippedExisting, budgetReached },
+  })
+
+  return {
+    considered: ranked.length,
+    eligible,
+    generated,
+    skippedExisting,
+    budgetReached,
+    message: `Generated ${generated.length} alert bundle(s); skipped ${skippedExisting} already-produced; ${budgetReached ? 'daily budget reached' : 'within budget'}.`,
+  }
+}
+
+async function loadCanonicalReport(cluster: ScamCluster): Promise<ScamReport | null> {
+  if (cluster.canonicalReportId) {
+    const doc = await getStore().get<ScamReport>(REPORTS, cluster.canonicalReportId)
+    if (doc) return doc.data
+  }
+  // Fallback: most recent approved report in this cluster.
+  const rows = await getStore().query<ScamReport>(REPORTS, {
+    where: [{ field: 'clusterId', op: '==', value: cluster.id }],
+    orderBy: { field: 'createdAt', dir: 'desc' }, limit: 1,
+  })
+  return rows[0]?.data ?? null
+}
+
+function chooseRegion(cluster: ScamCluster, report: ScamReport): string {
+  const r = report.region && report.region !== 'unknown' ? report.region : cluster.regions[0]
+  return r && r !== 'unknown' ? r : DEFAULT_REGION
+}
