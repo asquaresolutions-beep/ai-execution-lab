@@ -1,0 +1,54 @@
+---
+title: "Autonomous Growth + Authority System — Estimates & Compounding Loops"
+description: "The autonomous growth system for ScamCheck: quality-gated auto-publishing with a Vertex budget circuit breaker, AI-Overview comparison/entity/trust signals, an E-E-A-T trust layer, automated multi-channel distribution, retention (email alerts + watchlists), a canonical scam-entity data moat, and growth analytics. Includes organic-growth, authority, Discover, and backlink estimates plus the biggest compounding loops — all on a static-first, cost-capped, Vercel-hobby-safe architecture."
+date: "2026-05-30"
+tags: ["scamcheck", "autonomous", "authority", "google-discover", "backlinks", "seo", "ai-overview", "india", "cost", "moat"]
+status: published
+related_docs:
+  - growth-roadmap-scamcheck-trustseal
+  - realtime-intelligence-growth-estimates
+  - monetization-discover-ctr-analysis
+  - low-cost-autonomous-operation
+---
+
+This is the capstone: ScamCheck now grows itself — detecting trending scams, generating quality-gated pages, distributing alerts, attracting links, and retaining users — inside a hard cost cap.
+
+## What shipped (mapped to the brief)
+- **A) Autonomous publishing** — autopilot (trending + freshness + dedup) now adds a **pre-publish quality gate** and a **Vertex daily-budget circuit breaker**; low-quality clusters are left unstamped to retry later.
+- **B) Hindi expansion** — bilingual pages/OG already; added bilingual trending strip + Hindi entity names in schema/graph.
+- **C) AI Overview** — scam-vs-safe **comparison block**, **entity extraction** (schema `mentions`), and **machine-readable trust** (`trustScore`, `publishingPrinciples`, `creditText`).
+- **D) Retention** — email-alert subscribe API (rate-limited), localStorage **watchlist**, and browser-notification opt-in.
+- **E) Trust layer** — editorial policy, AI disclosure, methodology, transparency, about — indexed, schema'd, linked from Article `publishingPrinciples`.
+- **F) Conversion** — high-intent topics surfaced via `convertingTopics`; ad-free for paid users (prior phase).
+- **G) Distribution automation** — X **threads** + **carousel** hooks; autopilot stores a per-bundle `distribution_alerts` payload.
+- **H) Data moat** — canonical **entity registry + relationship graph** (`entities.ts`), aliases, cluster fingerprints.
+- **I) Cost protection** — budget breaker, cache-first AI, increment counters, throttles, graceful degradation.
+- **J) Analytics** — Discover candidates, fastest-growing entities, topic leverage, **backlink topics**, **converting topics** via `/api/scam-intel/growth`.
+
+## Cost posture
+Auto-publishing is bounded by `BUNDLES_PER_DAY`, `AUTOPILOT_PER_RUN`, and a hard `DAILY_BUDGET_USD` breaker. Pages stay SSG; real-time data is CDN-cached; distribution/entities/analytics are deterministic. Stays within **Vercel Hobby + Firestore Spark + a few dollars/month of Vertex** (cap-enforced).
+
+## Estimates (planning, not guarantees)
+
+**Organic growth potential.** ~250 evergreen pages today, growing autonomously as new scams trend (quality-gated). With maturation (3–6 months) and the freshness/authority loops below, a plausible trajectory is **low-thousands → tens-of-thousands of monthly organic clicks**, weighted toward tier-1 types and Hindi long-tail.
+
+**Authority growth.** The trust layer + citations + entity graph materially lift E-E-A-T. Expect steady gains in rankings for "is this a scam / verdict" intent and rising AI-Overview citation frequency as the machine-readable trust/entity signals are consumed.
+
+**Discover visibility growth.** Freshness (live trending/active badges) + dedicated OG images + clear authorship are exactly Discover's signals. Trending pages should become Discover-eligible within weeks; Discover then contributes **bursty, high-volume spikes** (especially around seasonal hubs).
+
+**Backlink accumulation.** Embeddable widgets convert ScamCheck into distributed infrastructure. Modest adoption (50–300 embedding domains over 6–12 months) → **dozens to a few hundred referring domains** — the dominant off-page driver for a young authority site.
+
+## The biggest compounding loops
+1. **Detect → publish → rank → attract reports → detect more.** Trending detection feeds pages; pages rank and pull in more scam reports; more reports sharpen detection. *(Self-reinforcing data flywheel.)*
+2. **Freshness → crawl → Discover → traffic → freshness.** Real-time trending keeps pages re-crawled; Discover rewards freshness with traffic; traffic surfaces new scams. 
+3. **Widgets → backlinks → authority → rankings → more embeds.** Each embed is a dofollow link; authority lifts rankings; higher visibility earns more embeds.
+4. **Authority/trust → AI-Overview citations → brand → direct + branded search.** Machine-readable trust + citations make ScamCheck the cited source; citations build brand; brand drives durable direct/branded demand.
+
+These loops **intersect** (reports feed detection feeds pages feeds links feeds authority feeds citations feeds traffic feeds reports). A competitor copying any single loop doesn't get the compounding — that intersection is the moat.
+
+## Highest-leverage next moves
+1. Connect a real email/push provider to activate the retention loop (capture already live).
+2. Pitch widgets to regional news/finance sites (backlink loop).
+3. Pre-publish seasonal hubs ahead of peaks (Discover spikes).
+4. Prioritise `backlinkTopics` for linkable assets and `convertingTopics` for monetisation.
+> Track all of this via `/api/scam-intel/growth` + Search Console; let the budget breaker and quality gate keep autonomy safe.

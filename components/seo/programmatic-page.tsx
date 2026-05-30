@@ -4,6 +4,7 @@ import type { PageModel, InternalLink } from '@/lib/seo/programmatic'
 import { AdSenseScript } from '@/components/ads/adsense-script'
 import { AdUnit } from '@/components/ads/ad-unit'
 import { TrendingStrip } from '@/components/scam/trending-strip'
+import { AlertSubscribe } from '@/components/scam/alert-subscribe'
 
 const SLOT_BELOW_VERDICT = process.env.NEXT_PUBLIC_ADSENSE_SLOT_BELOW_VERDICT || ''
 const SLOT_IN_CONTENT = process.env.NEXT_PUBLIC_ADSENSE_SLOT_IN_CONTENT || ''
@@ -167,6 +168,9 @@ export function ProgrammaticPage({ model }: { model: PageModel }) {
           ))}
         </ul>
       </section>
+
+      {/* Retention: email alerts + watchlist */}
+      <AlertSubscribe topic={model.breadcrumb[model.breadcrumb.length - 1]?.name || 'scam'} topicId={model.path.split('/').pop()} />
 
       {/* Internal linking */}
       <section className="border-t border-neutral-800 pt-5">

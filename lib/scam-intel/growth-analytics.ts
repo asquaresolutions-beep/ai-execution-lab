@@ -92,5 +92,39 @@ export async function topicLeverage(): Promise<TopicLeverage[]> {
   }).sort((a, b) => b.leverage - a.leverage)
 }
 
+// ── Backlink + conversion topic scoring ───────────────────────────
+export interface ScoredTopic { typeId: string; name: string; score: number; why: string }
+
+// Topics that make the best linkable assets (widgets/citable data): broad,
+// evergreen, high public interest → most likely to attract embeds + links.
+export function backlinkTopics(): ScoredTopic[] {
+  const LINKABILITY: Record<string, number> = {
+    'upi-fraud': 1, 'otp-fraud': 1, phishing: 0.9, 'kyc-fraud': 0.9, 'investment-fraud': 0.8,
+    'fake-job': 0.7, 'loan-scam': 0.7, 'courier-scam': 0.6, 'lottery-scam': 0.5,
+    'tech-support-scam': 0.5, 'romance-scam': 0.4,
+  }
+  return SCAM_TYPES.map((t) => {
+    const link = LINKABILITY[t.id] ?? 0.5
+    const demand = t.searchVolumeTier === 1 ? 1 : t.searchVolumeTier === 2 ? 0.6 : 0.3
+    const score = +((link * 0.6 + demand * 0.4) * 100).toFixed(1)
+    return { typeId: t.id, name: t.name, score, why: 'broad interest + search demand → embeddable/citable' }
+  }).sort((a, b) => b.score - a.score)
+}
+
+// Topics most likely to convert free → paid (high-stakes financial loss +
+// recurring need): proxy via category + demand.
+export function convertingTopics(): ScoredTopic[] {
+  const INTENT: Record<string, number> = {
+    'investment-fraud': 1, 'upi-fraud': 0.9, 'kyc-fraud': 0.85, 'loan-scam': 0.8, 'otp-fraud': 0.8,
+    phishing: 0.7, 'fake-job': 0.6, 'tech-support-scam': 0.6, 'courier-scam': 0.5, 'lottery-scam': 0.4, 'romance-scam': 0.5,
+  }
+  return SCAM_TYPES.map((t) => {
+    const intent = INTENT[t.id] ?? 0.5
+    const demand = t.searchVolumeTier === 1 ? 1 : t.searchVolumeTier === 2 ? 0.6 : 0.3
+    const score = +((intent * 0.65 + demand * 0.35) * 100).toFixed(1)
+    return { typeId: t.id, name: t.name, score, why: 'financial stakes + recurring need → upgrade intent' }
+  }).sort((a, b) => b.score - a.score)
+}
+
 export { SCAM_TYPE_BY_ID }
 export type { TrendingItem }

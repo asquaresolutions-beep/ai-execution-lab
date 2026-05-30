@@ -51,7 +51,7 @@ export function TrendingStrip({ limit = 6 }: { limit?: number }) {
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
         </span>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-300">Trending scams now</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-300">Trending scams now <span className="font-normal normal-case text-neutral-500" lang="hi">· अभी ट्रेंडिंग</span></h2>
       </div>
       <ul className="space-y-1.5">
         {items.map((it) => (
