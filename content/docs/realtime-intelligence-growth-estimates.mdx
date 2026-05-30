@@ -1,0 +1,59 @@
+---
+title: "Real-Time Intelligence + Distribution — Growth Estimates & Authority Moat"
+description: "The real-time layer for ScamCheck: live trending engine with viral detection, real-time multi-channel distribution, an internal authority graph with seasonal/event hubs, freshness signals, embeddable backlink widgets, and growth analytics. Includes backlink potential, Discover growth, authority growth, and highest-leverage traffic opportunities — all on a static-first, Vercel-hobby-safe architecture."
+date: "2026-05-30"
+tags: ["scamcheck", "trending", "google-discover", "backlinks", "authority", "distribution", "seo", "india", "cost"]
+status: published
+related_docs:
+  - growth-roadmap-scamcheck-trustseal
+  - monetization-discover-ctr-analysis
+  - scam-intelligence-ingestion
+  - low-cost-autonomous-operation
+---
+
+This layer makes ScamCheck *real-time* and *self-reinforcing*: trending detection feeds the public pages, distribution pushes alerts out, embeddable widgets pull links back, and the authority graph compounds topical strength — without leaving the free/hobby cost envelope.
+
+## What shipped
+- **Live trending engine** (`trending()` + viral/momentum/active detection) surfaced on every scam page via a static-first `TrendingStrip` that hydrates from a **CDN-cached** snapshot API (one cheap read behind the cache).
+- **Real-time distribution** (`formatAlert`): deterministic X/LinkedIn/WhatsApp/Telegram/Shorts snippets — **no AI cost** — via `/api/scam-intel/alert-formats`.
+- **Authority graph + hubs**: seasonal (festival, tax), event (election), and entity (UPI, job/investment) hubs that interlink type pages and concentrate link equity; in-season detection for freshness boosts.
+- **Freshness layer**: viral/active badges, last-reported timestamps, `computeTrend` decay, 72h "active alert" window.
+- **Embeddable backlink widgets** (`/widget.js`, `/widgets`): one-line embed injected into the host DOM → real **dofollow** "Powered by ScamCheck" backlink; auto-updating; near-zero cost.
+- **Growth analytics** (`/api/scam-intel/growth`): Discover candidates, fastest-growing entities, topic-leverage ranking.
+
+## Architecture & cost (static-first)
+- Public pages stay **SSG**; real-time data arrives via **client fetch of CDN-cached APIs** → no rebuilds, **negligible Firestore reads** (snapshot is materialized by the daily cron).
+- Distribution + widgets are **deterministic / cached** → **no Vertex usage** on these paths.
+- Everything fits **Vercel Hobby + Firestore Spark**.
+
+## Analytics signals (for prioritisation)
+- **Highest-CTR topics**: surfaced via Discover-candidate scoring (viral + active + severity + recency).
+- **Highest-RPM topics**: investment, loan-app, tech-support (advertiser demand) — flagged in `topicLeverage`.
+- **Discover candidates**: fresh + viral + high-severity clusters (`discoverCandidates()`).
+- **Fastest-growing entities**: platforms/regions/categories by recent share (`fastestGrowingEntities()`).
+
+## Backlink potential
+Widgets convert ScamCheck from a destination into **distributed infrastructure** other sites embed:
+- Target embedders: regional news, consumer-finance blogs, bank/fintech help centres, RWAs/community sites, cybersecurity newsletters.
+- Each embed = a persistent dofollow link; widgets update themselves, so embedders keep them.
+- Planning estimate: even modest adoption (50–300 embedding domains in 6–12 months) yields **dozens to a few hundred referring domains** — the single biggest off-page lever for a new authority site. The `/widgets` page itself targets the "free scam widget/badge" query space.
+
+## Discover growth potential
+Discover rewards **freshness + entity authority + image quality**. This layer adds all three: live trending/active badges (freshness), the hub/entity graph (authority), and (from the prior phase) dynamic OG images. Combined, expect trending scam pages to become **Discover-eligible within weeks** and Discover to grow into a **material, spiky traffic source** (Discover traffic is bursty by nature). Seasonal hubs capture predictable spikes (festival/tax/election).
+
+## Authority growth (the moat)
+The moat compounds from four reinforcing loops:
+1. **Coverage** — programmatic pages across types × cities × banks × platforms.
+2. **Freshness** — real-time trending keeps pages "alive" and re-crawled.
+3. **Links** — embeddable widgets pull in referring domains.
+4. **Citations** — official-source attribution (1930/cybercrime.gov.in/RBI/SEBI) earns E-E-A-T and AI-Overview citations.
+Each loop feeds the others; competitors copying one loop don't get the compounding.
+
+## Highest-leverage traffic opportunities (do first)
+1. **Tier-1 type pages × Discover** (UPI/OTP/KYC/phishing) — demand + freshness + AI-Overview structure already in place.
+2. **Widgets distribution** — pitch the "Latest scams in India" widget to regional news/finance sites; highest backlink ROI.
+3. **Seasonal hubs ahead of the season** — publish/promote festival & tax hubs 3–4 weeks before peak.
+4. **High-RPM topic pages** (investment/loan/tech-support) — monetisation-weighted.
+5. **Hindi variants** — large underserved query space, near-zero marginal cost.
+
+> All estimates are planning figures, not guarantees — outcomes depend on indexing, competition, embed adoption, and Discover's per-user ranking. Track actuals via `/api/scam-intel/growth` and Search Console.
