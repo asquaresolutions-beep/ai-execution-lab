@@ -67,6 +67,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       })),
   ]
 
+  // Widgets gallery (backlink-attraction page)
+  const widgetRoute: MetadataRoute.Sitemap = [
+    { url: `${SCAM_BASE}/widgets`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+  ]
+
   // Programmatic scam pages (city/bank/UPI/platform/type + combos)
   const scamRoutes: MetadataRoute.Sitemap = allScamPaths().map((path) => ({
     url: `${SCAM_BASE}${path}`,
@@ -75,5 +80,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: path === '/scams' ? 0.9 : 0.7,
   }))
 
-  return [...staticRoutes, ...contentRoutes, ...tagRoutes, ...trackRoutes, ...scamRoutes]
+  return [...staticRoutes, ...contentRoutes, ...tagRoutes, ...trackRoutes, ...widgetRoute, ...scamRoutes]
 }
