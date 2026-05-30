@@ -15,6 +15,7 @@ import {
 } from './facets'
 import { referencesForType, trustScore, type Reference, type TrustScore } from './authority'
 import { buildDiscoverMeta, type DiscoverMeta } from './discover'
+import { HUB_BY_ID, hubTypes } from './hubs'
 
 // Canonical base = where these SSG pages are actually served. Defaults to
 // the lab site; set NEXT_PUBLIC_SCAM_BASE_URL to serve from a dedicated
@@ -308,6 +309,7 @@ export function buildHubPage(): PageModel {
     { anchor: 'Telegram scams', href: '/scams/platform/telegram', group: 'facet' },
     { anchor: 'SBI scams', href: '/scams/bank/sbi', group: 'facet' },
     { anchor: 'UPI / Google Pay scams', href: '/scams/upi/google-pay', group: 'facet' },
+    ...[...HUB_BY_ID.values()].map((h): InternalLink => ({ anchor: h.title, href: `/scams/hub/${h.id}`, group: 'related-alerts' })),
   ]
   const references = referencesForType('upi-fraud')
   const trust = trustScore({ hasOfficialRefs: true, citationCount: references.length, hasHelpline: true, hasLastUpdated: true, factCount: 4, bilingual: true })
@@ -348,10 +350,56 @@ export function buildHubPage(): PageModel {
   }
 }
 
+// ── Authority-graph hub page ───────────────────────────────────────
+export function buildScamHub(hubId: string): PageModel | null {
+  const hub = HUB_BY_ID.get(hubId)
+  if (!hub) return null
+  const types = hubTypes(hub)
+  const path = `/scams/hub/${hub.id}`
+  const canonical = `${BASE}${path}`
+  const directAnswer = `${hub.intro} Never share OTP/UPI PIN, verify in official apps, and report fraud to 1930 or cybercrime.gov.in.`
+  const verdict = 'Verdict: Unexpected + urgent + asks for money or codes = likely scam. Pause and verify.'
+  const quickBullets = types.map((t) => `${t.name}: ${t.hook}`)
+  const references = referencesForType(types[0]?.id || 'upi-fraud')
+  const faq: FaqItem[] = [
+    { question: `Why do these scams spike during ${hub.title.toLowerCase()}?`, answer: hub.intro },
+    { question: 'How do I report it?', answer: 'Call 1930 and file at cybercrime.gov.in. Reporting within the golden hour improves recovery odds.' },
+    { question: 'Will any official body ask for my OTP?', answer: 'No. No bank, wallet, or government body asks for your OTP, UPI PIN, or CVV.' },
+  ]
+  const internalLinks: InternalLink[] = [
+    ...types.map((t): InternalLink => ({ anchor: t.name, href: `/scams/type/${t.id}`, group: 'related-scams' })),
+    ...(hub.relatedHubs || []).map((h): InternalLink => ({ anchor: HUB_BY_ID.get(h)?.title || h, href: `/scams/hub/${h}`, group: 'trending' })),
+    { anchor: 'All scam alerts', href: '/scams', group: 'latest' },
+  ]
+  const trust = trustScore({ hasOfficialRefs: true, citationCount: references.length, hasHelpline: true, hasLastUpdated: true, factCount: quickBullets.length, bilingual: true })
+  const breadcrumb = [{ name: 'Scams', href: '/scams' }, { name: hub.title, href: path }]
+  const discover = buildDiscoverMeta({ subject: hub.title, typeName: hub.title, region: 'India', updatedAt: UPDATED_AT, severity: 'high', verdict, hiTitle: hub.titleHi })
+  return {
+    kind: 'hub', path, canonical,
+    title: clip(`${hub.title} | ${BRAND}`, 70),
+    metaDescription: clip(directAnswer, 158),
+    h1: hub.title,
+    directAnswer, verdict, riskLevel: 'High', quickBullets,
+    structuredSummary: [
+      { label: 'Hub type', value: hub.kind },
+      { label: 'Scams covered', value: String(types.length) },
+      { label: 'Region', value: 'India' },
+      { label: 'Report to', value: '1930 / cybercrime.gov.in' },
+      { label: 'Languages', value: 'English + हिन्दी' },
+    ],
+    sections: [{ heading: 'Scams in this cluster', body: types.map((t) => `${t.name}: ${t.hook}`) }],
+    faq, references, internalLinks, breadcrumb, trust, discover,
+    hi: { h1: hub.titleHi, directAnswer: `${hub.titleHi}: OTP/UPI पिन कभी साझा न करें, आधिकारिक ऐप में जांचें, और 1930 पर रिपोर्ट करें।`, verdict: 'नतीजा: अनचाहा + जल्दबाज़ी + पैसे/कोड की मांग = संभावित स्कैम।' },
+    updatedAt: UPDATED_AT,
+    schema: buildSchema({ title: hub.title, metaDescription: clip(directAnswer, 158), canonical, h1: hub.title, faq, breadcrumb, updatedAt: UPDATED_AT, image: `${BASE}${discover.imageRecommendation.ogImagePath}` }),
+  }
+}
+
 // ── Resolver: slug[] → PageModel ───────────────────────────────────
 export function resolveScamPage(slugParts: string[]): PageModel | null {
   if (!slugParts || slugParts.length === 0) return buildHubPage()
   const [a, b, c] = slugParts
+  if (a === 'hub' && b && !c) return buildScamHub(b)
   if (a === 'type' && b && !c) return buildTypePage(b)
   if (a === 'type' && b && c) return buildComboPage(b, c)
   if ((a === 'city' || a === 'bank' || a === 'upi' || a === 'platform') && b && !c) {

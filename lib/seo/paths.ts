@@ -5,11 +5,13 @@
 // ─────────────────────────────────────────────────────────────────
 
 import { SCAM_TYPES, CITIES, BANKS, UPI_APPS, PLATFORMS, COMBO_TYPES, COMBO_CITIES } from './facets'
+import { allHubIds } from './hubs'
 
 /** All slugs as string[] arrays for the optional catch-all route. */
 export function allScamPathSlugs(): string[][] {
   const out: string[][] = []
   out.push([]) // /scams hub
+  for (const id of allHubIds()) out.push(['hub', id])
   for (const t of SCAM_TYPES) out.push(['type', t.id])
   for (const c of CITIES) out.push(['city', c.id])
   for (const b of BANKS) out.push(['bank', b.id])
