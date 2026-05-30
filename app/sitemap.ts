@@ -4,6 +4,7 @@ import { SECTION_META } from '@/lib/utils'
 import { TRACKS, getAllLessonPaths } from '@/lib/tracks'
 import { buildTagIndex } from '@/lib/tags'
 import { allScamPaths } from '@/lib/seo/paths'
+import { trustPageSlugs } from '@/lib/seo/trust-pages'
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 const SCAM_BASE = process.env.NEXT_PUBLIC_SCAM_BASE_URL ?? BASE_URL
@@ -67,9 +68,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       })),
   ]
 
-  // Widgets gallery (backlink-attraction page)
+  // Widgets gallery (backlink-attraction page) + trust/E-E-A-T pages
   const widgetRoute: MetadataRoute.Sitemap = [
     { url: `${SCAM_BASE}/widgets`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+    ...trustPageSlugs().map((slug) => ({
+      url: `${SCAM_BASE}/${slug}`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.5,
+    })),
   ]
 
   // Programmatic scam pages (city/bank/UPI/platform/type + combos)
