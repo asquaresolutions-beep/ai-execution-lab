@@ -5,6 +5,8 @@ import { SECTION_META, ACCENT_CLASSES, formatDateMono } from '@/lib/utils'
 import { getPlatformStatus } from '@/lib/activity'
 import { FeaturedFailures }  from '@/components/homepage/featured-failures'
 import { LiveActivityBar } from '@/components/platform/live-activity-bar'
+import { CheckMessageBox } from '@/components/scam/check-message-box'
+import { TrendingTicker } from '@/components/scam/trending-ticker'
 import { getEvidenceMetrics, formatOperationalHours, formatAvgResolution } from '@/lib/evidence-metrics'
 
 // Code-split framer-motion components — reduces initial JS parse work
@@ -140,7 +142,13 @@ export default function HomePage() {
             Playbooks
           </Link>
         </div>
+
+        {/* ── Check a message (above-the-fold engagement) ──────── */}
+        <CheckMessageBox />
       </div>
+
+      {/* ── Live trending ticker (above fold, auto-rotating) ─── */}
+      <TrendingTicker />
 
       {/* ── Live activity bar ────────────────────────────────── */}
       <LiveActivityBar status={platformStatus} />
@@ -192,19 +200,19 @@ export default function HomePage() {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {[
-            { href: '/scams', label: 'Latest scam alerts', sub: 'trending + active now' },
-            { href: '/scams/type/upi-fraud', label: 'UPI fraud', sub: 'tier-1 demand' },
-            { href: '/scams/type/otp-fraud', label: 'OTP fraud', sub: 'tier-1 demand' },
-            { href: '/scams/type/kyc-fraud', label: 'Fake KYC', sub: 'tier-1 demand' },
-            { href: '/scams/type/investment-fraud', label: 'Investment fraud', sub: 'highest RPM' },
-            { href: '/scams/hub/upi-payment-scams', label: 'Trending hubs', sub: 'seasonal + entity' },
+            { href: '/scams/type/upi-fraud', q: 'Is this a UPI scam?', sub: 'refund / collect-request tricks' },
+            { href: '/scams/type/kyc-fraud', q: 'Got a KYC update link?', sub: 'fake KYC freeze threats' },
+            { href: '/scams/platform/whatsapp', q: 'Suspicious WhatsApp message?', sub: 'forwarded fraud warnings' },
+            { href: '/scams/type/fake-job', q: 'Offered an easy job?', sub: 'task / registration-fee scams' },
+            { href: '/scams/hub/festival-scams', q: 'Festival sale too good?', sub: 'seasonal scam alerts' },
+            { href: '/scams', label: 'See all scam alerts', sub: 'trending + active now', arrow: true },
           ].map((c) => (
             <Link
               key={c.href}
               href={c.href}
               className="rounded-xl border border-amber-500/[0.12] bg-amber-500/[0.03] px-3 py-2.5 hover:border-amber-500/30 hover:bg-amber-500/[0.07] transition-colors"
             >
-              <p className="text-sm font-medium text-surface-200">{c.label}</p>
+              <p className="text-sm font-medium text-surface-200">{c.arrow ? `${c.label} →` : c.q}</p>
               <p className="text-[10px] text-surface-600 mt-0.5 font-mono">{c.sub}</p>
             </Link>
           ))}
