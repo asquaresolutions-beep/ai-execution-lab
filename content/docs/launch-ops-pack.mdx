@@ -1,0 +1,96 @@
+---
+title: "Launch Execution Pack — Publishing Queues, Distribution Copy & Weekly Loop"
+description: "The hands-on launch execution pack for ScamCheck: daily/Hindi/Shorts/LinkedIn/X publishing queues for priority scams (UPI, WhatsApp, Telegram-investment, fake-KYC, fake-job, phishing), ready-to-paste distribution copy for every channel, Discover candidates + headlines, GEO/AI-visibility tracking, monitoring helpers, cost discipline, and the weekly optimization loop. Deterministic, zero-AI-cost."
+date: "2026-05-31"
+tags: ["scamcheck", "launch", "publishing", "distribution", "discover", "monitoring", "weekly-loop", "cost"]
+status: published
+related_docs:
+  - phase-27-launch-operations
+  - launch-content-pack
+  - homepage-ia-nav-recommendations
+---
+
+Operational execution pack for launch week. All copy below is produced by the **deterministic** `/api/scam-intel/alert-formats` endpoint (zero Vertex cost) — paste-ready, regenerable live per type/place. **No new systems; publishing + growth ops only.**
+
+## A) Launch support flow [you]
+1. Merge PR → Vercel auto-deploys. Set `NEXT_PUBLIC_SITE_URL` first (static-first).
+2. Post-deploy smoke (run the §4 command block in the [Phase 27 runbook](/docs/phase-27-launch-operations)).
+3. GSC: submit `/sitemap.xml`; URL-inspect + request-index the 6 tier-1 hubs.
+4. Confirm a live canonical resolves on your origin; Rich Results + PSI-mobile on `/` + one scam page.
+
+## B) Publishing queues (priority order)
+**Daily scam queue (publish/promote in this order):**
+1. UPI fraud · 2. OTP fraud · 3. Fake KYC · 4. Phishing · 5. Fake job · 6. Investment fraud (Telegram) · 7. WhatsApp scams (platform hub) · 8. Loan-app · 9. Courier · 10. Electricity-bill.
+
+**Hindi queue (already bilingual + Hindi OG — push the Hindi share text):**
+UPI धोखाधड़ी · OTP धोखाधड़ी · KYC धोखाधड़ी · फ़िशिंग · फ़र्ज़ी नौकरी घोटाला · निवेश धोखाधड़ी.
+
+**Shorts queue (hooks):**
+- UPI: "Got this message? It could be UPI Fraud. Here's the one sign that gives it away…"
+- OTP: "Got this message? It could be OTP Fraud. Here's the one sign that gives it away…"
+- KYC: "Got this message? It could be KYC Fraud. Here's the one sign that gives it away…"
+- Fake job: "Got this message? It could be Fake Job. Here's the one sign that gives it away…"
+- Investment: "Got this message? It could be Investment Fraud. Here's the one sign that gives it away…"
+
+**LinkedIn authority queue (3):** "Why UPI refund requests are a scam" · "The KYC-freeze SMS pattern" · "Investment groups that block withdrawals."
+
+**X/Twitter alert queue (5):** one thread per tier-1 type — opener + 3 red-flag tweets + safety + report (from `alert-formats?type=<id>` → `twitterThread`).
+
+## C) Discover candidates + headlines
+**Strongest Discover candidates** (tier-1 demand + high severity + freshness): UPI fraud, OTP fraud, KYC fraud, phishing, investment fraud.
+**Emotional-but-truthful headlines** (auto-generated, no clickbait):
+- "UPI Fraud: How It Works and How to Stay Safe"
+- "KYC Fraud Explained — Warning Signs and What to Do"
+- "Is It an Investment Fraud? A Quick Way to Check"
+**Freshness + seasonal opportunities:** push the in-season hub ahead of peaks — Festival scams (Oct–Nov, Mar), Tax-season (Mar–Apr, Jul), Election scams (around polls). Surface via the homepage trending ticker + seasonal hub.
+
+## D) GEO / AI-visibility tracking
+- **AI Overview / featured snippets:** spot-check tier-1 "what is / is this a scam" queries; the direct-answer lead + comparison block + speakable schema target these.
+- **FAQ opportunities:** each page ships FAQPage; watch GSC Enhancements for eligibility.
+- **Entity growth + semantic expansion:** `/api/scam-intel/growth?view=entities` (fastest-growing categories/platforms/regions) and `?view=leverage` (publish-priority).
+
+## E) Distribution copy (ready-to-paste, priority scams)
+> Live for any type/place: `GET /api/scam-intel/alert-formats?type=<id>&place=<city>`.
+
+**UPI fraud — X:**
+`🚨 UPI Fraud alert / A "refund" that asks you to APPROVE or enter your UPI PIN. / ✅ Never enter your UPI PIN to RECEIVE money / Report: 1930 / <url>`
+**UPI fraud — WhatsApp:** `🚨 *UPI Fraud Scam Alert* … ⚠️ A "refund" that asks you to APPROVE or enter your UPI PIN … ✅ Never enter your UPI PIN to RECEIVE money … 📞 1930 … 🔗 <url> _Forwarded by ScamCheck_`
+**UPI fraud — carousel:** UPI Fraud → How it works → 🚩 refund asks to APPROVE/PIN → 🚩 unknown collect requests → 🚩 pressure to act fast → ✅ never enter PIN to receive → Report 1930.
+
+**Fake KYC — X:** `🚨 KYC Fraud alert / Urgent KYC link by SMS/WhatsApp. / ✅ Banks do not update KYC via random links / Report: 1930 / <url>`
+**Fake job — X:** `🚨 Fake Job alert / Upfront fee to start work. / ✅ Legitimate jobs never charge you to join / Report: 1930 / <url>`
+**Investment (Telegram) — X:** `🚨 Investment Fraud alert / Guaranteed or fixed high returns. / ✅ No real investment guarantees returns / Report: 1930 / <url>`
+**OTP — X:** `🚨 OTP Fraud alert / Anyone asking for your OTP. / ✅ No bank or company ever needs your OTP / Report: 1930 / <url>`
+
+**Telegram alert format:** title → how it works → warning signs (bullets) → "Do this" → Report 1930 · cybercrime.gov.in → [Full guide](url). **WhatsApp format:** emoji header + one sign + one action + 1930 + link + "Forwarded by ScamCheck."
+
+**Reddit-safe summaries** (no clickbait, no link-spam — lead with help, link once):
+- *r/Scams / r/india:* "PSA: a common UPI 'refund' scam — if a 'refund' asks you to APPROVE a request or enter your UPI PIN, it's a scam (you never enter a PIN to receive money). Report to 1930 / cybercrime.gov.in. More patterns + how to verify: [link]."
+- *Fake job:* "Heads-up on 'work-from-home task' offers that charge a registration fee or ask you to deposit to 'unlock' earnings — legit jobs never charge you. Details + red flags: [link]."
+
+## F) Monitoring support (where to look)
+| Track | Source |
+|---|---|
+| Indexing velocity / crawl anomalies | GSC Coverage |
+| Discover impressions | GSC → Discover |
+| CTR | GSC Performance (by query/page) |
+| Widget embeds / backlinks | referring domains in GA/Plausible + GSC Links |
+| AI citation visibility | manual spot-checks of tier-1 queries |
+| Cost / queue / DLQ / quota | `/ops/analytics` |
+| Growth signals | `/api/scam-intel/growth?view=all` |
+
+## G) Cost discipline (keep these)
+- Vertex stays **capped** (`DAILY_BUDGET_USD=1`, `DEEP_TIER=flash`, `AUTOPILOT_PER_RUN=1`) until traffic justifies more.
+- **All distribution copy here is deterministic (no AI)** — generate freely.
+- Reuse cached generations; let dedup + quality gate prevent rework; crons early-exit when idle. Don't enable ads until CWV verified live.
+
+## H) Weekly optimization loop
+Each week:
+1. **Content priorities:** pull `/api/scam-intel/growth?view=leverage` (RPM × demand × momentum) → publish/promote the top movers.
+2. **Highest-performing entities:** `?view=entities` (fastest-growing) → double down with combos + Hindi.
+3. **Highest CTR opportunities:** GSC Performance → pages with high impressions + low CTR → improve title/headline (honest).
+4. **Best internal-link opportunities:** link new trending pages from the hub + related type pages (keep depth ≤3, 0 orphans).
+5. **Strongest backlink opportunities:** `?view=backlink` → pitch the widget to the matching audience (fintech/news/forums).
+6. **Discover:** promote in-season hub + freshest tier-1 pages; verify large-image previews.
+
+> Bottleneck rule: only add infrastructure if a real one appears (e.g. cost spike → lower caps; crawl stall → add internal links; throughput → split AI calls to a worker). Otherwise: publish, distribute, monitor, compound.
