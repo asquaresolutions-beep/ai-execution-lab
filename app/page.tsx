@@ -122,6 +122,12 @@ export default function HomePage() {
             Execution Tracks
           </Link>
           <Link
+            href="/scams"
+            className="inline-flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-4 py-2 text-sm font-medium text-amber-400 hover:bg-amber-500/[0.12] hover:border-amber-500/40 transition-colors"
+          >
+            Scam Alerts
+          </Link>
+          <Link
             href="/failures"
             className="inline-flex items-center gap-2 rounded-lg border border-red-500/25 bg-red-500/[0.06] px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/[0.12] hover:border-red-500/40 transition-colors"
           >
@@ -172,6 +178,37 @@ export default function HomePage() {
             <p className="text-[9px] text-surface-700 mt-0.5 font-mono">{item.sub}</p>
           </div>
         ))}
+      </div>
+
+      {/* ── Scam Intelligence (homepage → scam entity authority flow) ── */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600">
+            Scam Intelligence — live India scam alerts
+          </h2>
+          <Link href="/scams" className="text-[10px] font-mono text-surface-600 hover:text-amber-400 transition-colors">
+            All scams →
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {[
+            { href: '/scams', label: 'Latest scam alerts', sub: 'trending + active now' },
+            { href: '/scams/type/upi-fraud', label: 'UPI fraud', sub: 'tier-1 demand' },
+            { href: '/scams/type/otp-fraud', label: 'OTP fraud', sub: 'tier-1 demand' },
+            { href: '/scams/type/kyc-fraud', label: 'Fake KYC', sub: 'tier-1 demand' },
+            { href: '/scams/type/investment-fraud', label: 'Investment fraud', sub: 'highest RPM' },
+            { href: '/scams/hub/upi-payment-scams', label: 'Trending hubs', sub: 'seasonal + entity' },
+          ].map((c) => (
+            <Link
+              key={c.href}
+              href={c.href}
+              className="rounded-xl border border-amber-500/[0.12] bg-amber-500/[0.03] px-3 py-2.5 hover:border-amber-500/30 hover:bg-amber-500/[0.07] transition-colors"
+            >
+              <p className="text-sm font-medium text-surface-200">{c.label}</p>
+              <p className="text-[10px] text-surface-600 mt-0.5 font-mono">{c.sub}</p>
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* ── Topic cluster ───────────────────────────────────── */}
