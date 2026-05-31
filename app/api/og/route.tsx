@@ -275,8 +275,8 @@ async function scamCard(o: { title: string; severity: string; place: string; ver
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {o.place && <span style={{ fontSize: 16, color: '#94a3b8' }}>{o.place}</span>}
-            <div style={{ padding: '6px 16px', borderRadius: 999, background: `${sev.color}22`, border: `2px solid ${sev.color}`, fontSize: 16, fontWeight: 800, color: sev.color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              ⚠ {o.severity} risk
+            <div style={{ display: 'flex', padding: '6px 16px', borderRadius: 999, background: `${sev.color}22`, border: `2px solid ${sev.color}`, fontSize: 16, fontWeight: 800, color: sev.color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {`⚠ ${o.severity} risk`}
             </div>
           </div>
         </div>
