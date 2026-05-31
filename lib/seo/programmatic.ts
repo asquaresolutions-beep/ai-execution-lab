@@ -11,7 +11,7 @@
 
 import {
   SCAM_TYPES, SCAM_TYPE_BY_ID, facetById, slug,
-  CITIES, BANKS, UPI_APPS, PLATFORMS,
+  CITIES, BANKS, UPI_APPS, PLATFORMS, COMBO_TYPES, COMBO_CITIES,
   type ScamType, type Dimension, type Facet,
 } from './facets'
 import { referencesForType, trustScore, type Reference, type TrustScore } from './authority'
@@ -233,6 +233,13 @@ function buildInternalLinks(t?: ScamType, facet?: Facet, dim?: Dimension): Inter
   if (t) {
     links.push({ anchor: `${t.name} on WhatsApp`, href: `/scams/platform/whatsapp`, group: 'facet' })
     links.push({ anchor: `${t.name} via UPI`, href: `/scams/upi/google-pay`, group: 'facet' })
+    // City breakdowns — link this type's city combos so none are orphaned.
+    if (COMBO_TYPES.includes(t.id)) {
+      for (const cityId of COMBO_CITIES) {
+        const c = facetById('city', cityId)
+        if (c) links.push({ anchor: `${t.name} in ${c.name}`, href: `/scams/type/${t.id}/${cityId}`, group: 'related-alerts' })
+      }
+    }
   } else if (facet && dim === 'city') {
     links.push({ anchor: `UPI fraud in ${facet.name}`, href: `/scams/type/upi-fraud/${facet.id}`, group: 'related-alerts' })
   }
