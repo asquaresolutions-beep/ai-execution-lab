@@ -50,6 +50,8 @@ export function formatAlert(input: AlertInput): AlertFormats | null {
   const sign = t.signs[0]
   const protect = t.protect[0]
   const hashtags = buildHashtags(t, input.place)
+  // Avoid "… Scam Scam Alert" for types whose name already ends in "Scam".
+  const label = t.name.replace(/\s*scam$/i, '')
 
   const twitter = clip(
     `🚨 ${t.name} alert${place}\n${sign}.\n✅ ${protect}\nReport: 1930\n${url}`,
@@ -65,21 +67,21 @@ export function formatAlert(input: AlertInput): AlertFormats | null {
     `${hashtags.slice(0, 4).map((h) => '#' + h).join(' ')}\n${url}`
 
   const whatsapp =
-    `🚨 *${t.name} Scam Alert*${place}\n\n` +
+    `🚨 *${label} Scam Alert*${place}\n\n` +
     `⚠️ ${sign}\n\n` +
     `✅ ${protect}\n` +
     `📞 Report fraud: *1930*\n\n` +
     `🔗 ${url}\n_Forwarded by ScamCheck — verify before you trust._`
 
   const telegram =
-    `🚨 *${t.name} Scam Alert*${place}\n\n` +
+    `🚨 *${label} Scam Alert*${place}\n\n` +
     `${t.hook}\n\n` +
     `*Warning signs:*\n${t.signs.map((s) => `• ${s}`).join('\n')}\n\n` +
     `*Do this:* ${protect}\n` +
     `*Report:* 1930 · cybercrime.gov.in\n\n` +
     `[Full guide](${url})`
 
-  const shortsHook = `Got this message? It could be a ${t.name.toLowerCase()}. Here's the one sign that gives it away…`
+  const shortsHook = `Got this message? It could be ${label}. Here's the one sign that gives it away…`
 
   const twitterThread = [
     clip(`🚨 ${t.name}${place} is spreading. A quick thread on how to spot it 🧵`, 280),
