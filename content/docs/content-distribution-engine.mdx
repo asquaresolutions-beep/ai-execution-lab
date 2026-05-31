@@ -1,0 +1,111 @@
+---
+title: "AI Content Distribution Engine — Architecture"
+description: "Modular, dependency-free engine that turns a single scam input into a full bilingual content bundle: article, SEO metadata, GEO summary, social copy for five platforms, Shorts/Reels script, FAQ + Article JSON-LD schema, auto internal links, and a per-channel publishing queue. Provider-agnostic AI over REST, Firebase-compatible store adapter, caching, rate limits, and audit logging."
+date: "2026-05-30"
+tags: ["gemini", "firebase", "firestore", "seo", "geo", "content-engine", "scamcheck", "distribution", "rate-limiting", "caching"]
+status: published
+related_docs:
+  - scam-intelligence-ingestion
+  - ai-cost-governance
+  - ai-assisted-publishing-system
+---
+
+The content distribution engine converts **one operator input** — scam title, description, affected platform, region, severity — into a complete, multi-channel, bilingual content bundle. Every module is independently callable, cached, rate-limited, and audited, so the engine is safe to run autonomously and cheap to re-run.
+
+## Design principles
+
+1. **Zero new dependencies.** AI runs over the Google Generative Language REST API via native `fetch`; the store is an interface, not an SDK. The platform builds and runs offline with a deterministic mock provider.
+2. **Provider-agnostic.** `AIProvider` and the embeddings module are swappable for Vertex AI or OpenAI without touching generators.
+3. **Firebase-compatible by interface.** All persistence flows through `DocumentStore`. Dev uses an in-memory/file store; production swaps to the Firestore REST adapter via env vars — no code change.
+4. **Modular generators.** Each output type is its own function. "Regenerate social only" is a one-call operation.
+
+## Module map
+
+| Layer | Module | Responsibility |
+|---|---|---|
+| AI | `lib/ai/provider.ts` | Gemini REST + mock fallback + JSON helper |
+| AI | `lib/ai/embeddings.ts` | Embeddings + cosine + ranking (for linking) |
+| AI | `lib/ai/cache.ts` | Content-addressed read-through cache (TTL) |
+| AI | `lib/ai/rate-limit.ts` | Fixed-window limits (cost + abuse) |
+| AI | `lib/ai/audit.ts` | Append-only audit log |
+| Store | `lib/store/adapter.ts` | `DocumentStore` interface + backend select |
+| Store | `lib/store/memory-store.ts` | Dev/preview backend (file-backed) |
+| Store | `lib/store/firestore-adapter.ts` | Production Firestore REST backend |
+| Engine | `lib/distribution/prompts.ts` | Versioned, reusable prompt templates |
+| Engine | `lib/distribution/generators.ts` | Article, SEO, GEO, social, reel, FAQ |
+| Engine | `lib/distribution/linking.ts` | Auto internal links + related pages |
+| Engine | `lib/distribution/schema.ts` | FAQPage + NewsArticle JSON-LD |
+| Engine | `lib/distribution/engine.ts` | Orchestrator → `ContentBundle` |
+| Engine | `lib/distribution/queue.ts` | Per-channel publish queue + retry |
+| Engine | `lib/distribution/integrations.ts` | Channel adapters (live + future stubs) |
+| Engine | `lib/distribution/export.ts` | markdown / html / json export |
+
+## Input → output
+
+**Input:** `{ title, description, platform, region, severity }`
+
+**Output (`ContentBundle`):** full article, SEO metadata, GEO summary, social copy (LinkedIn, X + thread, Facebook, Threads, Reddit), reel script, FAQ, featured-snippet answer, CTA, tags, keywords, GEO summary — **per locale (English + Hindi)** — plus internal links, related pages, and FAQ + Article JSON-LD.
+
+## Generation flow
+
+```
+ScamInput
+  └─ engine.generateBundle()
+       ├─ for each locale (en, hi)  [concurrent]
+       │    └─ Promise.all(article, seo, geo, social, reel, faq)  [concurrent]
+       │         each: rate-limit → cache lookup → AI call → cache store → audit
+       ├─ buildInternalLinks()   (embedding similarity vs published alerts)
+       ├─ buildFaqSchema / buildArticleSchema
+       ├─ persistBundle()        (content_bundles + alerts index w/ vector)
+       └─ audit(distribution.bundle)
+```
+
+Independent generations fan out with `Promise.all`, so a full bilingual bundle is roughly the latency of its slowest single generation, not the sum.
+
+## Prompt structure
+
+All prompts live in `prompts.ts`, share a `BASE_SYSTEM` (brand voice + safety rules: no fabricated statistics, no victim PII, no scammer-enabling instructions), and are versioned with `PROMPT_VERSION`. The version is part of every cache key, so tuning a prompt cleanly invalidates stale cache entries. Structured outputs request strict JSON and are parsed with a fence-tolerant parser.
+
+## Safety, cost & reliability
+
+- **Rate limits:** 30 AI calls/min and 1000/day by default (`RATE_LIMITS`), enforced through the store so limits hold across instances.
+- **Caching:** identical inputs are free and instant; retries and previews cost nothing.
+- **Audit:** every generation, cache hit, queue transition, and publish is logged to `audit_log`.
+- **Mock mode:** with no API key the engine produces structurally valid output, so CI and local dev never hit the network.
+
+## Publishing queue
+
+`enqueue(bundleId, { channels })` creates one job per channel (`queued`). `drainQueue()` — a cron-friendly call — picks due jobs (`runAt <= now`), transitions `processing → published | failed`, and retries with exponential backoff (cap 1h, 3 attempts). Future scheduling is built in via `runAt`.
+
+## Channel adapters & future integrations
+
+`integrations.ts` defines a `PublishAdapter` per channel. **Live today:** `internal-store`, `markdown-export`. **Wired stubs** (ready to flip on, credentials documented in code):
+
+- **WordPress** — `WORDPRESS_API_URL` + `WORDPRESS_APP_PASSWORD`; POST to `/wp-json/wp/v2/posts` with rendered HTML.
+- **LinkedIn** — `LINKEDIN_ACCESS_TOKEN` + `LINKEDIN_AUTHOR_URN`; POST `ugcPosts`.
+- **X/Twitter** — `TWITTER_BEARER_TOKEN`.
+- **YouTube Shorts** — adapter prepares the reel-script package for an external render worker (TTS → caption burn-in → Data API upload).
+
+Each stub already receives the correct inputs and returns a `prepared` artifact when credentials are absent, so the queue and dashboard work end-to-end before any external API is connected.
+
+## API surface
+
+| Method | Route | Auth | Purpose |
+|---|---|---|---|
+| POST | `/api/distribution/generate` | admin | Generate a bundle (optional `enqueue`) |
+| GET/POST | `/api/distribution/queue` | admin | List / enqueue / drain jobs |
+| GET | `/api/distribution/export` | admin | Download md/html/json |
+
+Admin dashboard: **`/ops/distribution`** — provider status, channel readiness, recent bundles with export links, queue state, audit log.
+
+## Required environment
+
+```
+GEMINI_API_KEY=…              # omit → mock mode
+GEMINI_TEXT_MODEL=gemini-2.0-flash
+GEMINI_EMBED_MODEL=text-embedding-004
+FIREBASE_PROJECT_ID=…         # omit → memory store
+FIREBASE_API_KEY=…            # or FIREBASE_ACCESS_TOKEN (service account)
+ADMIN_API_TOKEN=…             # gates admin routes
+STORE_FILE=./.data/store.json # optional dev persistence
+```

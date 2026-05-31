@@ -3,8 +3,11 @@ import { getAllMeta, type ContentSection } from '@/lib/content'
 import { SECTION_META } from '@/lib/utils'
 import { TRACKS, getAllLessonPaths } from '@/lib/tracks'
 import { buildTagIndex } from '@/lib/tags'
+import { allScamPaths } from '@/lib/seo/paths'
+import { trustPageSlugs } from '@/lib/seo/trust-pages'
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
+const SCAM_BASE = process.env.NEXT_PUBLIC_SCAM_BASE_URL ?? BASE_URL
 
 const SECTIONS: ContentSection[] = ['docs', 'systems', 'labs', 'case-studies', 'playbooks', 'failures', 'logs']
 
@@ -65,5 +68,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
       })),
   ]
 
-  return [...staticRoutes, ...contentRoutes, ...tagRoutes, ...trackRoutes]
+  // Widgets gallery (backlink-attraction page) + trust/E-E-A-T pages
+  const widgetRoute: MetadataRoute.Sitemap = [
+    { url: `${SCAM_BASE}/widgets`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+    ...trustPageSlugs().map((slug) => ({
+      url: `${SCAM_BASE}/${slug}`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.5,
+    })),
+  ]
+
+  // Programmatic scam pages (city/bank/UPI/platform/type + combos)
+  const scamRoutes: MetadataRoute.Sitemap = allScamPaths().map((path) => ({
+    url: `${SCAM_BASE}${path}`,
+    lastModified: new Date(),
+    changeFrequency: path === '/scams' ? ('daily' as const) : ('weekly' as const),
+    priority: path === '/scams' ? 0.9 : 0.7,
+  }))
+
+  return [...staticRoutes, ...contentRoutes, ...tagRoutes, ...trackRoutes, ...widgetRoute, ...scamRoutes]
 }

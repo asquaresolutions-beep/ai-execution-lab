@@ -1,0 +1,58 @@
+---
+title: "Homepage IA, Navigation & Trending-Scams Placement Recommendations"
+description: "Recommended information architecture for the ScamCheck homepage, future navigation structure, a Trending Scams placement strategy, and homepage CTR modules — designed to maximise crawl discovery, internal authority flow to scam entities, and click-through, while keeping mobile nav clean and Core Web Vitals intact."
+date: "2026-05-31"
+tags: ["scamcheck", "information-architecture", "navigation", "seo", "ctr", "discover", "homepage"]
+status: published
+related_docs:
+  - phase-25-launch-runbook
+  - monetization-discover-ctr-analysis
+  - autonomous-growth-authority-estimates
+---
+
+Recommendations to make ScamCheck's homepage the strongest possible authority + discovery hub for the scam content. The shipped Phase-25 links are the **minimum**; this is the target IA.
+
+## What shipped (baseline)
+- Sidebar nav group **Scam Intelligence** → `Scam Alerts` (`/scams`) + `Trending Hubs`.
+- Homepage hero CTA **Scam Alerts** + a 6-card module (latest, 4 tier-1 types, a trending hub).
+- Result: every tier-1 scam hub is now **≤2 clicks** (most 1); homepage passes link equity to 6 scam URLs.
+
+## Recommended homepage information architecture (priority order)
+1. **Hero** — value prop + primary CTA. Add **"Check a message"** as the #1 action (utility hook) alongside Scam Alerts.
+2. **Live "Trending scams now" strip** — *above the fold*, client-hydrated from the cached trending API (viral/active badges). Highest freshness + CTR signal. (Component exists: `TrendingStrip`.)
+3. **Scam Intelligence module** — latest + tier-1 entities + trending hubs (shipped).
+4. **Browse by** — quick links: by platform (WhatsApp/Telegram/SMS), by bank (SBI/HDFC…), by city (top 6). Spreads equity to facet clusters.
+5. **Seasonal hub spotlight** — surfaces the in-season hub (festival/tax/election) when active (`inSeasonHubs()`).
+6. **Trust strip** — "Cited sources: 1930 · cybercrime.gov.in · RBI · SEBI" + links to editorial-policy/methodology (E-E-A-T above the fold-ish).
+7. Existing lab sections (tracks/failures/etc.) below.
+
+## Recommended future navigation structure
+- Promote **Scam Intelligence** to the **top** of the sidebar (above Knowledge) — it's the primary public surface.
+- Expand the group (still clean — ≤4 items):
+  - `Scam Alerts` → `/scams`
+  - `Trending` → `/scams` (trending strip anchor) or a future `/scams/trending`
+  - `By Platform` → `/scams/platform/whatsapp` (gateway to facet set)
+  - `Hubs` → flagship hub
+- **Top bar (mobile):** keep a single persistent **"Scam Alerts"** entry + a search icon; do not add more than one scam item to the top bar to keep mobile clean.
+- Add a **footer column "Scam Alerts"** listing tier-1 types + trust pages (footer links aid crawl without cluttering primary nav).
+
+## "Trending Scams" placement strategy
+- **Homepage:** above-the-fold live strip (freshness + CTR) — the single highest-leverage placement.
+- **Every scam page:** the in-page `TrendingStrip` (already shipped) for cross-discovery + dwell time.
+- **Widgets:** the embeddable "latest scams" widget (already shipped) extends trending off-site → backlinks.
+- **Cadence:** refreshed by the `update-trending` cron (materialized snapshot) → served from CDN cache → real-time feel, near-zero cost.
+- **Rule:** trending must never cause CLS — render only after data loads (current behavior), reserve no fixed space when empty.
+
+## Recommended homepage CTR modules (ranked by expected lift)
+1. **"Check a message" input** — paste-a-message utility box → routes to the checker. Converts intent → engagement; strongest CTR/retention driver.
+2. **Live trending strip** — curiosity + freshness; high CTR to entity pages.
+3. **"Is this a scam?" quick-answer cards** — tier-1 types as question cards ("Asked for your OTP?", "Got a KYC link?") → direct-answer pages (AI-Overview synergy).
+4. **Seasonal alert banner** — time-sensitive ("Festival scams are rising") → seasonal hub.
+5. **Watchlist / email-alert prompt** — retention capture (component exists: `AlertSubscribe`).
+6. **Regional cue** — "Scams reported in your city" using coarse geo (no PII) → city facet pages.
+
+## Guardrails (verified)
+- Mobile nav stays clean (one group, ≤2 items shipped; recommend ≤4).
+- No CLS: all new homepage links are static server-rendered; trending/subscribe are client-lazy and render nothing until ready.
+- Lighthouse unaffected: no new blocking JS; links are plain anchors.
+- No orphans: homepage + hub + sitemap together reach every page; tier-1 ≤2 clicks.

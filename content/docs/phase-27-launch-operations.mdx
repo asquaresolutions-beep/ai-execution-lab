@@ -1,0 +1,176 @@
+---
+title: "Phase 27 — Production Launch Operations Playbook"
+description: "The launch-day operations playbook for the ScamCheck growth engine: exact env vars, validated config assumptions, static-first deployment order, Vercel/Firebase/GSC checklists, rollback steps, launch validation commands, a first-week operational playbook, the first 30-page publishing schedule, backlink outreach targets, first-week SEO/GEO monitoring, and Day 1/3/7/30 checklists."
+date: "2026-05-31"
+tags: ["scamcheck", "launch", "operations", "deployment", "google-search-console", "discover", "monitoring", "cost"]
+status: published
+related_docs:
+  - phase-25-launch-runbook
+  - launch-content-pack
+  - homepage-ia-nav-recommendations
+  - low-cost-autonomous-operation
+---
+
+Operational playbook for launch day + week one. Builds on the [Phase 25 runbook](/docs/phase-25-launch-runbook); this adds exact config validation, validation commands, the 30-page schedule, outreach targets, and Day 1/3/7/30 checklists. **No new architecture — operations only.** Steps marked **[you]** run on your accounts.
+
+## 1) Exact required environment variables
+
+**Minimum for a static-first launch (pages/OG/widgets/sitemap):**
+| Var | Required | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_SITE_URL` | **Yes** | Canonical + sitemap + schema origin. The one must-set var. |
+
+**Add for live AI (defer until after static-first is verified):**
+| Var | Purpose |
+|---|---|
+| `VERTEX_PROJECT_ID` (or `FIREBASE_PROJECT_ID`) | Vertex AI project |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` (or `VERTEX_ACCESS_TOKEN`) | Vertex auth (`roles/aiplatform.user`) |
+| `DAILY_BUDGET_USD` (start at 1) · `DEEP_TIER=flash` | cost guard |
+
+**Add for persistence (ingestion / dashboards / trending):**
+| Var | Purpose |
+|---|---|
+| `FIREBASE_PROJECT_ID` + `FIREBASE_API_KEY` (or `FIREBASE_ACCESS_TOKEN`) | Firestore |
+
+**Add for admin + automation:**
+| Var | Purpose |
+|---|---|
+| `ADMIN_API_TOKEN` | gates admin APIs + dashboards |
+| `CRON_SECRET` | authenticates Vercel cron calls |
+
+**Optional:** `NEXT_PUBLIC_SCAM_BASE_URL`, `NEXT_PUBLIC_SCAMCHECK_APP_URL`, `NEXT_PUBLIC_GA_ID`/`NEXT_PUBLIC_PLAUSIBLE_DOMAIN`, `NEXT_PUBLIC_ADSENSE_CLIENT` + slots, `NEXT_PUBLIC_PAID_FLAG_KEY`, `AUTOPILOT_PER_RUN`, `BUNDLES_PER_DAY`, `PUBLISH_PER_HOUR`, `QUALITY_THRESHOLD`. Full template in `.env.example`. **No secrets are committed.**
+
+## 2) Validated configuration assumptions
+- **Canonical = sitemap origin (verified in code).** Both `lib/seo/programmatic.ts` and `app/sitemap.ts` resolve the origin identically: `NEXT_PUBLIC_SCAM_BASE_URL → NEXT_PUBLIC_SITE_URL → lab fallback`. They cannot diverge if env is set consistently.
+- **Rule:** set `NEXT_PUBLIC_SITE_URL` to the exact origin where pages are served (scheme + host, no trailing slash).
+- **`NEXT_PUBLIC_SCAM_BASE_URL`:** leave **unset** if serving scam pages on the same origin as the site. Set it **only** if scam pages live on a different origin (e.g. `https://scamcheck.asquaresolution.com`) AND that origin actually serves this app (DNS/proxy). If set but not served there → canonical points to a dead URL. Most launches: leave unset.
+- **`NEXT_PUBLIC_SCAMCHECK_APP_URL`:** the checker the homepage "Check a message" box routes to (default `https://scamcheck.asquaresolution.com`), as `?q=MESSAGE&t=TYPE`. Confirm the checker app reads `q` (rename if its param differs).
+
+## 3) Safest deployment order
+1. **Static-first** — deploy branch with **only** `NEXT_PUBLIC_SITE_URL` set (AI/Firebase unset → mock/memory, zero cost/risk).
+2. **GSC** — submit sitemap, request-index tier-1 hubs.
+3. **Firestore** — add `FIREBASE_*` → ingestion/dashboards/trending persistence.
+4. **Vertex, capped** — add Vertex creds + `DAILY_BUDGET_USD=1`, `DEEP_TIER=flash`, `AUTOPILOT_PER_RUN=1`; watch one full day.
+5. **Crons** — add `CRON_SECRET`; enable after a clean cost day; raise caps gradually.
+6. **Ads** — set `NEXT_PUBLIC_ADSENSE_*` last, after CWV confirmed live.
+
+### Vercel checklist [you]
+- [ ] Import repo / select branch; framework Next.js (auto).
+- [ ] Set `NEXT_PUBLIC_SITE_URL` (Production scope).
+- [ ] Deploy → confirm build succeeds + pages render.
+- [ ] Add custom domain; confirm it matches `NEXT_PUBLIC_SITE_URL`.
+- [ ] (Later) add remaining env per the order above; crons auto-register from `vercel.json`.
+
+### Firebase checklist [you]
+- [ ] Create Firestore (production mode).
+- [ ] Service account → grant `roles/aiplatform.user` (Vertex) + Firestore access; enable **Vertex AI API**.
+- [ ] `FIREBASE_PROJECT_ID=… npm run setup:firestore` → composite + vector indexes + TTL policies; wait for build.
+- [ ] Set a **Cloud Billing budget alert**.
+
+### GSC checklist [you]
+- [ ] Add/verify property for `NEXT_PUBLIC_SITE_URL` origin.
+- [ ] Submit `/sitemap.xml`.
+- [ ] URL-inspect + request-index: `/scams`, `/scams/type/upi-fraud`, `/otp-fraud`, `/kyc-fraud`, `/phishing`, `/investment-fraud`.
+- [ ] Check Coverage + Enhancements (FAQ/Breadcrumb) after 48–72h.
+
+### Rollback steps
+- **Instant:** redeploy previous Vercel deployment, or `git revert` the merge (themed commits revert cleanly).
+- **Kill AI spend:** unset Vertex env → mock fallback (no spend, no crash).
+- **Halt autonomy:** remove crons from `vercel.json` + redeploy, or `DAILY_BUDGET_USD=0`.
+- **No destructive migrations** — all collections new/append-only.
+
+## 4) Launch validation commands
+Run against your live origin (replace `SITE`):
+```bash
+SITE=https://your-domain
+curl -s -o /dev/null -w "sitemap %{http_code}\n" $SITE/sitemap.xml
+curl -s $SITE/robots.txt | grep -E "Allow|Disallow|Sitemap"           # expect Allow /api/og, Disallow /api/,/ops
+curl -s $SITE/sitemap.xml | grep -c "<loc>"                            # expect ~730
+curl -s -o /dev/null -w "OG %{http_code} %{content_type}\n" "$SITE/api/og?template=scam&title=UPI+Fraud&sev=high"
+curl -s $SITE/scams/type/upi-fraud | grep -o '"@type":"FAQPage"'       # schema present
+curl -s $SITE/scams/type/upi-fraud | grep -o 'rel="canonical" href="[^"]*"'   # canonical = SITE origin
+curl -s -o /dev/null -w "widget.js %{http_code}\n" $SITE/widget.js
+```
+- **Schema validation [you]:** Google Rich Results Test on a type page + a hub page (Article + FAQ + Breadcrumb).
+- **Mobile validation [you]:** PageSpeed Insights (mobile) on `/` + a scam page → confirm CLS ≈ 0, good LCP.
+
+## 5) First-week operational playbook (daily)
+| Metric | Where | Healthy |
+|---|---|---|
+| AI cost today | `/ops/analytics` | under `DAILY_BUDGET_USD` |
+| Vertex quota | `/ops/analytics` | under 85% |
+| Queue failure / DLQ | `/ops/analytics` | failure under 5 percent, DLQ 0 |
+| Indexing coverage | GSC | rising; not stuck "Discovered – not indexed" |
+| Discover impressions | GSC → Discover | first impressions by week 2–3 |
+| Rich results | GSC → Enhancements | no FAQ/Article errors |
+| CWV | GSC/PSI | CLS good, LCP good |
+| Function errors | Vercel logs | no spikes/timeouts |
+
+## 6) First publishing schedule (priority order)
+**First 30 pages** (already prerendered; prioritise for indexing + promotion):
+- Tier-1 types (5): upi-fraud, otp-fraud, kyc-fraud, phishing, investment-fraud
+- Tier-2 types (7): fake-job, loan-scam, courier-scam, electricity-bill-scam, lottery-scam, tech-support-scam, romance-scam
+- Hubs (5): upi-payment-scams, job-investment-scams, festival-scams, tax-season-scams, election-scams
+- Top platform/bank/UPI (5): platform/whatsapp, platform/telegram, bank/sbi, bank/hdfc-bank, upi/google-pay
+- High-intent combos (8): upi-fraud in Mumbai/Delhi/Bengaluru, otp-fraud in Mumbai/Delhi, kyc-fraud in Mumbai, fake-job in Delhi, investment-fraud in Mumbai
+
+**First Hindi targets (10):** the 10 tier-1/2 type pages (already bilingual + Hindi OG) — promote the Hindi share text via the alert-formats API.
+
+**First Shorts topics (5):** UPI refund-PIN trick · OTP "bank security" call · KYC freeze SMS · fake-job registration fee · Telegram investment "task" scam.
+
+**First LinkedIn authority topics (3):** "Why UPI refund requests are a scam" · "The KYC-freeze SMS pattern" · "Investment groups that block withdrawals."
+
+**First X/Twitter alert threads (5):** one per tier-1 type (snippets from `/api/scam-intel/alert-formats?type=<id>`).
+
+> Full ready-to-post copy is in [launch-content-pack](/docs/launch-content-pack); per-channel snippets at `/api/scam-intel/alert-formats`.
+
+## 7) First backlink / outreach targets
+- **Fintech / personal-finance blogs:** offer the "Latest scams in India" widget + a data citation.
+- **Cyber-awareness sites / CERT-style portals:** link the methodology + helpline references.
+- **Student / campus communities (Reddit r/india, college groups):** fake-job + investment-scam pages.
+- **Banking forums / RWA & community groups:** bank-specific scam pages + the embeddable badge.
+- **Local news / regional cyber-desk portals:** city scam pages + the widget for their region.
+- **Angle:** lead with public-safety value + the free widget (keeps the "Powered by ScamCheck" dofollow link). Pitch order: widget embed → data citation → guest explainer.
+
+## 8) First-week SEO/GEO monitoring checklist
+- [ ] **Indexing velocity:** pages indexed per day (GSC Coverage) — target majority of 250 within 2–3 weeks.
+- [ ] **Crawl depth:** confirm no orphans (all pages ≤3 clicks; verified at build).
+- [ ] **Featured snippets:** track tier-1 "what is / is this a scam" queries (the direct-answer + comparison blocks target these).
+- [ ] **AI Overview visibility:** spot-check tier-1 queries for AI Overview citation (machine-readable trust + speakable shipped).
+- [ ] **Discover pickup:** GSC → Discover; confirm large-image previews (robots allows `/api/og`).
+- [ ] **Entity growth:** `/api/scam-intel/growth?view=entities` — fastest-growing categories/platforms/regions.
+
+## 9) Day-by-day checklists
+
+### Day 1
+- [ ] Deploy static-first; set `NEXT_PUBLIC_SITE_URL`.
+- [ ] Run §4 validation commands (all pass).
+- [ ] Rich Results + PSI mobile on `/` + one scam page.
+- [ ] Submit sitemap in GSC; request-index tier-1 hubs.
+- [ ] Confirm canonical on a live page = your origin.
+
+### Day 3
+- [ ] GSC Coverage: pages getting discovered/crawled; no canonical/robots errors.
+- [ ] (If AI enabled) `/ops/analytics`: cost under cap, DLQ 0, quota under 85%.
+- [ ] First social posts live (tier-1 X threads + 1 LinkedIn); first widget pitch sent.
+- [ ] Re-check no Enhancement errors (FAQ/Breadcrumb).
+
+### Day 7
+- [ ] Indexed count trending up; request-index any stalled tier-1.
+- [ ] First Discover impressions watch begins.
+- [ ] 5 Shorts + 5 X threads + 2 LinkedIn posted; 5 outreach targets contacted.
+- [ ] Cost trend stable; consider raising `AUTOPILOT_PER_RUN`/`BUNDLES_PER_DAY` slightly if clean.
+
+### Day 30 goals
+- Majority of 250 pages indexed; tier-1 ranking for long-tail "is this a scam" queries.
+- First Discover impressions + first featured snippets.
+- First 5–15 referring domains from widget embeds/outreach.
+- Steady, predictable AI cost under cap; DLQ ≈ 0; CWV green.
+- First Hindi pages indexed; entity-growth signal visible in `/api/scam-intel/growth`.
+
+## Final verification (this phase)
+- ✅ No new architecture/features added; tree clean; 30 commits.
+- ✅ Env assumptions validated in code (canonical = sitemap origin; static-first needs only `NEXT_PUBLIC_SITE_URL`).
+- ✅ No required secret missing for static-first; live AI/persistence gated progressively.
+- ✅ No broken env assumptions; no committed secrets.
+- **No hidden deployment blockers.** Single must-set gate: `NEXT_PUBLIC_SITE_URL` = real serving origin.

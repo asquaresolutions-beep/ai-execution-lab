@@ -1,0 +1,80 @@
+---
+title: "Vertex AI Gemini — Setup & Provider Architecture"
+description: "How AI Execution Lab uses Vertex AI Gemini 2.5 (Flash + Pro) exclusively: dependency-free service-account auth, model-tier routing with automatic fallback, graceful rate-limit handling, token usage + cost tracking, Vertex quota monitoring, batched multilingual embeddings, and a deterministic mock fallback. Includes the exact env vars, IAM roles, and a go-live checklist."
+date: "2026-05-30"
+tags: ["vertex-ai", "gemini", "firebase", "firestore", "cost", "rate-limiting", "scamcheck", "production"]
+status: published
+related_docs:
+  - content-distribution-engine
+  - scam-intelligence-ingestion
+  - low-cost-autonomous-operation
+---
+
+The platform talks to **Vertex AI exclusively** — no direct Generative Language (API-key) calls. The provider abstraction is unchanged for callers: `getProvider().generate()`, `generateJSON()`, and the embeddings API keep their old signatures, so nothing downstream broke.
+
+## Why Vertex
+
+- Enterprise auth (service account / Workload Identity), VPC-SC, data residency, and one billing surface with Firestore.
+- Access to **Gemini 2.5 Flash** (fast, cheap) and **Gemini 2.5 Pro** (deep analysis).
+
+## Model tiers & routing
+
+| Tier | Model (default) | Used for |
+|---|---|---|
+| `flash` | `gemini-2.5-flash` | SEO, GEO, social, reel, FAQ, classification — everything fast |
+| `pro` | `gemini-2.5-pro` | The long-form article (deep analysis) |
+
+Callers select a tier via `generate(prompt, { tier: 'pro' })` or `{ deep: true }`. Default is Flash. The article generator uses `DEEP_TIER` (default `pro`); set `DEEP_TIER=flash` to cut article cost ~4× for low-cost mode.
+
+**Automatic fallback:** on persistent `429/5xx`, a call retries with exponential backoff + jitter, then falls back across tiers once (flash↔pro) before failing. This is graceful rate-limit handling, not silent data loss — every retry/fallback is logged (`ai.retry`, `ai.tier_fallback`).
+
+## Authentication (dependency-free)
+
+Two modes, checked in order (`lib/ai/vertex-auth.ts`):
+
+1. **`VERTEX_ACCESS_TOKEN`** — a pre-minted OAuth token (e.g. Workload Identity on Cloud Run). Simplest.
+2. **`GOOGLE_SERVICE_ACCOUNT_JSON`** (raw or base64) — we sign a JWT with `node:crypto` (RS256) and exchange it for an access token at Google's token endpoint, cached ~55 min. No `google-auth-library` needed.
+
+### Required IAM
+Grant the service account **`roles/aiplatform.user`** on the project. (Firestore uses its own `FIREBASE_*` credentials.)
+
+## Token usage, cost & quota
+
+Every live call records `usageMetadata` (`lib/ai/usage.ts`):
+- **Per-call cost** estimated from a pricing table (USD / 1M tokens), emitted as a structured `ai.usage` log line.
+- **Daily counters** (`_ai_usage_daily`) via cheap increments — no table scans.
+- **Quota monitor** (`_ai_quota`) tracks tokens/min vs `VERTEX_TOKENS_PER_MIN`; `nearLimit` flips at 85% so the system can back off before hard 429s.
+
+Cost + quota appear live on **`/ops/analytics`**.
+
+> Pricing constants are **estimates** — confirm against the current Vertex pricing page and override via `VERTEX_FLASH_IN_PER_M`, `VERTEX_PRO_OUT_PER_M`, etc.
+
+## Embeddings
+
+Vertex `:predict` with **`text-multilingual-embedding-002`** (handles English + Hindi), 768-d, COSINE. `embedBatch()` packs up to 25 texts per request (real batching → fewer calls, lower cost). Falls back to a deterministic hash embedding (Devanagari-aware) when Vertex is unconfigured, so dedup/clustering/search stay testable offline.
+
+## Environment
+
+```
+# Vertex AI (required for live)
+VERTEX_PROJECT_ID=your-gcp-project          # falls back to FIREBASE_PROJECT_ID
+VERTEX_LOCATION=us-central1                 # or 'global'
+GOOGLE_SERVICE_ACCOUNT_JSON={...}           # OR VERTEX_ACCESS_TOKEN=...
+# optional overrides
+VERTEX_FLASH_MODEL=gemini-2.5-flash
+VERTEX_PRO_MODEL=gemini-2.5-pro
+VERTEX_EMBED_MODEL=text-multilingual-embedding-002
+VERTEX_TOKENS_PER_MIN=100000
+DEEP_TIER=pro                               # set 'flash' for cheap mode
+```
+
+## Go-live checklist
+1. Create a service account, grant `roles/aiplatform.user`, download the JSON key.
+2. Set `GOOGLE_SERVICE_ACCOUNT_JSON` (base64 is convenient) + `VERTEX_PROJECT_ID` + `VERTEX_LOCATION` in Vercel.
+3. Enable the **Vertex AI API** on the project.
+4. `curl /api/health` → expect `"ai":"live"`, `provider: vertex:…`.
+5. Generate one bundle → check `/ops/analytics` shows non-zero tokens + cost.
+
+## Verification status
+- **Mock mode:** full pipeline verified (build, typecheck, autopilot, queue) with the deterministic provider.
+- **Vertex mode:** auth/generation/embedding/usage code paths are typechecked and wired; live confirmation requires your service account (step 4–5 above).

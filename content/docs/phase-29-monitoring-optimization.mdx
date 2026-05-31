@@ -1,0 +1,94 @@
+---
+title: "Phase 29 — Post-Launch Monitoring & Optimization Workbook"
+description: "A fill-in monitoring + optimization workbook for the deployed ScamCheck growth engine: what to track for indexing, Discover, SEO/GEO, content, distribution, monetization, and cost — where to read it, healthy thresholds, and a weekly optimization loop seeded with computed publish/backlink/conversion priorities. Guardrails keep it low-cost and stable."
+date: "2026-05-31"
+tags: ["scamcheck", "monitoring", "optimization", "google-search-console", "discover", "adsense", "cost", "weekly-loop"]
+status: published
+related_docs:
+  - launch-ops-pack
+  - phase-27-launch-operations
+  - autonomous-growth-authority-estimates
+---
+
+Post-launch operating workbook. Live metrics (indexing counts, Discover impressions, RPM) live in **your** GSC / AdSense / Vercel / Analytics — this doc tells you exactly what to read, where, the healthy range, and what to do. Sections seeded with priorities **computed deterministically** from the engine (no live data needed). **No new systems — monitoring + high-ROI optimization only.**
+
+> Note: the engine's `/api/health` reports live AI/persistence mode. In production it should read `ai: live`, `persistence: firestore`, `env.ok: true`. (A local sandbox reads mock/memory — that is expected and not the production state.)
+
+## Computed baselines (no live data required)
+**Publish priority — topic leverage (demand × RPM × momentum):**
+1. Investment Fraud (80, high RPM) · 2. UPI Fraud (71) · 3. KYC Fraud (71) · 4. Phishing (71) · 5. Fake Job (71) · 6. OTP Fraud (62) · 7. Loan-app (60).
+**Backlink targets (most embeddable/citable):** UPI (100), OTP (100), KYC (94), Phishing (94), Investment (88), Fake Job (82).
+**Conversion targets (free→paid intent):** Investment (100), UPI (93.5), KYC (90.3), OTP (87), Phishing (80.5).
+**Crawl health:** 0 orphans, all 251 scam pages ≤3 clicks from homepage (verified at build; unchanged). Refresh after any content addition.
+
+## A) Indexing monitoring — GSC → Pages / Sitemaps
+| Track | Healthy | Action if not |
+|---|---|---|
+| Indexed page growth | rising toward ~250 over 2–3 wks | request-index stalled tier-1 |
+| Excluded / "Discovered – not indexed" | shrinking | improve internal links / content depth |
+| Sitemap coverage | submitted, ~730 discovered | resubmit; check origin matches canonical |
+| Crawl anomalies (5xx/redirects) | none | check Vercel logs / canonical config |
+| Orphan risk | 0 | re-run crawl-depth after big content adds |
+
+## B) Discover monitoring — GSC → Performance → Discover
+| Track | Healthy | Action |
+|---|---|---|
+| Discover impressions | first by wk 2–3, then rising | push freshest tier-1 + in-season hub |
+| Discover CTR | improving | strengthen headline (honest) + OG image |
+| Strongest Discover pages | identify top 5 | make more like them; interlink |
+| Freshness decay | refresh pages older than ~30d | update "last updated" + trending strip |
+| Image/OG effectiveness | large-image previews showing | confirm robots allows /api/og |
+
+## C) SEO/GEO monitoring — GSC Performance + manual spot-checks
+- **Featured snippets / AI Overview:** spot-check tier-1 "what is / is this a scam" queries weekly; the direct-answer + comparison + speakable schema target these.
+- **FAQ visibility:** GSC → Enhancements (FAQ) — fix any errors.
+- **Entity growth + semantic expansion:** `/api/scam-intel/growth?view=entities` (fastest-growing categories/platforms/regions).
+- **Internal-link effectiveness:** pages with rising impressions that you linked from the hub — keep depth ≤3.
+
+## D) Content optimization
+- **Strongest entities:** highest GSC clicks/impressions → expand with city combos + Hindi.
+- **Weakest pages:** high impressions + low CTR → rewrite title/headline (truthful) first; thin/low-severity → consider deprioritising.
+- **CTR-hook candidates:** pages with impressions but CTR below site median.
+- **Freshness refreshes:** tier-1 pages older than 30d; bump dates + re-promote.
+- **Internal-link opportunities:** link new trending pages from the hub + related type pages (0 orphans, depth ≤3).
+
+## E) Distribution optimization
+| Track | Where | Use |
+|---|---|---|
+| Shorts / LinkedIn / X engagement | each platform's native analytics | double down on top hooks (from alert-formats) |
+| Backlink growth / referring domains | GSC → Links + GA/Plausible referrals | scale the winning outreach angle |
+| Widget embeds | referral traffic from `widget.js` loads | pitch more sites in that vertical |
+
+## F) Monetization monitoring — AdSense + analytics (only after ads enabled)
+- **RPM / CTR / placement:** below-verdict vs in-content unit performance; keep the higher-RPM placement, drop dead weight.
+- **Free→paid:** watch which scam topics precede upgrades (Investment/UPI/KYC score highest on intent); position Pro on those pages.
+- **Guardrail:** no intrusive/anchor formats; confirm CLS stays ≈0 with ads live.
+
+## G) Cost monitoring — /ops/analytics + GCP billing
+| Track | Healthy | Action |
+|---|---|---|
+| Vertex spend today | under `DAILY_BUDGET_USD` | breaker auto-halts; lower caps if near |
+| Quota utilization | under 85% | back off autopilot frequency |
+| Firestore reads/writes | low (counters, cached snapshot) | investigate spikes; avoid scans |
+| Cache hit rate | rising | ensure cache TTL not bypassed |
+| Queue efficiency / DLQ | failure under 5%, DLQ 0 | inspect + replay from DLQ |
+| Unnecessary AI usage | none (dedup + quality gate) | confirm crons early-exit when idle |
+
+## H) Weekly optimization loop (highest-ROI)
+Run weekly; most inputs are one API call or one GSC view.
+1. **Content priorities:** `/api/scam-intel/growth?view=leverage` → publish/promote top movers (baseline: Investment, UPI, KYC, Phishing, Fake-job).
+2. **Discover opportunities:** freshest tier-1 + in-season hub (festival Oct–Nov/Mar, tax Mar–Apr, election around polls).
+3. **Backlink opportunities:** `?view=backlink` (baseline: UPI, OTP, KYC) → pitch the widget to the matching vertical.
+4. **Hindi opportunities:** the tier-1 Hindi pages (already built) with rising EN demand → promote Hindi share copy.
+5. **AI Overview opportunities:** tier-1 question queries showing impressions but no snippet → tighten the direct-answer block (no new system).
+
+## I) Guardrails (do NOT add unless metrics justify)
+- **No new infra / expensive scaling / redesigns / realtime systems** unless a measured bottleneck appears:
+  - Cost spike → lower caps (`DAILY_BUDGET_USD`, `AUTOPILOT_PER_RUN`), not bigger infra.
+  - Crawl stall → add internal links, not a new crawler.
+  - Throughput limit → split AI calls to a worker only if the queue genuinely backs up (DLQ growing).
+  - Vector search slow only above a few thousand docs → switch to Firestore Vector Search (indexes already defined).
+- **Default posture:** publish consistently, distribute the deterministic copy, monitor weekly, let the four loops compound (detect→publish→reports; freshness→Discover; widgets→backlinks→authority; trust→AI-citations→brand).
+
+## What I need to do real analysis
+Share a **live origin URL** (I'll run the post-deploy smoke + crawl/canonical/OG/schema checks against production) and/or **exported GSC/AdSense numbers** (indexed count, top queries/pages, Discover impressions, RPM) — then I'll produce a data-driven weekly report: weakest pages, CTR-hook targets, refresh list, and the next week's priorities.
