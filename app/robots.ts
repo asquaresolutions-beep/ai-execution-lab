@@ -7,8 +7,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
-        // Block internal tools + API routes from crawlers
+        // Allow OG image route (needed for Discover/social image fetching).
+        allow: ['/', '/api/og'],
+        // Block internal tools + other API routes from crawlers
         disallow: ['/api/', '/ops', '/syndicate'],
       },
     ],

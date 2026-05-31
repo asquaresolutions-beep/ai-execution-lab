@@ -11,6 +11,7 @@
 
 import {
   SCAM_TYPES, SCAM_TYPE_BY_ID, facetById, slug,
+  CITIES, BANKS, UPI_APPS, PLATFORMS,
   type ScamType, type Dimension, type Facet,
 } from './facets'
 import { referencesForType, trustScore, type Reference, type TrustScore } from './authority'
@@ -339,9 +340,13 @@ export function buildHubPage(): PageModel {
     ...SCAM_TYPES.filter((t) => t.searchVolumeTier === 1).map((t): InternalLink => ({ anchor: `${t.name}`, href: `/scams/type/${t.id}`, group: 'trending' })),
     { anchor: 'WhatsApp scams', href: '/scams/platform/whatsapp', group: 'facet' },
     { anchor: 'Telegram scams', href: '/scams/platform/telegram', group: 'facet' },
-    { anchor: 'SBI scams', href: '/scams/bank/sbi', group: 'facet' },
-    { anchor: 'UPI / Google Pay scams', href: '/scams/upi/google-pay', group: 'facet' },
     ...[...HUB_BY_ID.values()].map((h): InternalLink => ({ anchor: h.title, href: `/scams/hub/${h.id}`, group: 'related-alerts' })),
+    // Full facet directory → ensures every city/bank/UPI/platform page is
+    // internally linked (no orphans; spreads crawl + link equity).
+    ...CITIES.map((c): InternalLink => ({ anchor: `${c.name} scams`, href: `/scams/city/${c.id}`, group: 'facet' })),
+    ...BANKS.map((b): InternalLink => ({ anchor: `${b.name} scams`, href: `/scams/bank/${b.id}`, group: 'facet' })),
+    ...UPI_APPS.map((u): InternalLink => ({ anchor: `${u.name} scams`, href: `/scams/upi/${u.id}`, group: 'facet' })),
+    ...PLATFORMS.map((p): InternalLink => ({ anchor: `${p.name} scams`, href: `/scams/platform/${p.id}`, group: 'facet' })),
   ]
   const references = referencesForType('upi-fraud')
   const trust = trustScore({ hasOfficialRefs: true, citationCount: references.length, hasHelpline: true, hasLastUpdated: true, factCount: 4, bilingual: true })
