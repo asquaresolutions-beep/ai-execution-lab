@@ -9,6 +9,7 @@
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "gen:indexes": "node scripts/gen-firestore-indexes.mjs",
+    "gen:launch": "node scripts/gen-launch-pack.mjs",
     "setup:firestore": "bash scripts/setup-firestore.sh"
   },
   "engines": {
