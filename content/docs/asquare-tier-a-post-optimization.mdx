@@ -1,0 +1,73 @@
+---
+title: "Tier-A Post Optimization Specs — Batch 1 (GEO / AI-SEO / ScamCheck / TrustSeal)"
+description: "Deep-read optimization specs for the strategic Tier-A blog posts on asquaresolution.com: GEO guide, ChatGPT Search guide, two Google AI Overviews posts, the dated AI-search 2025 post, plus the ScamCheck and TrustSeal posts. Per post: answer-first + AI-Overview/ChatGPT-citation gains, E-E-A-T, FAQ schema, internal links to service pillars, conversion CTAs, cannibalization fixes, indexing priority, and title/meta CTR tweaks."
+date: "2026-05-31"
+tags: ["seo", "geo", "ai-overviews", "chatgpt-search", "scamcheck", "trustseal", "content-optimization", "schema"]
+status: published
+related_docs:
+  - asquare-blog-content-audit
+  - asquare-internal-linking-topical-map
+  - asquare-new-service-landing-pages
+---
+
+Deep-read (live body) optimization specs for 7 Tier-A posts. **Finding:** these are already well-built (answer-first, 2.5k–5.5k words, FAQs, cross-links, cited sources). So these are **targeted gains + 3 real gaps**, not rewrites. (Batch 2 — AI automation / consulting / SEO-ROI — to follow.)
+
+## Cross-cutting actions (apply to all 7)
+- **Verify FAQPage JSON-LD is actually emitted** (several posts only "imply" it). If Rank Math isn't outputting FAQPage for the FAQ blocks, enable it — this is the single biggest AI-Overview/snippet lever here.
+- **Add links to the new service pillars** once published: GEO posts → `/services/geo-seo/`; AI-search/automation angle → `/services/ai-automation/`; product posts → `/services/ai-consulting/`; SEO-ROI → `/services/technical-seo/`.
+- **Author/E-E-A-T:** add a visible author byline + `author` Person schema + "Reviewed by" + last-updated date on each (most cite the org but not a named author).
+- **Anchor hygiene:** replace generic anchors ("here", "this trend") with descriptive, entity-rich text.
+
+## 1. generative-engine-optimization-geo-end-of-traditional-seo — **GEO pillar-spoke**
+- **State:** Excellent. Answer-first; ~5,500w; GEO-vs-SEO + platforms + ranking stack + India + checklist + FAQ; links to entity-SEO + AI-Overviews + ChatGPT + lab; external sources (Anthropic, MIT).
+- **Do:** confirm FAQPage schema output; add a prominent link to `/services/geo-seo/` ("our GEO services") high in the body (currently below the fold); add a comparison **table** for GEO-vs-SEO if it's prose (snippet bait); ensure it's the canonical target for the "what is GEO" head term (all GEO mentions elsewhere anchor here).
+- **Cannibalization:** none — this is the canonical GEO explainer. Keep it that way.
+- **Indexing:** P1 (highest). **Title CTR:** strong already ("…2026 Guide to AI Search Citations").
+
+## 2. chatgpt-search-seo-how-to-appear-in-chatgpt-answers — **ChatGPT cluster**
+- **State:** Strong; ~3,500w; answer-first; 3-layer source model; 7 strategies; FAQ; "Get Your Citation Audit" CTA; links to GEO + AI-Overviews + entity-SEO.
+- **Do:** confirm FAQPage schema; add a one-line **direct-answer box** at top ("To appear in ChatGPT answers: be in Bing's index, write passage-level answers, add schema"); add `HowTo` schema to the "Seven Strategies" section (ChatGPT/AI-Overview eligible); link to `/services/geo-seo/` (GEO encompasses ChatGPT visibility).
+- **Cannibalization:** distinct from GEO post (ChatGPT-specific intent) — fine.
+- **Indexing:** P1. **Title:** good; consider adding "[2026]" already present.
+
+## 3. google-ai-overviews-impact-organic-clicks — "**38% Click Drop**" (data asset)
+- **State:** Strong data post; FAQ; comparison table; cites the 38% randomized-experiment stat. Opening is **not strictly answer-first**.
+- **Do:** rewrite first sentence to lead with the stat ("Google AI Overviews cut organic clicks ~38% with no gain in user satisfaction, a randomized field experiment found."); keep it as the **narrow citable stat asset**; add `Article` + FAQPage schema; CTA → "Book free consultation" (has it).
+- **Cannibalization:** **overlaps #4** on "AI Overviews traffic impact." **Fix:** scope this one to the *study/stat* ("AI Overviews 38% click drop study") and link to #4 as the broader/how-to piece. Distinct titles already help.
+- **Indexing:** P2 (after the canonical #4). **Title CTR:** excellent ("38% Click Drop, No User Gain").
+
+## 4. google-ai-overviews-and-your-traffic-data-backed-analysis-april-2026 — "**Killing Traffic — Real Data**" (canonical AI-Overviews spoke)
+- **State:** Strong; answer-first (85% prevalence, 30–60% CTR); how-to-optimize + 6 actions + GSC how-to + FAQ; "Get GEO Readiness Audit" CTA; references #3.
+- **Do:** make this the **canonical head-term page** for "do AI Overviews reduce traffic / AI Overviews traffic impact"; confirm FAQPage schema; ensure it links **down** to #3 ("the 38% click-drop study") and **up** to the GEO pillar + `/services/geo-seo/`.
+- **Cannibalization:** resolve with #3 (above) — this = broad+how-to, #3 = the stat.
+- **Indexing:** P1. **Title CTR:** strong; "Real Data (2026)" is good.
+
+## 5. google-ai-search-digital-marketing-2025 — ⚠️ **the weak/dated Tier-A post**
+- **State:** Dated **2025**, references 2026 resources (temporal inconsistency); **moderate/surface depth**; generic anchors; overlaps the GEO guide, the AI-Overviews posts, and **digital-marketing-in-2026**.
+- **Decision:** **Refresh-and-redate to 2026 with a distinct angle** (e.g., "AI search: how to rebalance organic + paid in 2026") **OR merge → `digital-marketing-in-2026`** and 301 (preferred if it lacks backlinks/traffic — confirm in GSC). Do **not** leave as-is: it dilutes the cluster and competes on the same terms with deeper posts.
+- **If kept:** re-date, deepen (add tactics/data), fix generic anchors, add FAQ + schema, link up to GEO pillar + `/digital-marketing-uk/`.
+- **Indexing:** **hold** until refreshed or redirected. **Cannibalization:** highest in this batch.
+
+## 6. scamcheck-india-ai-scam-detector — **ScamCheck product proof**
+- **State:** Strong; answer-first; 12 scam types; Vertex AI transparency; I4C stats + cybercrime.gov.in; FAQ ×5; links to ScamCheck app + TrustSeal + lab.
+- **Gap → Do:** **add a link to AI consulting** ("ScamCheck is built by A Square Solutions — see our AI consulting & product development") to capture the proof→consult conversion (currently missing); link to the new `/scams/*` ecosystem hub once live; confirm FAQPage + (ideally) `SoftwareApplication`/`Product` schema for ScamCheck; keep "Check a Message Now — Free" as primary CTA.
+- **GEO section:** add a short "Is [X] a scam? — quick checks" answer block (voice/AI-assistant friendly).
+- **Indexing:** P1 (commercial product + E-E-A-T proof). **E-E-A-T:** strong.
+
+## 7. trustseal-india-ai-fact-checker — **TrustSeal product proof** ⚠️ **missing FAQ + schema**
+- **State:** Strong copy; answer-first; 3-step method; pricing tiers; cites Reuters/WHO/BBC; links to services + ScamCheck + lab. **BUT: no FAQ section and no visible schema.**
+- **Gap → Do (highest-impact in batch):** **add an FAQ section + FAQPage schema** (e.g., "Is TrustSeal free? How accurate? Does it check WhatsApp forwards? How does it cross-reference sources?"); add `Article` + `SoftwareApplication`/`Product` schema; add author/Person schema. Keep the AI-consulting + product CTAs (present).
+- **GEO section:** add a direct-answer "How to fact-check a WhatsApp forward in 10 seconds" block.
+- **Indexing:** P1 after FAQ/schema added. **Title CTR:** strong.
+
+## Cannibalization summary (this batch)
+- **AI-Overviews pair (#3 vs #4):** keep both, enforce distinct head terms — #4 canonical (broad + how-to), #3 narrow (38% study). Cross-link with distinct anchors.
+- **#5 (AI-search 2025) vs GEO guide + digital-marketing-2026:** refresh-and-redate **or** merge/redirect into digital-marketing-2026. Resolve before requesting indexing.
+- Otherwise distinct intents (GEO vs ChatGPT vs product posts).
+
+## Manual-indexing priority (this batch)
+**P1 (request now, after schema/link fixes):** GEO guide, ChatGPT Search, AI-Overviews "Real Data 2026", ScamCheck, TrustSeal (post-FAQ).
+**P2:** AI-Overviews "38% Click Drop".
+**Hold:** AI-search-2025 (until refreshed or redirected).
+
+> Batch 2 (operationalizing-ai, ai-native-cloud, ai-coding-agent-costs, open-source-ai-coding, build-business-website-with-ai, calculating-seo-roi, digital-marketing-in-2026) follows the same spec format — say go and I'll deep-read + write it.
