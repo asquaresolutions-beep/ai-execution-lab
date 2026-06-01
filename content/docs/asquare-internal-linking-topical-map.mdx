@@ -1,0 +1,82 @@
+---
+title: "A Square Solutions — Internal Linking Map, Topical Authority Clusters & GEO Structure"
+description: "Semantic internal-linking architecture for asquaresolution.com: eight topical authority clusters (AI SEO, GEO, AI Automation, Technical SEO, Digital Marketing UK, AI Consulting, Scam Detection, Trust Verification), with pillar pages, service-to-blog and blog-to-service links, tool-to-service links, contextual anchor text, conversion pathways, and an entity-first GEO/AI-search structure. Implementation-ready for WordPress (Rank Math)."
+date: "2026-05-31"
+tags: ["seo", "geo", "internal-linking", "topical-authority", "ai-seo", "digital-marketing-uk", "scamcheck", "trustseal", "conversion"]
+status: published
+related_docs:
+  - homepage-ia-nav-recommendations
+  - autonomous-growth-authority-estimates
+---
+
+Internal-linking + topical-authority architecture for **asquaresolution.com**, built from the live site (services hub, GEO/Entity-SEO/Digital-Marketing-UK pages, 2 tools, 500+ blog posts) and the ecosystem properties (ScamCheck, TrustSeal, AI Execution Lab). Goal: compound topical authority and route every cluster to a conversion action. Implementation target: WordPress + Rank Math (manual or via the WP REST integration when credentials are added).
+
+## Site reality (audit)
+- **Live service pages:** `/services/geo-seo/`, `/services/entity-seo/`, `/digital-marketing-uk/`; hub at `/services/`.
+- **Declared but NOT yet built (create these):** `/services/technical-seo/`, `/services/ai-automation/`, `/services/ai-consulting/`.
+- **Tools:** `/free-qr-code-generator/`, `/image-to-pdf-converter/`.
+- **Support:** `/about-us/`, `/case-studies/`, `/contact/`, `/blog/`.
+- **Primary CTA across site:** "Get Free GEO Readiness Audit →".
+- **Proof assets:** ScamCheck + TrustSeal (shipped AI products) — use as E-E-A-T proof in AI Consulting / AI Automation clusters.
+
+## Eight topical authority clusters
+Each cluster = one **pillar** (a service or hub page that should rank + convert) + **supporting blog posts** that link up to it. Pillars interlink as a hub-and-spoke; spokes link to one pillar + 1–2 sibling spokes max (avoid link soup).
+
+| # | Cluster | Pillar (target) | Representative supporting posts | Converts to |
+|---|---|---|---|---|
+| 1 | **AI SEO** | `/services/geo-seo/` (+ AI-SEO section) | google-ai-overviews-impact-organic-clicks, chatgpt-search-seo, ai-overviews-data-backed-analysis | GEO Audit |
+| 2 | **GEO** | `/services/geo-seo/` | chatgpt-search-seo, ai-overviews posts, digital-marketing-in-2026 | GEO Audit |
+| 3 | **AI Automation** | `/services/ai-automation/` *(create)* | operationalizing-ai-for-scale, ai-native-cloud-infrastructure, ai-coding-agent-costs | Consultation |
+| 4 | **Technical SEO** | `/services/technical-seo/` *(create)* | calculating-seo-roi, Core-Web-Vitals/indexation posts | GEO Audit |
+| 5 | **Digital Marketing UK** | `/digital-marketing-uk/` | digital-marketing-in-2026, regional "top digital marketing companies" listicles | Consultation |
+| 6 | **AI Consulting** | `/services/ai-consulting/` *(create)* | operationalizing-ai, build-business-website-with-ai, case-studies | Consultation |
+| 7 | **Scam Detection** | ScamCheck (scamcheck.asquaresolution.com) + lab `/scams/*` | scamcheck-india-ai-scam-detector | Use ScamCheck (tool) |
+| 8 | **Trust Verification** | TrustSeal (trustseal.asquaresolution.com) | trustseal-india-ai-fact-checker | Use TrustSeal (tool) |
+
+## Semantic internal-linking map (direction + anchor text)
+Anchors are **contextual + entity-rich** (never "click here"). Use the exact-ish phrase once, partial-match variants elsewhere.
+
+### Service → blog (pillar pushes equity down to spokes)
+- GEO page → "how AI Overviews affect organic clicks", "appearing in ChatGPT Search results", "data-backed AI Overviews analysis (2026)".
+- Digital Marketing UK page → "digital marketing in 2026", "leading digital marketing companies" (regional listicles as comparison proof).
+- AI Automation pillar → "operationalizing AI for scale", "AI-native cloud infrastructure".
+
+### Blog → service (spokes route up to the money page) — **do this on every commercial post**
+- AI-Overviews / ChatGPT posts → "our Generative Engine Optimization (GEO) services" → `/services/geo-seo/`.
+- SEO-ROI / technical posts → "a technical SEO audit" → `/services/technical-seo/`.
+- AI-infra / automation posts → "AI workflow automation services" → `/services/ai-automation/`.
+- Regional digital-marketing listicles → "digital marketing for UK businesses" → `/digital-marketing-uk/`.
+- ScamCheck/TrustSeal posts → "AI products we've shipped" → `/services/ai-consulting/` (proof → consult).
+
+### Tool → service (capture utility traffic)
+- `/free-qr-code-generator/` → footer/contextual link "Need this built into your marketing? → Digital marketing for UK businesses" + GEO Audit CTA.
+- `/image-to-pdf-converter/` → "We build custom AI tools like this → AI automation services".
+- Both tools → a shared "Built by A Square Solutions — AI SEO & automation" credit linking to `/services/`.
+
+### Cross-property (authority + proof)
+- WordPress AI Consulting / Automation pillars → link to **ScamCheck** and **TrustSeal** as "production AI products we operate" (E-E-A-T proof).
+- ScamCheck / TrustSeal footers → "Built by A Square Solutions" → `/services/ai-consulting/`.
+- AI Execution Lab (lab.asquaresolution.com) → already the public documentation hub; link service pages to relevant lab case studies for evidence.
+
+## Conversion-oriented internal links
+- **Two CTAs per pillar:** primary "Free GEO Readiness Audit" (top SEO clusters) **or** "Book a consultation" (automation/consulting); secondary contextual link to `/case-studies/`.
+- **In-content conversion anchors** (mid-article, not just footer): e.g. "If AI engines aren't citing you yet, start with a GEO readiness audit."
+- **Proof → action chain:** case study → relevant service → audit/consult. Every `/case-studies/` entry links to the service it demonstrates.
+- **Tool users → lead:** tool pages carry one soft service CTA (low-friction, not salesy).
+
+## GEO / AI-search topical structure (entity-first)
+- **Entity anchoring:** Organization schema with a stable `@id` on every page; consistent NAP; `sameAs` to ScamCheck/TrustSeal/lab + social. Establish "A Square Solutions" as an entity ("AI-native SEO + scam-intelligence company, India, serving UK").
+- **Service schema** on each service page (`Service` + `provider` → the Organization `@id` + `areaServed` UK/India).
+- **Answer-first sections:** each pillar opens with a 2–3 sentence direct answer ("What is GEO?", "What is AI automation?") → wins AI Overviews + featured snippets.
+- **FAQPage schema** on every service page (5–6 Qs targeting "how much / how long / vs / do I need").
+- **Machine-readable definitions + comparison blocks** (GEO vs SEO; Technical SEO vs On-page) — high AI-Overview citation value.
+- **Topical completeness:** each cluster pillar links to enough spokes that the cluster reads as exhaustive to a topic model; add the 3 missing pillars to close the AI-Automation / Technical-SEO / AI-Consulting gaps.
+
+## Implementation order (highest ROI first)
+1. **Create the 3 missing pillars** (Technical SEO, AI Automation, AI Consulting) — without them, three clusters have no money page and the hub links 404/placeholder.
+2. **Add blog→service links** on the top ~30 commercial posts (fastest authority + conversion win; no new content).
+3. **Add Service + FAQPage + Organization @id schema** to all service pages.
+4. **Wire tool→service + cross-property proof links.**
+5. **Add answer-first intros + comparison blocks** to pillars for GEO/AI-Overview pickup.
+
+> This doc is the foundation for the two follow-on workstreams: (a) upgrading each service page into a conversion landing page, and (b) the ScamCheck topical-authority ecosystem (partly already built as the `/scams/*` engine in this repo). See the companion plan.
