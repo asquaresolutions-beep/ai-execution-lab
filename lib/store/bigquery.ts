@@ -318,6 +318,61 @@ ORDER BY n DESC`
   return rows.map((r) => ({ dim: Number(r.actual_dim), recorded_dim: Number(r.recorded_dim), model: r.model ?? '', rows: Number(r.n) }))
 }
 
+// ── Image-analysis telemetry (task 8) ──────────────────────────────
+export interface ImageAnalysisRow {
+  id: string                 // image content hash (dedups duplicate uploads)
+  verdict: string
+  risk_score: number
+  scam_probability: number
+  trust_score: number
+  category: string
+  ocr_chars: number
+  ocr_engine: string
+  lang: string
+  phones: number
+  urls: number
+  shorteners: number
+  upi_ids: number
+  signals: number
+  deep_used: boolean
+  created_at: string
+}
+
+const IMAGE_TABLE = process.env.BQ_IMAGE_TABLE || 'scam_image_analysis'
+let _imageTableReady = false
+
+async function ensureImageTable(PROJECT: string): Promise<void> {
+  if (_imageTableReady) return
+  const schema = { fields: [
+    { name: 'id', type: 'STRING', mode: 'REQUIRED' }, { name: 'verdict', type: 'STRING' },
+    { name: 'risk_score', type: 'INT64' }, { name: 'scam_probability', type: 'FLOAT64' }, { name: 'trust_score', type: 'INT64' },
+    { name: 'category', type: 'STRING' }, { name: 'ocr_chars', type: 'INT64' }, { name: 'ocr_engine', type: 'STRING' }, { name: 'lang', type: 'STRING' },
+    { name: 'phones', type: 'INT64' }, { name: 'urls', type: 'INT64' }, { name: 'shorteners', type: 'INT64' }, { name: 'upi_ids', type: 'INT64' },
+    { name: 'signals', type: 'INT64' }, { name: 'deep_used', type: 'BOOL' }, { name: 'created_at', type: 'TIMESTAMP' },
+  ] }
+  const res = await authedFetch(`${BASE}/projects/${PROJECT}/datasets/${DATASET}/tables`, {
+    method: 'POST', body: JSON.stringify({ tableReference: { projectId: PROJECT, datasetId: DATASET, tableId: IMAGE_TABLE }, schema }),
+  })
+  if (!res.ok && res.status !== 409) throw new Error(`ensureImageTable ${res.status}`)
+  _imageTableReady = true
+}
+
+/** Best-effort: store one image-analysis telemetry row (never throws). */
+export async function logImageAnalysis(row: ImageAnalysisRow): Promise<void> {
+  try {
+    if (!bqConfigured()) return
+    const PROJECT = await bqProject()
+    await ensureDataset().catch(() => {})
+    await ensureImageTable(PROJECT)
+    const res = await authedFetch(`${BASE}/projects/${PROJECT}/datasets/${DATASET}/tables/${IMAGE_TABLE}/insertAll`, {
+      method: 'POST', body: JSON.stringify({ rows: [{ insertId: row.id, json: row }] }),
+    })
+    if (!res.ok) log.warn({ event: 'bq.image_telemetry_failed', status: res.status })
+  } catch (e) {
+    log.warn({ event: 'bq.image_telemetry_error', detail: String(e).slice(0, 120) })
+  }
+}
+
 export function bigQueryReady(): boolean { return bqConfigured() }
 
 export { PROJECT as BIGQUERY_PROJECT, DATASET as BIGQUERY_DATASET }

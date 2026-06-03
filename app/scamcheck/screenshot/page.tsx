@@ -11,11 +11,17 @@ import { cn } from '@/lib/utils'
 interface VisualSignal { id: string; label: string; severity: 'info' | 'warn' | 'danger'; evidence: string }
 interface OcrWord { text: string; x: number; y: number; w: number; h: number }
 interface SimilarHit { id: string; title: string; url: string; confidence: number; confidenceBand: string }
+interface Entities { phones: string[]; urls: string[]; shorteners: string[]; upiIds: string[]; amounts: string[]; qrPaymentRefs: string[]; urgencyMarkers: string[]; impersonationMarkers: string[] }
 interface Verdict {
   verdict: 'likely_scam' | 'suspicious' | 'likely_safe' | 'unclear'
   riskScore: number
+  scamProbability: number
+  trustScore: number
   confidence: number
+  explanation: string
+  safetyAdvice: string[]
   ocr: { text: string; engine: string; lang: string; wordCount: number }
+  entities: Entities
   regions: OcrWord[]
   classification: { category: string; severity: string; tactics: string[] }
   trust: { score: number; band: string }
@@ -23,6 +29,7 @@ interface Verdict {
   similar: SimilarHit[]
   deepAnalysisUsed: boolean
   deepAnalysis?: string
+  cached?: boolean
 }
 
 const VERDICT_STYLE: Record<Verdict['verdict'], string> = {
@@ -112,8 +119,29 @@ export default function ScreenshotScamCheck() {
                   <span className="text-lg font-semibold capitalize">{result.verdict.replace(/_/g, ' ')}</span>
                   <span className="text-sm">Risk {result.riskScore}/100</span>
                 </div>
-                <div className="mt-1 text-xs opacity-80">Confidence {Math.round(result.confidence * 100)}% · {result.classification.category.replace(/_/g, ' ')} · severity {result.classification.severity}{result.deepAnalysisUsed ? ' · deep vision used' : ''}</div>
+                <div className="mt-1 text-xs opacity-80">Scam probability {Math.round(result.scamProbability * 100)}% · trust {result.trustScore}/100 · confidence {Math.round(result.confidence * 100)}% · {result.classification.category.replace(/_/g, ' ')}{result.deepAnalysisUsed ? ' · deep vision' : ''}{result.cached ? ' · cached' : ''}</div>
+                {result.explanation && <p className="mt-2 text-sm opacity-90">{result.explanation}</p>}
               </div>
+
+              {result.safetyAdvice?.length > 0 && (
+                <div>
+                  <h3 className="mb-1 text-sm font-medium text-zinc-300">What to do</h3>
+                  <ul className="list-inside list-disc space-y-1 text-sm text-zinc-300">
+                    {result.safetyAdvice.map((a, i) => <li key={i}>{a}</li>)}
+                  </ul>
+                </div>
+              )}
+
+              {result.entities && (result.entities.phones.length + result.entities.urls.length + result.entities.upiIds.length + result.entities.amounts.length > 0) && (
+                <div className="text-xs text-zinc-400">
+                  <h3 className="mb-1 text-sm font-medium text-zinc-300">Extracted</h3>
+                  {result.entities.phones.length > 0 && <div>Phones: {result.entities.phones.join(', ')}</div>}
+                  {result.entities.urls.length > 0 && <div>Links: {result.entities.urls.join(', ')}{result.entities.shorteners.length ? ' (⚠ shortened/risky)' : ''}</div>}
+                  {result.entities.upiIds.length > 0 && <div>UPI IDs: {result.entities.upiIds.join(', ')}</div>}
+                  {result.entities.amounts.length > 0 && <div>Amounts: {result.entities.amounts.join(', ')}</div>}
+                  {result.entities.qrPaymentRefs.length > 0 && <div>⚠ QR / payment-collect request detected</div>}
+                </div>
+              )}
 
               {result.visualSignals.length > 0 && (
                 <div>

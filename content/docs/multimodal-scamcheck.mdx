@@ -63,6 +63,15 @@ Always returns structured JSON (wrapped by `lib/api/json.ts` — no HTML error p
 ## UI
 `app/scamcheck/screenshot/page.tsx` — drag/drop or tap-to-upload, screenshot preview with **highlighted suspicious regions** (scaled Vision boxes), **editable OCR text**, verdict + risk + confidence, fraud-signal list, and similar known scams. Mobile-friendly, dark theme. Images are processed in-request and not stored.
 
+## v2 additions — entities, trust score, telemetry, caching
+
+- **Entity extraction** (`lib/scam-intel/extract-entities.ts`, deterministic): phone numbers, URLs, link shorteners/risky TLDs, UPI VPAs, ₹ amounts, QR/payment-collect references, urgency + impersonation markers. Entity risk feeds the score.
+- **Pipeline fan-out (task 5):** OCR text is fed into the **trustscore** pipeline (`computeTrustScore` → `trustScore`, `scamProbability`, AI `explanation`), the **semantic-search** + **scam-intel similarity** pipelines (VECTOR_SEARCH over scam sources).
+- **Richer verdict:** `verdict`, `riskScore`, `scamProbability`, `trustScore`, `explanation`, `safetyAdvice[]`, `entities`, `visualSignals`, `regions`, `similar`, `classification`, `deepAnalysisUsed`.
+- **Cost optimization (task 10):** the image is SHA-256 hashed; the full verdict, OCR result, and query embedding are each **cached by image hash** (24h) — a duplicate upload costs **zero** OCR/embedding/vision calls (`cached: true`). (Pixel resize/compression is delegated to Gemini's server-side downsampling since the runtime has no image lib; uploads are capped at 6 MB.)
+- **BigQuery telemetry (task 8):** `logImageAnalysis()` writes one best-effort row per scan to `scam_image_analysis` (verdict, risk, scam probability, trust, category, entity counts, deep-used) — self-ensuring table, never blocks the response.
+- **Test fixtures (task 11):** `lib/scam-intel/__fixtures__/screenshot-scams.ts` (fake SBI SMS, fake courier customs, fake UPI refund, fake KYC) + runnable `scripts/test-screenshot-fixtures.mjs` asserting expected signals/entities/risk (4/4 passing, offline).
+
 ## Operational guidance
 - **Enable Cloud Vision** (`gcloud services enable vision.googleapis.com`) for cheap OCR + region boxes; without it, the Gemini OCR fallback still works (slightly higher cost, no boxes).
 - **Env:** `VERTEX_VISION_MODEL` (deep, default `gemini-2.5-flash`), `VERTEX_OCR_VISION_MODEL` (OCR fallback). ADC on Cloud Run needs no keys.
