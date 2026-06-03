@@ -81,6 +81,7 @@ export default function ScreenshotScamCheck() {
     <main className="mx-auto max-w-3xl px-4 py-10 text-zinc-100">
       <h1 className="text-2xl font-semibold">ScamCheck — Screenshot Analysis</h1>
       <p className="mt-2 text-sm text-zinc-400">Upload a screenshot of a suspicious message, payment, or DM (WhatsApp, Telegram, SMS, banking). We extract the text, detect fraud signals, and compare it against known scam patterns.</p>
+      <p className="mt-1 text-sm text-zinc-500">New here? See <a href="/scam-intelligence" className="text-sky-400 hover:underline">trending scam campaigns &amp; how to spot them</a>.</p>
 
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}

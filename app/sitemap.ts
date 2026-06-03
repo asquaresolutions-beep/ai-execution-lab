@@ -5,6 +5,7 @@ import { TRACKS, getAllLessonPaths } from '@/lib/tracks'
 import { buildTagIndex } from '@/lib/tags'
 import { allScamPaths } from '@/lib/seo/paths'
 import { trustPageSlugs } from '@/lib/seo/trust-pages'
+import { allIntelSlugs } from '@/lib/scam-intel/intel-pages'
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 const SCAM_BASE = process.env.NEXT_PUBLIC_SCAM_BASE_URL ?? BASE_URL
@@ -84,5 +85,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: path === '/scams' ? 0.9 : 0.7,
   }))
 
-  return [...staticRoutes, ...contentRoutes, ...tagRoutes, ...trackRoutes, ...widgetRoute, ...scamRoutes]
+  // Public scam-intelligence pages + the screenshot tool
+  const intelRoutes: MetadataRoute.Sitemap = [
+    { url: `${BASE_URL}/scam-intelligence`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
+    { url: `${BASE_URL}/scamcheck/screenshot`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
+    ...allIntelSlugs().map((slug) => ({
+      url: `${BASE_URL}/scam-intelligence/${slug}`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 0.7,
+    })),
+  ]
+
+  return [...staticRoutes, ...contentRoutes, ...tagRoutes, ...trackRoutes, ...widgetRoute, ...scamRoutes, ...intelRoutes]
 }
