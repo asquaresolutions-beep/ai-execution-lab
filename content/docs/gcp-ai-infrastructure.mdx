@@ -34,12 +34,21 @@ for r in aiplatform.user bigquery.dataEditor bigquery.jobUser run.invoker; do
   gcloud projects add-iam-policy-binding "$GCP_PROJECT" --member="serviceAccount:$SA" --role="roles/$r"; done
 ```
 
-## 2. Embeddings → BigQuery (vector-ready)
+## 2. Embeddings → BigQuery (vector-ready, incremental)
 ```bash
+# ADC-first: on Cloud Run/GCE it uses the attached SA + metadata project automatically.
+# Locally:
 export VERTEX_ACCESS_TOKEN=$(gcloud auth print-access-token)
-export GCP_PROJECT=your-project BQ_DATASET=asquare_ai VERTEX_LOCATION=us-central1
-node scripts/gen-embeddings-to-bigquery.mjs        # embeds Tier-A posts, service pages, ScamCheck, TrustSeal
+export GCP_PROJECT=ass-youtube-agent BQ_DATASET=asquare_ai VERTEX_LOCATION=us-central1
+node scripts/gen-embeddings-to-bigquery.mjs        # Tier-A posts, service pages, ScamCheck, TrustSeal
 ```
+**Pipeline behaviour (`scripts/gen-embeddings-to-bigquery.mjs`):**
+- **Incremental:** each doc gets a SHA-256 `content_hash`; **unchanged docs are skipped** (zero Vertex calls — the primary cost control). First run embeds all; re-runs only touch changed/new content.
+- **Dedup-correct:** changed/new ids are **DELETE-then-insert** (no duplicate rows). *(Note: BigQuery streaming-buffer rows can defer a DELETE for ~30–90 min after insert; space re-runs accordingly, or switch to a MERGE/load-job for high-frequency loads.)*
+- **Batched:** `EMBED_BATCH` (default 5) instances per Vertex `:predict` call.
+- **Retry:** exponential backoff + jitter on 429/5xx for Vertex and BigQuery.
+- **Semantic metadata stored:** `source_type, title, url, word_count, lang (en/hi), content_hash, dim, model, created_at, updated_at` — ready for search/recommendations/RAG.
+- **Schedule it:** add a Cloud Scheduler job hitting a small Cloud Run job/endpoint, or run nightly; because it's incremental, the steady-state cost is ~zero.
 Then create the vector index + query (from `lib/store/bigquery.ts`):
 ```sql
 CREATE VECTOR INDEX IF NOT EXISTS embeddings_idx

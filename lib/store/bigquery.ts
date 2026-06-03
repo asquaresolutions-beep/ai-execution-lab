@@ -29,7 +29,11 @@ export interface EmbeddingRow {
   embedding: number[]   // ARRAY<FLOAT64> — vector-ready
   model: string
   dim: number
+  content_hash: string  // for incremental dedup (skip unchanged content)
+  word_count: number    // semantic metadata
+  lang: string          // 'en' | 'hi' | ...
   created_at: string    // ISO
+  updated_at: string    // ISO
 }
 
 // BigQuery table schema for the embeddings store.
@@ -43,7 +47,11 @@ export const EMBEDDINGS_SCHEMA = {
     { name: 'embedding', type: 'FLOAT64', mode: 'REPEATED' }, // ARRAY<FLOAT64>
     { name: 'model', type: 'STRING' },
     { name: 'dim', type: 'INT64' },
+    { name: 'content_hash', type: 'STRING' },
+    { name: 'word_count', type: 'INT64' },
+    { name: 'lang', type: 'STRING' },
     { name: 'created_at', type: 'TIMESTAMP' },
+    { name: 'updated_at', type: 'TIMESTAMP' },
   ],
 }
 
