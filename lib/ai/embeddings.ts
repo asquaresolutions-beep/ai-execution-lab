@@ -10,16 +10,11 @@
 //   (chunked), cutting request count and cost.
 // ─────────────────────────────────────────────────────────────────
 
-import { getAccessToken, serviceAccountProjectId } from './vertex-auth'
+import { getAccessToken, getProjectId } from './vertex-auth'
 import { vertexConfigured } from './provider'
 import { recordUsage } from './usage'
 
 const LOCATION = process.env.VERTEX_LOCATION || 'us-central1'
-const PROJECT =
-  process.env.VERTEX_PROJECT_ID ||
-  process.env.FIREBASE_PROJECT_ID ||
-  process.env.GOOGLE_CLOUD_PROJECT ||
-  serviceAccountProjectId()
 const EMBED_MODEL = process.env.VERTEX_EMBED_MODEL || 'text-multilingual-embedding-002'
 const BATCH_SIZE = 25 // Vertex allows up to 250 instances; keep payloads modest.
 
@@ -45,7 +40,7 @@ export async function embed(text: string): Promise<EmbeddingResult> {
 /** Batched embeddings — one Vertex predict call per BATCH_SIZE chunk. */
 export async function embedBatch(texts: string[]): Promise<EmbeddingResult[]> {
   const inputs = texts.map((t) => (t || '').slice(0, 8000))
-  if (!vertexConfigured() || !PROJECT) {
+  if (!vertexConfigured()) {
     return inputs.map((t) => ({ vector: hashEmbedding(t), model: 'mock-hash', live: false }))
   }
 
@@ -63,8 +58,10 @@ export async function embedBatch(texts: string[]): Promise<EmbeddingResult[]> {
 }
 
 async function predictChunk(chunk: string[]): Promise<EmbeddingResult[]> {
+  const project = await getProjectId()
+  if (!project) throw new Error('Vertex project not resolvable')
   const token = await getAccessToken()
-  const url = `${base()}/v1/projects/${PROJECT}/locations/${LOCATION}/publishers/google/models/${EMBED_MODEL}:predict`
+  const url = `${base()}/v1/projects/${project}/locations/${LOCATION}/publishers/google/models/${EMBED_MODEL}:predict`
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },

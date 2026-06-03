@@ -104,6 +104,38 @@ export function serviceAccountProjectId(): string {
   return loadServiceAccount()?.project_id || ''
 }
 
+let _projectId: string | null | undefined
+
+/** Synchronous project id from env / service account (no network). */
+export function projectIdFromEnv(): string {
+  return (
+    process.env.VERTEX_PROJECT_ID ||
+    process.env.GOOGLE_CLOUD_PROJECT ||
+    process.env.GCLOUD_PROJECT ||
+    process.env.FIREBASE_PROJECT_ID ||
+    serviceAccountProjectId() ||
+    ''
+  )
+}
+
+/** Project id: env first, then the GCP metadata server (ADC). Cached. */
+export async function getProjectId(): Promise<string> {
+  const fromEnv = projectIdFromEnv()
+  if (fromEnv) return fromEnv
+  if (_projectId !== undefined) return _projectId || ''
+  try {
+    const host = process.env.GCE_METADATA_HOST || 'metadata.google.internal'
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), 1500)
+    const res = await fetch(`http://${host}/computeMetadata/v1/project/project-id`, { headers: { 'Metadata-Flavor': 'Google' }, signal: ctrl.signal })
+    clearTimeout(t)
+    _projectId = res.ok ? (await res.text()).trim() : null
+  } catch {
+    _projectId = null
+  }
+  return _projectId || ''
+}
+
 /** Returns a valid bearer access token, minting + caching as needed. */
 export async function getAccessToken(): Promise<string> {
   const direct = process.env.VERTEX_ACCESS_TOKEN
@@ -156,6 +188,7 @@ export async function getAccessToken(): Promise<string> {
 export function resetVertexAuthCache(): void {
   _cache = null
   _sa = undefined
+  _projectId = undefined
 }
 
 function b64url(s: string): string {

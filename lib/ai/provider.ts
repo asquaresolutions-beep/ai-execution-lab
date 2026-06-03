@@ -16,7 +16,7 @@
 //    setProvider(), AIProviderError, GenerateOptions all preserved.
 // ─────────────────────────────────────────────────────────────────
 
-import { getAccessToken, hasVertexAuth, serviceAccountProjectId } from './vertex-auth'
+import { getAccessToken, hasVertexAuth, adcAvailable, getProjectId, projectIdFromEnv } from './vertex-auth'
 import { recordUsage, type ModelTier, type TokenUsage } from './usage'
 import { log } from '@/lib/observability/logger'
 
@@ -46,11 +46,6 @@ export interface AIProvider {
 
 // ── Config ─────────────────────────────────────────────────────────
 const LOCATION = process.env.VERTEX_LOCATION || 'us-central1'
-const PROJECT =
-  process.env.VERTEX_PROJECT_ID ||
-  process.env.FIREBASE_PROJECT_ID ||
-  process.env.GOOGLE_CLOUD_PROJECT ||
-  serviceAccountProjectId()
 
 const MODELS: Record<ModelTier, string> = {
   flash: process.env.VERTEX_FLASH_MODEL || 'gemini-2.5-flash',
@@ -110,10 +105,11 @@ class VertexProvider implements AIProvider {
   }
 
   private async callOnce(tier: ModelTier, prompt: string, opts: GenerateOptions): Promise<string> {
-    if (!PROJECT) throw new AIProviderError('VERTEX_PROJECT_ID not configured', 500)
+    const project = await getProjectId()
+    if (!project) throw new AIProviderError('Vertex project not resolvable (set VERTEX_PROJECT_ID / GOOGLE_CLOUD_PROJECT, or run on a GCP runtime)', 500)
     const model = MODELS[tier]
     const token = await getAccessToken()
-    const url = `${vertexBase()}/v1/projects/${PROJECT}/locations/${LOCATION}/publishers/google/models/${model}:generateContent`
+    const url = `${vertexBase()}/v1/projects/${project}/locations/${LOCATION}/publishers/google/models/${model}:generateContent`
 
     const body: Record<string, unknown> = {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -189,7 +185,10 @@ interface VertexResponse {
 let _provider: AIProvider | null = null
 
 export function vertexConfigured(): boolean {
-  return hasVertexAuth() && !!PROJECT
+  // Live when we have auth AND a resolvable project. On Cloud Run/GCE (ADC),
+  // the project is resolved from the metadata server at call time, so ADC
+  // presence counts even if no project env var is set.
+  return hasVertexAuth() && (!!projectIdFromEnv() || adcAvailable())
 }
 
 export function getProvider(): AIProvider {

@@ -95,7 +95,9 @@ export function validateProductionEnv(): EnvReport {
 
   return {
     ok: missingRequired.length === 0,
-    aiLive: !!env.vertexProjectId && vertexAuth,
+    // Live when we have auth AND a project source (env OR Cloud Run ADC, where
+    // the project is resolved from the metadata server at call time).
+    aiLive: vertexAuth && (!!env.vertexProjectId || adc),
     persistence: env.firebaseProjectId && (env.firebaseApiKey || env.firebaseAccessToken) ? 'firestore' : 'memory',
     checks,
     missingRequired,

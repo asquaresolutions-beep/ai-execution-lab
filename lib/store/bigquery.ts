@@ -8,7 +8,7 @@
 // roles/bigquery.dataEditor + roles/bigquery.jobUser). No SDK.
 // ─────────────────────────────────────────────────────────────────
 
-import { getAccessToken, serviceAccountProjectId, hasVertexAuth } from '@/lib/ai/vertex-auth'
+import { getAccessToken, serviceAccountProjectId, hasVertexAuth, adcAvailable, projectIdFromEnv, getProjectId } from '@/lib/ai/vertex-auth'
 import { log } from '@/lib/observability/logger'
 
 const PROJECT =
@@ -48,8 +48,14 @@ export const EMBEDDINGS_SCHEMA = {
 }
 
 function bqConfigured(): boolean {
-  // Auth via explicit token, SA key, or Cloud Run ADC (attached service account).
-  return !!PROJECT && hasVertexAuth()
+  // Auth via explicit token, SA key, or Cloud Run ADC. Project resolvable
+  // from env or (on GCP) the metadata server.
+  return hasVertexAuth() && (!!process.env.BIGQUERY_PROJECT_ID || !!projectIdFromEnv() || adcAvailable())
+}
+
+/** Resolve the BigQuery project: explicit override → env/metadata (ADC). */
+async function bqProject(): Promise<string> {
+  return process.env.BIGQUERY_PROJECT_ID || (await getProjectId())
 }
 
 async function authedFetch(url: string, init: RequestInit): Promise<Response> {
@@ -60,6 +66,7 @@ async function authedFetch(url: string, init: RequestInit): Promise<Response> {
 /** Create the dataset if missing (idempotent). */
 export async function ensureDataset(): Promise<void> {
   if (!bqConfigured()) throw new Error('BigQuery not configured (project + Vertex/GCP credentials required)')
+  const PROJECT = await bqProject()
   const res = await authedFetch(`${BASE}/projects/${PROJECT}/datasets`, {
     method: 'POST',
     body: JSON.stringify({ datasetReference: { datasetId: DATASET, projectId: PROJECT }, location: process.env.BIGQUERY_LOCATION || 'US' }),
@@ -69,6 +76,7 @@ export async function ensureDataset(): Promise<void> {
 
 /** Create the embeddings table if missing (idempotent). */
 export async function ensureEmbeddingsTable(table = 'embeddings'): Promise<void> {
+  const PROJECT = await bqProject()
   const res = await authedFetch(`${BASE}/projects/${PROJECT}/datasets/${DATASET}/tables`, {
     method: 'POST',
     body: JSON.stringify({ tableReference: { projectId: PROJECT, datasetId: DATASET, tableId: table }, schema: EMBEDDINGS_SCHEMA }),
@@ -79,6 +87,7 @@ export async function ensureEmbeddingsTable(table = 'embeddings'): Promise<void>
 /** Stream rows via tabledata.insertAll (idempotent on insertId = row.id). */
 export async function insertEmbeddingRows(rows: EmbeddingRow[], table = 'embeddings'): Promise<{ inserted: number }> {
   if (!rows.length) return { inserted: 0 }
+  const PROJECT = await bqProject()
   const res = await authedFetch(`${BASE}/projects/${PROJECT}/datasets/${DATASET}/tables/${table}/insertAll`, {
     method: 'POST',
     body: JSON.stringify({ rows: rows.map((r) => ({ insertId: r.id, json: r })) }),
@@ -123,6 +132,7 @@ export async function runQuery(sql: string, params: Array<{ name: string; type: 
     }
     return { name: p.name, parameterType: { type: p.type }, parameterValue: { value: String(p.value) } }
   })
+  const PROJECT = await bqProject()
   const res = await authedFetch(`${BASE}/projects/${PROJECT}/queries`, {
     method: 'POST',
     body: JSON.stringify({ query: sql, useLegacySql: false, parameterMode: params.length ? 'NAMED' : undefined, queryParameters, timeoutMs: 30000 }),
@@ -138,6 +148,7 @@ export interface VectorHit { id: string; title: string; url: string; source_type
 /** Live semantic search via BigQuery VECTOR_SEARCH (brute-force or index-backed). */
 export async function vectorSearch(queryEmbedding: number[], topK = 8, table = 'embeddings'): Promise<VectorHit[]> {
   const k = Math.max(1, Math.min(50, Math.floor(topK)))
+  const PROJECT = await bqProject()
   const sql = `SELECT base.id AS id, base.title AS title, base.url AS url, base.source_type AS source_type, distance
 FROM VECTOR_SEARCH(
   TABLE \`${PROJECT}.${DATASET}.${table}\`, 'embedding',
