@@ -4,8 +4,8 @@
 // above the AI screenshot analyzer. Mobile-first, credit-aware, high-conversion.
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { useCredits } from '@/hooks/use-credits'
-import type { ScanType } from '@/lib/credits/credits'
+import { useCredits, authHeaders } from '@/hooks/use-credits'
+import { useAuth } from '@/components/auth/auth-provider'
 
 type Tab = 'message' | 'link' | 'email' | 'phone' | 'screenshot'
 const TABS: { id: Tab; label: string }[] = [
@@ -38,18 +38,20 @@ export function QuickAnalyzer() {
   const [result, setResult] = useState<QuickResult | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const { remaining, quota, loggedIn, trySpend } = useCredits()
+  const { user } = useAuth()
+  const { remaining, quota, loggedIn, refresh } = useCredits()
 
   const check = async () => {
     setError(''); setResult(null)
     if (!value.trim() || value.trim().length < 3) { setError('Enter something to check.'); return }
-    if (!trySpend(tab as ScanType)) { setError(`Out of free scans (${quota}/day). Sign in for 50/day.`); return }
     setBusy(true)
     try {
-      const r = await fetch('/api/scam-intel/quick-check', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: tab, value }) })
+      const r = await fetch('/api/scam-intel/quick-check', { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders(user) }, body: JSON.stringify({ type: tab, value }) })
       const data = await r.json()
+      if (r.status === 402) { setError(data.detail || `Daily limit reached (${quota}/day). Sign in for 50/day.`); void refresh(); return }
       if (!r.ok) { setError(data.detail || data.error || 'Check failed.'); return }
       setResult(data as QuickResult)
+      void refresh()
     } catch (e) { setError(e instanceof Error ? e.message : 'Network error.') } finally { setBusy(false) }
   }
   const scrollToShot = () => document.getElementById('screenshot-analyzer')?.scrollIntoView({ behavior: 'smooth' })

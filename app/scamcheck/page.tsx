@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { AuthProvider } from '@/components/auth/auth-provider'
 import { AuthButton } from '@/components/auth/auth-button'
+import { CreditsDashboard } from '@/components/scamcheck/credits-dashboard'
 import { QuickAnalyzer } from '@/components/scamcheck/quick-analyzer'
 import { ScreenshotAnalyzer } from '@/components/scamcheck/screenshot-analyzer'
 import { AdSlot } from '@/components/ads/ad-slot'
@@ -35,7 +36,10 @@ export default function ScamCheckHome() {
             <h1 className="text-2xl font-bold text-zinc-100">ScamCheck</h1>
             <p className="text-xs text-zinc-500">AI scam detector · by A Square Solutions</p>
           </div>
-          <AuthButton />
+          <div className="flex items-center gap-3">
+            <CreditsDashboard />
+            <AuthButton />
+          </div>
         </header>
 
         {/* 1. Quick analyzer (text/link/email/phone) — above the fold */}

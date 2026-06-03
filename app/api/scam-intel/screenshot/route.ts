@@ -7,6 +7,8 @@ import { NextResponse } from 'next/server'
 import { analyzeScreenshot } from '@/lib/scam-intel/multimodal'
 import { enforceRateLimit, RateLimitError } from '@/lib/ai/rate-limit'
 import { clientIp } from '@/lib/admin-auth'
+import { resolveSubject } from '@/lib/api/identify'
+import { consumeCredits } from '@/lib/credits/server-credits'
 import { jsonRoute, ApiError } from '@/lib/api/json'
 
 export const dynamic = 'force-dynamic'
@@ -62,6 +64,14 @@ export const POST = jsonRoute('scam-intel/screenshot', async (req) => {
     mime = sniffed
   }
 
+  // Server-authoritative credit enforcement (screenshot scans cost 3).
+  const sid = await resolveSubject(req)
+  const credit = await consumeCredits(sid.subject, 'screenshot', sid.loggedIn)
+  if (!credit.ok) {
+    return NextResponse.json({ error: 'out_of_credits', detail: `Daily limit reached (${credit.quota} credits; screenshots use 3). ${sid.loggedIn ? '' : 'Sign in for 50/day.'}`, ...credit }, { status: 402 })
+  }
+
   const result = await analyzeScreenshot(base64, mime, { forceDeep })
-  return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ ...result, credits: { remaining: credit.remaining, quota: credit.quota, resetsAt: credit.resetsAt } }, { headers: { 'Cache-Control': 'no-store' } })
 })
+

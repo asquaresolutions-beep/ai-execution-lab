@@ -2,36 +2,32 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/components/auth/auth-provider'
-import { type Ledger, type ScanType, rollover, remaining as remainingFn, spend, quotaFor, nextResetISO } from '@/lib/credits/credits'
+import type { AuthUser } from '@/lib/auth/firebase'
 
-const key = (uid: string) => `sc_credits_${uid}`
+/** Authorization header for authenticated API calls (server verifies the token). */
+export function authHeaders(user: AuthUser | null): Record<string, string> {
+  return user?.idToken ? { Authorization: `Bearer ${user.idToken}` } : {}
+}
 
-/** Auth-aware daily credit ledger (client soft limit; server enforcement TBD). */
+export interface CreditView { remaining: number; quota: number; used: number; loggedIn: boolean; resetsAt: string }
+
+/**
+ * Server-backed credit view. The server (/api/credits + scan endpoints) is the
+ * source of truth; this hook only reflects it (no client-side spending). Call
+ * refresh() after a scan to update the display.
+ */
 export function useCredits() {
   const { user } = useAuth()
-  const uid = user?.uid || 'guest'
-  const loggedIn = !!user
-  const [ledger, setLedger] = useState<Ledger>(() => rollover(null))
+  const [state, setState] = useState<CreditView>({ remaining: 3, quota: 3, used: 0, loggedIn: false, resetsAt: '' })
 
-  useEffect(() => {
-    let stored: Ledger | null = null
-    try { const raw = localStorage.getItem(key(uid)); if (raw) stored = JSON.parse(raw) } catch { /* ignore */ }
-    const l = rollover(stored)
-    setLedger(l)
-    try { localStorage.setItem(key(uid), JSON.stringify(l)) } catch { /* ignore */ }
-  }, [uid])
+  const refresh = useCallback(async () => {
+    try {
+      const r = await fetch('/api/credits', { headers: authHeaders(user), cache: 'no-store' })
+      if (r.ok) { const d = await r.json(); setState({ remaining: d.remaining, quota: d.quota, used: d.used, loggedIn: d.loggedIn, resetsAt: d.resetsAt }) }
+    } catch { /* keep last known */ }
+  }, [user])
 
-  const trySpend = useCallback((type: ScanType): boolean => {
-    const { ledger: next, ok } = spend(ledger, type, loggedIn)
-    if (ok) { setLedger(next); try { localStorage.setItem(key(uid), JSON.stringify(next)) } catch { /* ignore */ } }
-    return ok
-  }, [ledger, loggedIn, uid])
+  useEffect(() => { void refresh() }, [refresh])
 
-  return {
-    remaining: remainingFn(ledger, loggedIn),
-    quota: quotaFor(loggedIn),
-    loggedIn,
-    resetsAt: nextResetISO(),
-    trySpend,
-  }
+  return { ...state, refresh }
 }

@@ -8,6 +8,8 @@ import { analyzeUrls } from '@/lib/scam-intel/url-intel'
 import { domainReputation, emailReputation, upiReputation, phoneReputation, applyReputation } from '@/lib/scam-intel/reputation'
 import { enforceRateLimit, RateLimitError } from '@/lib/ai/rate-limit'
 import { clientIp } from '@/lib/admin-auth'
+import { resolveSubject } from '@/lib/api/identify'
+import { consumeCredits } from '@/lib/credits/server-credits'
 import { jsonRoute, ApiError } from '@/lib/api/json'
 
 export const dynamic = 'force-dynamic'
@@ -31,6 +33,13 @@ export const POST = jsonRoute('scam-intel/quick-check', async (req) => {
   const type = (body.type || 'message') as CheckType
   const value = (body.value || '').trim()
   if (!value || value.length < 3) throw new ApiError('empty', 'Provide a message, link, email, phone, or UPI ID.', 400)
+
+  // Server-authoritative credit enforcement (text scans cost 1).
+  const id = await resolveSubject(req)
+  const credit = await consumeCredits(id.subject, type === 'message' || type === 'link' || type === 'email' || type === 'phone' || type === 'upi' ? type : 'message', id.loggedIn)
+  if (!credit.ok) {
+    return NextResponse.json({ error: 'out_of_credits', detail: `Daily limit reached (${credit.quota} scans). ${id.loggedIn ? '' : 'Sign in for 50/day.'}`, ...credit }, { status: 402 })
+  }
 
   const ts = analyzeTextSignals(value)                 // entities + signals + category + tactics
   const urlFindings = analyzeUrls(ts.entities.urls.length ? ts.entities.urls : (type === 'link' ? [value] : []))
@@ -66,6 +75,7 @@ export const POST = jsonRoute('scam-intel/quick-check', async (req) => {
 
   return NextResponse.json({
     type, verdict, riskScore: risk,
+    credits: { remaining: credit.remaining, quota: credit.quota, resetsAt: credit.resetsAt },
     trusted: rep.trusted,
     category: ts.category, tactics: ts.tactics,
     signals: ts.signals,
