@@ -1,0 +1,70 @@
+---
+title: "Multimodal ScamCheck — Screenshot & Image Scam Analysis (OCR + Vision + Semantic Retrieval)"
+description: "Production multimodal scam-intelligence for ScamCheck: screenshot/image upload, lightweight OCR (Cloud Vision + Gemini fallback), deterministic fraud-signal detection, gated deep Gemini-vision analysis, and semantic comparison against known scam clusters via BigQuery VECTOR_SEARCH. Cost-gated, serverless, scale-to-zero."
+date: "2026-06-03"
+tags: ["scamcheck", "multimodal", "ocr", "vision", "vertex-ai", "bigquery", "fraud-detection", "api"]
+status: published
+related_docs:
+  - semantic-intelligence-platform
+  - gcp-ai-infrastructure
+---
+
+ScamCheck now analyzes **screenshots** (WhatsApp/Telegram/Instagram DMs, fake UPI/payment confirmations, phishing UIs, banking SMS) in addition to text. The pipeline is **cost-gated**: cheap OCR + deterministic signals run first; expensive Gemini-vision inference fires only when the verdict is ambiguous.
+
+## Pipeline (cost-gated)
+
+```
+screenshot ─► [1] OCR (Cloud Vision TEXT_DETECTION → Gemini fallback)  ── cheap
+                  → text + word bounding boxes (highlight regions)
+           ─► [2] enrich(text): scam category/severity/tactics + trust signals  ── 0 Vertex
+                  + visual-heuristic detectors (fake payment, OTP, KYC phish, urgency, impersonation…)
+           ─► [3] embedQuery(text) → VECTOR_SEARCH over scam corpus  ── cheap (cached)
+                  → similar known scam patterns
+           ─► [4] GATED deep Gemini-vision verdict  ── expensive, only if riskScore ∈ [25,70] or forceDeep
+                  → blended risk + rationale
+           ─► verdict + riskScore + confidence + signals + regions + similar (JSON)
+```
+
+- **Lightweight first (task 6):** OCR via **Cloud Vision** (≈$1.5/1k images, returns boxes) with a **Gemini multimodal fallback** if Vision isn't enabled. Deterministic detectors and trust scoring cost **zero** Vertex calls.
+- **Expensive only when needed:** the deep `gemini-2.5-flash` vision pass runs **only** for mid-risk/ambiguous screenshots (or `forceDeep`), preserving **scale-to-zero**.
+- **Preserves architecture:** Vertex AI, BigQuery VECTOR_SEARCH, Cloud Run, and the semantic enrichment pipeline are reused, not replaced.
+
+## Modules
+| File | Role |
+|---|---|
+| `lib/scam-intel/ocr.ts` | `ocrImage()` — Cloud Vision TEXT_DETECTION (+word boxes) → Gemini fallback. Multilingual (en/hi hints). |
+| `lib/scam-intel/multimodal.ts` | `analyzeScreenshot()` — orchestrates OCR → enrichment + visual detectors → semantic similarity → gated deep vision → verdict. |
+| `lib/intelligence/enrichment.ts` | Reused for scam category/severity/tactics + trust signals on the OCR text. |
+| `lib/store/bigquery.ts` | `vectorSearch(..., { sourceTypes })` for "similar known scams". |
+
+## Visual / textual detectors
+Fake payment/UPI confirmation · OTP/PIN/CVV request · KYC/verification phishing · urgency/pressure · brand/authority impersonation · lottery/reward/job bait · suspicious links/shorteners · move-to-WhatsApp/call-this-number. Each contributes to a 0–100 risk score; danger signals weigh more than warnings.
+
+## API contract
+
+### `POST /api/scam-intel/screenshot` (public, rate-limited 12/min)
+- **JSON:** `{ "imageBase64": "<...>", "mime": "image/png", "forceDeep": false }`
+- **multipart/form-data:** field `image` (file) [+ `forceDeep`]
+- Limits: PNG/JPEG/WebP, ≤ 6 MB.
+
+```json
+{ "verdict":"likely_scam","riskScore":84,"confidence":0.82,
+  "ocr":{"text":"…","engine":"cloud-vision","lang":"en","wordCount":42},
+  "regions":[{"text":"OTP","x":120,"y":340,"w":60,"h":28}],
+  "classification":{"category":"otp_fraud","severity":"high","tactics":["urgency","impersonation"]},
+  "trust":{"score":10,"band":"standard"},
+  "visualSignals":[{"id":"otp_request","label":"OTP / PIN / CVV request","severity":"danger","evidence":"do not share otp"}],
+  "similar":[{"id":"…","title":"…","url":"…","confidence":0.79,"confidenceBand":"high"}],
+  "deepAnalysisUsed":true,"deepAnalysis":"Spoofed bank UI requesting OTP; classic account-takeover." }
+```
+
+Always returns structured JSON (wrapped by `lib/api/json.ts` — no HTML error pages).
+
+## UI
+`app/scamcheck/screenshot/page.tsx` — drag/drop or tap-to-upload, screenshot preview with **highlighted suspicious regions** (scaled Vision boxes), **editable OCR text**, verdict + risk + confidence, fraud-signal list, and similar known scams. Mobile-friendly, dark theme. Images are processed in-request and not stored.
+
+## Operational guidance
+- **Enable Cloud Vision** (`gcloud services enable vision.googleapis.com`) for cheap OCR + region boxes; without it, the Gemini OCR fallback still works (slightly higher cost, no boxes).
+- **Env:** `VERTEX_VISION_MODEL` (deep, default `gemini-2.5-flash`), `VERTEX_OCR_VISION_MODEL` (OCR fallback). ADC on Cloud Run needs no keys.
+- **Cost control:** deep vision is gated to ambiguous risk; raise/lower the `[25,70]` band in `multimodal.ts` to trade cost vs sensitivity. Query embeddings are cached.
+- **Monetization:** a clean public, rate-limited endpoint — a ScamCheck Pro "scan a screenshot" feature; per-scan metering via the existing rate-limit + usage layers.

@@ -13,13 +13,14 @@ import { confidenceBand } from '@/lib/intelligence/snippets'
 import { enforceRateLimit, RateLimitError } from '@/lib/ai/rate-limit'
 import { clientIp } from '@/lib/admin-auth'
 import { recordRetrieval } from '@/lib/intelligence/metrics'
+import { jsonRoute } from '@/lib/api/json'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 const SCAM_SOURCES = ['scamcheck', 'trustseal', 'tier_a_post', 'blog_post']
 
-export async function POST(req: Request) {
+export const POST = jsonRoute('scam-intel/similar', async (req) => {
   const started = Date.now()
   try {
     await enforceRateLimit({ key: `scam-similar:${clientIp(req)}`, limit: 20, windowMs: 60_000 })
@@ -54,4 +55,4 @@ export async function POST(req: Request) {
     severity: enrichment.scam.severity,
     similar,
   })
-}
+})

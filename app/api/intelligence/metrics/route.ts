@@ -6,14 +6,15 @@ import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { retrievalSummary } from '@/lib/intelligence/metrics'
 import { costToday } from '@/lib/ai/usage'
+import { jsonRoute } from '@/lib/api/json'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: Request) {
+export const GET = jsonRoute('intelligence/metrics', async (req) => {
   const auth = requireAdmin(req)
   if (!auth.ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const windowMinutes = Math.min(1440, Math.max(5, Number(new URL(req.url).searchParams.get('window')) || 60))
   const retrieval = retrievalSummary(windowMinutes)
   const spend = await costToday().catch(() => ({ totalUsd: 0, byTier: {} }))
   return NextResponse.json({ retrieval, spend, estimatedInr: Math.round(spend.totalUsd * 83 * 100) / 100 })
-}
+})

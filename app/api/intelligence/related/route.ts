@@ -10,11 +10,12 @@ import { getCached, setCached } from '@/lib/ai/cache'
 import { hybridRerank } from '@/lib/intelligence/hybrid'
 import { confidenceBand } from '@/lib/intelligence/snippets'
 import { recordRetrieval } from '@/lib/intelligence/metrics'
+import { jsonRoute } from '@/lib/api/json'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-export async function GET(req: Request) {
+export const GET = jsonRoute('intelligence/related', async (req) => {
   const started = Date.now()
   if (!vertexConfigured() || !bigQueryReady()) {
     return NextResponse.json({ error: 'not_configured' }, { status: 503 })
@@ -51,4 +52,4 @@ export async function GET(req: Request) {
   const top = results[0]?.confidence ?? 0
   recordRetrieval({ endpoint: 'related', query: q, results: results.length, topConfidence: top, hit: top >= 0.6, latencyMs: Date.now() - started, embeddingLive: true, cached })
   return NextResponse.json({ query: q, count: results.length, results }, { headers: { 'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=3600' } })
-}
+})

@@ -8,10 +8,11 @@ import { enrich } from '@/lib/intelligence/enrichment'
 import { geoScore } from '@/lib/intelligence/geo'
 import { enforceRateLimit, RateLimitError } from '@/lib/ai/rate-limit'
 import { clientIp } from '@/lib/admin-auth'
+import { jsonRoute } from '@/lib/api/json'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(req: Request) {
+export const POST = jsonRoute('intelligence/analyze', async (req) => {
   try {
     await enforceRateLimit({ key: `analyze:${clientIp(req)}`, limit: 30, windowMs: 60_000 })
   } catch (e) {
@@ -23,4 +24,4 @@ export async function POST(req: Request) {
   const enrichment = enrich({ title: body.title, text, url: body.url, sourceType: body.sourceType })
   const geo = geoScore({ title: body.title, text })
   return NextResponse.json({ enrichment, geo }, { headers: { 'Cache-Control': 'no-store' } })
-}
+})

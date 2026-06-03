@@ -6,10 +6,11 @@ import { NextResponse } from 'next/server'
 import { geoScore } from '@/lib/intelligence/geo'
 import { enforceRateLimit, RateLimitError } from '@/lib/ai/rate-limit'
 import { clientIp } from '@/lib/admin-auth'
+import { jsonRoute } from '@/lib/api/json'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(req: Request) {
+export const POST = jsonRoute('geo-score', async (req) => {
   try {
     await enforceRateLimit({ key: `geo-score:${clientIp(req)}`, limit: 30, windowMs: 60_000 })
   } catch (e) {
@@ -20,4 +21,4 @@ export async function POST(req: Request) {
   if (text.length < 50) return NextResponse.json({ error: 'text too short (min 50 chars)' }, { status: 400 })
   const score = geoScore({ title: body.title, text })
   return NextResponse.json({ ...score }, { headers: { 'Cache-Control': 'no-store' } })
-}
+})

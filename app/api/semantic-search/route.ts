@@ -12,6 +12,7 @@ import { getCached, setCached } from '@/lib/ai/cache'
 import { hybridRerank } from '@/lib/intelligence/hybrid'
 import { buildSnippet, highlights, matchedTerms, confidenceBand, relevanceExplanation } from '@/lib/intelligence/snippets'
 import { recordRetrieval } from '@/lib/intelligence/metrics'
+import { jsonRoute } from '@/lib/api/json'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -118,17 +119,17 @@ async function handle(q: string, k: number, diag: boolean) {
   )
 }
 
-export async function GET(req: Request) {
+export const GET = jsonRoute('semantic-search', async (req) => {
   const sp = new URL(req.url).searchParams
   const q = (sp.get('q') || '').trim()
   const diag = sp.get('diag') === '1'
   if (q.length < 2) return NextResponse.json({ error: 'q required' }, { status: 400 })
   return handle(q, Number(sp.get('k')) || 8, diag)
-}
+})
 
-export async function POST(req: Request) {
+export const POST = jsonRoute('semantic-search', async (req) => {
   const body = await req.json().catch(() => ({})) as { q?: string; query?: string; k?: number }
   const q = (body.q || body.query || '').trim()
   if (q.length < 2) return NextResponse.json({ error: 'q/query required' }, { status: 400 })
   return handle(q, body.k || 8, false)
-}
+})
