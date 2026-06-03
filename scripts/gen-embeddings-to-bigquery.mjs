@@ -21,7 +21,10 @@
 import { createHash } from 'node:crypto'
 
 const LOCATION = process.env.VERTEX_LOCATION || 'us-central1'
+// CANONICAL EMBEDDING CONFIG — must match lib/ai/embeddings.ts exactly so the
+// stored corpus and semantic-search query vectors are VECTOR_SEARCH-compatible.
 const EMBED_MODEL = process.env.VERTEX_EMBED_MODEL || 'text-multilingual-embedding-002'
+const EMBED_DIM = 768 // PINNED via outputDimensionality below — never the model default.
 const DATASET = process.env.BQ_DATASET || process.env.BIGQUERY_DATASET || 'asquare_ai'
 const TABLE = process.env.BQ_TABLE || 'embeddings'
 const BATCH = Number(process.env.EMBED_BATCH || 5)         // instances per predict call
@@ -111,8 +114,17 @@ async function existingHashes(p) {
 
 async function embedBatch(p, texts) {
   const url = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${p}/locations/${LOCATION}/publishers/google/models/${EMBED_MODEL}:predict`
-  const j = await withRetry(() => authedFetch(url, { instances: texts.map((content) => ({ content, task_type: 'RETRIEVAL_DOCUMENT' })) }), 'vertex-embed')
-  return (j.predictions ?? []).map((pr) => pr.embeddings?.values ?? [])
+  // task_type RETRIEVAL_DOCUMENT for the corpus; outputDimensionality PINNED to
+  // EMBED_DIM so dimension is deterministic regardless of model default.
+  const j = await withRetry(() => authedFetch(url, {
+    instances: texts.map((content) => ({ content, task_type: 'RETRIEVAL_DOCUMENT' })),
+    parameters: { outputDimensionality: EMBED_DIM, autoTruncate: true },
+  }), 'vertex-embed')
+  return (j.predictions ?? []).map((pr) => {
+    const v = pr.embeddings?.values ?? []
+    if (v.length && v.length !== EMBED_DIM) throw new Error(`Embedding dim ${v.length} != ${EMBED_DIM} — check VERTEX_EMBED_MODEL`)
+    return v
+  })
 }
 
 async function deleteIds(p, ids) {

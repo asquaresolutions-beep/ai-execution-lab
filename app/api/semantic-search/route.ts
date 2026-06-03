@@ -4,7 +4,7 @@
 // recommendations + RAG context retrieval. Live only when Vertex + BigQuery
 // are configured; otherwise returns a clear 'not configured' response.
 import { NextResponse } from 'next/server'
-import { embed } from '@/lib/ai/embeddings'
+import { embedQuery, EMBED_DIM, EMBED_MODEL } from '@/lib/ai/embeddings'
 import { vectorSearch, bigQueryReady } from '@/lib/store/bigquery'
 import { vertexConfigured } from '@/lib/ai/provider'
 
@@ -18,10 +18,26 @@ async function handle(q: string, k: number) {
       { status: 503 },
     )
   }
-  const { vector, live } = await embed(q)
+  // Canonical query embedding: same model + 768-dim as the stored corpus,
+  // task_type=RETRIEVAL_QUERY.
+  const { vector, live, model } = await embedQuery(q)
+  // Never run VECTOR_SEARCH with a non-live (hash) fallback or wrong-dim vector
+  // — it would either dimension-mismatch or return meaningless results.
+  if (!live) {
+    return NextResponse.json(
+      { error: 'embedding_unavailable', detail: 'Live Vertex embedding required for semantic search; the query embedding fell back to a non-semantic vector.' },
+      { status: 503 },
+    )
+  }
+  if (vector.length !== EMBED_DIM) {
+    return NextResponse.json(
+      { error: 'dimension_mismatch', detail: `Query embedding dim ${vector.length} != corpus ${EMBED_DIM} (model ${model}). Set VERTEX_EMBED_MODEL=${EMBED_MODEL}.` },
+      { status: 500 },
+    )
+  }
   const hits = await vectorSearch(vector, k)
   return NextResponse.json(
-    { query: q, embeddingLive: live, count: hits.length, results: hits },
+    { query: q, model, dim: vector.length, embeddingLive: live, count: hits.length, results: hits },
     { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600' } },
   )
 }

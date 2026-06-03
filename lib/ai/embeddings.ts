@@ -14,11 +14,21 @@ import { getAccessToken, getProjectId } from './vertex-auth'
 import { vertexConfigured } from './provider'
 import { recordUsage } from './usage'
 
+// ── CANONICAL EMBEDDING CONFIG (single source of truth) ────────────
+// One model + one dimensionality across the whole platform so the stored
+// corpus and query vectors are always VECTOR_SEARCH-compatible.
+// `scripts/gen-embeddings-to-bigquery.mjs` MUST mirror these exact values.
+//   model: text-multilingual-embedding-002 (EN + HI)
+//   dim:   768 — PINNED via outputDimensionality, never the model default,
+//          so a divergent VERTEX_EMBED_MODEL can't change the dimension.
 const LOCATION = process.env.VERTEX_LOCATION || 'us-central1'
-const EMBED_MODEL = process.env.VERTEX_EMBED_MODEL || 'text-multilingual-embedding-002'
+export const EMBED_MODEL = process.env.VERTEX_EMBED_MODEL || 'text-multilingual-embedding-002'
+export const EMBED_DIM = 768
 const BATCH_SIZE = 25 // Vertex allows up to 250 instances; keep payloads modest.
 
-export const EMBED_DIM = 768
+// Asymmetric retrieval: docs and queries share MODEL+DIM but use different
+// task types for best relevance.
+export type EmbedTaskType = 'RETRIEVAL_DOCUMENT' | 'RETRIEVAL_QUERY'
 
 export interface EmbeddingResult {
   vector: number[]
@@ -32,13 +42,25 @@ function base(): string {
     : `https://${LOCATION}-aiplatform.googleapis.com`
 }
 
+/** Embed a single DOCUMENT (ingestion side). */
 export async function embed(text: string): Promise<EmbeddingResult> {
-  const [res] = await embedBatch([text])
+  const [res] = await embedBatch([text], 'RETRIEVAL_DOCUMENT')
+  return res
+}
+
+/**
+ * Embed a single QUERY (search side). Same model + dimension as documents,
+ * but task_type=RETRIEVAL_QUERY for correct asymmetric retrieval. This is the
+ * function the semantic-search endpoint MUST use so query vectors match the
+ * stored 768-dim corpus exactly.
+ */
+export async function embedQuery(text: string): Promise<EmbeddingResult> {
+  const [res] = await embedBatch([text], 'RETRIEVAL_QUERY')
   return res
 }
 
 /** Batched embeddings — one Vertex predict call per BATCH_SIZE chunk. */
-export async function embedBatch(texts: string[]): Promise<EmbeddingResult[]> {
+export async function embedBatch(texts: string[], taskType: EmbedTaskType = 'RETRIEVAL_DOCUMENT'): Promise<EmbeddingResult[]> {
   const inputs = texts.map((t) => (t || '').slice(0, 8000))
   if (!vertexConfigured()) {
     return inputs.map((t) => ({ vector: hashEmbedding(t), model: 'mock-hash', live: false }))
@@ -48,7 +70,7 @@ export async function embedBatch(texts: string[]): Promise<EmbeddingResult[]> {
   for (let i = 0; i < inputs.length; i += BATCH_SIZE) {
     const chunk = inputs.slice(i, i + BATCH_SIZE)
     try {
-      out.push(...(await predictChunk(chunk)))
+      out.push(...(await predictChunk(chunk, taskType)))
     } catch {
       // Degrade gracefully — never break ingestion on an embedding hiccup.
       out.push(...chunk.map((t) => ({ vector: hashEmbedding(t), model: 'mock-hash-fallback', live: false })))
@@ -57,7 +79,7 @@ export async function embedBatch(texts: string[]): Promise<EmbeddingResult[]> {
   return out
 }
 
-async function predictChunk(chunk: string[]): Promise<EmbeddingResult[]> {
+async function predictChunk(chunk: string[], taskType: EmbedTaskType): Promise<EmbeddingResult[]> {
   const project = await getProjectId()
   if (!project) throw new Error('Vertex project not resolvable')
   const token = await getAccessToken()
@@ -66,7 +88,10 @@ async function predictChunk(chunk: string[]): Promise<EmbeddingResult[]> {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
     body: JSON.stringify({
-      instances: chunk.map((content) => ({ content, task_type: 'RETRIEVAL_DOCUMENT' })),
+      instances: chunk.map((content) => ({ content, task_type: taskType })),
+      // PIN dimensionality so output is always EMBED_DIM regardless of model
+      // default — guarantees query/corpus VECTOR_SEARCH compatibility.
+      parameters: { outputDimensionality: EMBED_DIM, autoTruncate: true },
     }),
   })
   if (!res.ok) throw new Error(`Vertex embed ${res.status}`)
@@ -76,6 +101,12 @@ async function predictChunk(chunk: string[]): Promise<EmbeddingResult[]> {
   const results = chunk.map((_, idx) => {
     const values = preds[idx]?.embeddings?.values ?? []
     tokenCount += preds[idx]?.embeddings?.statistics?.token_count ?? 0
+    // Hard guard: a live vector MUST be exactly EMBED_DIM. If a misconfigured
+    // model returns a different size, fail loudly rather than poison the store
+    // or trigger a VECTOR_SEARCH dimension-mismatch at query time.
+    if (values.length && values.length !== EMBED_DIM) {
+      throw new Error(`Embedding dim ${values.length} != canonical ${EMBED_DIM} (model ${EMBED_MODEL}). Check VERTEX_EMBED_MODEL.`)
+    }
     return values.length
       ? { vector: values, model: EMBED_MODEL, live: true }
       : { vector: hashEmbedding(chunk[idx]), model: 'mock-hash-fallback', live: false }
