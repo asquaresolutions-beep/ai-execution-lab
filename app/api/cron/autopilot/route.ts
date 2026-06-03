@@ -8,7 +8,9 @@ import { log } from '@/lib/observability/logger'
 import { reportError } from '@/lib/observability/errors'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 300
+// Vercel Hobby caps serverless functions at 60s (Pro allows up to 300). Keep 60
+// for Hobby compatibility; the autopilot route early-exits within budget.
+export const maxDuration = 60
 
 export async function GET(req: Request) {
   if (!isAuthorizedCron(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
