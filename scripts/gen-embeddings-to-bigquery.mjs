@@ -72,24 +72,97 @@ async function authedFetch(url, body) {
   return res.json()
 }
 
-// ── Targets ───────────────────────────────────────────────────────
-const WP = 'https://asquaresolution.com'
-const TARGETS = [
-  ...['generative-engine-optimization-geo-end-of-traditional-seo','chatgpt-search-seo-how-to-appear-in-chatgpt-answers','google-ai-overviews-impact-organic-clicks','google-ai-overviews-and-your-traffic-the-data-backed-analysis-april-2026','scamcheck-india-ai-scam-detector','trustseal-india-ai-fact-checker','operationalizing-ai-for-scale-and-sovereignty','ai-native-cloud-infrastructure-disruption-developer-empowerment','calculating-seo-roi-google-analytics','digital-marketing-in-2026'].map((s) => ({ url: `${WP}/blog/${s}/`, source_type: 'tier_a_post' })),
-  ...['services/geo-seo','services/entity-seo','services/technical-seo','services/ai-automation','services/ai-consulting','digital-marketing-uk','geo-vs-seo'].map((s) => ({ url: `${WP}/${s}/`, source_type: 'service_page' })),
+// ── Content sources (structured-first; never scrape rendered HTML) ─
+// Priority: WordPress REST API (clean JSON: body, slug, categories, dates)
+// → quality-gated direct fetch for non-WP apps (our own subdomains). The old
+// approach scraped rendered pages and captured Cloudflare "Just a moment…"
+// interstitials. Structured JSON endpoints bypass the bot-challenge entirely.
+const WP = process.env.WP_BASE || 'https://asquaresolution.com'
+const SUBDOMAINS = [
   { url: 'https://scamcheck.asquaresolution.com/', source_type: 'scamcheck' },
   { url: 'https://trustseal.asquaresolution.com/', source_type: 'trustseal' },
 ]
+// Strategic posts that should be tagged tier_a (higher retrieval weight signal).
+const TIER_A_SLUGS = new Set(['generative-engine-optimization-geo-end-of-traditional-seo','chatgpt-search-seo-how-to-appear-in-chatgpt-answers','google-ai-overviews-impact-organic-clicks','google-ai-overviews-and-your-traffic-the-data-backed-analysis-april-2026','scamcheck-india-ai-scam-detector','trustseal-india-ai-fact-checker','operationalizing-ai-for-scale-and-sovereignty','ai-native-cloud-infrastructure-disruption-developer-empowerment','calculating-seo-roi-google-analytics','digital-marketing-in-2026'])
 
-function extract(html) {
-  const title = (html.match(/<title>([^<]*)<\/title>/i)?.[1] || '').trim()
-  const text = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 8000)
-  const wordCount = text.split(/\s+/).length
+const slug = (u) => u.replace(/^https?:\/\//, '').replace(/[^\w]+/g, '_').replace(/_+$/, '')
+
+// ── Content sanitization ───────────────────────────────────────────
+function decodeEntities(s) {
+  return s
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#0?39;|&apos;|&#x27;/g, "'").replace(/&nbsp;/g, ' ')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+}
+function stripHtml(html, { dropChrome = false } = {}) {
+  let h = html
+  h = h.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ').replace(/<!--[\s\S]*?-->/g, ' ')
+  if (dropChrome) {
+    // Remove site chrome + cookie/consent boilerplate for raw HTML pages.
+    h = h.replace(/<(nav|header|footer|aside|form)[\s\S]*?<\/\1>/gi, ' ')
+         .replace(/<div[^>]*(cookie|consent|gdpr|banner|subscribe|newsletter)[^>]*>[\s\S]*?<\/div>/gi, ' ')
+  }
+  return decodeEntities(h.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim()
+}
+
+// ── Content-quality validation (task 9) ────────────────────────────
+const JUNK_TITLE = /just a moment|checking your browser|attention required|enable javascript and cookies|cloudflare|access denied|are you human|verify you are human|403 forbidden/i
+const JUNK_BODY = /cf-browser-verification|cf_chl|challenge-platform|enable javascript and cookies to continue|performance & security by cloudflare/i
+function validate({ title, text }) {
+  if (!title || JUNK_TITLE.test(title)) return 'cloudflare/junk title'
+  if (JUNK_BODY.test(text)) return 'cloudflare challenge body'
+  const words = text.split(/\s+/).filter(Boolean).length
+  if (words < 80) return `too thin (${words} words)`
+  // Reject pages dominated by boilerplate (low unique-word ratio).
+  const uniq = new Set(text.toLowerCase().split(/\s+/)).size
+  if (uniq / words < 0.18) return `low lexical diversity (${uniq}/${words})`
+  return null // OK
+}
+
+function buildDoc({ url, source_type, title, body, excerpt = '', slugVal = '', category = '', publishedAt = '', updatedAt = '' }) {
+  const text = `${title}\n\n${excerpt ? excerpt + '\n\n' : ''}${body}`.replace(/\s+/g, ' ').trim().slice(0, 8000)
+  const wordCount = text.split(/\s+/).filter(Boolean).length
   const lang = /[ऀ-ॿ]/.test(text) ? 'hi' : 'en'
   const contentHash = createHash('sha256').update(`${title}\n${text}`).digest('hex')
-  return { title, text, wordCount, lang, contentHash }
+  return { id: slug(url), url, source_type, title, text, slug: slugVal || slug(url), category, published_at: publishedAt || null, updated_at: updatedAt || null, wordCount, lang, contentHash }
 }
-const slug = (u) => u.replace(/^https?:\/\//, '').replace(/[^\w]+/g, '_').replace(/_+$/, '')
+
+// ── Source: WordPress REST API (clean structured content) ──────────
+async function fetchWpKind(kind) {
+  const docs = []
+  for (let page = 1; page <= 10; page++) {
+    const res = await fetch(`${WP}/wp-json/wp/v2/${kind}?per_page=100&page=${page}&_embed=1&orderby=modified&order=desc`, { headers: { accept: 'application/json' } })
+    if (res.status === 400) break // past last page
+    if (!res.ok) { console.warn(`  WP ${kind} page ${page}: HTTP ${res.status}`); break }
+    const items = await res.json()
+    if (!Array.isArray(items) || !items.length) break
+    for (const it of items) {
+      const title = decodeEntities(stripHtml(it.title?.rendered || ''))
+      const body = stripHtml(it.content?.rendered || '')
+      const excerpt = stripHtml(it.excerpt?.rendered || '')
+      const link = it.link || `${WP}/${it.slug}/`
+      const category = (it._embedded?.['wp:term']?.[0]?.[0]?.name) || ''
+      const isService = /\/services?\//.test(link) || /service/i.test(category)
+      const source_type = kind === 'pages' ? (isService ? 'service_page' : 'page') : (TIER_A_SLUGS.has(it.slug) ? 'tier_a_post' : 'blog_post')
+      docs.push(buildDoc({
+        url: link, source_type, title, body, excerpt, slugVal: it.slug, category,
+        publishedAt: it.date_gmt ? `${it.date_gmt}Z` : '', updatedAt: it.modified_gmt ? `${it.modified_gmt}Z` : '',
+      }))
+    }
+    const total = Number(res.headers.get('x-wp-totalpages') || 1)
+    if (page >= total) break
+  }
+  return docs
+}
+
+// ── Source: quality-gated direct fetch (non-WP apps we own) ────────
+async function fetchPageDoc({ url, source_type }) {
+  const html = await fetch(url, { headers: { 'user-agent': 'AsquareIngest/1.0', accept: 'text/html' } }).then((r) => r.text())
+  const title = decodeEntities((html.match(/<title>([^<]*)<\/title>/i)?.[1] || '').trim())
+  const body = stripHtml(html, { dropChrome: true })
+  return buildDoc({ url, source_type, title, body, slugVal: slug(url) })
+}
 
 // ── BigQuery helpers ──────────────────────────────────────────────
 async function ensureTable(p) {
@@ -98,7 +171,9 @@ async function ensureTable(p) {
     { name: 'id', type: 'STRING', mode: 'REQUIRED' }, { name: 'source_type', type: 'STRING' }, { name: 'url', type: 'STRING' },
     { name: 'title', type: 'STRING' }, { name: 'text', type: 'STRING' }, { name: 'embedding', type: 'FLOAT64', mode: 'REPEATED' },
     { name: 'model', type: 'STRING' }, { name: 'dim', type: 'INT64' }, { name: 'content_hash', type: 'STRING' },
-    { name: 'word_count', type: 'INT64' }, { name: 'lang', type: 'STRING' }, { name: 'created_at', type: 'TIMESTAMP' }, { name: 'updated_at', type: 'TIMESTAMP' },
+    { name: 'word_count', type: 'INT64' }, { name: 'lang', type: 'STRING' }, { name: 'slug', type: 'STRING' },
+    { name: 'category', type: 'STRING' }, { name: 'published_at', type: 'TIMESTAMP' },
+    { name: 'created_at', type: 'TIMESTAMP' }, { name: 'updated_at', type: 'TIMESTAMP' },
   ] }
   await authedFetch(`${BQ_BASE}/projects/${p}/datasets/${DATASET}/tables`, { tableReference: { projectId: p, datasetId: DATASET, tableId: TABLE }, schema }).catch((e) => { if (!/409/.test(e.message)) throw e })
   await ensureSchema(p)
@@ -114,11 +189,26 @@ async function ensureSchema(p) {
     ADD COLUMN IF NOT EXISTS content_hash STRING,
     ADD COLUMN IF NOT EXISTS word_count INT64,
     ADD COLUMN IF NOT EXISTS lang STRING,
+    ADD COLUMN IF NOT EXISTS slug STRING,
+    ADD COLUMN IF NOT EXISTS category STRING,
+    ADD COLUMN IF NOT EXISTS published_at TIMESTAMP,
     ADD COLUMN IF NOT EXISTS created_at TIMESTAMP,
     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP`
   await withRetry(() => authedFetch(`${BQ_BASE}/projects/${p}/queries`, { query: ddl, useLegacySql: false, timeoutMs: 60000 }), 'bq-alter')
     .then(() => console.log('  schema ensured (metadata columns present)'))
     .catch((e) => console.warn('  schema alter:', e.message.slice(0, 160)))
+}
+
+// Purge previously-ingested junk (Cloudflare challenge pages etc.) by title
+// pattern, regardless of id scheme — cleans a poisoned corpus.
+async function purgeJunk(p) {
+  const ddl = `DELETE FROM \`${p}.${DATASET}.${TABLE}\`
+    WHERE REGEXP_CONTAINS(LOWER(title), r'just a moment|checking your browser|attention required|enable javascript and cookies|cloudflare|access denied|verify you are human')
+       OR title IS NULL OR ARRAY_LENGTH(embedding) != ${EMBED_DIM}`
+  const j = await withRetry(() => authedFetch(`${BQ_BASE}/projects/${p}/queries`, { query: ddl, useLegacySql: false, timeoutMs: 60000 }), 'bq-purge')
+    .then((r) => Number(r.numDmlAffectedRows ?? 0))
+    .catch((e) => { console.warn('  purge junk (streaming buffer may defer):', e.message.slice(0, 100)); return 0 })
+  console.log(`  purged ${j} junk/wrong-dim row(s)`)
 }
 
 // Count rows for a set of ids — used to CONFIRM deletion before re-insert so a
@@ -185,36 +275,55 @@ async function insertRows(p, rows) {
   const p = await project()
   console.log(`project=${p} dataset=${DATASET} table=${TABLE} model=${EMBED_MODEL} batch=${BATCH}`)
   await ensureTable(p)
+  await purgeJunk(p)            // remove poisoned (Cloudflare/junk/wrong-dim) rows
   const known = await existingHashes(p)
 
-  // 1. Fetch + hash; decide what needs embedding (incremental + dedup).
-  const candidates = []
-  for (const t of TARGETS) {
-    try {
-      const html = await fetch(t.url).then((r) => r.text())
-      const meta = extract(html)
-      if (meta.text.length < 100) { console.log(`skip (thin): ${t.url}`); continue }
-      const id = slug(t.url)
-      const prev = known[id]
-      if (prev && prev.hash === meta.contentHash && prev.dim === EMBED_DIM) { console.log(`unchanged (skip): ${id}`); continue }
-      if (prev && prev.dim !== EMBED_DIM) console.log(`re-embed (dim ${prev.dim} -> ${EMBED_DIM}): ${id}`)
-      candidates.push({ id, ...t, ...meta })
-    } catch (e) { console.warn(`fetch failed: ${t.url} — ${e.message.slice(0, 60)}`) }
+  // 1. DISCOVER documents from structured sources (WordPress REST API +
+  //    quality-gated direct fetch), VALIDATE quality, then decide what needs
+  //    embedding (incremental: skip unchanged + already-768).
+  console.log('Discovering content…')
+  const discovered = []
+  try {
+    const posts = await fetchWpKind('posts'); console.log(`  WP posts: ${posts.length}`)
+    const pages = await fetchWpKind('pages'); console.log(`  WP pages: ${pages.length}`)
+    discovered.push(...posts, ...pages)
+  } catch (e) { console.warn(`  WP REST discovery failed: ${e.message.slice(0, 80)}`) }
+  for (const s of SUBDOMAINS) {
+    try { discovered.push(await fetchPageDoc(s)) } catch (e) { console.warn(`  fetch ${s.url}: ${e.message.slice(0, 60)}`) }
   }
-  if (!candidates.length) { console.log('\n✓ nothing changed — 0 Vertex calls. Up to date.'); return }
-  console.log(`\n${candidates.length} doc(s) to (re)embed; batching ${BATCH}/call…`)
 
-  // 2. Batched embeddings.
+  const candidates = []
+  let rejected = 0
+  const seen = new Set()
+  for (const d of discovered) {
+    if (seen.has(d.id)) continue
+    seen.add(d.id)
+    const why = validate(d)                       // content-quality gate (task 9)
+    if (why) { console.log(`  reject [${why}]: ${d.url}`); rejected++; continue }
+    const prev = known[d.id]
+    if (prev && prev.hash === d.contentHash && prev.dim === EMBED_DIM) { continue } // unchanged
+    if (prev && prev.dim !== EMBED_DIM) console.log(`  re-embed (dim ${prev.dim} -> ${EMBED_DIM}): ${d.id}`)
+    candidates.push(d)
+  }
+  console.log(`\n${discovered.length} discovered, ${rejected} rejected by quality gate, ${candidates.length} to (re)embed.`)
+  if (!candidates.length) { console.log('✓ nothing new/changed — 0 Vertex calls. Corpus up to date.'); return }
+
+  // 2. Batched embeddings (clean semantic text: title + excerpt + body).
   const now = new Date().toISOString()
   const rows = []
   for (let i = 0; i < candidates.length; i += BATCH) {
     const chunk = candidates.slice(i, i + BATCH)
-    const vecs = await embedBatch(p, chunk.map((c) => `${c.title}\n\n${c.text}`))
+    const vecs = await embedBatch(p, chunk.map((c) => c.text))
     chunk.forEach((c, k) => {
       const embedding = vecs[k] || []
       if (!embedding.length) { console.warn(`  empty embedding: ${c.id}`); return }
-      rows.push({ id: c.id, source_type: c.source_type, url: c.url, title: c.title, text: c.text, embedding, model: EMBED_MODEL, dim: embedding.length, content_hash: c.contentHash, word_count: c.wordCount, lang: c.lang, created_at: now, updated_at: now })
-      console.log(`  embedded ${c.id} (dim ${embedding.length}, ${c.lang}, ${c.wordCount}w)`)
+      rows.push({
+        id: c.id, source_type: c.source_type, url: c.url, title: c.title, text: c.text,
+        embedding, model: EMBED_MODEL, dim: embedding.length, content_hash: c.contentHash,
+        word_count: c.wordCount, lang: c.lang, slug: c.slug, category: c.category,
+        published_at: c.published_at, created_at: now, updated_at: now,
+      })
+      console.log(`  embedded ${c.source_type}/${c.slug} (dim ${embedding.length}, ${c.lang}, ${c.wordCount}w)`)
     })
   }
 

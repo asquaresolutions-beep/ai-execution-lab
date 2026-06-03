@@ -42,6 +42,28 @@ export VERTEX_ACCESS_TOKEN=$(gcloud auth print-access-token)
 export GCP_PROJECT=ass-youtube-agent BQ_DATASET=asquare_ai VERTEX_LOCATION=us-central1
 node scripts/gen-embeddings-to-bigquery.mjs        # Tier-A posts, service pages, ScamCheck, TrustSeal
 ```
+**Ingestion architecture — structured sources, never rendered-HTML scraping:**
+The pipeline must NOT scrape rendered public pages — behind Cloudflare that
+captures "Just a moment…" bot-challenge interstitials instead of article text,
+poisoning the corpus. Sources, in priority order:
+1. **WordPress REST API** (`/wp-json/wp/v2/posts` + `/pages`, `_embed=1`, paginated) —
+   clean JSON: `content.rendered` body, `title.rendered`, `excerpt`, `slug`,
+   embedded category, `date_gmt`/`modified_gmt`. Bypasses the HTML bot-challenge.
+2. **Quality-gated direct fetch** for non-WP apps we own (ScamCheck/TrustSeal) —
+   raw HTML, then sanitized (strip `script/style/nav/header/footer/aside` + cookie/
+   consent blocks) and decoded.
+3. **Sitemap-driven** discovery is supported as an extension point (`/sitemap.xml`).
+
+**Content-quality validation (gate before embedding):** rejects Cloudflare/junk
+titles & bodies (`just a moment`, `checking your browser`, `cf-chl`, …), thin pages
+(under 80 words), and low-lexical-diversity boilerplate. A `purgeJunk()` step also deletes
+any previously-ingested challenge pages / wrong-dim rows from the corpus by pattern.
+
+**Extracted per document:** real title, sanitized body (title+excerpt+body as the
+embedded text), `slug`, `category`, `published_at`/`updated_at`, `word_count`, `lang`
+(en/hi), `content_hash`, `source_type` (`tier_a_post`/`blog_post`/`service_page`/
+`page`/`scamcheck`/`trustseal`).
+
 **Pipeline behaviour (`scripts/gen-embeddings-to-bigquery.mjs`):**
 - **Incremental:** each doc gets a SHA-256 `content_hash`; **unchanged docs are skipped** (zero Vertex calls — the primary cost control). First run embeds all; re-runs only touch changed/new content.
 - **Dedup-correct:** changed/new ids are **DELETE-then-insert** (no duplicate rows). *(Note: BigQuery streaming-buffer rows can defer a DELETE for ~30–90 min after insert; space re-runs accordingly, or switch to a MERGE/load-job for high-frequency loads.)*
