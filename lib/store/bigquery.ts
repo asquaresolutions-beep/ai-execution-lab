@@ -98,11 +98,53 @@ OPTIONS(index_type = 'IVF', distance_type = 'COSINE');`
 }
 
 export function semanticSearchSQL(table = 'embeddings'): string {
-  return `-- params: @query_embedding ARRAY<FLOAT64>, @top_k INT64
+  return `-- param: @q ARRAY<FLOAT64>
 SELECT base.id, base.title, base.url, base.source_type, distance
 FROM VECTOR_SEARCH(
   TABLE \`${PROJECT}.${DATASET}.${table}\`, 'embedding',
-  (SELECT @query_embedding AS embedding), top_k => @top_k, distance_type => 'COSINE');`
+  (SELECT @q AS embedding), top_k => 8, distance_type => 'COSINE');`
 }
+
+// ── Live query (jobs.query REST) ───────────────────────────────────
+export interface BQRow { [k: string]: string | null }
+
+/** Run a synchronous BigQuery query (named params) and return mapped rows. */
+export async function runQuery(sql: string, params: Array<{ name: string; type: string; value: unknown; arrayType?: string }> = []): Promise<BQRow[]> {
+  if (!bqConfigured()) throw new Error('BigQuery not configured')
+  const queryParameters = params.map((p) => {
+    if (p.type === 'ARRAY') {
+      return {
+        name: p.name,
+        parameterType: { type: 'ARRAY', arrayType: { type: p.arrayType || 'FLOAT64' } },
+        parameterValue: { arrayValues: (p.value as number[]).map((v) => ({ value: String(v) })) },
+      }
+    }
+    return { name: p.name, parameterType: { type: p.type }, parameterValue: { value: String(p.value) } }
+  })
+  const res = await authedFetch(`${BASE}/projects/${PROJECT}/queries`, {
+    method: 'POST',
+    body: JSON.stringify({ query: sql, useLegacySql: false, parameterMode: params.length ? 'NAMED' : undefined, queryParameters, timeoutMs: 30000 }),
+  })
+  if (!res.ok) throw new Error(`BQ query ${res.status}: ${(await res.text()).slice(0, 300)}`)
+  const data = (await res.json()) as { schema?: { fields?: { name: string }[] }; rows?: { f: { v: string | null }[] }[] }
+  const cols = data.schema?.fields?.map((f) => f.name) ?? []
+  return (data.rows ?? []).map((r) => Object.fromEntries(r.f.map((cell, i) => [cols[i], cell.v])))
+}
+
+export interface VectorHit { id: string; title: string; url: string; source_type: string; distance: number }
+
+/** Live semantic search via BigQuery VECTOR_SEARCH (brute-force or index-backed). */
+export async function vectorSearch(queryEmbedding: number[], topK = 8, table = 'embeddings'): Promise<VectorHit[]> {
+  const k = Math.max(1, Math.min(50, Math.floor(topK)))
+  const sql = `SELECT base.id AS id, base.title AS title, base.url AS url, base.source_type AS source_type, distance
+FROM VECTOR_SEARCH(
+  TABLE \`${PROJECT}.${DATASET}.${table}\`, 'embedding',
+  (SELECT @q AS embedding), top_k => ${k}, distance_type => 'COSINE')
+ORDER BY distance`
+  const rows = await runQuery(sql, [{ name: 'q', type: 'ARRAY', arrayType: 'FLOAT64', value: queryEmbedding }])
+  return rows.map((r) => ({ id: r.id ?? '', title: r.title ?? '', url: r.url ?? '', source_type: r.source_type ?? '', distance: Number(r.distance) }))
+}
+
+export function bigQueryReady(): boolean { return bqConfigured() }
 
 export { PROJECT as BIGQUERY_PROJECT, DATASET as BIGQUERY_DATASET }
