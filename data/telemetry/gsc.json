@@ -1,0 +1,16 @@
+{
+  "_meta": {
+    "source": "gsc-export",
+    "lastUpdated": "2026-05-19T00:00:00Z",
+    "note": "Seeded. Export from GSC → Performance → Export CSV, then run: node scripts/ingest-gsc.mjs <path/to/export.csv>"
+  },
+  "property": "https://lab.asquaresolution.com",
+  "dateRange": null,
+  "totalClicks": 0,
+  "totalImpressions": 0,
+  "avgCtr": 0,
+  "avgPosition": 0,
+  "topQueries": [],
+  "topPages": [],
+  "indexingIssues": []
+}

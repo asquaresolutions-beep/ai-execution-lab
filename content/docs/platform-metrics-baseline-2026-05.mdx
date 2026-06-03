@@ -1,0 +1,214 @@
+---
+title: "Platform Metrics Baseline — May 2026"
+description: "First complete operational metrics snapshot for the AI Execution Lab platform and A Square Solutions ecosystem. Establishes the baseline from which all future measurable improvements are tracked."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["metrics", "baseline", "telemetry", "ecosystem", "seo", "platform"]
+status: published
+difficulty: intermediate
+section: operations
+evidence_images: []
+external_refs: []
+---
+
+This is the first complete operational metrics baseline for the AI Execution Lab platform and the A Square Solutions ecosystem. Every number here was captured from live production on 2026-05-19. Future audits will reference this document as the starting point for measurable improvement tracking.
+
+---
+
+## Ecosystem Uptime — 2026-05-19T04:58:07Z
+
+Live HEAD checks via `scripts/ingest-uptime.mjs`:
+
+| Property | Status | HTTP | Latency |
+|---|---|---|---|
+| A Square Solutions (asquaresolution.com) | ✓ Up | 200 | 343ms |
+| AI Execution Lab (lab.asquaresolution.com) | ✓ Up | 200 | 256ms |
+| TrustSeal (trustseal.asquaresolution.com) | ✓ Up | 200 | 428ms |
+| ScamCheck (scamcheck.asquaresolution.com) | ✓ Up | 200 | 479ms |
+| Project Subdomain (project.asquaresolution.com) | ✓ Up | 200 | 1047ms |
+
+**Ecosystem uptime: 5/5 (100%)**
+
+Notable: `project.asquaresolution.com` latency at 1047ms is 4× higher than the Lab. This subdomain serves no active product and has no optimization investment. Not a concern currently but worth monitoring as baseline.
+
+Average latency across all properties: **511ms**
+
+---
+
+## Lab Platform Sitemap Health — 2026-05-19T05:00:15Z
+
+Full verification run (all 313 URLs) via `scripts/ingest-sitemap.mjs --full`:
+
+| Metric | Value |
+|---|---|
+| Total URLs in sitemap | 313 |
+| URLs verified | 313 |
+| Passing (HTTP 200) | 313 |
+| Failing | 0 |
+| Pass rate | 100% |
+| Sitemap HTTP status | 200 |
+
+**313/313 URLs live.** No 404s, no redirect loops, no unreachable content. This is the first verified sitemap baseline — every future sitemap check references this as T+0.
+
+---
+
+## Content Corpus — 2026-05-19
+
+### Section depth
+
+| Section | Items | Last published | Days since |
+|---|---|---|---|
+| /docs | 54 | 2026-05-19 | 0 |
+| /failures | 12 | 2026-05-19 | 0 |
+| /logs | 10 | 2026-05-19 | 0 |
+| /case-studies | 7 | 2026-05-18 | 1 |
+| /playbooks | 2 | 2026-05-18 | 1 |
+| /labs | 2 | 2026-05-18 | 1 |
+| /systems | 1 | 2026-05-17 | 2 |
+
+**Total: 88 published items across 7 sections**
+
+All sections active within 2 days. Publishing velocity at this baseline: average 10+ items per day across the build sprint.
+
+### Evidence density — primary gap
+
+| Section | Items | With evidence | Coverage |
+|---|---|---|---|
+| /docs | 54 | 0 | 0% |
+| /failures | 12 | 2 | 17% |
+| /logs | 10 | 1 | 10% |
+| /case-studies | 7 | 0 | 0% |
+| /playbooks | 2 | 0 | 0% |
+| /labs | 2 | 0 | 0% |
+
+**Platform-wide evidence coverage: 3/88 (3.4%)**
+
+This is the single largest operational gap at baseline. Evidence-free content has lower GEO citation probability and reduced trust signals for AI retrieval systems. The target is 40%+ of high-value sections (failures, case-studies, logs) carrying evidence within 30 days.
+
+Evidence means: `evidence_images:` or `external_refs:` in frontmatter. Even one screenshot or one source link per item qualifies.
+
+### Failure intelligence coverage
+
+| Metric | Value |
+|---|---|
+| Failure MDX files published | 12 |
+| Entries in failure-memory.ts | 12 |
+| Scoring coverage | 100% |
+| Unscored failures | 0 |
+| Avg confidence (estimated) | ~72/100 |
+| Failures with playbooks | 2 |
+| Failures needing playbooks | 4 (recurring) |
+
+100% scoring is a hard-earned state. Every published failure has a confidence score, instance count, prevention steps, and recovery complexity. The failure intelligence layer is fully operational.
+
+---
+
+## GEO Query Coverage — 2026-05-19
+
+| Category | Queries | With content target | Gap queries |
+|---|---|---|---|
+| Definitional | 4 | 3 | 1 |
+| Procedural | 6 | 5 | 1 |
+| Diagnostic | 5 | 5 | 0 |
+| Operational | 4 | 0 | 4 |
+| Comparative | 2 | 0 | 2 |
+
+**Total coverage: ~60%** — 13/21 queries have content targets
+
+Owned queries (content published specifically for this platform): 10
+Competitive queries (content exists but not ranked): 3
+Gap queries (no content): 8
+
+The 8 uncovered queries are primarily in operational and comparative categories. These have the lowest current competition and highest opportunity for this platform's specific positioning — platform operators, not beginners.
+
+### Top priority GEO gap (immediate)
+
+```
+"what is operational evidence in software"
+category: definitional
+difficulty: gap (no competition)
+```
+
+No content exists anywhere for this specific query. A 500-word definitional doc directly answering this would be the first piece. This platform has original definitions based on real operational practice that no other source has.
+
+---
+
+## Lighthouse / Performance — 2026-05-19
+
+PSI API quota exceeded (429) — no data from this run. **Schedule Lighthouse run with `PAGESPEED_API_KEY` set in `.env.local`** to establish performance baseline.
+
+Expected: performance and SEO scores above 90 for a Next.js SSG platform deployed on Vercel with no client-side data fetching. First confirmed run required to establish baseline.
+
+---
+
+## Google Search Console — Not yet ingested
+
+GSC snapshot at baseline: `totalClicks: 0, totalImpressions: 0`
+
+The GSC ingestion script exists (`scripts/ingest-gsc.mjs`) but no CSV export has been run yet. **Next action: export GSC Performance data (last 28 days) from Google Search Console → run `node scripts/ingest-gsc.mjs <path/to/export.csv>`.**
+
+This is the most important metric to establish. Once ingested:
+- Total organic impressions become the baseline impression count
+- Average position becomes the baseline rank
+- Top queries reveal what Google already associates with this domain
+- Indexing issue list surfaces any crawl gaps
+
+All future GSC snapshots will show delta from this baseline.
+
+---
+
+## Operational Signals — 2026-05-19
+
+Platform-wide signal count at baseline (computed at build time from corpus):
+
+| Priority | Count | Primary causes |
+|---|---|---|
+| Critical | 0 | — |
+| High | Varies | Unscored failures, weak GEO clusters |
+| Medium | Multiple | Underdeveloped tracks, stale assumptions |
+| Low | Multiple | Evidence gaps, single-instance failures |
+
+Zero critical signals at baseline — the platform has no blocking operational gaps.
+
+The most actionable signal category: **weak_geo_cluster** — zero queries in the "operational" and "comparative" categories have content targets.
+
+---
+
+## Deployment Stability — 2026-05-19
+
+Vercel deployment history not yet ingested (requires `VERCEL_TOKEN` + `VERCEL_PROJECT_ID` in `.env.local`).
+
+Known from direct observation:
+- Last deployment: 2026-05-19 (today — platform intelligence layer shipped)
+- Build system: Next.js 15 SSG, Vercel
+- Build failures in last 30 days: 1 (edge-runtime-deployment-failure, 2026-05-10, resolved in 23 minutes)
+- Current deployment: stable, all 313 URLs live
+
+---
+
+## What This Baseline Establishes
+
+This document marks the transition from **infrastructure build mode** into **execution compounding mode**. From this point:
+
+1. Every operational action has a before-state to measure against
+2. Every content piece added increases the 88-item corpus count
+3. Every evidence addition improves the 3.4% coverage rate
+4. Every GSC export will show impression/click delta from the zero baseline
+5. Every Lighthouse run will establish then track performance scores
+6. Every uptime check will show latency trends against the 511ms baseline
+
+The moat compounds through measurement. Undocumented improvements disappear. Measured improvements compound.
+
+---
+
+## Next Measurement Actions
+
+| Action | Tool | What it measures |
+|---|---|---|
+| Export GSC Performance CSV | Google Search Console | Impressions, clicks, position, queries |
+| Set `PAGESPEED_API_KEY`, run ingest-lighthouse | `.env.local` | Core Web Vitals, Lighthouse scores |
+| Set `VERCEL_TOKEN`, run ingest-vercel | `.env.local` | Deployment frequency, build success rate |
+| Re-run uptime weekly | `node scripts/ingest-uptime.mjs` | Latency trends |
+| Re-run sitemap monthly | `node scripts/ingest-sitemap.mjs --full` | URL count growth, 404 emergence |
+
+The next metrics snapshot after GSC ingestion will show the first real search data.

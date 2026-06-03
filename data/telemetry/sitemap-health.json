@@ -1,0 +1,2207 @@
+{
+  "_meta": {
+    "source": "sitemap-check",
+    "lastUpdated": "2026-05-19T05:00:15.509Z",
+    "mode": "full"
+  },
+  "sitemapUrl": "https://lab.asquaresolution.com/sitemap.xml",
+  "httpStatus": 200,
+  "totalUrls": 313,
+  "checkedUrls": 313,
+  "passing": 313,
+  "failing": 0,
+  "errors": [],
+  "results": [
+    {
+      "url": "https://lab.asquaresolution.com",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 59,
+      "checkedAt": "2026-05-19T04:59:36.986Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/start-here",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 193,
+      "checkedAt": "2026-05-19T04:59:37.122Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 193,
+      "checkedAt": "2026-05-19T04:59:37.127Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/systems",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 225,
+      "checkedAt": "2026-05-19T04:59:37.163Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/labs",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 183,
+      "checkedAt": "2026-05-19T04:59:37.124Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/case-studies",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 198,
+      "checkedAt": "2026-05-19T04:59:37.141Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/playbooks",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 198,
+      "checkedAt": "2026-05-19T04:59:37.143Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/failures",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 215,
+      "checkedAt": "2026-05-19T04:59:37.161Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/logs",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 160,
+      "checkedAt": "2026-05-19T04:59:37.324Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/ai-research-workflow",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 173,
+      "checkedAt": "2026-05-19T04:59:37.340Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/case-study-expansion-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 170,
+      "checkedAt": "2026-05-19T04:59:37.340Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/community-model-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 187,
+      "checkedAt": "2026-05-19T04:59:37.359Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/content-expansion-roadmap",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 225,
+      "checkedAt": "2026-05-19T04:59:37.398Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/content-gap-audit-v2",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 185,
+      "checkedAt": "2026-05-19T04:59:37.359Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/content-quality-standards",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 252,
+      "checkedAt": "2026-05-19T04:59:37.428Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/content-queue-system",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 222,
+      "checkedAt": "2026-05-19T04:59:37.399Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/content-templates",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 153,
+      "checkedAt": "2026-05-19T04:59:37.581Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/content-velocity-system",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 173,
+      "checkedAt": "2026-05-19T04:59:37.602Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/cross-property-positioning",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 172,
+      "checkedAt": "2026-05-19T04:59:37.602Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/ecosystem-copy-blocks",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 173,
+      "checkedAt": "2026-05-19T04:59:37.603Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/ecosystem-integration-strategy",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 197,
+      "checkedAt": "2026-05-19T04:59:37.628Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/ecosystem-schema-blocks",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 198,
+      "checkedAt": "2026-05-19T04:59:37.629Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/evidence-framework",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 197,
+      "checkedAt": "2026-05-19T04:59:37.629Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/evidence-indexing-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 226,
+      "checkedAt": "2026-05-19T04:59:37.658Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/execution-artifacts-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 151,
+      "checkedAt": "2026-05-19T04:59:37.809Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/execution-checklist-system",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 171,
+      "checkedAt": "2026-05-19T04:59:37.830Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/execution-observability-design",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 189,
+      "checkedAt": "2026-05-19T04:59:37.849Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/failure-intelligence-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 169,
+      "checkedAt": "2026-05-19T04:59:37.829Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/failure-intelligence-ux",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 189,
+      "checkedAt": "2026-05-19T04:59:37.850Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/failure-memory-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 189,
+      "checkedAt": "2026-05-19T04:59:37.850Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/failure-pattern-library",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 216,
+      "checkedAt": "2026-05-19T04:59:37.878Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/geo-intelligence-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 217,
+      "checkedAt": "2026-05-19T04:59:37.879Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/global-education-positioning",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 171,
+      "checkedAt": "2026-05-19T04:59:38.050Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/implementation-project-system",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 150,
+      "checkedAt": "2026-05-19T04:59:38.030Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/knowledge-graph-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 168,
+      "checkedAt": "2026-05-19T04:59:38.049Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/launch-readiness-report",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 169,
+      "checkedAt": "2026-05-19T04:59:38.050Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/media-publishing-workflow",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 186,
+      "checkedAt": "2026-05-19T04:59:38.068Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/operational-intelligence-roadmap",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 217,
+      "checkedAt": "2026-05-19T04:59:38.099Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/operational-memory-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 216,
+      "checkedAt": "2026-05-19T04:59:38.099Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/operational-retrieval-ux",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 215,
+      "checkedAt": "2026-05-19T04:59:38.098Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/operational-search-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 148,
+      "checkedAt": "2026-05-19T04:59:38.247Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/operational-search-design",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 171,
+      "checkedAt": "2026-05-19T04:59:38.271Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/operator-experience-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 191,
+      "checkedAt": "2026-05-19T04:59:38.292Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/platform-evolution-roadmap",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 967,
+      "checkedAt": "2026-05-19T04:59:39.068Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/platform-focus-lock",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 227,
+      "checkedAt": "2026-05-19T04:59:38.329Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/platform-maturity-audit-2026-05",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 189,
+      "checkedAt": "2026-05-19T04:59:38.291Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/platform-vision-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 226,
+      "checkedAt": "2026-05-19T04:59:38.329Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/production-deployment-guide",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 205,
+      "checkedAt": "2026-05-19T04:59:38.308Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/productization-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 153,
+      "checkedAt": "2026-05-19T04:59:39.221Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/publishing-operations",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 150,
+      "checkedAt": "2026-05-19T04:59:39.219Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/track-audit-2026-05",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 809,
+      "checkedAt": "2026-05-19T04:59:39.879Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/track-design-v2",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 759,
+      "checkedAt": "2026-05-19T04:59:39.829Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/wordpress-launch-article",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 877,
+      "checkedAt": "2026-05-19T04:59:39.948Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/wordpress-rollout-assets",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 877,
+      "checkedAt": "2026-05-19T04:59:39.948Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/wordpress-to-lab-linking",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 778,
+      "checkedAt": "2026-05-19T04:59:39.850Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/analytics-setup",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 756,
+      "checkedAt": "2026-05-19T04:59:39.828Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/claude-code-wp-rest-api",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 738,
+      "checkedAt": "2026-05-19T04:59:40.687Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/deployment-workflow",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 718,
+      "checkedAt": "2026-05-19T04:59:40.669Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/frontmatter-reference",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 696,
+      "checkedAt": "2026-05-19T04:59:40.648Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/launch-assets",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 734,
+      "checkedAt": "2026-05-19T04:59:40.688Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/launch-checklist",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 813,
+      "checkedAt": "2026-05-19T04:59:40.768Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/publishing-cadence",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 771,
+      "checkedAt": "2026-05-19T04:59:40.728Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/docs/publishing-workflow",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 709,
+      "checkedAt": "2026-05-19T04:59:40.668Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/systems/wordpress-typography-system",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1429,
+      "checkedAt": "2026-05-19T04:59:41.389Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/labs/2026-05-18-geo-entity-density-experiment",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1358,
+      "checkedAt": "2026-05-19T04:59:42.747Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/labs/litespeed-ucss-scoped-css-stripping",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 726,
+      "checkedAt": "2026-05-19T04:59:42.117Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/case-studies/ai-assisted-publishing-system",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1813,
+      "checkedAt": "2026-05-19T04:59:43.206Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/case-studies/ai-execution-lab-platform-launch",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1642,
+      "checkedAt": "2026-05-19T04:59:43.037Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/case-studies/ecosystem-wordpress-integration",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1741,
+      "checkedAt": "2026-05-19T04:59:43.137Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/case-studies/vercel-deployment-evolution",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1351,
+      "checkedAt": "2026-05-19T04:59:42.748Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/case-studies/geo-pillar-post-8717-typography-repair",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 997,
+      "checkedAt": "2026-05-19T04:59:42.396Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/case-studies/trustseal-architecture-build",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 836,
+      "checkedAt": "2026-05-19T04:59:42.238Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/case-studies/scamcheck-architecture-build",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1081,
+      "checkedAt": "2026-05-19T04:59:44.287Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/playbooks/operational-publishing-workflow",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1308,
+      "checkedAt": "2026-05-19T04:59:44.516Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/playbooks/wp-rest-api-automation-playbook",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1076,
+      "checkedAt": "2026-05-19T04:59:44.286Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/failures/claude-code-context-exhaustion",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1205,
+      "checkedAt": "2026-05-19T04:59:44.416Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/failures/gsc-index-coverage-drop",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1442,
+      "checkedAt": "2026-05-19T04:59:44.655Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/failures/server-module-client-bundle",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1074,
+      "checkedAt": "2026-05-19T04:59:44.288Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/failures/next-mdx-remote-v6-blockjs",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 761,
+      "checkedAt": "2026-05-19T04:59:43.976Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/failures/edge-runtime-deployment-failure",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1069,
+      "checkedAt": "2026-05-19T04:59:44.285Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/failures/wordpress-rest-api-auth-failure",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 752,
+      "checkedAt": "2026-05-19T04:59:45.407Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/failures/ga4-cross-domain-tracking-gap",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 750,
+      "checkedAt": "2026-05-19T04:59:45.407Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/failures/vite-github-pages-spa-routing",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 747,
+      "checkedAt": "2026-05-19T04:59:45.406Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/failures/environment-variable-missing-production",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 714,
+      "checkedAt": "2026-05-19T04:59:45.376Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/failures/dns-subdomain-propagation-delay",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 715,
+      "checkedAt": "2026-05-19T04:59:45.377Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/logs/2026-05-18-deployment-journal-may-2026",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1213,
+      "checkedAt": "2026-05-19T04:59:45.876Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/logs/2026-05-18-operational-memory-infrastructure",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1462,
+      "checkedAt": "2026-05-19T04:59:46.126Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/logs/2026-05-18-publishing-mode-shift",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1211,
+      "checkedAt": "2026-05-19T04:59:45.877Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/logs/2026-05-18-scamcheck-operations-review",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1407,
+      "checkedAt": "2026-05-19T04:59:47.533Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/logs/2026-05-18-trustseal-operations-review",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 957,
+      "checkedAt": "2026-05-19T04:59:47.084Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/logs/2026-05-18-wordpress-seo-operations",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 746,
+      "checkedAt": "2026-05-19T04:59:46.874Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/logs/2026-05-17-launch-stabilization-audit",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 683,
+      "checkedAt": "2026-05-19T04:59:46.813Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/logs/2026-05-14-tracks-failure-archive-build",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 773,
+      "checkedAt": "2026-05-19T04:59:46.904Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1891,
+      "checkedAt": "2026-05-19T04:59:48.023Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/ops",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 771,
+      "checkedAt": "2026-05-19T04:59:46.904Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 790,
+      "checkedAt": "2026-05-19T04:59:46.924Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/platform",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 658,
+      "checkedAt": "2026-05-19T04:59:48.682Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/publishing",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 688,
+      "checkedAt": "2026-05-19T04:59:48.713Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/deployment",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 737,
+      "checkedAt": "2026-05-19T04:59:48.763Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/intelligence",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 687,
+      "checkedAt": "2026-05-19T04:59:48.713Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/workflow",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 685,
+      "checkedAt": "2026-05-19T04:59:48.712Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/geo",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 736,
+      "checkedAt": "2026-05-19T04:59:48.764Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/seo",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 843,
+      "checkedAt": "2026-05-19T04:59:48.872Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/vercel",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 802,
+      "checkedAt": "2026-05-19T04:59:48.833Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/debugging",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 710,
+      "checkedAt": "2026-05-19T04:59:49.583Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/ecosystem",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 710,
+      "checkedAt": "2026-05-19T04:59:49.583Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/roadmap",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 780,
+      "checkedAt": "2026-05-19T04:59:49.653Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/wordpress",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 828,
+      "checkedAt": "2026-05-19T04:59:49.702Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/case-study",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 738,
+      "checkedAt": "2026-05-19T04:59:49.612Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/github-pages",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 797,
+      "checkedAt": "2026-05-19T04:59:49.672Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/next.js",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1367,
+      "checkedAt": "2026-05-19T04:59:50.242Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/strategy",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 707,
+      "checkedAt": "2026-05-19T04:59:49.583Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/audit",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 749,
+      "checkedAt": "2026-05-19T04:59:50.991Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/content",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 709,
+      "checkedAt": "2026-05-19T04:59:50.953Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/documentation",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 668,
+      "checkedAt": "2026-05-19T04:59:50.913Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/launch",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 725,
+      "checkedAt": "2026-05-19T04:59:50.972Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/WordPress",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 704,
+      "checkedAt": "2026-05-19T04:59:50.952Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/claude-code",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 763,
+      "checkedAt": "2026-05-19T04:59:51.012Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/evidence",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 723,
+      "checkedAt": "2026-05-19T04:59:50.973Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/failures",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 761,
+      "checkedAt": "2026-05-19T04:59:51.012Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/firebase",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 700,
+      "checkedAt": "2026-05-19T04:59:51.712Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/gemini",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 717,
+      "checkedAt": "2026-05-19T04:59:51.731Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/quality",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 736,
+      "checkedAt": "2026-05-19T04:59:51.751Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/retrieval",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 803,
+      "checkedAt": "2026-05-19T04:59:51.821Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/analytics",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 713,
+      "checkedAt": "2026-05-19T04:59:51.732Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/automation",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 871,
+      "checkedAt": "2026-05-19T04:59:51.891Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/copy",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 731,
+      "checkedAt": "2026-05-19T04:59:51.752Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/CSS",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 731,
+      "checkedAt": "2026-05-19T04:59:51.754Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/integration",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 712,
+      "checkedAt": "2026-05-19T04:59:52.603Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/LiteSpeed",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 709,
+      "checkedAt": "2026-05-19T04:59:52.602Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/mdx",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 688,
+      "checkedAt": "2026-05-19T04:59:52.582Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/operations",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 685,
+      "checkedAt": "2026-05-19T04:59:52.581Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/patterns",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 745,
+      "checkedAt": "2026-05-19T04:59:52.642Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/positioning",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 703,
+      "checkedAt": "2026-05-19T04:59:52.601Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/react",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 813,
+      "checkedAt": "2026-05-19T04:59:52.712Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/REST API",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 762,
+      "checkedAt": "2026-05-19T04:59:52.662Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/tracks",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 699,
+      "checkedAt": "2026-05-19T04:59:53.412Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/typography",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 676,
+      "checkedAt": "2026-05-19T04:59:53.391Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/ux",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 744,
+      "checkedAt": "2026-05-19T04:59:53.461Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/vite",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 711,
+      "checkedAt": "2026-05-19T04:59:53.431Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/ai-native",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 711,
+      "checkedAt": "2026-05-19T04:59:53.432Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/ai-search",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 757,
+      "checkedAt": "2026-05-19T04:59:53.480Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/Astra",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 778,
+      "checkedAt": "2026-05-19T04:59:53.502Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/authority",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 754,
+      "checkedAt": "2026-05-19T04:59:53.479Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/cadence",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 657,
+      "checkedAt": "2026-05-19T04:59:54.159Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/Claude Code",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 654,
+      "checkedAt": "2026-05-19T04:59:54.158Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/cross-domain",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 705,
+      "checkedAt": "2026-05-19T04:59:54.211Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/curriculum",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 743,
+      "checkedAt": "2026-05-19T04:59:54.251Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/dns",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 761,
+      "checkedAt": "2026-05-19T04:59:54.270Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/edge-runtime",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 741,
+      "checkedAt": "2026-05-19T04:59:54.252Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/editorial",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 819,
+      "checkedAt": "2026-05-19T04:59:54.331Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/Elementor",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 906,
+      "checkedAt": "2026-05-19T04:59:54.420Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/entity",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 669,
+      "checkedAt": "2026-05-19T04:59:55.090Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/execution",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 899,
+      "checkedAt": "2026-05-19T04:59:55.321Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/ga4",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 895,
+      "checkedAt": "2026-05-19T04:59:55.319Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/google-search-console",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 898,
+      "checkedAt": "2026-05-19T04:59:55.323Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/indexing",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 896,
+      "checkedAt": "2026-05-19T04:59:55.322Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/knowledge-graph",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1193,
+      "checkedAt": "2026-05-19T04:59:55.620Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/memory",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 893,
+      "checkedAt": "2026-05-19T04:59:55.321Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/metadata",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 894,
+      "checkedAt": "2026-05-19T04:59:55.323Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/next-mdx-remote",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 698,
+      "checkedAt": "2026-05-19T04:59:56.319Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/observability",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 838,
+      "checkedAt": "2026-05-19T04:59:56.459Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/operational-memory",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 816,
+      "checkedAt": "2026-05-19T04:59:56.439Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/production",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 695,
+      "checkedAt": "2026-05-19T04:59:56.321Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/Python",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 693,
+      "checkedAt": "2026-05-19T04:59:56.320Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/razorpay",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 731,
+      "checkedAt": "2026-05-19T04:59:56.358Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/scamcheck",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 732,
+      "checkedAt": "2026-05-19T04:59:56.360Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/schema",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1149,
+      "checkedAt": "2026-05-19T04:59:56.778Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/search",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 800,
+      "checkedAt": "2026-05-19T04:59:57.578Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/trustseal",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 678,
+      "checkedAt": "2026-05-19T04:59:57.458Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/accessibility",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 725,
+      "checkedAt": "2026-05-19T04:59:57.507Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/ai",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 724,
+      "checkedAt": "2026-05-19T04:59:57.508Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/ai-assisted",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 792,
+      "checkedAt": "2026-05-19T04:59:57.578Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/ai-product",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 721,
+      "checkedAt": "2026-05-19T04:59:57.508Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/answerability",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 740,
+      "checkedAt": "2026-05-19T04:59:57.529Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/artifacts",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 758,
+      "checkedAt": "2026-05-19T04:59:57.548Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/authentication",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 689,
+      "checkedAt": "2026-05-19T04:59:58.267Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/boundaries",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 728,
+      "checkedAt": "2026-05-19T04:59:58.307Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/brand",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 668,
+      "checkedAt": "2026-05-19T04:59:58.248Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/build-pipeline",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 768,
+      "checkedAt": "2026-05-19T04:59:58.348Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/build-session",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 766,
+      "checkedAt": "2026-05-19T04:59:58.347Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/business-model",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 706,
+      "checkedAt": "2026-05-19T04:59:58.288Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/case-studies",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 765,
+      "checkedAt": "2026-05-19T04:59:58.347Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/checklist",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 706,
+      "checkedAt": "2026-05-19T04:59:58.288Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/checklists",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 688,
+      "checkedAt": "2026-05-19T04:59:59.036Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/ci-cd",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 687,
+      "checkedAt": "2026-05-19T04:59:59.036Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/claude",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 930,
+      "checkedAt": "2026-05-19T04:59:59.279Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/client-bundle",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 688,
+      "checkedAt": "2026-05-19T04:59:59.037Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/community",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 735,
+      "checkedAt": "2026-05-19T04:59:59.086Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/confidence",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 736,
+      "checkedAt": "2026-05-19T04:59:59.086Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/constitution",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 736,
+      "checkedAt": "2026-05-19T04:59:59.087Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/content-gaps",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 746,
+      "checkedAt": "2026-05-19T04:59:59.097Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/content-pipeline",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 750,
+      "checkedAt": "2026-05-19T05:00:00.029Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/content-strategy",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 795,
+      "checkedAt": "2026-05-19T05:00:00.077Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/content-velocity",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 744,
+      "checkedAt": "2026-05-19T05:00:00.027Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/context",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 701,
+      "checkedAt": "2026-05-19T04:59:59.986Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/credibility",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 702,
+      "checkedAt": "2026-05-19T04:59:59.987Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/dependency",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 721,
+      "checkedAt": "2026-05-19T05:00:00.007Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/design",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 741,
+      "checkedAt": "2026-05-19T05:00:00.028Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/education",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 759,
+      "checkedAt": "2026-05-19T05:00:00.047Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/entity-density",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 791,
+      "checkedAt": "2026-05-19T05:00:00.868Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/environment-variables",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 748,
+      "checkedAt": "2026-05-19T05:00:00.827Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/evidence-framework",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 726,
+      "checkedAt": "2026-05-19T05:00:00.807Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/evolution",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 764,
+      "checkedAt": "2026-05-19T05:00:00.846Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/execution-tracks",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 746,
+      "checkedAt": "2026-05-19T05:00:00.828Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/experiment",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 704,
+      "checkedAt": "2026-05-19T05:00:00.787Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/failure-archive",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 705,
+      "checkedAt": "2026-05-19T05:00:00.788Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/failure-memory",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 834,
+      "checkedAt": "2026-05-19T05:00:00.918Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/focus",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 678,
+      "checkedAt": "2026-05-19T05:00:01.597Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/framework",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 716,
+      "checkedAt": "2026-05-19T05:00:01.637Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/freshness",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 754,
+      "checkedAt": "2026-05-19T05:00:01.677Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/frontmatter",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 753,
+      "checkedAt": "2026-05-19T05:00:01.678Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/fs",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 709,
+      "checkedAt": "2026-05-19T05:00:01.636Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/GEO",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 708,
+      "checkedAt": "2026-05-19T05:00:01.637Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/geo-intelligence",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 819,
+      "checkedAt": "2026-05-19T05:00:01.750Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/global",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 815,
+      "checkedAt": "2026-05-19T05:00:01.748Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/implementation",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 727,
+      "checkedAt": "2026-05-19T05:00:02.478Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/internal-links",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 663,
+      "checkedAt": "2026-05-19T05:00:02.415Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/jsx",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 725,
+      "checkedAt": "2026-05-19T05:00:02.479Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/linking",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 720,
+      "checkedAt": "2026-05-19T05:00:02.476Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/media",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 818,
+      "checkedAt": "2026-05-19T05:00:02.575Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/metrics",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 780,
+      "checkedAt": "2026-05-19T05:00:02.538Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/milestones",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 756,
+      "checkedAt": "2026-05-19T05:00:02.515Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/module-boundary",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 776,
+      "checkedAt": "2026-05-19T05:00:02.537Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/monetization",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 682,
+      "checkedAt": "2026-05-19T05:00:03.257Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/navigation",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 759,
+      "checkedAt": "2026-05-19T05:00:03.337Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/noindex",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 737,
+      "checkedAt": "2026-05-19T05:00:03.317Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/operational",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 674,
+      "checkedAt": "2026-05-19T05:00:03.255Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/operator",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 753,
+      "checkedAt": "2026-05-19T05:00:03.336Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/parallel-agents",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 791,
+      "checkedAt": "2026-05-19T05:00:03.375Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/performance",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 752,
+      "checkedAt": "2026-05-19T05:00:03.338Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/platform-build",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 728,
+      "checkedAt": "2026-05-19T05:00:03.315Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/plausible",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 671,
+      "checkedAt": "2026-05-19T05:00:04.046Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/playbook",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 668,
+      "checkedAt": "2026-05-19T05:00:04.045Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/prevention",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 646,
+      "checkedAt": "2026-05-19T05:00:04.025Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/priority",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 745,
+      "checkedAt": "2026-05-19T05:00:04.126Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/projects",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 822,
+      "checkedAt": "2026-05-19T05:00:04.204Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/propagation",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 730,
+      "checkedAt": "2026-05-19T05:00:04.113Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/queue",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 727,
+      "checkedAt": "2026-05-19T05:00:04.112Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/recommendation",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 739,
+      "checkedAt": "2026-05-19T05:00:04.125Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/reference",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 691,
+      "checkedAt": "2026-05-19T05:00:04.895Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/refinement",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 708,
+      "checkedAt": "2026-05-19T05:00:04.915Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/research",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 708,
+      "checkedAt": "2026-05-19T05:00:04.916Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/rest-api",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 825,
+      "checkedAt": "2026-05-19T05:00:05.034Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/rollout",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 773,
+      "checkedAt": "2026-05-19T05:00:04.984Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/routing",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1131,
+      "checkedAt": "2026-05-19T05:00:05.344Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/semantic",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 702,
+      "checkedAt": "2026-05-19T05:00:04.915Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/session-management",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 799,
+      "checkedAt": "2026-05-19T05:00:05.014Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/site-health",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 715,
+      "checkedAt": "2026-05-19T05:00:06.059Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/social",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 678,
+      "checkedAt": "2026-05-19T05:00:06.023Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/spa",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 708,
+      "checkedAt": "2026-05-19T05:00:06.055Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/standards",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 709,
+      "checkedAt": "2026-05-19T05:00:06.058Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/structured-data",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 733,
+      "checkedAt": "2026-05-19T05:00:06.084Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/subdomain",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 754,
+      "checkedAt": "2026-05-19T05:00:06.105Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/subdomains",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 704,
+      "checkedAt": "2026-05-19T05:00:06.057Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/templates",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 752,
+      "checkedAt": "2026-05-19T05:00:06.107Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/tracking",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 888,
+      "checkedAt": "2026-05-19T05:00:06.995Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/UCSS",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 796,
+      "checkedAt": "2026-05-19T05:00:06.905Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/upgrade",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 712,
+      "checkedAt": "2026-05-19T05:00:06.823Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/velocity",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 791,
+      "checkedAt": "2026-05-19T05:00:06.904Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/verification",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 770,
+      "checkedAt": "2026-05-19T05:00:06.884Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/visibility",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 878,
+      "checkedAt": "2026-05-19T05:00:06.993Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/vision",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 790,
+      "checkedAt": "2026-05-19T05:00:06.906Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/workflows",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 765,
+      "checkedAt": "2026-05-19T05:00:06.883Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tags/yoast",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 717,
+      "checkedAt": "2026-05-19T05:00:07.712Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1105,
+      "checkedAt": "2026-05-19T05:00:08.102Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-business-zero-budget",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1193,
+      "checkedAt": "2026-05-19T05:00:08.192Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1190,
+      "checkedAt": "2026-05-19T05:00:08.191Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/geo-ai-search",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1119,
+      "checkedAt": "2026-05-19T05:00:08.123Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-automation-systems",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 968,
+      "checkedAt": "2026-05-19T05:00:07.973Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-content-distribution",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 745,
+      "checkedAt": "2026-05-19T05:00:07.752Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-for-non-developers",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 804,
+      "checkedAt": "2026-05-19T05:00:07.812Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/solo-ai-founder",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 670,
+      "checkedAt": "2026-05-19T05:00:08.862Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-freelancing",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 698,
+      "checkedAt": "2026-05-19T05:00:08.892Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-for-students",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 726,
+      "checkedAt": "2026-05-19T05:00:08.921Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-business-zero-budget/zero-budget-stack/choosing-your-product",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1274,
+      "checkedAt": "2026-05-19T05:00:09.471Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-business-zero-budget/zero-budget-stack/ai-tool-stack-budget",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1354,
+      "checkedAt": "2026-05-19T05:00:09.552Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-business-zero-budget/zero-budget-stack/free-tier-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1393,
+      "checkedAt": "2026-05-19T05:00:09.592Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-business-zero-budget/zero-budget-stack/claude-wordpress-workflow",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1171,
+      "checkedAt": "2026-05-19T05:00:09.371Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-business-zero-budget/zero-budget-stack/github-for-non-developers",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 850,
+      "checkedAt": "2026-05-19T05:00:09.051Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-business-zero-budget/zero-budget-stack/vercel-for-beginners",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 729,
+      "checkedAt": "2026-05-19T05:00:10.321Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-business-zero-budget/zero-budget-stack/google-search-console-setup",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 694,
+      "checkedAt": "2026-05-19T05:00:10.290Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-business-zero-budget/zero-budget-stack/google-analytics-data-thinking",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1373,
+      "checkedAt": "2026-05-19T05:00:10.972Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-business-zero-budget/zero-budget-stack/adsense-approval-reality",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1201,
+      "checkedAt": "2026-05-19T05:00:10.802Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-business-zero-budget/zero-budget-stack/avoid-tool-subscription-traps",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1418,
+      "checkedAt": "2026-05-19T05:00:11.021Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-business-zero-budget/zero-budget-stack/first-organic-traffic-system",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1457,
+      "checkedAt": "2026-05-19T05:00:11.061Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/foundations/choosing-your-ai-engineering-stack",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 735,
+      "checkedAt": "2026-05-19T05:00:10.341Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/foundations/dev-environment",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1365,
+      "checkedAt": "2026-05-19T05:00:10.973Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/foundations/claude-md-architecture",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1110,
+      "checkedAt": "2026-05-19T05:00:12.171Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/foundations/project-settings",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 948,
+      "checkedAt": "2026-05-19T05:00:12.010Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/foundations/first-agentic-task",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 828,
+      "checkedAt": "2026-05-19T05:00:11.891Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/prompt-engineering/production-prompt-anatomy",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1437,
+      "checkedAt": "2026-05-19T05:00:12.501Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/prompt-engineering/context-loading-strategies",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 787,
+      "checkedAt": "2026-05-19T05:00:11.851Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/prompt-engineering/task-decomposition",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 736,
+      "checkedAt": "2026-05-19T05:00:11.800Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/prompt-engineering/prompt-failure-patterns",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 845,
+      "checkedAt": "2026-05-19T05:00:11.910Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/github-workflows/git-operations",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1475,
+      "checkedAt": "2026-05-19T05:00:12.541Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/github-workflows/branch-strategy",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 781,
+      "checkedAt": "2026-05-19T05:00:13.322Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/github-workflows/bad-commit-recovery",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 746,
+      "checkedAt": "2026-05-19T05:00:13.289Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/vercel-deployment/deployment-pipeline",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 685,
+      "checkedAt": "2026-05-19T05:00:13.230Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/vercel-deployment/build-failure-diagnosis",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 1322,
+      "checkedAt": "2026-05-19T05:00:13.869Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/vercel-deployment/env-vars-secrets",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 950,
+      "checkedAt": "2026-05-19T05:00:13.499Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/vercel-deployment/rollback-strategies",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 850,
+      "checkedAt": "2026-05-19T05:00:13.400Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/wordpress-rest-api/wp-auth-patterns",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 786,
+      "checkedAt": "2026-05-19T05:00:13.338Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/wordpress-rest-api/content-patching-system",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 866,
+      "checkedAt": "2026-05-19T05:00:13.419Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/product-development/feature-planning-claude",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 709,
+      "checkedAt": "2026-05-19T05:00:14.578Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/debugging-recovery/debugging-methodology",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 748,
+      "checkedAt": "2026-05-19T05:00:14.619Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/debugging-recovery/reading-build-errors",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 867,
+      "checkedAt": "2026-05-19T05:00:14.739Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/claude-code-operator/scaling-systems/multi-agent-orchestration",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 751,
+      "checkedAt": "2026-05-19T05:00:14.624Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/geo-ai-search/ai-search-mechanics/geo-vs-seo",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 954,
+      "checkedAt": "2026-05-19T05:00:14.828Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/geo-ai-search/ai-search-mechanics/rag-pipeline",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 761,
+      "checkedAt": "2026-05-19T05:00:14.636Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/geo-ai-search/ai-search-mechanics/citation-signals",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 762,
+      "checkedAt": "2026-05-19T05:00:14.638Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-automation-systems/automation-architecture/pipeline-design",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 761,
+      "checkedAt": "2026-05-19T05:00:14.639Z"
+    },
+    {
+      "url": "https://lab.asquaresolution.com/tracks/ai-content-distribution/content-architecture/content-systems-thinking",
+      "status": 200,
+      "ok": true,
+      "latencyMs": 681,
+      "checkedAt": "2026-05-19T05:00:15.509Z"
+    }
+  ]
+}

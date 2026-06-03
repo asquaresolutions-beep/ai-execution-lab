@@ -1,0 +1,198 @@
+---
+title: "AI-Assisted Publishing System — How AI Execution Lab Publishes at Scale"
+description: "How the AI Execution Lab uses Claude Code to operate a high-velocity, evidence-based publishing system. Covers the workflow, the content pipeline, the evidence discipline, and the operational principles that separate this from generic AI content generation."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["claude-code", "publishing", "ai-assisted", "workflow", "mdx", "geo", "operational-evidence", "content"]
+status: published
+difficulty: intermediate
+section: operations
+evidence_images: []
+external_refs:
+  - "https://docs.anthropic.com/en/docs/claude-code"
+  - "https://lab.asquaresolution.com/tracks/claude-code-operator"
+---
+
+The AI Execution Lab publishes operational content at high velocity using Claude Code as the primary tool. In the build sprint from 2026-05-14 to 2026-05-19 (6 days), the platform went from 0 published items to 91 — an average of 15 items per day.
+
+This document describes how that system actually works: the MDX content pipeline, the Claude Code workflow, the evidence discipline that prevents the content from becoming generic AI output, and the operational principles that make the whole system sustainable.
+
+---
+
+## What This Is Not
+
+This is not a system for generating AI content at scale.
+
+The distinction is important. Generic AI content generation produces plausible, readable text about a topic. The AI Execution Lab's publishing system produces operational records of real engineering work — documented at the moment the work happens, with specific error messages, resolution times, version numbers, and measurable outcomes.
+
+Claude Code is the operational tool. The content comes from real work. The two are not interchangeable.
+
+An AI-generated post about "common Next.js deployment errors" has low operational value and low citation potential. A documented production failure — with the exact error `The Edge Runtime does not support Node.js 'crypto' module`, the fix, the 23-minute resolution time, and the environment context (Next.js 15.3.0, Vercel) — has high operational value because it is the thing that happened, not a description of a thing that might happen.
+
+---
+
+## The Pipeline Architecture
+
+```
+Real work (deployment, debugging, operations)
+  ↓
+Capture: error message + resolution + timing
+  ↓
+Claude Code: draft MDX file from operational context
+  ↓
+Review: verify facts, add frontmatter metadata
+  ↓
+Publish: push to repository → Vercel builds → live
+```
+
+Three inputs to the pipeline:
+1. **Execution context** — what was actually done (the error, the fix, the sequence)
+2. **Content template** — the MDX frontmatter schema and section structure
+3. **Claude Code** — writes the MDX file given the operational inputs
+
+The output is a published operational record. Not a blog post. Not a tutorial. A documented execution event.
+
+---
+
+## The Content Types
+
+The publishing system produces seven content types:
+
+| Type | Purpose | Key frontmatter | Section structure |
+|---|---|---|---|
+| Failure reports | Document production incidents | `severity`, `resolution_time`, `failure_type` | Error → Root cause → Fix → Timeline |
+| Execution logs | Daily/session operations journals | `log_type`, `duration`, `outcome` | Context → What was done → Blockers → Next actions |
+| Deployment journals | Release records | `log_type: deployment`, `outcome` | What changed → What failed → Verified state |
+| Docs | Concepts, architecture, definitions | `section`, `difficulty` | Definition → Components → Examples → Related |
+| Case studies | Build records for full systems | `impact` | Context → What was built → Failures → Outcomes |
+| Playbooks | Repeatable operational procedures | `goal`, `estimated_time` | Prerequisites → Steps with verification → Checklist |
+| Labs | Experiments with hypotheses | `hypothesis`, `result` | Setup → Observations → Conclusion |
+
+Each type has a specific structure. Claude Code uses the structure to generate the draft — but the operational inputs (what actually happened) must come from the engineer.
+
+---
+
+## Claude Code in the Workflow
+
+Claude Code is a terminal-based AI coding agent with file system access and persistent context across a session. In the Lab's publishing workflow, it handles:
+
+**Content generation:**
+- Given: error message, resolution, timing, environment
+- Output: complete MDX failure report with correct frontmatter
+- Review required: verify technical accuracy, confirm version numbers, add evidence links
+
+**Content structure:**
+- Given: a topic, its section type, and any notes
+- Output: MDX doc with correct heading hierarchy, frontmatter, and Related section
+- Review required: confirm the content reflects actual operational practice, not generalities
+
+**Cross-content linking:**
+- Given: a new content item
+- Output: suggestions for Related items in existing corpus
+- Review required: confirm all linked slugs exist
+
+**Frontmatter audits:**
+- Scan corpus for missing `evidence_images`, `external_refs`, `updated` fields
+- Surface items below the evidence threshold
+
+What Claude Code does NOT do in this workflow:
+- Generate content about things that didn't happen
+- Write "best practices" guides based on generic AI knowledge
+- Produce content that cannot be verified against real operational history
+
+---
+
+## The Evidence Discipline
+
+The publishing system has one quality gate: **does this document contain at least one verifiable operational event?**
+
+Verifiable operational events are things like:
+- A specific error message encountered in production
+- A resolution time measured from a real incident
+- A command run with its actual output
+- A before/after state with a curl command or screenshot
+- A version pinned to a specific date
+
+Content that passes this gate is operational evidence. Content that fails it is assertional documentation. The system publishes the first. The second goes back for revision.
+
+This is the discipline that separates the Lab from a content farm using AI tools. Content farms optimize for volume. The Lab optimizes for evidence density — the concentration of verifiable operational events per published item.
+
+At the May 2026 baseline:
+- 91 published items
+- 12 failure reports with 100% scoring coverage
+- Evidence density (items with `evidence_images` or `external_refs`): 3.4% — the primary open gap
+- Target: 40%+ of high-value sections with evidence within 30 days
+
+---
+
+## Velocity vs. Density Trade-off
+
+High velocity (15 items/day) and high evidence density are in tension.
+
+The build sprint prioritized velocity — getting the platform from 0 to operational. The result is a large corpus with low evidence density. Most items are structurally complete but lack the `evidence_images` or `external_refs` that make them maximally useful for GEO.
+
+The second phase — evidence density improvement — requires going back through the corpus and adding:
+- Screenshots of real UI states, terminal output, error messages
+- External references to tools, docs, and specifications cited
+- Before/after measurements where applicable
+
+This is 5-10 minutes per item. At 91 items, 10-15% of them need this work — roughly 5-7 hours of focused effort to reach 40%+ evidence coverage.
+
+The operational principle is: **velocity phase, then density phase**. Ship the corpus quickly, then enrich the most important items with evidence. Do not mix the phases — slowing down the velocity phase to add evidence to every item prevents the corpus from reaching critical mass.
+
+---
+
+## The MDX Content Schema
+
+All content in the Lab is `.mdx` files in `/content/[section]/[slug].mdx`. The content schema is TypeScript-validated via `ContentFrontmatter` in `lib/content.ts`.
+
+Relevant fields for the publishing system:
+
+```typescript
+interface ContentFrontmatter {
+  title:          string
+  description:    string
+  date:           string     // when the work happened
+  updated?:       string     // when the doc was last updated
+  tags?:          string[]
+  status?:        'draft' | 'published' | 'archived'
+  // Section-specific
+  severity?:      'low' | 'medium' | 'high' | 'critical'    // failures
+  resolution_time?: string                                    // failures
+  log_type?:      'deployment' | 'debug' | 'operations'      // logs
+  duration?:      string                                      // logs
+  outcome?:       string                                      // logs
+  impact?:        string                                      // case studies
+  // Evidence fields
+  evidence_images?: string[]
+  external_refs?:   string[]
+}
+```
+
+The `outcome` field on logs and `impact` field on case studies are the single most important fields for GEO. They force the author to state the operational result before writing the prose — and they give AI retrieval systems a direct answer to "what was the outcome" without requiring full-text parsing.
+
+---
+
+## Scaling the System
+
+The current system runs in a single session — one Claude Code agent, one engineer, one repository. As the corpus grows, the system scales by:
+
+1. **Session focus** — each session targets one content type or one operational area. All failures from a debugging session get documented in one sitting.
+
+2. **Template reuse** — the frontmatter schema handles structure. Claude Code handles prose. The engineer handles facts.
+
+3. **Corpus feedback** — the operational signals layer (`/ops/signals`) surfaces what the corpus is missing. Rather than guessing what to write next, the platform tells you: `weak_geo_cluster`, `evidence_gap`, `underdeveloped_track`.
+
+4. **Evidence accumulation** — screenshots and terminal output captured during work are stored in `/public/evidence/` and referenced in frontmatter. The system is additive — evidence can be added to published items at any time.
+
+The ceiling on this system is operational execution rate — how much real work happens. The publishing system can document anything, but it cannot generate operational evidence that doesn't exist. The moat comes from the execution, not the documentation tooling.
+
+---
+
+## Related
+
+- [Claude Code Operator Track](/tracks/claude-code-operator) — full documentation of Claude Code workflows
+- [What Is Operational Evidence](/docs/what-is-operational-evidence) — the evidence standard
+- [Execution Density](/docs/what-is-execution-density) — why density matters more than volume
+- [Content Quality Standards](/docs/content-quality-standards)
+- [Platform Metrics Baseline](/docs/platform-metrics-baseline-2026-05) — velocity numbers at baseline

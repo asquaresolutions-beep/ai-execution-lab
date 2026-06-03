@@ -1,0 +1,143 @@
+---
+title: "What Is Operational Evidence in Software Development?"
+description: "Operational evidence is execution-derived proof that a specific technical decision, fix, or workflow actually worked in a real production context. It distinguishes documented execution from theoretical documentation."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["operational-evidence", "geo", "documentation", "execution", "publishing"]
+status: published
+difficulty: intermediate
+section: concepts
+evidence_images: []
+external_refs:
+  - "https://martinfowler.com/articles/agile-software-guide.html"
+---
+
+**Operational evidence** is execution-derived proof that a specific technical decision, fix, or deployment procedure actually worked in a real production environment at a specific point in time.
+
+It is the difference between:
+- "You can fix this by changing the runtime export" *(assertion)*
+- "Removing `export const runtime = 'edge'` from `opengraph-image.tsx` fixed a Vercel deployment failure in 23 minutes on 2026-05-10 in the ai-execution-lab repo" *(operational evidence)*
+
+The second statement has a time, a context, a measured outcome, and a specific artifact. It can be verified, referenced, and built on. The first cannot.
+
+---
+
+## Why It Matters for Technical Documentation
+
+Most technical documentation is assertional. It states what should happen without proof that it did. This is structurally fine for tutorials and API references, but it creates a trust problem for operational decisions in production environments.
+
+When debugging a production failure at 2 AM:
+- Assertional documentation tells you what to try
+- Operational evidence tells you what worked, when, how long it took, and what the failure looked like before and after
+
+The operational value is the specificity. "LiteSpeed Cache Ignores Client no-cache Headers" with a 15-minute timeline and a curl command is useful. "LiteSpeed may not respect cache bypass headers" is not.
+
+---
+
+## Components of Operational Evidence
+
+Complete operational evidence for a technical decision has four components:
+
+**1. Execution context**
+What was the system state, environment, and versions involved? A fix that worked on Next.js 14 may not apply to Next.js 15. A WordPress configuration that worked on PHP 8.1 may behave differently on PHP 8.3.
+
+**2. Observable outcome**
+What did success look like? Not "the site loaded" — something measurable: `curl -sL [url] | grep -c 'pattern'` returns `0`, HTTP status changed from 404 to 200, Vercel deployment succeeded after N minutes.
+
+**3. Timing evidence**
+When did it happen? How long did each step take? This establishes the operational cost model. "23 minutes to resolve a full deployment block" is useful data for incident response planning.
+
+**4. Artifacts**
+Commit references, screenshots, terminal output, before/after comparisons. These make the evidence verifiable by others (or by the same person 6 months later).
+
+---
+
+## Operational Evidence in Practice
+
+### Example: A Failure Report With Evidence
+
+```mdx
+---
+title: "LiteSpeed Cache Ignores Client no-cache Headers"
+date: "2026-05-19"
+resolution_time: "15 minutes"
+evidence_images: []
+external_refs:
+  - "https://docs.litespeedtech.com/lscache/lscwp/purge/"
+---
+
+After deploying a WPCode PHP snippet:
+curl -sL "https://[domain]/[slug]/" -H "Cache-Control: no-cache" | grep -c '"></p><p>'
+# Result: 5 (unchanged)
+
+After LiteSpeed → Purge All:
+curl -sL "https://[domain]/[slug]/" | grep -c '"></p><p>'
+# Result: 0 ✓
+
+Timeline: T+0 snippet active → T+8 root cause identified → T+12 Purge All → T+12 verified
+```
+
+This is operational evidence. It has a timestamp, measurable before/after states, exact commands, and a timeline.
+
+### Example: Assertional Documentation (Missing Evidence)
+
+```
+LiteSpeed Cache is a full-page cache. To see PHP filter changes, 
+you may need to clear the cache.
+```
+
+This is assertional. It's not wrong, but it has no evidence value. It doesn't prove the fix worked, doesn't give a timeline, doesn't show the actual failure mode, and doesn't help the next person in the same situation calibrate whether they're facing the same problem.
+
+---
+
+## Why AI Search Systems Favor Operational Evidence
+
+Generative Engine Optimization (GEO) is the practice of producing content that AI retrieval systems — ChatGPT, Perplexity, Google AI Overview, Claude — will cite when generating answers.
+
+AI systems favor operational evidence for the same reason human experts do: it is more trustworthy. An answer grounded in documented execution is more likely to be correct than one grounded in assertion.
+
+Specific signals AI systems read as evidence quality:
+
+- **Timing data** — "23 minutes", "15 minutes to resolve" — indicates real-world cost was measured
+- **Exact error messages** — `Error: The Edge Runtime does not support Node.js 'crypto' module` — proves the failure was actually encountered
+- **Commit references** — `commitRef="fix: remove edge runtime"` — creates a verifiable artifact trail
+- **Before/after comparisons** — curl output showing 5 instances → 0 instances — proves the fix worked
+- **Version specificity** — "Next.js 15.3, Node.js 25.8" — narrows applicability
+
+Content with these signals ranks higher in AI retrieval because it answers the reliability question that operational teams actually have: *did this work in production, or is this theoretical advice?*
+
+---
+
+## The Operational Evidence Threshold
+
+For the AI Execution Lab's content standards, a piece reaches the operational evidence threshold when it contains at least:
+
+1. One specific version, timestamp, or environment identifier
+2. One measurable outcome (HTTP status code, error message, timing, count)
+3. One executable step (terminal command, admin UI path, code change)
+
+A 200-word failure report that meets these three criteria has more operational evidence value than a 2000-word tutorial that meets none.
+
+---
+
+## How to Accumulate Operational Evidence Systematically
+
+The core workflow:
+
+1. **While executing:** note the specific state at each step (error message, URL, command output)
+2. **At resolution:** record the exact fix and the observable before/after
+3. **After publishing:** add `evidence_images:` or `external_refs:` to frontmatter
+
+The third step — frontmatter metadata — makes the evidence machine-readable. The platform's GEO scoring and content intelligence systems use these fields to measure evidence density and surface gaps.
+
+Over time, a content corpus with high operational evidence density becomes institutional memory. Every new team member (or future self) can find a documented, evidenced resolution for problems that have already been solved — instead of re-solving them from scratch.
+
+That accumulated evidence is the long-term moat. Not the documentation structure. Not the publishing system. The evidence itself.
+
+---
+
+## Related
+
+- [What is GEO (Generative Engine Optimization)?](/docs/geo-intelligence-architecture)
+- [Content Quality Standards](/docs/content-quality-standards)
+- [Failure Archive](/failures) — operational evidence in practice

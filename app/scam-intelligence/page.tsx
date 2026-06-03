@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { INTEL_PAGES } from '@/lib/scam-intel/intel-pages'
 import { TrendingIsland } from '@/components/scam-intel/trending-island'
+import { AdSlot } from '@/components/ads/ad-slot'
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 
@@ -41,6 +42,8 @@ export default function ScamIntelligenceIndex() {
       </ul>
 
       <TrendingIsland />
+
+      <AdSlot id="intel-index" format="horizontal" />
 
       <section className="mt-10 text-sm text-zinc-400">
         <h2 className="text-base font-semibold text-zinc-200">Related</h2>

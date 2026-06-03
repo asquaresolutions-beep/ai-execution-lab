@@ -1,0 +1,387 @@
+---
+title: "WordPress Homepage Blocks — Production HTML (Gutenberg)"
+description: "Production-ready Gutenberg block HTML for asquaresolution.com homepage. Copy-paste into the WordPress block editor (Code Editor view). Includes AI Execution Lab section, How We Build block, ecosystem architecture, internal links, and CTA."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["wordpress", "gutenberg", "homepage", "ecosystem", "integration", "ops"]
+status: published
+difficulty: beginner
+section: operations
+evidence_images: []
+external_refs:
+  - "https://developer.wordpress.org/block-editor/reference-guides/blocks/"
+---
+
+Production HTML for five homepage sections on `asquaresolution.com`. Each section is self-contained Gutenberg block markup — paste directly into **Edit Page → Options (⋮) → Code Editor** view.
+
+Add sections after the hero/intro block and before the footer. Recommended order:
+
+1. AI Execution Lab featured section
+2. "How We Build" operational block
+3. Ecosystem architecture (three products)
+4. Operational authority CTA
+5. Internal links strip
+
+---
+
+## Paste Instructions
+
+1. Open `asquaresolution.com/wp-admin/post.php?post=[homepage-id]&action=edit`
+2. Top-right menu → **Options (⋮)** → **Code Editor** (or press `Ctrl+Shift+Alt+M`)
+3. Find the insertion point (after hero block, before footer)
+4. Paste the section HTML
+5. Switch back to Visual Editor to confirm layout
+6. LiteSpeed → Purge All
+
+---
+
+## Section 1 — AI Execution Lab Featured Section
+
+```html
+<!-- wp:group {"tagName":"section","style":{"spacing":{"padding":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|60"}}},"backgroundColor":"base-2","className":"ael-featured-section"} -->
+<section class="wp-block-group has-base-2-background-color has-background ael-featured-section" style="padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--60)">
+
+  <!-- wp:group {"layout":{"type":"constrained","contentSize":"760px"}} -->
+  <div class="wp-block-group">
+
+    <!-- wp:heading {"level":2,"style":{"typography":{"fontStyle":"normal","fontWeight":"700","fontSize":"1.75rem"}},"textColor":"contrast"} -->
+    <h2 class="wp-block-heading has-contrast-color has-text-color" style="font-style:normal;font-weight:700;font-size:1.75rem">The Work, Made Public</h2>
+    <!-- /wp:heading -->
+
+    <!-- wp:paragraph {"style":{"typography":{"fontSize":"1.0625rem","lineHeight":"1.7"}},"textColor":"contrast-2"} -->
+    <p class="has-contrast-2-color has-text-color" style="font-size:1.0625rem;line-height:1.7">AI Execution Lab is where we document what we actually build — the systems, the failures, the operational decisions, and the workflows that run behind our products and client work.</p>
+    <!-- /wp:paragraph -->
+
+    <!-- wp:paragraph {"style":{"typography":{"fontSize":"1.0625rem","lineHeight":"1.7"}},"textColor":"contrast-2"} -->
+    <p class="has-contrast-2-color has-text-color" style="font-size:1.0625rem;line-height:1.7">It is not a tutorial site. It is a public record of a real AI operations practice: how we use Claude Code to build production systems, how we engineer content for AI-search visibility, how we run automation pipelines without breaking things.</p>
+    <!-- /wp:paragraph -->
+
+    <!-- wp:paragraph {"style":{"typography":{"fontSize":"1.0625rem","lineHeight":"1.7"}},"textColor":"contrast-2"} -->
+    <p class="has-contrast-2-color has-text-color" style="font-size:1.0625rem;line-height:1.7">Everything on the platform is built first. Documented second.</p>
+    <!-- /wp:paragraph -->
+
+    <!-- wp:spacer {"height":"16px"} -->
+    <div style="height:16px" aria-hidden="true" class="wp-block-spacer"></div>
+    <!-- /wp:spacer -->
+
+    <!-- wp:group {"layout":{"type":"flex","flexWrap":"wrap","justifyContent":"left"},"style":{"spacing":{"blockGap":"12px"}}} -->
+    <div class="wp-block-group">
+
+      <!-- wp:paragraph -->
+      <p><a href="https://lab.asquaresolution.com" target="_blank" rel="noopener noreferrer" style="text-decoration:underline;text-underline-offset:3px;">Read the Lab →</a></p>
+      <!-- /wp:paragraph -->
+
+      <!-- wp:paragraph {"textColor":"contrast-3"} -->
+      <p class="has-contrast-3-color has-text-color"><a href="https://lab.asquaresolution.com/failures" target="_blank" rel="noopener noreferrer" style="text-decoration:none;color:inherit;">Failure archive</a> · <a href="https://lab.asquaresolution.com/playbooks" target="_blank" rel="noopener noreferrer" style="text-decoration:none;color:inherit;">Playbooks</a> · <a href="https://lab.asquaresolution.com/tracks" target="_blank" rel="noopener noreferrer" style="text-decoration:none;color:inherit;">Execution tracks</a></p>
+      <!-- /wp:paragraph -->
+
+    </div>
+    <!-- /wp:group -->
+
+  </div>
+  <!-- /wp:group -->
+
+</section>
+<!-- /wp:group -->
+```
+
+---
+
+## Section 2 — How We Build (Operational Block)
+
+```html
+<!-- wp:group {"tagName":"section","style":{"spacing":{"padding":{"top":"var:preset|spacing|50","bottom":"var:preset|spacing|50"}}},"className":"how-we-build-section"} -->
+<section class="wp-block-group how-we-build-section" style="padding-top:var(--wp--preset--spacing--50);padding-bottom:var(--wp--preset--spacing--50)">
+
+  <!-- wp:group {"layout":{"type":"constrained","contentSize":"760px"}} -->
+  <div class="wp-block-group">
+
+    <!-- wp:heading {"level":2,"style":{"typography":{"fontStyle":"normal","fontWeight":"700","fontSize":"1.5rem"}}} -->
+    <h2 class="wp-block-heading" style="font-style:normal;font-weight:700;font-size:1.5rem">How We Build</h2>
+    <!-- /wp:heading -->
+
+    <!-- wp:paragraph {"style":{"typography":{"lineHeight":"1.7"}},"textColor":"contrast-2"} -->
+    <p class="has-contrast-2-color has-text-color" style="line-height:1.7">Every system we build follows the same operational discipline: ship to production, observe what breaks, document the resolution, then systematize the fix. Not a methodology — a practice.</p>
+    <!-- /wp:paragraph -->
+
+    <!-- wp:list {"style":{"spacing":{"padding":{"left":"1.25rem"}}},"textColor":"contrast-2"} -->
+    <ul class="has-contrast-2-color has-text-color wp-block-list" style="padding-left:1.25rem">
+      <!-- wp:list-item -->
+      <li>Production-first: we deploy before we document</li>
+      <!-- /wp:list-item -->
+      <!-- wp:list-item -->
+      <li>Failure-indexed: every production incident is logged with resolution time and root cause</li>
+      <!-- /wp:list-item -->
+      <!-- wp:list-item -->
+      <li>Evidence-backed: documentation includes terminal output, commit references, and before/after states — not assertions</li>
+      <!-- /wp:list-item -->
+      <!-- wp:list-item -->
+      <li>Claude Code-operated: AI-assisted workflows that compound over time — not one-off prompting sessions</li>
+      <!-- /wp:list-item -->
+    </ul>
+    <!-- /wp:list -->
+
+    <!-- wp:spacer {"height":"12px"} -->
+    <div style="height:12px" aria-hidden="true" class="wp-block-spacer"></div>
+    <!-- /wp:spacer -->
+
+    <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem"}},"textColor":"contrast-3"} -->
+    <p class="has-contrast-3-color has-text-color" style="font-size:0.9375rem">The full methodology is documented at <a href="https://lab.asquaresolution.com/start-here" target="_blank" rel="noopener noreferrer">AI Execution Lab → Start Here</a>.</p>
+    <!-- /wp:paragraph -->
+
+  </div>
+  <!-- /wp:group -->
+
+</section>
+<!-- /wp:group -->
+```
+
+---
+
+## Section 3 — Ecosystem Architecture (Three Properties)
+
+```html
+<!-- wp:group {"tagName":"section","style":{"spacing":{"padding":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|60"}}},"backgroundColor":"base-2","className":"ecosystem-section"} -->
+<section class="wp-block-group has-base-2-background-color has-background ecosystem-section" style="padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--60)">
+
+  <!-- wp:group {"layout":{"type":"constrained","contentSize":"900px"}} -->
+  <div class="wp-block-group">
+
+    <!-- wp:heading {"level":2,"style":{"typography":{"fontStyle":"normal","fontWeight":"700","fontSize":"1.5rem"}}} -->
+    <h2 class="wp-block-heading" style="font-style:normal;font-weight:700;font-size:1.5rem">What We Build and Run</h2>
+    <!-- /wp:heading -->
+
+    <!-- wp:paragraph {"textColor":"contrast-2"} -->
+    <p class="has-contrast-2-color has-text-color">Three production AI systems, built and operated by the same team.</p>
+    <!-- /wp:paragraph -->
+
+    <!-- wp:spacer {"height":"24px"} -->
+    <div style="height:24px" aria-hidden="true" class="wp-block-spacer"></div>
+    <!-- /wp:spacer -->
+
+    <!-- wp:columns {"isStackedOnMobile":true,"style":{"spacing":{"blockGap":{"top":"32px","left":"32px"}}}} -->
+    <div class="wp-block-columns is-layout-flex wp-container-core-columns">
+
+      <!-- wp:column -->
+      <div class="wp-block-column">
+        <!-- wp:heading {"level":3,"style":{"typography":{"fontSize":"1.0625rem","fontWeight":"600"}}} -->
+        <h3 class="wp-block-heading" style="font-size:1.0625rem;font-weight:600">AI Execution Lab</h3>
+        <!-- /wp:heading -->
+        <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem","lineHeight":"1.6"}},"textColor":"contrast-2"} -->
+        <p class="has-contrast-2-color has-text-color" style="font-size:0.9375rem;line-height:1.6">Our public engineering journal — production failures, proven playbooks, deployment workflows, and the full Claude Code operator track. Built from real daily AI engineering work.</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem"}}} -->
+        <p style="font-size:0.9375rem"><a href="https://lab.asquaresolution.com" target="_blank" rel="noopener noreferrer">lab.asquaresolution.com →</a></p>
+        <!-- /wp:paragraph -->
+      </div>
+      <!-- /wp:column -->
+
+      <!-- wp:column -->
+      <div class="wp-block-column">
+        <!-- wp:heading {"level":3,"style":{"typography":{"fontSize":"1.0625rem","fontWeight":"600"}}} -->
+        <h3 class="wp-block-heading" style="font-size:1.0625rem;font-weight:600">TrustSeal</h3>
+        <!-- /wp:heading -->
+        <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem","lineHeight":"1.6"}},"textColor":"contrast-2"} -->
+        <p class="has-contrast-2-color has-text-color" style="font-size:0.9375rem;line-height:1.6">AI-powered trust verification for websites and businesses. Assesses credibility signals, fact-checks claims, and issues a verifiable trust badge for businesses that want to demonstrate legitimacy.</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem"}}} -->
+        <p style="font-size:0.9375rem"><a href="https://trustseal.asquaresolution.com" target="_blank" rel="noopener noreferrer">trustseal.asquaresolution.com →</a></p>
+        <!-- /wp:paragraph -->
+      </div>
+      <!-- /wp:column -->
+
+      <!-- wp:column -->
+      <div class="wp-block-column">
+        <!-- wp:heading {"level":3,"style":{"typography":{"fontSize":"1.0625rem","fontWeight":"600"}}} -->
+        <h3 class="wp-block-heading" style="font-size:1.0625rem;font-weight:600">ScamCheck</h3>
+        <!-- /wp:heading -->
+        <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem","lineHeight":"1.6"}},"textColor":"contrast-2"} -->
+        <p class="has-contrast-2-color has-text-color" style="font-size:0.9375rem;line-height:1.6">AI scam detection tool. Check any URL, business, or offer for scam signals before engaging — AI analysis of domain age, content, contact information, and behavioral patterns.</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem"}}} -->
+        <p style="font-size:0.9375rem"><a href="https://scamcheck.asquaresolution.com" target="_blank" rel="noopener noreferrer">scamcheck.asquaresolution.com →</a></p>
+        <!-- /wp:paragraph -->
+      </div>
+      <!-- /wp:column -->
+
+    </div>
+    <!-- /wp:columns -->
+
+  </div>
+  <!-- /wp:group -->
+
+</section>
+<!-- /wp:group -->
+```
+
+---
+
+## Section 4 — Operational Authority CTA
+
+```html
+<!-- wp:group {"tagName":"section","style":{"spacing":{"padding":{"top":"var:preset|spacing|50","bottom":"var:preset|spacing|50"}}},"className":"authority-cta-section"} -->
+<section class="wp-block-group authority-cta-section" style="padding-top:var(--wp--preset--spacing--50);padding-bottom:var(--wp--preset--spacing--50)">
+
+  <!-- wp:group {"layout":{"type":"constrained","contentSize":"720px"}} -->
+  <div class="wp-block-group">
+
+    <!-- wp:heading {"level":2,"textAlign":"left","style":{"typography":{"fontStyle":"normal","fontWeight":"700","fontSize":"1.375rem"}}} -->
+    <h2 class="wp-block-heading has-text-align-left" style="font-style:normal;font-weight:700;font-size:1.375rem">If you're evaluating whether we know what we're doing</h2>
+    <!-- /wp:heading -->
+
+    <!-- wp:paragraph {"style":{"typography":{"lineHeight":"1.7"}},"textColor":"contrast-2"} -->
+    <p class="has-contrast-2-color has-text-color" style="line-height:1.7">The answer is at AI Execution Lab. Two years of production engineering work, documented in public: what we built, what broke, how long things took, and what the operational cost was. Not a portfolio. An engineering record.</p>
+    <!-- /wp:paragraph -->
+
+    <!-- wp:spacer {"height":"8px"} -->
+    <div style="height:8px" aria-hidden="true" class="wp-block-spacer"></div>
+    <!-- /wp:spacer -->
+
+    <!-- wp:group {"layout":{"type":"flex","flexWrap":"wrap","justifyContent":"left"},"style":{"spacing":{"blockGap":"var:preset|spacing|30"}}} -->
+    <div class="wp-block-group">
+
+      <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem"}}} -->
+      <p style="font-size:0.9375rem"><a href="https://lab.asquaresolution.com/start-here" target="_blank" rel="noopener noreferrer"><strong>Start here →</strong></a></p>
+      <!-- /wp:paragraph -->
+
+      <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem"}},"textColor":"contrast-3"} -->
+      <p class="has-contrast-3-color has-text-color" style="font-size:0.9375rem">or browse: <a href="https://lab.asquaresolution.com/failures" target="_blank" rel="noopener noreferrer">failure archive</a> · <a href="https://lab.asquaresolution.com/playbooks" target="_blank" rel="noopener noreferrer">playbooks</a> · <a href="https://lab.asquaresolution.com/tracks" target="_blank" rel="noopener noreferrer">execution tracks</a></p>
+      <!-- /wp:paragraph -->
+
+    </div>
+    <!-- /wp:group -->
+
+  </div>
+  <!-- /wp:group -->
+
+</section>
+<!-- /wp:group -->
+```
+
+---
+
+## Section 5 — Internal Links Strip (Footer of Main Content)
+
+A compact strip linking to the five key Lab sections. Add just before the page footer or at the bottom of the content column.
+
+```html
+<!-- wp:group {"style":{"spacing":{"padding":{"top":"24px","bottom":"24px"},"margin":{"top":"32px"}},"border":{"top":{"color":"#e0e0e0","width":"1px"}}},"className":"internal-links-strip"} -->
+<div class="wp-block-group internal-links-strip" style="padding-top:24px;padding-bottom:24px;margin-top:32px;border-top:1px solid #e0e0e0">
+
+  <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.8125rem"}},"textColor":"contrast-3"} -->
+  <p class="has-contrast-3-color has-text-color" style="font-size:0.8125rem">
+    <strong>AI Execution Lab:</strong> 
+    &nbsp;<a href="https://lab.asquaresolution.com/start-here" target="_blank" rel="noopener noreferrer">Start Here</a>
+    &nbsp;·&nbsp;<a href="https://lab.asquaresolution.com/tracks" target="_blank" rel="noopener noreferrer">Execution Tracks</a>
+    &nbsp;·&nbsp;<a href="https://lab.asquaresolution.com/failures" target="_blank" rel="noopener noreferrer">Failure Archive</a>
+    &nbsp;·&nbsp;<a href="https://lab.asquaresolution.com/playbooks" target="_blank" rel="noopener noreferrer">Playbooks</a>
+    &nbsp;·&nbsp;<a href="https://lab.asquaresolution.com/ops/seo" target="_blank" rel="noopener noreferrer">SEO Operations</a>
+  </p>
+  <!-- /wp:paragraph -->
+
+</div>
+<!-- /wp:group -->
+```
+
+---
+
+## Elementor — Block Equivalents
+
+If the homepage uses Elementor instead of Gutenberg, the same sections map as follows:
+
+### Section 1: AI Execution Lab Featured
+
+**Elementor structure:**
+```
+Section widget → Full width, background: base-2 (off-white or light grey)
+  Inner Section → Max width: 760px, centered
+    Heading widget    → "The Work, Made Public" — H2, semibold
+    Text Editor widget → [paragraph 1]
+    Text Editor widget → [paragraph 2]
+    Text Editor widget → [paragraph 3]
+    Divider widget    → 16px spacer
+    Text Editor widget → Links: "Read the Lab →" + "Failure archive · Playbooks · Execution tracks"
+```
+
+**Elementor link settings:**
+- "Read the Lab →" → URL: `https://lab.asquaresolution.com` → Open in new tab: ON → Custom attribute: `rel=noopener`
+- Anchor text for inline links should match exactly as shown
+
+### Section 2: How We Build
+
+```
+Section widget → Full width
+  Inner Section → Max width: 760px
+    Heading widget    → "How We Build" — H2
+    Text Editor widget → [opening paragraph]
+    Icon List widget  → 4 list items (use text list or bullet list widget)
+    Text Editor widget → [Lab link sentence]
+```
+
+### Section 3: Ecosystem Architecture
+
+```
+Section widget → Full width, background: base-2
+  Inner Section → Max width: 900px
+    Heading widget → "What We Build and Run"
+    Text Editor   → [subtitle]
+    Inner Section → 3-column layout
+      Column 1: Heading H3 "AI Execution Lab" + Text + Link
+      Column 2: Heading H3 "TrustSeal" + Text + Link
+      Column 3: Heading H3 "ScamCheck" + Text + Link
+```
+
+**Column settings:** Equal width (33% each), stack on mobile ON.
+
+---
+
+## CTA Variants
+
+Three versions of the primary CTA. Use whichever fits the section tone:
+
+**Variant A — Direct (default):**
+```
+Read the Lab →
+lab.asquaresolution.com
+```
+
+**Variant B — Evaluative (for services/about pages):**
+```
+If you're evaluating our work: the Lab is the answer.
+→ lab.asquaresolution.com
+```
+
+**Variant C — Specific (for blog posts on AI/SEO topics):**
+```
+Full operational detail for this is at AI Execution Lab.
+→ [specific section URL]
+```
+
+---
+
+## Anchor Text Reference
+
+Use these exact anchor texts when linking to Lab sections from WordPress posts or pages. Consistency improves entity recognition in AI search systems.
+
+| Destination | Primary anchor text | Secondary variant |
+|---|---|---|
+| Lab homepage | "AI Execution Lab" | "our engineering journal" |
+| /start-here | "start here" | "getting started guide" |
+| /tracks | "execution tracks" | "learning tracks" |
+| /failures | "failure archive" | "production failure log" |
+| /playbooks | "operational playbooks" | "deployment playbooks" |
+| /case-studies | "engineering case studies" | "case studies" |
+| /docs | "engineering docs" | "technical documentation" |
+| /ops/seo | "SEO operations dashboard" | "search operations" |
+
+Never: "click here", "read more", "learn more" as standalone anchor text.
+
+---
+
+## Post-Implementation Checklist
+
+- [ ] LiteSpeed → Purge All after homepage save
+- [ ] Verify all 5 Lab links open correctly in new tab
+- [ ] Check mobile layout (stack on mobile for 3-column)
+- [ ] Verify page load time didn't regress (no new scripts added)
+- [ ] Confirm GSC sees homepage as updated (submit URL inspection in GSC)

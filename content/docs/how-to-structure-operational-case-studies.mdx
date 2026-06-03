@@ -1,0 +1,205 @@
+---
+title: "How to Structure Operational Case Studies"
+description: "Operational case studies are engineering records — not success summaries. This document defines the exact structure, frontmatter schema, evidence requirements, and narrative pattern used in the AI Execution Lab case study archive."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["case-studies", "operational-evidence", "documentation", "publishing", "geo", "structure"]
+status: published
+difficulty: intermediate
+section: concepts
+evidence_images: []
+external_refs:
+  - "https://lab.asquaresolution.com/case-studies"
+---
+
+An operational case study is an engineering record. It answers the question: *what did we build, what did we actually encounter, and what was the operational outcome?*
+
+It is not a success story. It is not a portfolio piece. A case study without failure data, timeline information, and measurable outcomes is marketing copy — it has low operational value and low citation potential in AI search systems.
+
+This document defines the structure used in the AI Execution Lab [case study archive](/case-studies). Every case study here follows this structure. It is not optional — the structure is what makes the case study operationally useful rather than narrative decoration.
+
+---
+
+## The Core Distinction
+
+**Marketing case study:** "We built a high-performance AI tool that delivered exceptional results and exceeded client expectations."
+
+**Operational case study:** "We built TrustSeal — a Firebase Auth + Razorpay subscription + Gemini AI assessment SPA — in 6 weeks. The Razorpay integration required 3 failed deployments before resolving a webhook signature verification issue. The Firebase Auth session persistence failed on iOS Safari in private mode. Both are documented. The tool is live at trustseal.asquaresolution.com."
+
+The second version is an operational case study. The first is not.
+
+---
+
+## Frontmatter Schema
+
+```yaml
+---
+title: "[System Name] — [What Was Built or Solved]"
+description: "One paragraph: what was built, what stack, what the key outcome was."
+date: "YYYY-MM-DD"          # when the work was done (not when the doc was written)
+updated: "YYYY-MM-DD"       # when the case study was last updated
+tags: [relevant operational tags]
+status: published
+impact: "one sentence: what changed as a result"
+evidence_images:            # screenshots, terminal output, before/after
+  - "/evidence/[filename].png"
+external_refs:              # tools, libraries, docs referenced
+  - "https://..."
+---
+```
+
+The `impact` field is required. It forces the author to state the operational outcome in one sentence before writing any prose. If you cannot write the impact sentence, the case study is not ready to publish.
+
+The `evidence_images` and `external_refs` fields are what make the case study machine-readable for GEO scoring. Even one screenshot or one external reference raises citation potential significantly.
+
+---
+
+## Section Structure
+
+Every operational case study has five sections, in this order:
+
+### 1. Context and Constraint
+
+What was the situation before the work started? What was the constraint — time, budget, existing system, prior decision?
+
+This section is brief (100–200 words). It establishes why the work was done, not what was done. The reader should understand the problem before reading the solution.
+
+**What to include:**
+- Date range of the work
+- What already existed (or didn't)
+- The specific constraint that shaped the approach
+- Version/environment context
+
+**What to exclude:**
+- Generic background ("AI is transforming industries")
+- Narrative framing that delays the technical content
+
+---
+
+### 2. What Was Built
+
+The technical record of what was actually implemented.
+
+**Required elements:**
+- Stack with versions (not "React" — "React 18.2, Vite 5.0, Tailwind CSS 3.4")
+- Architecture decisions and their reasoning
+- Integration points (APIs, authentication, payments, data stores)
+- Deployment configuration
+
+**Format:** Technical prose, not a list. The reader should be able to reconstruct the core architecture from this section alone.
+
+---
+
+### 3. Failures and Complications
+
+The most operationally valuable section. Without it, the case study is assertional documentation.
+
+For each significant failure encountered:
+
+```
+**[Failure name]**
+Error: [exact error message or observable symptom]
+Root cause: [what caused it]
+Resolution: [exact fix]
+Time: [how long it took]
+Reference: [/failures/slug if a full failure report exists]
+```
+
+If no failures occurred, note it explicitly: "No significant deployment failures in this build. The known risks (X, Y) did not materialize."
+
+The absence of failures is also operational evidence.
+
+---
+
+### 4. Measurable Outcomes
+
+Specific, verifiable outcomes. Not "it performs well" — something you can check.
+
+**Acceptable outcomes:**
+- "Production since 2026-04-20, 0 downtime incidents"
+- "Lighthouse performance score: 94 (first measurement, 2026-05-19)"
+- "Razorpay integration live, processing real subscriptions"
+- "313 sitemap URLs at launch, all returning HTTP 200"
+
+**Not acceptable:**
+- "The platform works well"
+- "Users have been satisfied"
+- "Performance is good"
+
+---
+
+### 5. What This Enables or What Comes Next
+
+What does this case study unlock? Is there a follow-on system, a repeatable pattern, or a documented playbook from this work?
+
+This section is brief (50–100 words). It is the forward link — connecting this case study to the next operational work.
+
+---
+
+## Evidence Requirements
+
+A case study reaches the operational evidence threshold when it contains:
+
+1. **One version-pinned environment statement** — "Next.js 15.3.0, Node.js 25.8, Vercel"
+2. **One failure or complication** — with error message, root cause, resolution time
+3. **One measurable outcome** — something checkable
+4. **One executable artifact** — a command, URL, commit SHA, or screenshot
+
+A 400-word case study with all four beats a 3,000-word case study with none.
+
+---
+
+## What to Avoid
+
+**Chronological narrative structure** — "First we did X, then Y, then Z" is the least useful format. The reader cannot extract operational intelligence from a timeline. Lead with what was built, then what went wrong, then outcomes.
+
+**Vague time references** — "it took a few weeks" is not operational. "6 weeks, April 1–May 12, 2026" is.
+
+**Unnamed versions** — "the latest version of Firebase" is not operational. "Firebase SDK 10.12.0" is.
+
+**Positive-only framing** — a case study that contains no failures is a marketing document, not an engineering record. If the build was genuinely smooth, say so explicitly — "no significant failures" is an honest statement.
+
+**Unverifiable claims** — "the AI model accuracy improved significantly" needs a baseline, a measurement, and a comparison. If you don't have the measurement, do not make the claim.
+
+---
+
+## Real Examples from This Platform
+
+### AI Execution Lab Platform Launch
+
+Key elements this case study has:
+- Stack with versions: Next.js 15, TypeScript, Tailwind CSS, MDX, Vercel
+- Build duration: approximately 6 weeks (April–May 2026)
+- Known failure: edge runtime deployment failure (resolved in 23 minutes)
+- Measurable outcome: 313 URLs live at launch, 256ms latency
+
+**What makes it operational:** the failure is named, linked, and timed. Someone with the same stack can check if the same failure applies to their situation.
+
+### TrustSeal Build
+
+Key elements this case study has (or should have):
+- Stack: React 18, Vite, Tailwind CSS, Firebase Auth, Firestore, Razorpay
+- Integration failures: Razorpay webhook verification, Firebase session on iOS Safari
+- Measurable outcome: live at trustseal.asquaresolution.com, processing real subscriptions
+- Deployment: GitHub Pages, production since April 2026
+
+---
+
+## GEO Impact of Case Study Structure
+
+AI search systems retrieve case studies in response to queries like "how does [company] build [product type]" and "what does [product] actually do." The retrieval quality depends on:
+
+- **Entity density:** the case study names specific tools, versions, and platforms
+- **Answerability:** the case study directly answers "what was built" and "what happened"
+- **Evidence signals:** failure records, resolution times, measurable outcomes
+- **Citation potential:** links to live products, failure reports, and playbooks
+
+A case study that follows this structure scores higher on all four dimensions than one that tells a success narrative. This is why the Lab's case study archive is structured as engineering records rather than testimonials.
+
+---
+
+## Related
+
+- [What Is Operational Evidence](/docs/what-is-operational-evidence) — the underlying evidence standard
+- [Case Studies Archive](/case-studies) — the platform's operational record
+- [Content Quality Standards](/docs/content-quality-standards) — publication standards

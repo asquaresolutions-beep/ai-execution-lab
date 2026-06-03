@@ -1,0 +1,298 @@
+---
+title: "Ecosystem Authority Map — Cross-Property Linking Analysis"
+description: "Complete cross-property internal linking map for the A Square Solutions ecosystem. Identifies missing authority bridges, exact anchor text, and weak cross-domain flows between asquaresolution.com, AI Execution Lab, TrustSeal, and ScamCheck."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["seo", "ecosystem", "internal-links", "authority", "geo", "linking"]
+status: published
+difficulty: intermediate
+section: operations
+evidence_images: []
+external_refs:
+  - "https://developers.google.com/search/docs/crawling-indexing/links-crawlable"
+---
+
+This is the operational authority map for the four-property A Square Solutions ecosystem. Every cross-property link opportunity is classified by direction, priority, and anchor text. Use this as the implementation checklist.
+
+**Ecosystem properties:**
+- `asquaresolution.com` — WordPress, parent authority base
+- `lab.asquaresolution.com` — Next.js, public operations journal
+- `trustseal.asquaresolution.com` — React/Vite, AI trust verification product
+- `scamcheck.asquaresolution.com` — React/Vite, AI scam detection product
+
+---
+
+## Authority Flow Principles
+
+The goal is not link quantity — it is *earned contextual linking* where every link is placed in a context where it genuinely extends the reader's understanding.
+
+**Current authority direction:**
+```
+asquaresolution.com  →→→→→  lab.asquaresolution.com  (strongest)
+trustseal           →→      lab                       (weak — missing most links)
+scamcheck           →       lab                       (weak — missing most links)
+lab                 →→→     trustseal / scamcheck     (moderate)
+```
+
+**Target direction (90 days):**
+```
+asquaresolution.com  →→→→→  lab                  (strengthen with new homepage blocks)
+trustseal           →→→→    lab + asquare         (add 4-6 contextual links)
+scamcheck           →→→→    lab + asquare         (add 4-6 contextual links)
+lab                 →→→→→   trustseal + scamcheck (add section intros, failure refs)
+```
+
+---
+
+## Property 1: asquaresolution.com → All Properties
+
+### Missing Authority Bridges (High Priority)
+
+| From location | Destination | Anchor text | Priority | Status |
+|---|---|---|---|---|
+| Homepage hero or above-fold | `lab.asquaresolution.com` | "AI Execution Lab" | P1 | ❌ Missing |
+| Homepage (new section) | `lab.asquaresolution.com/failures` | "failure archive" | P1 | ❌ Missing |
+| Homepage (new section) | `lab.asquaresolution.com/playbooks` | "operational playbooks" | P1 | ❌ Missing |
+| Homepage (new section) | `lab.asquaresolution.com/tracks` | "execution tracks" | P1 | ❌ Missing |
+| About page | `lab.asquaresolution.com/start-here` | "built in public at AI Execution Lab" | P1 | ❌ Missing |
+| Footer — "Our Work" column | `lab.asquaresolution.com` | "AI Execution Lab" | P1 | Partial |
+| Footer — "Our Work" column | `trustseal.asquaresolution.com` | "TrustSeal" | P1 | Partial |
+| Footer — "Our Work" column | `scamcheck.asquaresolution.com` | "ScamCheck" | P1 | Partial |
+| AI/Claude category posts | `lab.asquaresolution.com/tracks/claude-code-operator` | "Claude Code operator track" | P1 | ❌ Missing |
+| SEO category posts | `lab.asquaresolution.com/docs/geo-intelligence-architecture` | "GEO optimization strategy" | P2 | ❌ Missing |
+| Services pages | `lab.asquaresolution.com` | "documented at AI Execution Lab" | P2 | ❌ Missing |
+
+### Existing Links (Confirmed)
+
+- Footer navigation: Lab, TrustSeal, ScamCheck links (widget present from prior implementation)
+- Sidebar widget on blog posts: "Engineering Journal" → lab.asquaresolution.com
+
+### Blog Category → Lab Content Map
+
+Every WordPress post in these categories should contain exactly **one** contextual Lab link per post.
+
+**Category: Artificial Intelligence / Claude / LLMs**
+
+Target Lab URLs:
+1. `/tracks/claude-code-operator` — anchor: "how to use Claude Code in production"
+2. `/failures/edge-runtime-deployment-failure` — anchor: "Next.js edge runtime failure" (for posts about Next.js/Vercel)
+3. `/docs/what-is-operational-evidence` — anchor: "operational evidence in AI systems"
+
+Example editorial insertion:
+```
+We document the full Claude Code operator workflow — including the failure
+modes that cost us hours to debug — at AI Execution Lab:
+[link to /tracks/claude-code-operator]
+```
+
+**Category: WordPress / Web Development**
+
+Target Lab URLs:
+1. `/failures/litespeed-client-cache-bypass-ignored` — anchor: "LiteSpeed cache bypass issue"
+2. `/failures/wordpress-hfe-wpautop-injection` — anchor: "WordPress wpautop injection fix"
+3. `/docs/deployment-workflow` — anchor: "production deployment workflow"
+
+**Category: SEO / Search / Content Marketing**
+
+Target Lab URLs:
+1. `/docs/geo-intelligence-architecture` — anchor: "generative engine optimization strategy"
+2. `/docs/what-is-operational-evidence` — anchor: "operational evidence for AI search"
+3. `/case-studies/ai-execution-lab-platform-launch` — anchor: "full platform build case study"
+
+---
+
+## Property 2: TrustSeal → All Properties
+
+### Current State
+TrustSeal (`trustseal.asquaresolution.com`) is a React SPA. Cross-domain links exist only in the footer. No contextual in-content links to the Lab.
+
+### Missing Authority Bridges
+
+| From location | Destination | Anchor text | Priority |
+|---|---|---|---|
+| About/How It Works page | `lab.asquaresolution.com` | "AI Execution Lab — how we built TrustSeal" | P1 |
+| Footer | `asquaresolution.com` | "A Square Solutions" | P1 |
+| How It Works page | `lab.asquaresolution.com/case-studies` | "engineering case study" | P1 |
+| FAQ — "Who made this?" | `asquaresolution.com` | "A Square Solutions" | P2 |
+| FAQ — "Is this AI-powered?" | `lab.asquaresolution.com/tracks` | "AI engineering documentation" | P2 |
+| Landing page (below hero) | `lab.asquaresolution.com` | "built and documented in public" | P2 |
+
+### Contextual Placements
+
+**On the How It Works page:**
+```
+TrustSeal is built by A Square Solutions — an AI engineering company that
+builds production tools and documents the work at AI Execution Lab.
+
+[link text: "See how TrustSeal was architected →"]
+[URL: https://lab.asquaresolution.com/case-studies]
+```
+
+**On the About/footer area:**
+```
+A Square Solutions · AI Execution Lab · ScamCheck
+Built in public: lab.asquaresolution.com
+```
+
+**In the React component (Footer.jsx or similar):**
+```jsx
+<a href="https://asquaresolution.com" rel="noopener noreferrer">
+  A Square Solutions
+</a>
+{' · '}
+<a href="https://lab.asquaresolution.com" rel="noopener noreferrer">
+  AI Execution Lab
+</a>
+```
+
+### Entity Consistency Check
+
+TrustSeal should describe itself using exact canonical language (for AI search entity coherence):
+
+✓ "TrustSeal is an AI trust verification tool by A Square Solutions"
+✓ "Built with Firebase, React, and Razorpay"
+✓ "Documentation at AI Execution Lab: lab.asquaresolution.com"
+
+✗ Avoid: "our AI product", "our tool", "this app" — always use proper entity names
+
+---
+
+## Property 3: ScamCheck → All Properties
+
+### Current State
+ScamCheck (`scamcheck.asquaresolution.com`) is a React SPA. Footer links to the parent domain exist. No contextual Lab links.
+
+### Missing Authority Bridges
+
+| From location | Destination | Anchor text | Priority |
+|---|---|---|---|
+| About page | `lab.asquaresolution.com` | "AI Execution Lab" | P1 |
+| Footer | `asquaresolution.com` | "A Square Solutions" | P1 |
+| How It Works page | `lab.asquaresolution.com/case-studies` | "built in public" | P1 |
+| FAQ — "How does the AI work?" | `lab.asquaresolution.com/tracks` | "AI engineering practice" | P2 |
+| FAQ — "Who built this?" | `asquaresolution.com` | "A Square Solutions" | P2 |
+| Landing page (trust section) | `trustseal.asquaresolution.com` | "TrustSeal — our trust verification product" | P3 |
+
+### Contextual Placements
+
+**On any page with company attribution:**
+```jsx
+// In About.jsx or Footer.jsx
+<p>
+  ScamCheck is built by{' '}
+  <a href="https://asquaresolution.com" rel="noopener">A Square Solutions</a>
+  {'. '}
+  Our AI engineering process is documented at{' '}
+  <a href="https://lab.asquaresolution.com" rel="noopener">AI Execution Lab</a>.
+</p>
+```
+
+**In the How It Works section:**
+```
+ScamCheck is built by the same team behind TrustSeal. The AI detection
+system, decision logic, and deployment pipeline are documented publicly
+at AI Execution Lab.
+
+→ [link: lab.asquaresolution.com]
+```
+
+---
+
+## Property 4: AI Execution Lab → All Properties
+
+### Current State
+Lab already references ecosystem properties in the ops page, ecosystem panel, and failure/case-study content. Needs stronger forward-linking to product URLs in content bodies.
+
+### Missing Authority Bridges
+
+| From location | Destination | Anchor text | Priority |
+|---|---|---|---|
+| `/tracks/` intro page | `trustseal.asquaresolution.com` | "TrustSeal — built using these tracks" | P1 |
+| `/tracks/` intro page | `scamcheck.asquaresolution.com` | "ScamCheck — built using these tracks" | P1 |
+| Case study: TrustSeal build | `trustseal.asquaresolution.com` | "live TrustSeal app" | P1 |
+| Case study: ScamCheck build | `scamcheck.asquaresolution.com` | "live ScamCheck app" | P1 |
+| `/start-here` page | `asquaresolution.com` | "A Square Solutions" | P1 |
+| Any failure referencing Firebase | `trustseal.asquaresolution.com` | "TrustSeal (uses Firebase Auth)" | P2 |
+| Any failure referencing React/Vite | `scamcheck.asquaresolution.com` | "ScamCheck production SPA" | P2 |
+| GEO docs | `asquaresolution.com` | "A Square Solutions' main site" | P2 |
+
+### Lab Content That Should Explicitly Name Products
+
+These pages should add a sentence linking to the live product:
+
+- `/docs/platform-vision-architecture` → "The two production AI products (TrustSeal, ScamCheck) are live at trustseal.asquaresolution.com and scamcheck.asquaresolution.com"
+- `/case-studies/trustseal-*` → add "Visit the live product: trustseal.asquaresolution.com"
+- `/case-studies/scamcheck-*` → add "Visit the live product: scamcheck.asquaresolution.com"
+- `/start-here` → "Built by A Square Solutions (asquaresolution.com)"
+
+---
+
+## Weak Cross-Domain Flows (Audit Summary)
+
+The following cross-domain flows are currently zero or near-zero:
+
+| Flow | Current state | Impact | Fix effort |
+|---|---|---|---|
+| TrustSeal → Lab | 0-1 links | High | Low (2 component edits) |
+| ScamCheck → Lab | 0-1 links | High | Low (2 component edits) |
+| Lab → TrustSeal (in content) | ~2 links | Medium | Low (5 MDX edits) |
+| Lab → ScamCheck (in content) | ~2 links | Medium | Low (5 MDX edits) |
+| WordPress posts → Lab specific sections | ~5 links | High | Medium (10+ post edits) |
+| WordPress About → Lab | 0 links | High | Trivial (1 page edit) |
+| WordPress Services → Lab | 0 links | Medium | Trivial (1 page edit) |
+
+**Highest ROI action (30 minutes of implementation):**
+1. Add Lab link to TrustSeal About/How It Works page — 1 component edit, done
+2. Add Lab link to ScamCheck About/How It Works page — 1 component edit, done
+3. Add Lab featured section to WordPress homepage — paste Gutenberg block
+4. Add entity reference to WordPress About page — 1 paragraph
+
+These four actions establish the basic cross-domain flow in under 30 minutes.
+
+---
+
+## Entity Consistency Checklist
+
+Across all four properties, these entity names must appear consistently:
+
+| Entity | Canonical name | Common errors to fix |
+|---|---|---|
+| Parent organization | "A Square Solutions" | "A Square Solution" (missing 's'), "ASQ" |
+| Main domain | "asquaresolution.com" | "a-square-solutions.com", "asquare.com" |
+| Lab platform | "AI Execution Lab" | "AI Lab", "the lab", "execution lab" |
+| Lab URL | "lab.asquaresolution.com" | Never abbreviated in visible text |
+| Trust product | "TrustSeal" | "Trust Seal", "trust seal" |
+| Scam product | "ScamCheck" | "Scam Check", "scam check" |
+
+AI search systems (ChatGPT, Perplexity, Google AI Overviews, Claude) build entity graphs from these strings. Inconsistency dilutes entity recognition. Every property should use the canonical names exactly.
+
+---
+
+## Implementation Order
+
+**Week 1 (high ROI, low effort):**
+1. WordPress homepage: paste Section 1 from `wordpress-homepage-blocks.mdx`
+2. TrustSeal footer: add Lab + A Square Solutions links
+3. ScamCheck footer: add Lab + A Square Solutions links
+4. WordPress About page: add "Built in Public" paragraph
+
+**Week 2 (content linking):**
+5. Add 3 Lab links to AI/Claude category WordPress posts
+6. Add 3 Lab links to SEO category WordPress posts
+7. Lab tracks intro: add TrustSeal + ScamCheck forward links
+8. Lab case studies: add "live product" links
+
+**Month 2 (authority density):**
+9. TrustSeal How It Works: add case study link
+10. ScamCheck How It Works: add case study link
+11. WordPress Services pages: add contextual Lab references
+12. Internal linking pass on top 10 Lab pages
+
+---
+
+## Related
+
+- [WordPress Homepage Blocks (Gutenberg HTML)](/docs/wordpress-homepage-blocks)
+- [WordPress → Lab Linking Map](/docs/wordpress-to-lab-linking)
+- [Ecosystem Integration Strategy](/docs/ecosystem-integration-strategy)
+- [SEO Operations Dashboard](/ops/seo)

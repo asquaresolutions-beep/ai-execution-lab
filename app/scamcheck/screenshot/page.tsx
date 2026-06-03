@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
+import { AuthProvider } from '@/components/auth/auth-provider'
 import { ScreenshotAnalyzer } from '@/components/scamcheck/screenshot-analyzer'
 
-const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
+const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://scamcheck.asquaresolution.com'
 
 export const metadata: Metadata = {
   title: 'Analyze a Screenshot — ScamCheck',
@@ -11,8 +12,10 @@ export const metadata: Metadata = {
 
 export default function ScreenshotPage() {
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
-      <ScreenshotAnalyzer />
-    </main>
+    <AuthProvider>
+      <main className="mx-auto max-w-3xl px-4 py-10" id="screenshot-analyzer">
+        <ScreenshotAnalyzer />
+      </main>
+    </AuthProvider>
   )
 }

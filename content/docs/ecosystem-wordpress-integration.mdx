@@ -1,0 +1,235 @@
+---
+title: "WordPress Ecosystem with SaaS Subdomains — How A Square Solutions Operates a Multi-Property System"
+description: "Operational record of running a WordPress parent site with two SaaS subdomain applications (TrustSeal, ScamCheck) and a Next.js engineering journal under one root domain. Covers subdomain authority flow, schema entity linking, cross-property navigation, and the structural decisions that keep the ecosystem coherent."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["wordpress", "subdomains", "saas", "ecosystem", "seo", "schema-org", "authority", "multi-property"]
+status: published
+difficulty: intermediate
+section: docs
+impact: "Four-property ecosystem under asquaresolution.com operates with unified entity schema, cross-property internal linking, and independently deployed subdomains that share root domain authority."
+evidence_images: []
+external_refs:
+  - "https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls"
+  - "https://schema.org/Organization"
+  - "https://developers.google.com/search/docs/appearance/structured-data/sitelinks-searchbox"
+  - "https://lab.asquaresolution.com/docs/ecosystem-authority-map"
+  - "https://lab.asquaresolution.com/docs/schema-org-entity-blocks"
+---
+
+A Square Solutions operates four properties under one root domain. The parent is a WordPress site at `asquaresolution.com`. The subdomains are:
+
+- `lab.asquaresolution.com` — Next.js 15 engineering journal (AI Execution Lab)
+- `trustseal.asquaresolution.com` — React/Vite SaaS product (AI trust verification)
+- `scamcheck.asquaresolution.com` — React/Vite SaaS product (AI scam detection)
+
+This document records how the ecosystem is structured, why the subdomain model was chosen over separate domains, and how the WordPress parent site connects to the subdomain properties in ways that distribute and preserve authority.
+
+---
+
+## Why Subdomains, Not Separate Domains
+
+The subdomain model was chosen for three operational reasons:
+
+**1. Root domain authority flows to subdomains** — Google treats subdomains as distinct crawl entities but they inherit root domain signals. A subdomain with zero inbound links from the root domain starts cold. One from a root with existing authority starts warmer.
+
+**2. Independent deployment** — Each property deploys independently. TrustSeal uses GitHub Pages. ScamCheck uses GitHub Pages. AI Execution Lab uses Vercel. WordPress stays on traditional hosting. No deployment change to one property touches the others.
+
+**3. Entity coherence** — Schema.org's `Organization` entity at `asquaresolution.com` owns all four properties via the `owns` array. One entity declaration covers all four. Separate domains would require explicit `sameAs` links, which are weaker entity signals than `owns`.
+
+The trade-off: subdomain isolation means each property must earn its crawl budget independently. There is no automatic link equity transfer — cross-property links must be placed deliberately in editorial context.
+
+---
+
+## The Four-Property Architecture
+
+```
+asquaresolution.com (WordPress)
+├── Authority base: company identity, services, About
+├── Schema: Organization @id="https://asquaresolution.com/#organization"
+│   └── owns: [lab, trustseal, scamcheck]
+│
+├── lab.asquaresolution.com (Next.js 15, Vercel)
+│   ├── 313+ URLs at launch (2026-05-19)
+│   ├── Schema: WebSite @id="https://lab.asquaresolution.com/lab/#website"
+│   └── Links back to: asquaresolution.com/about, trustseal, scamcheck
+│
+├── trustseal.asquaresolution.com (React/Vite, GitHub Pages)
+│   ├── Single-page application, 3 routes
+│   ├── Schema: SoftwareApplication @id=".../trustseal/#app"
+│   └── Links back to: asquaresolution.com, lab.asquaresolution.com
+│
+└── scamcheck.asquaresolution.com (React/Vite, GitHub Pages)
+    ├── Single-page application, 6 routes
+    ├── Schema: SoftwareApplication @id=".../scamcheck/#app"
+    └── Links back to: asquaresolution.com, lab.asquaresolution.com
+```
+
+---
+
+## WordPress Configuration for Multi-Property Ecosystems
+
+### Navigation — Cross-Property Links
+
+The WordPress main navigation includes one entry pointing to AI Execution Lab. The nav item placement is deliberate — the Lab is the most content-rich subdomain and the one most likely to capture search entry from informational queries.
+
+Nav entry: `AI Execution Lab → lab.asquaresolution.com`
+
+This single nav link provides:
+- A crawlable path from the homepage to the Lab subdomain
+- A sitelinks candidate for the parent domain (Google may index the Lab as a sitelink for branded queries)
+- A consistent UI signal to visitors that the Lab is part of the company
+
+Footer links cover TrustSeal and ScamCheck. Footer placement is appropriate for SaaS products — users seeking the product by name will find it. It does not require prominent nav placement to function.
+
+### Schema.org JSON-LD — Organization Entity
+
+The WordPress site hosts the master `Organization` entity declaration. It is installed via WPCode (a code injection plugin that adds `<script type="application/ld+json">` to the `<head>` sitewide).
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": "https://asquaresolution.com/#organization",
+  "name": "A Square Solutions",
+  "url": "https://asquaresolution.com",
+  "description": "AI-powered software tools and engineering services. Products include TrustSeal (AI trust verification) and ScamCheck (AI scam detection).",
+  "owns": [
+    { "@type": "WebSite", "@id": "https://lab.asquaresolution.com/lab/#website" },
+    { "@type": "SoftwareApplication", "@id": "https://trustseal.asquaresolution.com/trustseal/#app" },
+    { "@type": "SoftwareApplication", "@id": "https://scamcheck.asquaresolution.com/scamcheck/#app" }
+  ]
+}
+```
+
+The `@id` values function as canonical entity identifiers. Each subdomain's own schema uses the same `@id` values in its `isPartOf` declarations, creating a closed entity graph that AI and structured data parsers can resolve completely.
+
+### Homepage Sections — Ecosystem Visibility
+
+The WordPress homepage includes dedicated sections for the subdomain properties:
+
+**Section structure (Gutenberg blocks):**
+1. AI Execution Lab featured section — name, description, link to `lab.asquaresolution.com`
+2. Ecosystem architecture — 3-column grid: Lab / TrustSeal / ScamCheck with descriptions and links
+3. Internal links strip — direct links to Lab sections: Failures, Playbooks, Tracks, Docs
+
+The Gutenberg markup for these sections is documented in full at [`content/docs/wordpress-homepage-blocks.mdx`](/docs/wordpress-homepage-blocks) with complete `<!-- wp:... -->` code ready to paste.
+
+---
+
+## SaaS Subdomain Specifics
+
+### React/Vite SPAs on GitHub Pages
+
+TrustSeal and ScamCheck are both React/Vite single-page applications hosted on GitHub Pages. This creates a specific routing problem: GitHub Pages serves files statically, so any route other than `/` returns a 404 unless the build creates individual `index.html` files per route.
+
+**TrustSeal routes (3):**
+```
+/          → dist/index.html (default)
+/verify    → dist/verify/index.html (needs manual copy)
+/pricing   → dist/pricing/index.html (needs manual copy)
+```
+
+**ScamCheck routes (6):**
+```
+/          → dist/index.html (default)
+/check     → dist/check/index.html (needs manual copy)
+/report    → dist/report/index.html (needs manual copy)
+/about     → dist/about/index.html (needs manual copy)
+/faq       → dist/faq/index.html (needs manual copy)
+/privacy   → dist/privacy/index.html (needs manual copy)
+```
+
+Status as of 2026-05-19: route copies are a pending operational task. Until they are in place, only the root URL of each SPA is reliably crawlable from external links.
+
+### Schema on SPAs
+
+Schema.org markup for SPA subdomains is injected via `dangerouslySetInnerHTML` in the `<head>` component of each app. The full declarations are documented in [`content/docs/schema-org-entity-blocks.mdx`](/docs/schema-org-entity-blocks).
+
+The `SoftwareApplication` type covers both products:
+
+```json
+{
+  "@type": "SoftwareApplication",
+  "@id": "https://trustseal.asquaresolution.com/trustseal/#app",
+  "name": "TrustSeal",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "isPartOf": {
+    "@id": "https://asquaresolution.com/#organization"
+  }
+}
+```
+
+---
+
+## Authority Flow Between Properties
+
+Cross-property link placement is the operational mechanism that distributes authority across the ecosystem. The current state and target state are tracked in [`content/docs/ecosystem-authority-map.mdx`](/docs/ecosystem-authority-map).
+
+**Summary of current gaps (May 2026 baseline):**
+
+| From | To | Gap | Action |
+|---|---|---|---|
+| asquaresolution.com | lab.asquaresolution.com | Nav link exists; no inline body links | Add Lab links to top 15 posts (15 min) |
+| asquaresolution.com | trustseal.asquaresolution.com | Footer only | Add contextual product mention to Services page |
+| lab.asquaresolution.com | asquaresolution.com | Track docs link back; failure reports don't | Add "Built by A Square Solutions" footer entity on Lab |
+| trustseal.asquaresolution.com | lab.asquaresolution.com | No link | Add "How we built this" link in About/footer |
+| scamcheck.asquaresolution.com | lab.asquaresolution.com | No link | Add "Engineering journal" link in footer |
+
+The pattern: SaaS products link outward to Lab less than they should. The Lab links to products clearly. The WordPress parent links to Lab clearly but not in body content.
+
+---
+
+## GSC Multi-Property Considerations
+
+Google Search Console treats each subdomain as a separate property. This means:
+
+- `lab.asquaresolution.com` is a separate GSC property from `asquaresolution.com`
+- Sitemaps must be submitted independently per property
+- Coverage and indexing stats are per-property, not aggregated
+
+At May 2026 baseline:
+- `lab.asquaresolution.com` — 313 URLs submitted, 100% coverage pass rate
+- `asquaresolution.com` — WordPress sitemap via Rank Math, `sitemap_index.xml` (known 404 issue pending permalink fix)
+- TrustSeal and ScamCheck — SPAs with no sitemap submitted yet (pending)
+
+The GSC weekly review SOP (at [`content/docs/gsc-weekly-review-sop.mdx`](/docs/gsc-weekly-review-sop)) covers the Lab property. WordPress GSC review is a separate monthly task.
+
+---
+
+## LiteSpeed Cache and Cross-Property Testing
+
+The WordPress site runs LiteSpeed Cache for full-page caching. After any edit to the homepage (adding ecosystem sections, updating navigation, installing schema via WPCode), a full cache purge is required.
+
+**Cache purge sequence:**
+```
+LiteSpeed → Dashboard → Purge All
+```
+
+Without the purge, visitors see cached pre-edit HTML. The purge takes under 10 seconds. It is the final step in every WordPress editing session.
+
+Cross-property links must be verified post-purge by loading the WordPress homepage in a new private window and clicking through to each subdomain. This is the only verification that confirms the live state, not the WordPress editor preview.
+
+---
+
+## What This Architecture Enables
+
+Running four properties under one root domain with unified schema and deliberate cross-linking means:
+
+1. **Entity graph completeness** — AI search systems (ChatGPT, Perplexity, Gemini) can resolve the full organization structure from any entry point. A query about TrustSeal resolves to A Square Solutions. A query about the Lab resolves to the same entity.
+
+2. **Authority compounding** — The WordPress parent accumulates topical authority through blog content. Each cross-link passes relevance signals to the property linked. Over time, a Lab post about a specific failure picks up authority from the parent's content about AI engineering.
+
+3. **Operational independence** — Each property deploys, updates, and breaks independently. The schema and cross-links are editorial choices, not infrastructure dependencies. A failed Vercel deploy on the Lab does not affect WordPress uptime.
+
+4. **GEO citation surface** — AI retrieval systems find entities through co-citation. When the Lab and WordPress both reference TrustSeal in similar contexts, AI systems build confidence in the entity relationship. This is the multi-property version of entity consistency.
+
+---
+
+## Related
+
+- [Ecosystem Authority Map](/docs/ecosystem-authority-map) — full cross-property linking analysis with priority table
+- [Schema.org Entity Blocks](/docs/schema-org-entity-blocks) — JSON-LD for all four properties
+- [WordPress Rollout Run Card](/docs/wordpress-rollout-run-card) — action checklist for implementing all of this
+- [WordPress Homepage Blocks](/docs/wordpress-homepage-blocks) — Gutenberg HTML for ecosystem sections

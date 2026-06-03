@@ -1,0 +1,254 @@
+---
+title: "WordPress SEO Technical Audit — asquaresolution.com"
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["wordpress", "seo", "litespeed", "schema", "wpautop", "hfe", "rank-math", "google-search-console"]
+status: published
+log_type: "operations"
+duration: "3h"
+outcome: "Identified 5 live HTML injection instances (wpautop/HFE), confirmed sitemap 404, generated phpMyAdmin cleanup query set, documented LiteSpeed cache behavior, produced WPCode fix for wpautop injection."
+affected_systems:
+  - wordpress
+  - litespeed
+systems_touched:
+  - asquaresolution.com
+  - google-search-console
+related_failures:
+  - wordpress-hfe-wpautop-injection
+  - litespeed-client-cache-bypass-ignored
+evidence_images: []
+external_refs:
+  - "https://rankmath.com/kb/sitemap/"
+  - "https://developer.wordpress.org/reference/functions/wpautop/"
+---
+
+<LessonMeta
+  duration="3h"
+  difficulty="intermediate"
+  tools={["curl", "phpMyAdmin", "WPCode", "WordPress Admin", "Rank Math", "LiteSpeed Cache"]}
+  outcome="Live production verification sweep across A Square Solutions ecosystem. Identified and documented real HTML, schema, and database issues. Deployed PHP filter fix for wpautop injection. Generated production-safe DB cleanup queries."
+/>
+
+Full technical SEO audit pass across the A Square Solutions ecosystem. Not a routine check — a deep live verification sweep across HTML output, database content, schema integrity, sitemap health, and redirect correctness.
+
+---
+
+## Session Context
+
+**Properties audited:** asquaresolution.com, project.asquaresolution.com, trustseal.asquaresolution.com, scamcheck.asquaresolution.com
+**Verification method:** curl HEAD + body inspection, direct HTML source review, Rank Math dashboard, phpMyAdmin query analysis
+**Priority:** Identify issues that affect crawl quality, indexing reliability, or AI search citation potential
+
+---
+
+## Live HTML Verification — Findings
+
+### Finding 1: wpautop Injecting Into HFE Widget Links (CRITICAL)
+
+Curl on the primary GEO pillar post revealed:
+
+```bash
+curl -sL "https://asquaresolution.com/[slug]/" | grep -c '"></p><p>'
+# Result: 5
+```
+
+Five instances of `</p><p>` inside `<a>` tags in the hfe-post-info widget. The HFE post-info widget renders author, date, and category as inline links. WordPress `wpautop()` was treating whitespace between link elements as paragraph breaks and injecting closing/opening `<p>` tags inside the anchor elements.
+
+**Impact:** Invalid HTML on all post pages. Potential DOM parse ambiguity for crawlers.
+
+**Resolution:** Deployed WPCode PHP snippet hooking into `elementor/widget/render_content`. Three `preg_replace()` calls targeting the specific injection patterns.
+
+**Verification:** After LiteSpeed Purge All, re-verified: 0 instances.
+
+Full root cause analysis: [WordPress wpautop Injects Into HFE Post-Info Widget Links](/failures/wordpress-hfe-wpautop-injection)
+
+### Finding 2: sitemap_index.xml Returns 404 (HIGH)
+
+```bash
+curl -I "https://asquaresolution.com/sitemap_index.xml"
+# HTTP/1.1 404 Not Found
+```
+
+robots.txt correctly declares the sitemap at this URL, but the URL itself returns 404. Rank Math's XML sitemap was confirmed enabled in the plugin settings. Most likely cause: WordPress permalink cache stale, or Rank Math sitemap handler not re-registered after a plugin update.
+
+**Required action:** WordPress Admin → Settings → Permalinks → Save Changes (flushes rewrite rules without changing permalink structure). If sitemap remains 404: Rank Math → General Settings → Sitemap → re-save.
+
+**Status:** Not yet fixed. Documented for next WordPress admin session.
+
+### Finding 3: Malformed href Patterns in Post Content (MEDIUM)
+
+phpMyAdmin query revealed instances of malformed href patterns in `wp_posts.post_content`:
+
+```sql
+SELECT ID, post_title
+FROM wp_posts
+WHERE post_status = 'publish'
+  AND post_type  = 'post'
+  AND post_content REGEXP 'href=[/"]https?://'
+LIMIT 20;
+```
+
+Pattern: `href=/"https://` instead of `href="https://`. Likely origin: a past bulk import or content paste operation that incorrectly escaped the quote character.
+
+**Impact:** Broken links in post content that render as literal text rather than clickable links.
+
+**Resolution:** WPCode snippet hooking into `the_content` with priority 8 — str_replace for the common patterns, preg_replace for edge cases. Deployed and active.
+
+### Finding 4: blog.asquaresolution.com References in Astra CSS (~15 instances)
+
+Live homepage source contained ~15 references to `https://blog.asquaresolution.com/wp-content/uploads/...` in the `<style id="astra-theme-css-inline-css">` block. These are background image URLs stored in Astra's customizer settings — PHP serialized option in `wp_options`.
+
+**Root cause:** Astra stores inline CSS with absolute URLs. The blog subdomain has been migrated but the stored settings still reference the old domain.
+
+**Resolution path (in order):**
+1. Astra Customizer → re-save background images with updated URLs
+2. If not resolved: WP-CLI search-replace on `astra-settings` option (with PHP serialization handling)
+3. LiteSpeed Purge All
+
+**Status:** Pending. wp-options WP-CLI command generated:
+```bash
+wp search-replace 'https://blog.asquaresolution.com/wp-content/uploads/' \
+  'https://asquaresolution.com/wp-content/uploads/' \
+  wp_options \
+  --include-columns=option_value \
+  --where="option_name='astra-settings'" \
+  --dry-run
+```
+
+---
+
+## Database Cleanup Query Set
+
+Generated and documented production-safe phpMyAdmin queries for 7 cleanup operations. All are SELECT first — no live UPDATE queries until counts are verified.
+
+### Query A — In-body duplicate JSON-LD
+```sql
+SELECT COUNT(*) as posts_with_schema
+FROM wp_posts
+WHERE post_status = 'publish'
+  AND post_type = 'post'
+  AND post_content LIKE '%"@type": "Article"%';
+```
+Purpose: Find posts where JSON-LD schema is embedded in post_content (duplicate of what Rank Math injects in wp_head). ~745 posts expected to match.
+
+### Query B — Malformed href patterns
+```sql
+SELECT COUNT(*) as malformed_href_count
+FROM wp_posts
+WHERE post_status = 'publish'
+  AND post_type IN ('post','page')
+  AND post_content REGEXP 'href=[/"]https?://';
+```
+
+### Query C — data-start / data-end attributes (fake crawl anchors)
+```sql
+SELECT COUNT(*) as fake_crawl_anchor_count
+FROM wp_posts
+WHERE post_status = 'publish'
+  AND post_content REGEXP 'data-(start|end)="[0-9]+"';
+```
+
+### Query D — blog.asquaresolution.com in post_content
+```sql
+SELECT COUNT(*) as blog_ref_count
+FROM wp_posts
+WHERE post_status = 'publish'
+  AND post_content LIKE '%blog.asquaresolution.com%';
+```
+
+### Query G — blog.asquaresolution.com in wp_options
+```sql
+SELECT COUNT(*) as options_with_blog_ref
+FROM wp_options
+WHERE option_value LIKE '%blog.asquaresolution.com%';
+```
+
+These queries are read-only. Running them establishes baseline counts before any UPDATE operations.
+
+---
+
+## SPA Route 404 Issues
+
+Audit identified SPA routing gaps on ScamCheck and TrustSeal (GitHub Pages static hosting):
+
+**ScamCheck** — 6 routes return 404 on direct access:
+- `/check/`, `/how-it-works/`, `/pricing/`, `/faq/`, `/about/`, `/report/`
+
+**TrustSeal** — 3 routes return 404 on direct access:
+- `/verify/`, `/how-it-works/`, `/apply/`
+
+Root cause: GitHub Pages static file hosting — no server-side routing. Direct URL access to `/check/` requires `dist/check/index.html` to exist. React Router handles navigation between pages client-side, but direct URL hits bypass the router.
+
+**Fix:** For each route, create `dist/[route]/index.html` that is a copy of `dist/index.html`. When the browser loads `/check/`, GitHub Pages serves the index, React Router hydrates and matches the `/check` route.
+
+**Status:** Pending. Not blocking search visibility (Googlebot follows anchor links, not direct URL access) but affects user experience for shared links.
+
+---
+
+## Security Findings
+
+1. **asquaresolution.com** — `X-Powered-By: PHP/8.3.30` header exposed on all responses. Not critical, but exposes PHP version to scanners.
+2. **project.asquaresolution.com** — No HSTS header. Connection upgrades but browser doesn't know to enforce HTTPS on subsequent visits.
+3. **ScamCheck** — No HSTS (GitHub Pages limitation — requires Cloudflare custom headers or custom domain config).
+
+Both HSTS items fixable via `.htaccess` for the WordPress properties:
+```apache
+Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+```
+
+---
+
+## WP-CLI Commands Generated
+
+### Blog subdomain migration dry run
+```bash
+wp search-replace 'https://blog.asquaresolution.com' \
+  'https://asquaresolution.com/blog' \
+  wp_posts \
+  --include-columns=post_content,post_excerpt \
+  --post-type=post,page \
+  --skip-columns=guid \
+  --dry-run
+```
+
+Note: `--skip-columns=guid` prevents GUID modification — GUIDs are identifiers, not display URLs, and should not be updated during domain migrations.
+
+---
+
+## Rank Math Category noindex
+
+Identified 4 off-topic category archives that should be noindexed:
+- `/category/space-astronomy/`
+- `/category/history-and-culture/`
+- `/category/global-affairs-news/`
+- `/category/quantum-computing/`
+
+These exist from a past content period and have no organic traffic or topical relevance to the current site focus. Indexed category archives dilute topical authority.
+
+**Action:** Rank Math → Titles & Meta → Categories → edit each → Set to "No Index."
+
+---
+
+## Session Outcome
+
+| Issue | Status | Priority |
+|---|---|---|
+| wpautop HFE injection | ✅ Fixed | High |
+| LiteSpeed cache bypass misunderstanding | ✅ Documented | Medium |
+| sitemap_index.xml 404 | ⏳ Pending | High |
+| Malformed hrefs | ✅ Filter deployed | Medium |
+| blog.asquaresolution.com in Astra CSS | ⏳ Pending WP-CLI | Medium |
+| SPA route 404s (ScamCheck, TrustSeal) | ⏳ Pending | Medium |
+| DB cleanup queries | ✅ Generated | Ready |
+| Category noindex | ⏳ Pending | Low |
+| HSTS headers | ⏳ Pending | Low |
+
+---
+
+## Key Learnings
+
+**LiteSpeed cache invalidation is not optional during verification.** Any PHP-level change — filters, hooks, schema injections — is invisible to curl until LiteSpeed Purge All runs. Built this into the standard deployment verification sequence.
+
+**Astra serialized options require WP-CLI, not raw SQL.** Direct `UPDATE wp_options SET option_value = REPLACE(...)` on PHP serialized data corrupts the byte-length metadata in the serialized string. WordPress then fails to unserialize the option. Always use `wp search-replace` which handles serialized data deserialize → replace → reserialize correctly.
+
+**SPA routes on GitHub Pages require pre-built route directories.** GitHub Pages has no server-side routing. The 404 behavior on direct URL access is a GitHub Pages constraint, not a React Router bug.

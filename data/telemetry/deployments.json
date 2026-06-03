@@ -1,0 +1,9 @@
+{
+  "_meta": {
+    "source": "vercel-api",
+    "lastUpdated": "2026-05-19T00:00:00Z",
+    "projectId": "",
+    "note": "Seeded. Run: node scripts/ingest-vercel.mjs to refresh."
+  },
+  "deployments": []
+}

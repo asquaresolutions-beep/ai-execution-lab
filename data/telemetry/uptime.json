@@ -1,0 +1,49 @@
+{
+  "_meta": {
+    "source": "uptime-check",
+    "lastUpdated": "2026-05-19T04:58:07.322Z",
+    "count": 5
+  },
+  "checks": [
+    {
+      "property": "A Square Solutions",
+      "url": "https://asquaresolution.com/",
+      "status": "up",
+      "httpCode": 200,
+      "latencyMs": 343,
+      "checkedAt": "2026-05-19T04:58:06.510Z"
+    },
+    {
+      "property": "AI Execution Lab",
+      "url": "https://lab.asquaresolution.com/",
+      "status": "up",
+      "httpCode": 200,
+      "latencyMs": 256,
+      "checkedAt": "2026-05-19T04:58:06.528Z"
+    },
+    {
+      "property": "TrustSeal",
+      "url": "https://trustseal.asquaresolution.com/",
+      "status": "up",
+      "httpCode": 200,
+      "latencyMs": 428,
+      "checkedAt": "2026-05-19T04:58:06.701Z"
+    },
+    {
+      "property": "ScamCheck",
+      "url": "https://scamcheck.asquaresolution.com/",
+      "status": "up",
+      "httpCode": 200,
+      "latencyMs": 479,
+      "checkedAt": "2026-05-19T04:58:06.753Z"
+    },
+    {
+      "property": "project subdomain",
+      "url": "https://project.asquaresolution.com/",
+      "status": "up",
+      "httpCode": 200,
+      "latencyMs": 1047,
+      "checkedAt": "2026-05-19T04:58:07.321Z"
+    }
+  ]
+}

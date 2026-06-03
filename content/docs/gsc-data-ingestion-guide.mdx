@@ -1,0 +1,124 @@
+---
+title: "GSC Data Ingestion Guide — Search Console to Lab Telemetry"
+description: "Exact sequence for exporting Google Search Console performance data and ingesting it into the AI Execution Lab telemetry layer. Covers report selection, date range, file naming, and ingestion commands. Time to complete: 10 minutes."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["gsc", "seo", "search-console", "telemetry", "ops", "data"]
+status: published
+difficulty: beginner
+section: operations
+evidence_images: []
+external_refs:
+  - "https://search.google.com/search-console/about"
+---
+
+GSC data does not auto-ingest — it requires a manual CSV export and one ingestion command. This guide covers the exact sequence. Time: 10 minutes.
+
+Run this when: first baseline capture, and every 4 weeks thereafter (monthly cadence matches GSC's 28-day rolling window).
+
+---
+
+## Which Property to Export
+
+GSC property: `https://lab.asquaresolution.com/`
+
+If Search Console shows this as `lab.asquaresolution.com` (without protocol) or `sc-domain:asquaresolution.com`, verify you're in the correct property. The Lab is a subdomain — it may have its own property or be included in a domain property.
+
+For `asquaresolution.com` (WordPress): repeat the same export sequence in the `https://asquaresolution.com/` property.
+
+---
+
+## Export Sequence — Queries CSV
+
+1. Open: `search.google.com/search-console` → select property `lab.asquaresolution.com`
+2. Left nav: **Performance** → **Search results**
+3. Date range: click **Last 3 months** → switch to **Custom range** → set **Last 28 days**
+4. Confirm these toggles are ON: Total clicks, Total impressions, Average CTR, Average position
+5. Click **Queries** tab (below the graph)
+6. Scroll to bottom → click **Export** (top right, download icon) → **Download CSV**
+7. Save file as: `gsc-queries-lab-[YYYY-MM-DD].csv`
+   - Example: `gsc-queries-lab-2026-05-19.csv`
+
+---
+
+## Export Sequence — Pages CSV
+
+Same GSC session (do not close):
+
+1. Click **Pages** tab (next to Queries tab)
+2. Date range should still be Last 28 days — confirm
+3. Export → Download CSV
+4. Save file as: `gsc-pages-lab-[YYYY-MM-DD].csv`
+   - Example: `gsc-pages-lab-2026-05-19.csv`
+
+---
+
+## Ingestion Commands
+
+Move both CSV files to the project root, then run:
+
+```bash
+node scripts/ingest-gsc.mjs gsc-queries-lab-2026-05-19.csv --type queries
+node scripts/ingest-gsc.mjs gsc-pages-lab-2026-05-19.csv --type pages
+```
+
+Expected output for each:
+```
+[ingest-gsc] Reading gsc-queries-lab-2026-05-19.csv...
+[ingest-gsc] Parsed 247 query rows
+[ingest-gsc] ✓ Wrote data/telemetry/gsc.json
+```
+
+If output shows 0 rows, the CSV format may differ from the expected column headers. Open the CSV in a text editor and check the header row — it should be: `Top queries,Clicks,Impressions,CTR,Position`.
+
+---
+
+## Verification
+
+After ingestion, rebuild the Lab:
+
+```bash
+node node_modules/.bin/next build
+```
+
+Then navigate to `localhost:3000/ops/gsc`. The dashboard should now show:
+- Total impressions and clicks (non-zero)
+- Page opportunity panel populated
+- Query opportunity panel populated
+
+If the dashboard still shows "pending" state, check `data/telemetry/gsc.json` directly — it should contain `totalImpressions` > 0.
+
+---
+
+## WordPress GSC Export
+
+Repeat the same sequence for the `asquaresolution.com` GSC property:
+
+1. Switch property in GSC to `https://asquaresolution.com/`
+2. Export Queries and Pages CSVs with naming: `gsc-queries-asquare-[YYYY-MM-DD].csv`
+3. Note separately — the Lab ingestion script processes Lab data. WordPress GSC data is for manual review via the Weekly GSC SOP.
+
+---
+
+## File Retention
+
+Keep the last 3 months of exported CSVs in a local folder (not committed to the repo). They are the raw source for trend analysis.
+
+Naming convention to maintain:
+```
+gsc-queries-lab-2026-05-19.csv
+gsc-pages-lab-2026-05-19.csv
+gsc-queries-lab-2026-04-21.csv
+gsc-pages-lab-2026-04-21.csv
+...
+```
+
+The `data/telemetry/gsc.json` file holds only the most recent snapshot. The CSV archive is the historical record.
+
+---
+
+## Related
+
+- [GSC Weekly Review SOP](/docs/gsc-weekly-review-sop) — what to do after ingestion
+- [GSC Operations Dashboard](/ops/gsc) — the build-time intelligence layer
+- [Platform Metrics Baseline](/docs/platform-metrics-baseline-2026-05) — baseline state before first ingestion

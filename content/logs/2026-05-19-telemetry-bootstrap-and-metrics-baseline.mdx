@@ -1,0 +1,166 @@
+---
+title: "Telemetry Bootstrap + Real Metrics Baseline Capture"
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["telemetry", "metrics", "uptime", "sitemap", "baseline", "lab", "ecosystem"]
+status: published
+log_type: "deployment"
+duration: "45m"
+outcome: "First live telemetry data captured: 5/5 properties up, 313/313 sitemap URLs passing. Real metrics baseline document published. Lighthouse deferred (PSI quota). GSC ingestion pending CSV export."
+affected_systems:
+  - ai-execution-lab
+systems_touched:
+  - vercel
+  - google-search-console
+  - google-analytics-4
+evidence_images: []
+external_refs: []
+---
+
+<LessonMeta
+  duration="45m"
+  difficulty="beginner"
+  tools={["Node.js", "ingest-uptime.mjs", "ingest-sitemap.mjs", "Google PageSpeed Insights API"]}
+  outcome="Live telemetry data captured for the first time. Uptime snapshot and full sitemap check both written to data/telemetry/. Metrics baseline document established."
+/>
+
+First live telemetry run for the AI Execution Lab. The telemetry infrastructure has been built for several sessions — this is the first time real data was captured and stored.
+
+---
+
+## What Was Run
+
+### Uptime check
+
+```bash
+node scripts/ingest-uptime.mjs
+```
+
+**Result:** 5/5 properties up. All HTTP 200.
+
+| Property | Latency |
+|---|---|
+| A Square Solutions | 343ms |
+| AI Execution Lab | 256ms |
+| TrustSeal | 428ms |
+| ScamCheck | 479ms |
+| project subdomain | 1047ms |
+
+Data written to `data/telemetry/uptime.json`. First verified uptime baseline at `2026-05-19T04:58:07Z`.
+
+The `project.asquaresolution.com` latency stands out at 1047ms — 4× slower than the Lab. This subdomain has no active product and receives no optimization. Not critical, but it's the first latency anomaly in the baseline.
+
+### Sitemap full check
+
+```bash
+node scripts/ingest-sitemap.mjs --full
+```
+
+**Result:** 313/313 URLs passing. 0 failures. Sitemap HTTP 200.
+
+Verified every URL in the lab's sitemap individually with HEAD requests. Full mode takes ~60 seconds. Result: zero 404s, zero redirect chains, zero unreachable content.
+
+313 published URLs at baseline. Every future sitemap run will show whether this grew or if any pages became unreachable.
+
+Data written to `data/telemetry/sitemap-health.json`.
+
+---
+
+## What Was Blocked
+
+### Lighthouse — PSI API quota exceeded
+
+```bash
+node scripts/ingest-lighthouse.mjs
+# [SKIP] PSI API 429: Quota exceeded
+```
+
+The PageSpeed Insights API has a daily quota for unauthenticated requests. The quota was already exhausted when the script ran (likely from earlier testing during the build session).
+
+**Fix:** Set `PAGESPEED_API_KEY=<your_key>` in `.env.local`. Free Google API keys have a quota of 25,000 requests/day — more than sufficient. Get key from Google Cloud Console → APIs & Services → Credentials.
+
+Without the API key, the script is limited to ~1-2 requests/day on the anonymous quota. This is a one-time setup task.
+
+### GSC — no CSV export yet
+
+GSC data requires manually exporting from Google Search Console and running the ingestion script against the CSV file. This can't be automated without OAuth (which is out of scope for this platform's architecture).
+
+**Next step:**
+1. Go to Google Search Console → Performance → Search Results
+2. Set date range: last 28 days
+3. Click Export → Download CSV (repeat for Queries tab and Pages tab)
+4. Run: `node scripts/ingest-gsc.mjs path/to/queries.csv --type queries`
+5. Run: `node scripts/ingest-gsc.mjs path/to/pages.csv --type pages`
+
+Until done, the GSC panel in the telemetry dashboard shows "unknown" tier.
+
+### Vercel — no env vars set
+
+The Vercel ingestion script needs `VERCEL_TOKEN` and `VERCEL_PROJECT_ID` in `.env.local`. These aren't set yet.
+
+**Next step:** Vercel Dashboard → Settings → Tokens → Create Token → add to `.env.local` → run `node scripts/ingest-vercel.mjs`.
+
+---
+
+## Script Bug Fixed
+
+`scripts/ingest-uptime.mjs` had a TypeScript type annotation (`const status: 'up' | 'degraded' =`) in a plain `.mjs` file. Node.js v25 can't parse TypeScript syntax in `.mjs` files. Removed the type annotation — the duplicate `status` computation was the dead line.
+
+```js
+// Before (broken)
+const latencyMs = Date.now() - start
+const status: 'up' | 'degraded' =     // ← TypeScript syntax in .mjs
+  res.ok ? 'up' : res.status >= 500 ? 'degraded' : 'up'
+
+// After (fixed)
+const latencyMs = Date.now() - start
+// status computed inline in return object below
+```
+
+The duplicate variable was unused — `status` was being computed twice (once with the type annotation, once in the return object). The return object's inline computation was the correct one.
+
+---
+
+## Telemetry Dashboard Now Has Real Data
+
+The `/ops/telemetry` page now reads from real snapshots:
+
+- **Uptime panel**: 5 real properties with HTTP status and latency
+- **Sitemap panel**: 313/313 verified URLs
+- **Performance panel**: still "unknown" — pending Lighthouse run with API key
+- **Search panel**: still "unknown" — pending GSC CSV export
+- **Deployment panel**: still "unknown" — pending Vercel env vars
+
+Overall system health tier: **warning** (partial data — 2/5 subsystems have real data)
+
+Target: all 5 subsystems active within this week.
+
+---
+
+## Metrics That Now Have Baselines
+
+| Metric | Baseline value | Captured |
+|---|---|---|
+| Ecosystem uptime | 5/5 (100%) | 2026-05-19 |
+| Project subdomain latency | 1047ms | 2026-05-19 |
+| Lab uptime | 256ms | 2026-05-19 |
+| Sitemap URL count | 313 | 2026-05-19 |
+| Sitemap pass rate | 100% | 2026-05-19 |
+| Published content items | 88 | 2026-05-19 |
+| Evidenced items | 3/88 (3.4%) | 2026-05-19 |
+| Failure memory coverage | 12/12 (100%) | 2026-05-19 |
+| Lighthouse scores | pending | — |
+| GSC impressions | pending | — |
+| Vercel build success rate | pending | — |
+
+These baselines have no value standing alone. Their value compounds as subsequent captures show movement. The point is not the number — it is the delta.
+
+---
+
+## Next Telemetry Actions
+
+1. `PAGESPEED_API_KEY` → `.env.local` → `node scripts/ingest-lighthouse.mjs`
+2. GSC export → `node scripts/ingest-gsc.mjs <csv>`
+3. `VERCEL_TOKEN` + `VERCEL_PROJECT_ID` → `.env.local` → `node scripts/ingest-vercel.mjs`
+4. Commit `data/telemetry/` snapshot files to repo
+5. Schedule weekly uptime + monthly sitemap full-check

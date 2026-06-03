@@ -1,0 +1,335 @@
+---
+title: "Schema.org Entity Blocks — A Square Solutions Ecosystem"
+description: "Production-ready JSON-LD schema markup for all four A Square Solutions properties. Establishes machine-readable entity relationships between asquaresolution.com, AI Execution Lab, TrustSeal, and ScamCheck for AI search systems and Google structured data."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["schema", "seo", "geo", "entity", "json-ld", "structured-data", "wordpress", "ecosystem"]
+status: published
+difficulty: intermediate
+section: operations
+evidence_images: []
+external_refs:
+  - "https://schema.org/Organization"
+  - "https://schema.org/SoftwareApplication"
+  - "https://schema.org/WebSite"
+  - "https://developers.google.com/search/docs/appearance/structured-data/organization"
+---
+
+JSON-LD schema blocks for all four A Square Solutions properties. Copy-paste ready. Each block establishes machine-readable entity relationships that AI search systems parse when building entity graphs.
+
+Schema markup is the most direct way to tell AI retrieval systems (Google, ChatGPT plugins, Perplexity) the exact relationship between these properties — that they are all owned by the same organization, what each one does, and how they connect.
+
+---
+
+## Why This Matters for GEO
+
+AI search systems don't only read content — they parse structured metadata. When ChatGPT or Perplexity answer "what does A Square Solutions build?", they draw from two sources:
+
+1. **Content** — what the pages say in prose
+2. **Schema** — what the pages declare in structured data
+
+Without schema, the relationship between `asquaresolution.com` and `lab.asquaresolution.com` is inferred from co-occurrence. With schema, it is explicit: `Organization` → `owns` → `WebSite`, `SoftwareApplication`. This removes ambiguity from AI entity resolution.
+
+The `sameAs` field is particularly important. It establishes that "A Square Solutions," "asquaresolution.com," "lab.asquaresolution.com," "TrustSeal," and "ScamCheck" all resolve to the same entity cluster.
+
+---
+
+## Block 1 — asquaresolution.com (WordPress)
+
+Add via **WPCode → Add New Snippet → Header & Footer → Header section**. Runs sitewide.
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": "https://asquaresolution.com/#organization",
+  "name": "A Square Solutions",
+  "url": "https://asquaresolution.com",
+  "description": "A Square Solutions builds production AI tools and systems. Engineering decisions, deployment workflows, and production failures are documented publicly at AI Execution Lab.",
+  "foundingDate": "2024",
+  "logo": {
+    "@type": "ImageObject",
+    "@id": "https://asquaresolution.com/#logo",
+    "url": "https://asquaresolution.com/wp-content/uploads/logo.png",
+    "width": 512,
+    "height": 512
+  },
+  "sameAs": [
+    "https://lab.asquaresolution.com",
+    "https://trustseal.asquaresolution.com",
+    "https://scamcheck.asquaresolution.com"
+  ],
+  "owns": [
+    {
+      "@type": "WebSite",
+      "@id": "https://lab.asquaresolution.com/#website",
+      "name": "AI Execution Lab",
+      "url": "https://lab.asquaresolution.com",
+      "description": "A Square Solutions' public operations journal for production AI engineering — failures, playbooks, deployment workflows, and execution tracks."
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://trustseal.asquaresolution.com/#app",
+      "name": "TrustSeal",
+      "url": "https://trustseal.asquaresolution.com",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "AI-powered trust verification for websites and businesses. Assesses credibility signals and issues verifiable trust badges.",
+      "offers": {
+        "@type": "Offer",
+        "priceCurrency": "INR",
+        "availability": "https://schema.org/InStock"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://scamcheck.asquaresolution.com/#app",
+      "name": "ScamCheck",
+      "url": "https://scamcheck.asquaresolution.com",
+      "applicationCategory": "SecurityApplication",
+      "operatingSystem": "Web",
+      "description": "AI scam detection tool. Analyzes websites and businesses for scam signals using domain, content, and behavioral pattern analysis.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+  ]
+}
+```
+
+**Also add** WebSite schema separately (same snippet, second `<script>` tag):
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://asquaresolution.com/#website",
+  "url": "https://asquaresolution.com",
+  "name": "A Square Solutions",
+  "description": "Production AI tools and systems from A Square Solutions.",
+  "publisher": {
+    "@id": "https://asquaresolution.com/#organization"
+  },
+  "inLanguage": "en-US"
+}
+```
+
+**WPCode snippet format** (wrap both in one snippet):
+
+```html
+<script type="application/ld+json">
+{ ... Organization block ... }
+</script>
+
+<script type="application/ld+json">
+{ ... WebSite block ... }
+</script>
+```
+
+---
+
+## Block 2 — lab.asquaresolution.com (Next.js / Vercel)
+
+Add to `app/layout.tsx` in the `<head>` section using a `<Script>` component or inline `<script>` tag.
+
+```tsx
+// In app/layout.tsx or a dedicated SchemaOrg component
+const labSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://lab.asquaresolution.com/#website",
+  "url": "https://lab.asquaresolution.com",
+  "name": "AI Execution Lab",
+  "description": "A Square Solutions' public operations journal for production AI engineering — failures, playbooks, Claude Code workflows, and deployment architectures.",
+  "publisher": {
+    "@type": "Organization",
+    "@id": "https://asquaresolution.com/#organization",
+    "name": "A Square Solutions",
+    "url": "https://asquaresolution.com"
+  },
+  "inLanguage": "en-US",
+  "about": {
+    "@type": "Thing",
+    "name": "Production AI engineering",
+    "description": "The practice of building, deploying, and operating AI systems in real production environments"
+  }
+}
+```
+
+**In JSX:**
+
+```tsx
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{ __html: JSON.stringify(labSchema) }}
+/>
+```
+
+Or use Next.js metadata with the `Script` component:
+
+```tsx
+import Script from 'next/script'
+
+// In layout.tsx body
+<Script
+  id="schema-lab"
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{ __html: JSON.stringify(labSchema) }}
+/>
+```
+
+---
+
+## Block 3 — trustseal.asquaresolution.com (React/Vite)
+
+Add to `public/index.html` in the `<head>`, or inject via `react-helmet` / `@vitejs/plugin-react` head management.
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "@id": "https://trustseal.asquaresolution.com/#app",
+  "name": "TrustSeal",
+  "url": "https://trustseal.asquaresolution.com",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "description": "TrustSeal is an AI-powered trust verification tool by A Square Solutions. It assesses website credibility signals, fact-checks claims, and issues verifiable trust badges for businesses that want to demonstrate legitimacy.",
+  "creator": {
+    "@type": "Organization",
+    "@id": "https://asquaresolution.com/#organization",
+    "name": "A Square Solutions",
+    "url": "https://asquaresolution.com"
+  },
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "A Square Solutions",
+    "url": "https://asquaresolution.com"
+  },
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "INR",
+    "availability": "https://schema.org/InStock",
+    "seller": {
+      "@id": "https://asquaresolution.com/#organization"
+    }
+  },
+  "sameAs": [
+    "https://asquaresolution.com",
+    "https://lab.asquaresolution.com"
+  ]
+}
+```
+
+**In `public/index.html`:**
+
+```html
+<script type="application/ld+json">
+{ ... TrustSeal schema ... }
+</script>
+```
+
+Or with React Helmet in `App.jsx`:
+
+```jsx
+import { Helmet } from 'react-helmet'
+
+function App() {
+  return (
+    <>
+      <Helmet>
+        <script type="application/ld+json">
+          {JSON.stringify(trustsealSchema)}
+        </script>
+      </Helmet>
+      {/* rest of app */}
+    </>
+  )
+}
+```
+
+---
+
+## Block 4 — scamcheck.asquaresolution.com (React/Vite)
+
+Same pattern as TrustSeal. Add to `public/index.html` or via React Helmet.
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "@id": "https://scamcheck.asquaresolution.com/#app",
+  "name": "ScamCheck",
+  "url": "https://scamcheck.asquaresolution.com",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "description": "ScamCheck is an AI scam detection tool by A Square Solutions. It analyzes websites, businesses, and offers for scam signals using domain analysis, content assessment, and behavioral pattern detection.",
+  "creator": {
+    "@type": "Organization",
+    "@id": "https://asquaresolution.com/#organization",
+    "name": "A Square Solutions",
+    "url": "https://asquaresolution.com"
+  },
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "A Square Solutions",
+    "url": "https://asquaresolution.com"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "sameAs": [
+    "https://asquaresolution.com",
+    "https://lab.asquaresolution.com",
+    "https://trustseal.asquaresolution.com"
+  ]
+}
+```
+
+---
+
+## Validation
+
+After implementation, test each property:
+
+**Google Rich Results Test:** `https://search.google.com/test/rich-results`
+- Enter each URL and confirm the schema type is detected
+- Organization schema should show on `asquaresolution.com`
+- SoftwareApplication should show on TrustSeal and ScamCheck
+
+**Schema.org Validator:** `https://validator.schema.org/`
+- Paste the raw JSON-LD to check for property errors
+- Confirm `@id` URIs are consistent across all four blocks
+- Confirm `creator` and `publisher` reference `asquaresolution.com/#organization`
+
+**GSC Rich Results report** (after 2-3 days):
+- WP Admin → GSC → Rich Results report
+- Should show Organization schema detected for homepage
+
+---
+
+## Entity Consistency Notes
+
+The `@id` values must be consistent across all four schema blocks. These are the canonical identifiers:
+
+| Property | @id |
+|---|---|
+| Organization | `https://asquaresolution.com/#organization` |
+| Main WebSite | `https://asquaresolution.com/#website` |
+| Lab WebSite | `https://lab.asquaresolution.com/#website` |
+| TrustSeal App | `https://trustseal.asquaresolution.com/#app` |
+| ScamCheck App | `https://scamcheck.asquaresolution.com/#app` |
+
+If any external schema tool or plugin generates its own `@id` values (Yoast, RankMath), check that their generated values match these. Override if needed.
+
+---
+
+## Related
+
+- [WordPress Ecosystem Integration Playbook](/playbooks/wordpress-ecosystem-integration) — implementation steps
+- [Ecosystem Authority Map](/docs/ecosystem-authority-map) — cross-property linking strategy
+- [GEO Intelligence Architecture](/docs/geo-intelligence-architecture) — entity density and AI search

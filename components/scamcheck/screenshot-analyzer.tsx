@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { LANGS, t, type Lang } from '@/lib/i18n/scamcheck'
 import { getCountry, resolveCountryDetailed, type CountryConfig, type GeoSource } from '@/lib/scam-intel/countries'
+import { useCredits } from '@/hooks/use-credits'
 
 interface VisualSignal { id: string; label: string; severity: 'info' | 'warn' | 'danger'; evidence: string }
 interface OcrWord { text: string; x: number; y: number; w: number; h: number }
@@ -69,6 +70,7 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
   const [dragOver, setDragOver] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
+  const { quota, trySpend } = useCredits()
 
   // Country detection: browser locale first, then CDN geo header (best-effort).
   // Gated by NEXT_PUBLIC_GEO_ENABLED. (task 4)
@@ -87,6 +89,7 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
     setError(''); setResult(null)
     if (!ALLOWED.includes(file.type)) { setError('Please upload a PNG, JPEG, or WebP screenshot.'); setStage('error'); return }
     if (file.size > 6 * 1024 * 1024) { setError('Image too large (max 6 MB).'); setStage('error'); return }
+    if (!trySpend('screenshot')) { setError(`Out of scans — screenshot analysis uses 3 credits (${quota}/day). Sign in for 50/day.`); setStage('error'); return }
     setStage('compressing')
     const { dataUrl, mime } = await optimizeImage(file)
     setPreview(dataUrl)
@@ -244,9 +247,6 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
       </div>
 
       <p className="mt-3 text-xs text-zinc-500">{t(lang, 'disclaimer')} Images are optimized on your device and processed securely, not stored.</p>
-
-      {/* TEMPORARY geo-detection debug label (remove after verification). */}
-      <p className="mt-2 font-mono text-[11px] text-zinc-600">debug · country={country.code} ({country.name}) · locale={geo.locale || 'n/a'} · header={geo.headerCode || 'none'} · source={geo.source} · ui={lang}</p>
     </div>
   )
 }

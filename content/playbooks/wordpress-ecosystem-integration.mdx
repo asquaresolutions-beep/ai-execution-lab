@@ -1,0 +1,396 @@
+---
+title: "WordPress Ecosystem Integration Playbook"
+description: "Complete operational playbook for integrating AI Execution Lab, TrustSeal, and ScamCheck into asquaresolution.com. Covers homepage blocks, schema markup, navigation, footer, and internal link distribution. Estimated execution time: 60–90 minutes."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["wordpress", "ecosystem", "integration", "seo", "schema", "gutenberg", "ops"]
+status: published
+goal: "Establish all cross-property authority links, schema markup, and homepage sections on asquaresolution.com in a single tracked session."
+prerequisites:
+  - "WordPress admin access (Editor or Administrator role)"
+  - "WPCode plugin installed (or access to theme functions.php)"
+  - "Gutenberg block editor enabled (not Classic Editor)"
+  - "LiteSpeed Cache plugin installed"
+estimated_time: "60–90 minutes"
+evidence_images: []
+external_refs:
+  - "https://schema.org/Organization"
+  - "https://developers.google.com/search/docs/appearance/structured-data/organization"
+---
+
+<LessonMeta
+  duration="60–90 min"
+  difficulty="intermediate"
+  tools={["WordPress Admin", "WPCode", "Gutenberg Editor", "LiteSpeed Cache", "Google Rich Results Test"]}
+  outcome="Cross-property authority links, schema markup, and homepage ecosystem sections live on asquaresolution.com."
+/>
+
+This playbook executes the complete ecosystem integration for `asquaresolution.com` in a single session. Every step is a concrete action with exact admin paths and copy-paste content.
+
+**Do not skip the verification checklist at the end.** Each step is reversible. The verification checklist is how you confirm it worked.
+
+---
+
+## Pre-Session Setup
+
+Open these tabs before starting:
+
+1. `asquaresolution.com/wp-admin` → logged in as Administrator
+2. `lab.asquaresolution.com` → to verify links resolve
+3. `trustseal.asquaresolution.com` → to verify product URL
+4. `scamcheck.asquaresolution.com` → to verify product URL
+5. This playbook (for copy-paste content)
+
+**Session log**: Record start time. Log each step completion time as you go. The session itself becomes an execution log entry.
+
+---
+
+## Step 1 — Schema.org Organization Markup (15 min)
+
+**Why first:** Schema markup is the most impactful single action for entity coherence in AI search systems. Do this before anything visible.
+
+**Path:** WP Admin → **WPCode** → **Add New Snippet** → **Header & Footer**
+
+Add this JSON-LD block to the **\<head\>** section (Header):
+
+```html
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": "https://asquaresolution.com/#organization",
+  "name": "A Square Solutions",
+  "url": "https://asquaresolution.com",
+  "logo": {
+    "@type": "ImageObject",
+    "url": "https://asquaresolution.com/wp-content/uploads/logo.png"
+  },
+  "description": "A Square Solutions builds production AI tools and documents the engineering work at AI Execution Lab.",
+  "sameAs": [
+    "https://lab.asquaresolution.com",
+    "https://trustseal.asquaresolution.com",
+    "https://scamcheck.asquaresolution.com"
+  ],
+  "subOrganization": [],
+  "owns": [
+    {
+      "@type": "WebSite",
+      "@id": "https://lab.asquaresolution.com/#website",
+      "name": "AI Execution Lab",
+      "url": "https://lab.asquaresolution.com",
+      "description": "A Square Solutions' public operations journal for production AI engineering."
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://trustseal.asquaresolution.com/#app",
+      "name": "TrustSeal",
+      "url": "https://trustseal.asquaresolution.com",
+      "applicationCategory": "BusinessApplication",
+      "description": "AI-powered trust verification tool. Assesses website credibility and issues verifiable trust badges."
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://scamcheck.asquaresolution.com/#app",
+      "name": "ScamCheck",
+      "url": "https://scamcheck.asquaresolution.com",
+      "applicationCategory": "SecurityApplication",
+      "description": "AI scam detection tool. Analyzes websites and businesses for scam signals before users engage."
+    }
+  ]
+}
+</script>
+```
+
+**Also add** this WebSite schema to the same header snippet (append after the Organization block):
+
+```html
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://asquaresolution.com/#website",
+  "url": "https://asquaresolution.com",
+  "name": "A Square Solutions",
+  "publisher": {
+    "@id": "https://asquaresolution.com/#organization"
+  }
+}
+</script>
+```
+
+**Save snippet.** Verify: go to [Google Rich Results Test](https://search.google.com/test/rich-results), enter `https://asquaresolution.com`, confirm Organization schema detected.
+
+⏱ **Target time:** Under 15 minutes including verification.
+
+---
+
+## Step 2 — Navigation Menu Update (5 min)
+
+**Path:** WP Admin → **Appearance** → **Menus** → select primary menu
+
+Add menu item:
+- **Label:** `AI Lab`
+- **URL:** `https://lab.asquaresolution.com`
+- **Open in new tab:** Yes
+- **Position:** Last item in primary nav
+
+If the theme has a **Tools** or **Products** dropdown, nest it there:
+```
+Products ▾
+  ├── TrustSeal
+  ├── ScamCheck
+  └── AI Lab
+```
+
+**Save Menu.** Verify: check desktop and mobile view. Confirm link opens correctly.
+
+⏱ **Target time:** Under 5 minutes.
+
+---
+
+## Step 3 — Homepage Sections (30 min)
+
+**Path:** WP Admin → **Pages** → find the homepage → **Edit**
+
+Switch to **Code Editor** view: top-right menu (⋮) → **Code Editor** (or `Ctrl+Shift+Alt+M`).
+
+Locate the insertion point: after the hero block, before the services/testimonials section.
+
+**Paste Section 1 — AI Execution Lab Featured:**
+
+```html
+<!-- wp:group {"tagName":"section","style":{"spacing":{"padding":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|60"}}},"backgroundColor":"base-2","className":"ael-featured-section"} -->
+<section class="wp-block-group has-base-2-background-color has-background ael-featured-section" style="padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--60)">
+  <!-- wp:group {"layout":{"type":"constrained","contentSize":"760px"}} -->
+  <div class="wp-block-group">
+    <!-- wp:heading {"level":2,"style":{"typography":{"fontWeight":"700","fontSize":"1.75rem"}}} -->
+    <h2 class="wp-block-heading" style="font-weight:700;font-size:1.75rem">The Work, Made Public</h2>
+    <!-- /wp:heading -->
+    <!-- wp:paragraph {"style":{"typography":{"fontSize":"1.0625rem","lineHeight":"1.7"}},"textColor":"contrast-2"} -->
+    <p class="has-contrast-2-color has-text-color" style="font-size:1.0625rem;line-height:1.7">AI Execution Lab is where we document what we actually build — the systems, the failures, the operational decisions, and the workflows behind our products and client work. Not a tutorial site. A public record of a real AI operations practice.</p>
+    <!-- /wp:paragraph -->
+    <!-- wp:paragraph {"style":{"typography":{"fontSize":"1.0625rem","lineHeight":"1.7"}},"textColor":"contrast-2"} -->
+    <p class="has-contrast-2-color has-text-color" style="font-size:1.0625rem;line-height:1.7">Everything on the platform is built first. Documented second.</p>
+    <!-- /wp:paragraph -->
+    <!-- wp:spacer {"height":"16px"} --><div style="height:16px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer -->
+    <!-- wp:paragraph -->
+    <p><a href="https://lab.asquaresolution.com" target="_blank" rel="noopener noreferrer">Read the Lab →</a> &nbsp;·&nbsp; <a href="https://lab.asquaresolution.com/failures" target="_blank" rel="noopener noreferrer">Failure archive</a> &nbsp;·&nbsp; <a href="https://lab.asquaresolution.com/playbooks" target="_blank" rel="noopener noreferrer">Playbooks</a> &nbsp;·&nbsp; <a href="https://lab.asquaresolution.com/tracks" target="_blank" rel="noopener noreferrer">Execution tracks</a></p>
+    <!-- /wp:paragraph -->
+  </div>
+  <!-- /wp:group -->
+</section>
+<!-- /wp:group -->
+```
+
+**Paste Section 2 — Ecosystem Architecture (3-column):**
+
+```html
+<!-- wp:group {"tagName":"section","style":{"spacing":{"padding":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|60"}}},"className":"ecosystem-section"} -->
+<section class="wp-block-group ecosystem-section" style="padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--60)">
+  <!-- wp:group {"layout":{"type":"constrained","contentSize":"900px"}} -->
+  <div class="wp-block-group">
+    <!-- wp:heading {"level":2,"style":{"typography":{"fontWeight":"700","fontSize":"1.5rem"}}} -->
+    <h2 class="wp-block-heading" style="font-weight:700;font-size:1.5rem">What We Build and Run</h2>
+    <!-- /wp:heading -->
+    <!-- wp:paragraph {"textColor":"contrast-2"} --><p class="has-contrast-2-color has-text-color">Three production AI systems, built and operated by the same team.</p><!-- /wp:paragraph -->
+    <!-- wp:spacer {"height":"24px"} --><div style="height:24px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer -->
+    <!-- wp:columns {"isStackedOnMobile":true} -->
+    <div class="wp-block-columns is-layout-flex">
+      <!-- wp:column -->
+      <div class="wp-block-column">
+        <!-- wp:heading {"level":3,"style":{"typography":{"fontSize":"1rem","fontWeight":"600"}}} --><h3 class="wp-block-heading" style="font-size:1rem;font-weight:600">AI Execution Lab</h3><!-- /wp:heading -->
+        <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem","lineHeight":"1.6"}},"textColor":"contrast-2"} --><p class="has-contrast-2-color has-text-color" style="font-size:0.9375rem;line-height:1.6">Our public engineering journal — production failures, proven playbooks, and the full Claude Code operator track. Built from real daily AI engineering work.</p><!-- /wp:paragraph -->
+        <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem"}}} --><p style="font-size:0.9375rem"><a href="https://lab.asquaresolution.com" target="_blank" rel="noopener noreferrer">lab.asquaresolution.com →</a></p><!-- /wp:paragraph -->
+      </div>
+      <!-- /wp:column -->
+      <!-- wp:column -->
+      <div class="wp-block-column">
+        <!-- wp:heading {"level":3,"style":{"typography":{"fontSize":"1rem","fontWeight":"600"}}} --><h3 class="wp-block-heading" style="font-size:1rem;font-weight:600">TrustSeal</h3><!-- /wp:heading -->
+        <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem","lineHeight":"1.6"}},"textColor":"contrast-2"} --><p class="has-contrast-2-color has-text-color" style="font-size:0.9375rem;line-height:1.6">AI-powered trust verification for websites and businesses. Assesses credibility signals and issues verifiable trust badges.</p><!-- /wp:paragraph -->
+        <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem"}}} --><p style="font-size:0.9375rem"><a href="https://trustseal.asquaresolution.com" target="_blank" rel="noopener noreferrer">trustseal.asquaresolution.com →</a></p><!-- /wp:paragraph -->
+      </div>
+      <!-- /wp:column -->
+      <!-- wp:column -->
+      <div class="wp-block-column">
+        <!-- wp:heading {"level":3,"style":{"typography":{"fontSize":"1rem","fontWeight":"600"}}} --><h3 class="wp-block-heading" style="font-size:1rem;font-weight:600">ScamCheck</h3><!-- /wp:heading -->
+        <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem","lineHeight":"1.6"}},"textColor":"contrast-2"} --><p class="has-contrast-2-color has-text-color" style="font-size:0.9375rem;line-height:1.6">AI scam detection tool. Check any URL, business, or offer for scam signals before engaging — domain, content, and behavioral analysis.</p><!-- /wp:paragraph -->
+        <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem"}}} --><p style="font-size:0.9375rem"><a href="https://scamcheck.asquaresolution.com" target="_blank" rel="noopener noreferrer">scamcheck.asquaresolution.com →</a></p><!-- /wp:paragraph -->
+      </div>
+      <!-- /wp:column -->
+    </div>
+    <!-- /wp:columns -->
+  </div>
+  <!-- /wp:group -->
+</section>
+<!-- /wp:group -->
+```
+
+**Paste Section 3 — Operational Authority CTA:**
+
+```html
+<!-- wp:group {"tagName":"section","style":{"spacing":{"padding":{"top":"var:preset|spacing|50","bottom":"var:preset|spacing|50"}}},"backgroundColor":"base-2"} -->
+<section class="wp-block-group has-base-2-background-color has-background" style="padding-top:var(--wp--preset--spacing--50);padding-bottom:var(--wp--preset--spacing--50)">
+  <!-- wp:group {"layout":{"type":"constrained","contentSize":"720px"}} -->
+  <div class="wp-block-group">
+    <!-- wp:heading {"level":2,"style":{"typography":{"fontWeight":"700","fontSize":"1.375rem"}}} -->
+    <h2 class="wp-block-heading" style="font-weight:700;font-size:1.375rem">If you're evaluating whether we know what we're doing</h2>
+    <!-- /wp:heading -->
+    <!-- wp:paragraph {"style":{"typography":{"lineHeight":"1.7"}},"textColor":"contrast-2"} -->
+    <p class="has-contrast-2-color has-text-color" style="line-height:1.7">The answer is at AI Execution Lab. Two years of production engineering work documented in public: what we built, what broke, how long things took, and what the operational cost was. Not a portfolio. An engineering record.</p>
+    <!-- /wp:paragraph -->
+    <!-- wp:spacer {"height":"8px"} --><div style="height:8px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer -->
+    <!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem"}}} -->
+    <p style="font-size:0.9375rem"><a href="https://lab.asquaresolution.com/start-here" target="_blank" rel="noopener noreferrer"><strong>Start here →</strong></a> &nbsp; <span style="color:#888">or browse: </span><a href="https://lab.asquaresolution.com/failures" target="_blank" rel="noopener noreferrer">failure archive</a> · <a href="https://lab.asquaresolution.com/playbooks" target="_blank" rel="noopener noreferrer">playbooks</a> · <a href="https://lab.asquaresolution.com/tracks" target="_blank" rel="noopener noreferrer">execution tracks</a></p>
+    <!-- /wp:paragraph -->
+  </div>
+  <!-- /wp:group -->
+</section>
+<!-- /wp:group -->
+```
+
+Switch back to Visual Editor. Confirm sections render correctly. **Save** (not publish yet — verify first).
+
+⏱ **Target time:** 30 minutes.
+
+---
+
+## Step 4 — Footer Widget (10 min)
+
+**Path:** WP Admin → **Appearance** → **Widgets** → find footer widget area
+
+Add a **Custom HTML** widget. Title: `Our Work`
+
+```html
+<div class="footer-ecosystem-block">
+  <ul style="list-style:none;padding:0;margin:0;line-height:2">
+    <li><a href="https://lab.asquaresolution.com" target="_blank" rel="noopener noreferrer"><strong>AI Execution Lab</strong></a> — Engineering journal</li>
+    <li><a href="https://trustseal.asquaresolution.com" target="_blank" rel="noopener noreferrer"><strong>TrustSeal</strong></a> — AI trust verification</li>
+    <li><a href="https://scamcheck.asquaresolution.com" target="_blank" rel="noopener noreferrer"><strong>ScamCheck</strong></a> — AI scam detection</li>
+  </ul>
+</div>
+```
+
+If using Elementor Footer or a block-based theme footer, add the equivalent text widget with these three links in the same order.
+
+⏱ **Target time:** 10 minutes.
+
+---
+
+## Step 5 — About Page Update (5 min)
+
+**Path:** WP Admin → **Pages** → find About page → **Edit**
+
+Add this block at the bottom of the existing About content, before any contact section:
+
+```html
+<!-- wp:group {"style":{"spacing":{"padding":{"top":"24px","bottom":"24px"},"margin":{"top":"24px"}},"border":{"top":{"color":"#e0e0e0","width":"1px"}}}} -->
+<div class="wp-block-group" style="padding-top:24px;padding-bottom:24px;margin-top:24px;border-top:1px solid #e0e0e0">
+  <!-- wp:heading {"level":3,"style":{"typography":{"fontSize":"1.0625rem","fontWeight":"600"}}} -->
+  <h3 class="wp-block-heading" style="font-size:1.0625rem;font-weight:600">Built in Public</h3>
+  <!-- /wp:heading -->
+  <!-- wp:paragraph {"textColor":"contrast-2"} -->
+  <p class="has-contrast-2-color has-text-color">The systems and decisions behind our work are documented at <a href="https://lab.asquaresolution.com" target="_blank" rel="noopener noreferrer">AI Execution Lab</a> — including the failures. We publish what we build: production automation pipelines, SEO engineering systems, content operations, and the AI workflows that run this practice. If you're evaluating whether we know what we're doing: the Lab is the answer.</p>
+  <!-- /wp:paragraph -->
+</div>
+<!-- /wp:group -->
+```
+
+**Save.** ⏱ **Target time:** 5 minutes.
+
+---
+
+## Step 6 — Internal Links Audit on Top 5 Posts (15 min)
+
+**Path:** WP Admin → **Posts** → sort by **Views** (or use GSC to identify top-traffic posts)
+
+For each of the top 5 posts:
+1. Open editor
+2. Search for content that mentions Claude, AI tools, SEO, or deployment
+3. Add ONE contextual Lab link where it genuinely extends the post
+
+**Anchor text rules:**
+- Claude/AI topics → link to `/tracks/claude-code-operator` with text "Claude Code operator track"
+- SEO/content topics → link to `/docs/geo-intelligence-architecture` with text "GEO optimization approach"
+- WordPress/deployment topics → link to `/failures` with text "production failure archive"
+- General → link to `lab.asquaresolution.com` with text "AI Execution Lab"
+
+Maximum 1 Lab link per post. Keep it editorially natural.
+
+⏱ **Target time:** 15 minutes (3 min/post average).
+
+---
+
+## Step 7 — LiteSpeed Purge (2 min)
+
+**Path:** WP Admin → **LiteSpeed Cache** → **Purge** → **Purge All**
+
+Wait 30 seconds for cache to rebuild on first request.
+
+---
+
+## Verification Checklist
+
+Run through this before closing the session:
+
+**Schema:**
+- [ ] Google Rich Results Test (`https://asquaresolution.com`) → Organization schema detected
+- [ ] Schema shows `sameAs` with three sub-domain URLs
+- [ ] No schema validation errors
+
+**Navigation:**
+- [ ] Primary menu shows "AI Lab" link (or equivalent)
+- [ ] Link opens `lab.asquaresolution.com` in new tab
+- [ ] Mobile menu renders correctly
+
+**Homepage:**
+- [ ] "The Work, Made Public" section visible
+- [ ] "What We Build and Run" 3-column section visible
+- [ ] Columns stack on mobile (test at 375px width)
+- [ ] All 5 Lab links resolve: homepage, /failures, /playbooks, /tracks, /start-here
+- [ ] "If you're evaluating whether we know what we're doing" CTA visible
+- [ ] Page load time not regressed (use DevTools → Network tab, check total page weight)
+
+**Footer:**
+- [ ] "Our Work" widget visible
+- [ ] TrustSeal, ScamCheck, AI Execution Lab links all resolve
+
+**About page:**
+- [ ] "Built in Public" paragraph visible with Lab link
+
+**Internal links:**
+- [ ] 5 posts confirmed with Lab links added
+- [ ] No broken links introduced (run a quick crawl or use Broken Link Checker plugin)
+
+**GSC (next day):**
+- [ ] Submit homepage URL in GSC URL Inspection → Request Indexing
+- [ ] Submit About page URL → Request Indexing
+
+---
+
+## Session Log Template
+
+When done, create a session log at `/content/logs/[date]-wordpress-ecosystem-integration.mdx`:
+
+```markdown
+---
+title: "WordPress Ecosystem Integration — Live Implementation"
+date: "[YYYY-MM-DD]"
+tags: ["wordpress", "ecosystem", "schema", "integration", "ops"]
+log_type: "deployment"
+duration: "[Xh Ym]"
+outcome: "Schema.org Organization markup live, 3 homepage sections added, footer updated, 5 posts linked. Verification: all checks passed."
+evidence_images: []
+external_refs: []
+---
+```
+
+Fill in duration and outcome from your actual session notes. This is the operational evidence that the integration happened.
+
+---
+
+## Related
+
+- [WordPress Homepage Blocks (Gutenberg HTML)](/docs/wordpress-homepage-blocks) — full HTML source
+- [Schema.org Entity Blocks](/docs/schema-org-entity-blocks) — schema reference
+- [Ecosystem Authority Map](/docs/ecosystem-authority-map) — full cross-property analysis
+- [WordPress → Lab Linking Map](/docs/wordpress-to-lab-linking)

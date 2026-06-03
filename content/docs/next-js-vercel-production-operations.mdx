@@ -1,0 +1,194 @@
+---
+title: "Operating a Next.js Platform on Vercel — Production Operations Guide"
+description: "What it actually takes to operate a Next.js 15 App Router platform on Vercel in production: deployment configuration, monitoring, known failure modes, build performance, and the operational discipline that keeps it stable. From real operational experience on AI Execution Lab."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["next.js", "vercel", "deployment", "production", "ops", "app-router", "ssg", "telemetry"]
+status: published
+difficulty: intermediate
+section: operations
+evidence_images: []
+external_refs:
+  - "https://vercel.com/docs/deployments/overview"
+  - "https://nextjs.org/docs/app/building-your-application/deploying"
+  - "https://vercel.com/docs/edge-network/overview"
+---
+
+This is operational documentation — not a deployment tutorial. It describes what running a Next.js 15 App Router platform on Vercel looks like after the initial setup is complete: the monitoring discipline, the known failure modes, the configuration decisions that actually matter, and the operational cost of each.
+
+The source is AI Execution Lab (`lab.asquaresolution.com`), a Next.js 15 SSG platform deployed on Vercel since April 2026. Current state at May 2026: 313 indexed URLs, 0 deployment failures (after the initial edge runtime incident), 256ms average response latency.
+
+---
+
+## The Production Stack
+
+| Layer | Choice | Operational notes |
+|---|---|---|
+| Framework | Next.js 15.3.0 | App Router, no Pages Router |
+| Rendering | SSG (Static Site Generation) | All content pre-rendered at build time |
+| Deployment | Vercel | Push-to-deploy via GitHub integration |
+| Runtime | Node.js (not Edge) | Edge runtime explicitly avoided after incident |
+| Content | MDX pipeline | `.mdx` files in `/content/` → build-time `fs.readFileSync()` |
+| Hosting | Vercel CDN | Global edge network serves static HTML |
+
+The most consequential architectural decision is SSG over SSR. Every page is pre-generated at build time — zero dynamic server-side rendering, zero database calls, zero API calls at request time. This eliminates entire categories of production failures (cold starts, API timeouts, database connection issues) at the cost of requiring a full rebuild for any content update.
+
+On Vercel with GitHub Actions, that rebuild takes 2–4 minutes from push to live. The operational model is: **write content → push → wait 3 minutes → live**.
+
+---
+
+## Known Failure Modes
+
+### Failure 1: Edge Runtime + Node.js Module
+
+**Error:** `The Edge Runtime does not support Node.js 'crypto' module`
+
+**Trigger:** Adding `export const runtime = 'edge'` to a page that imports anything that uses Node.js built-ins (directly or through a dependency chain).
+
+**Root cause:** The Vercel Edge Runtime runs on V8 isolates, not Node.js. It has no access to `crypto`, `fs`, `path`, `buffer`, or most Node.js standard library modules.
+
+**Fix:** Remove `export const runtime = 'edge'` from any route that imports server-side Node.js code. For `opengraph-image.tsx` specifically (common trigger), use the Node.js runtime.
+
+**Resolution time in production:** 23 minutes, 2026-05-10. Full report: [`/failures/edge-runtime-deployment-failure`](/failures/edge-runtime-deployment-failure)
+
+**Prevention:** Never add `export const runtime = 'edge'` to routes that import content utilities, file system operations, or any library not explicitly Edge Runtime compatible.
+
+---
+
+### Failure 2: Server Module in Client Bundle
+
+**Error:** `Module not found: Can't resolve 'fs'` (or `path`, `crypto` in client build)
+
+**Trigger:** Using `fs.readFileSync()` or other server-only modules inside a component that renders on the client, or using a server-only import without the `'server-only'` guard.
+
+**Root cause:** Next.js App Router's component model is strict about server vs. client boundaries. Any component with `'use client'` directive (or any component imported into one) cannot use server-only modules.
+
+**Fix:** Move server-only data fetching to Server Components or `page.tsx`/`layout.tsx` files. Pass data as props to Client Components.
+
+**Resolution time in production:** varies, typically 15–30 minutes. Full report: [`/failures/server-module-client-bundle`](/failures/server-module-client-bundle)
+
+---
+
+### Failure 3: Missing Environment Variables
+
+**Error:** Build succeeds but feature fails silently, OR `Error: Missing required environment variable`
+
+**Trigger:** Environment variable set in `.env.local` (development) but not in Vercel project settings.
+
+**Root cause:** `.env.local` is gitignored and never reaches Vercel. Variables must be explicitly added in Vercel Dashboard → Project → Settings → Environment Variables.
+
+**Fix:** For each required env var: Vercel Dashboard → Settings → Environment Variables → Add → select environments (Production, Preview, Development as appropriate).
+
+**Prevention:** Maintain a `.env.example` file committed to the repo listing all required variable names (without values). Check after any new feature that requires env vars.
+
+Full report: [`/failures/environment-variable-missing-production`](/failures/environment-variable-missing-production)
+
+---
+
+## Configuration Decisions That Matter
+
+### Build output type
+
+```javascript
+// next.config.js
+const nextConfig = {
+  output: 'export',  // For pure SSG → static HTML/CSS/JS only
+}
+```
+
+`output: 'export'` generates a fully static site with no Node.js server. Vercel can still deploy it, but this mode has limitations: no server-side redirects, no ISR, no middleware. For a content-only platform (docs, blog, MDX), this is fine. For any app with user sessions or dynamic routes, do not use `output: 'export'`.
+
+The Lab does NOT use `output: 'export'` — it uses Vercel's standard deployment which handles static pages automatically without needing the export flag.
+
+### Image optimization
+
+Next.js `<Image>` is not compatible with `output: 'export'` without a custom loader. For SSG platforms that want optimized images: either use Vercel's built-in image optimization (works with standard deployment) or configure a third-party image CDN loader.
+
+For the Lab: standard deployment + Vercel image optimization. Any `<Image>` component works without additional configuration.
+
+### MDX rendering
+
+The Lab uses `next-mdx-remote` v5+ for build-time MDX compilation. The `blockJS: false` configuration option was removed in v6 — props in MDX custom components stopped passing correctly. Fix: do not pass object/array props via MDX frontmatter; use string props or component-level defaults.
+
+Full report: [`/failures/next-mdx-remote-v6-blockjs`](/failures/next-mdx-remote-v6-blockjs)
+
+---
+
+## Build Performance
+
+At May 2026 with 91 content items:
+
+| Phase | Duration |
+|---|---|
+| `npm install` (cached) | ~15s |
+| TypeScript type check | ~18s |
+| Content compilation (91 MDX) | ~25s |
+| Static generation (313 pages) | ~45s |
+| Total build time | 2–4 minutes |
+
+Build time scales with page count. 313 pages is current. Expect 4–6 minutes at 500+ pages. Build time does not significantly affect user experience (SSG serves pre-built HTML), but it affects deployment velocity — longer builds mean longer lag between push and live.
+
+**Optimization levers (if build time becomes a problem):**
+1. `next build --turbo` (Turbopack) — available in Next.js 15, reported 2–5x build time improvement
+2. ISR for high-count sections (generate only pages modified since last build)
+3. Limit `generateStaticParams()` in dev mode to avoid full regeneration on every hot reload
+
+---
+
+## Monitoring
+
+The Lab monitors deployment health via the Vercel API:
+- `scripts/ingest-vercel.mjs` — reads deployment history, build times, failure rate
+- Output: `data/telemetry/deployments.json`
+- Dashboard: `/ops/telemetry` → deployment panel
+
+Manual monitoring (weekly):
+1. Vercel Dashboard → Deployments → confirm no ERROR state in last 7 deployments
+2. Check build duration trend — a sudden 2x increase indicates a content volume or dependency issue
+3. Function invocations — should be near zero for a pure SSG site
+
+For platform health baseline, the Lab also runs:
+- Sitemap check: `node scripts/ingest-sitemap.mjs --full` → 313/313 at baseline
+- Uptime check: `node scripts/ingest-uptime.mjs` → 256ms latency at baseline
+
+---
+
+## The Operational Discipline
+
+The failure rate on Vercel for an SSG Next.js site is very low. Most failures cluster around:
+
+1. **Dependency updates** — a library update breaks the build
+2. **Module boundary violations** — server code imported into client components
+3. **Edge runtime misuse** — `runtime = 'edge'` added without checking compatibility
+4. **Environment variable gaps** — new feature ships without its required env var
+
+The operational discipline is:
+- After any dependency update: run `node node_modules/typescript/bin/tsc --noEmit` before pushing
+- After any new page or API route: check for server/client boundary violations
+- After any new feature requiring secrets: confirm the env var is in Vercel settings, not just `.env.local`
+- Weekly: check Vercel dashboard for any unexpected error state
+
+One build failure costs 2–4 minutes to diagnose and fix (the Vercel build log is specific). Zero scheduled downtime since Vercel pre-builds before swapping — the old build stays live until the new one is ready.
+
+---
+
+## Compared to Other Options
+
+| Platform | Build time | Cold start | SSG support | Price floor | Operational complexity |
+|---|---|---|---|---|---|
+| Vercel | 2–4 min | 0 (edge CDN) | Excellent | Free tier | Low |
+| GitHub Pages | 2–5 min | 0 (CDN) | Only static | Free | Low but limited |
+| Railway | N/A (SSR) | 0 | Requires Node server | ~$5/mo | Medium |
+| AWS CloudFront + S3 | 3–8 min | 0 | Manual setup | Minimal | High |
+
+For a content-heavy Next.js platform with MDX, Vercel is the lowest-friction operational choice. The main tradeoff versus GitHub Pages: Vercel supports server components, API routes, and ISR. GitHub Pages does not — it is purely static.
+
+---
+
+## Related
+
+- [Edge Runtime Deployment Failure](/failures/edge-runtime-deployment-failure) — the failure that defined this platform's runtime choice
+- [Environment Variable Missing in Production](/failures/environment-variable-missing-production)
+- [Server Module in Client Bundle](/failures/server-module-client-bundle)
+- [Platform Metrics Baseline](/docs/platform-metrics-baseline-2026-05) — current production numbers
+- [Telemetry Dashboard](/ops/telemetry) — live deployment health

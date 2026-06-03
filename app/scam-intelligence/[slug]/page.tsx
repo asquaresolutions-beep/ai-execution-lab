@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { allIntelSlugs, getIntelPage } from '@/lib/scam-intel/intel-pages'
 import { getCountry } from '@/lib/scam-intel/countries'
+import { AdSlot } from '@/components/ads/ad-slot'
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 
@@ -79,6 +80,8 @@ export default async function IntelPage({ params }: Props) {
 
       <h2 className="mt-8 text-xl font-semibold">What to do</h2>
       <ul className="mt-2 list-inside list-disc space-y-1 text-zinc-300">{p.safetyAdvice.map((s, i) => <li key={i}>{s}</li>)}</ul>
+
+      <AdSlot id="intel-mid" format="horizontal" />
 
       <h2 className="mt-8 text-xl font-semibold">FAQ</h2>
       <div className="mt-2 space-y-3">{p.faqs.map((f, i) => (

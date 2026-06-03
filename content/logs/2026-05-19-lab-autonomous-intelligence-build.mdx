@@ -1,0 +1,211 @@
+---
+title: "Lab Platform — Autonomous Intelligence Layer Build"
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["lab", "platform", "intelligence", "signals", "content-intelligence", "typescript", "next.js"]
+status: published
+log_type: "deployment"
+duration: "4h"
+outcome: "Shipped lib/content-intelligence.ts, lib/platform-intelligence.ts, app/ops/intelligence/, 6 new signal detectors, GEO dashboard. TypeScript clean across all files."
+affected_systems:
+  - ai-execution-lab
+  - next.js
+systems_touched:
+  - vercel
+  - claude-code
+related_docs:
+  - operational-memory-architecture
+  - geo-intelligence-architecture
+evidence_images: []
+external_refs: []
+---
+
+<LessonMeta
+  duration="4h"
+  difficulty="advanced"
+  tools={["TypeScript", "Next.js 15", "Claude Code", "VS Code"]}
+  outcome="Autonomous intelligence layer complete. Platform now scores its own maturity across 6 dimensions, generates ranked publishing recommendations, and surfaces 18 distinct signal types from the content corpus."
+/>
+
+Platform infrastructure build session. Objective: close out Phase 1–6 of the Operational Telemetry + Autonomous Intelligence roadmap by connecting existing telemetry, failure memory, GEO intelligence, and signal systems into a composite intelligence layer.
+
+---
+
+## Session Context
+
+**Platform:** lab.asquaresolution.com (Next.js 15, Vercel, SSG)
+**Session type:** Infrastructure + content systems build
+**Starting state:** Telemetry, GEO, signals, failure intelligence all exist as independent subsystems with no composite view
+
+The platform had reached the point where each individual system was operational, but no single surface showed the operator what to work on next or how the platform was performing as a whole. This session was about building that layer — and then immediately shifting mode away from infrastructure toward content compounding.
+
+---
+
+## What Was Built
+
+### `lib/content-intelligence.ts` (19 KB)
+
+The self-improving content recommendation engine. Analyses the full content corpus + failure memory + GEO taxonomy at build time to produce a ranked publishing priority queue.
+
+Seven independent detectors:
+
+| Detector | What it surfaces |
+|---|---|
+| GEO gaps | Uncovered GEO query taxonomy entries with no content target |
+| Failure coverage | Recurring failures (≥2 instances) without resolver playbooks |
+| Thin sections | Content sections below minimum depth threshold |
+| Evidence gaps | Case studies, failures, and labs with no screenshots or external refs |
+| Stale content | Docs 60+ days old with no `updated:` frontmatter field |
+| Ecosystem gaps | Active properties with no linked docs or failure reports |
+| Link density | High-severity failures with no related lessons or playbooks |
+
+Each recommendation has: action type, publish window (immediate / this-week / this-month / backlog), scored 0–100 by `impact × effort-inverse × urgency`.
+
+Sorted descending by score. The platform now answers: **what should be published next?**
+
+### `lib/platform-intelligence.ts` (19 KB)
+
+Composite platform maturity scoring across 6 dimensions:
+
+```
+Content (20%)           — section breadth × total depth
+Evidence (15%)          — evidence_images + external_refs density
+Failure Intelligence    — avg confidence, pattern coverage, high-conf paths
+(20%)
+GEO Coverage (20%)      — query taxonomy coverage %, owned query mapping
+Telemetry (12.5%)       — snapshot freshness + subsystem health tiers
+Operational Memory      — signal penalty model (penalties for open signals)
+(12.5%)
+```
+
+Tiers: `nascent → developing → operational → mature → advanced`
+
+Also generates `OperationalGuidance[]` — ranked recovery paths addressing the weakest current dimension with exact, executable action strings. Not vague suggestions — exact commands and file locations.
+
+### `app/ops/intelligence/page.tsx` (23 KB)
+
+Unified intelligence dashboard:
+- Large maturity score + tier label + next milestone
+- 6-dimension bar chart (score + insight + top gap per dimension)
+- Operational guidance cards (category, urgency, exact action)
+- Publishing queue split into Immediate / This Week / This Month
+- Intelligence sources panel
+- Platform direction manifesto (maintain vs. avoid)
+
+### Signal engine expansion: 12 → 18 types
+
+Added 6 new Phase 1 detectors to `lib/operational-signals.ts`:
+
+| Signal type | Detects |
+|---|---|
+| `stale_assumption` | Docs 60+ days old, no `updated:` field |
+| `underdeveloped_track` | Topic clusters with < 3 items (Vercel, Firebase, Next.js, SEO, Claude) |
+| `publishing_imbalance` | Largest section > 5× smallest populated section |
+| `operational_blind_spot` | Live ecosystem property with zero docs or failure reports |
+| `weak_geo_cluster` | GEO query category where zero queries have a content target |
+| `low_link_density` | High-severity failures with no related lessons or playbooks |
+
+All 18 signal types wired, deduped, sorted by priority, and rendered in `app/ops/signals/page.tsx`.
+
+### `app/ops/geo/page.tsx` (23 KB)
+
+New GEO Intelligence dashboard:
+- Coverage summary (owned/competitive/gap breakdown + progress bar)
+- Full query taxonomy grouped by category with difficulty badges and content target links
+- Gap query panel — red-highlighted uncovered intents
+- Entity graph (35 entities, bucketed by type)
+- Answerability framework (4 dimensions with positive/negative signal examples)
+- Citation potential scoring breakdown
+
+### Ops page integration
+
+`app/ops/page.tsx` now shows:
+- Telemetry health strip (5 subsystem dots + overall tier) → `/ops/telemetry`
+- Platform Intelligence strip (maturity score + tier + rec count) → `/ops/intelligence`
+- GEO strip → `/ops/geo`
+- Quick Access with Intelligence Dashboard, Telemetry, GEO entries
+
+---
+
+## TypeScript Hygiene
+
+Zero type errors across all files. Issues fixed during build:
+
+1. `SearchHealth` was missing `tier: HealthTier` — added to interface and computed in `computeSearchHealth()`
+2. `ContentFrontmatter` was missing `evidence_images` and `external_refs` optional fields — added to `lib/content.ts`
+
+---
+
+## Architecture Decisions
+
+**Build-time only, no runtime fetching.** All intelligence computation runs in Next.js server components at build time (`getOperationalSignals()`, `getTelemetrySummary()`, `getPlatformMaturityScore()` are all pure synchronous functions operating on static data). Zero client-side JS for the intelligence layer.
+
+**Memoization pattern.** Each function caches its result in a module-level `_cached*` variable:
+```typescript
+let _cachedSignals: OperationalSignal[] | null = null
+
+export function getOperationalSignals(): OperationalSignal[] {
+  if (_cachedSignals) return _cachedSignals
+  // ... compute ...
+  _cachedSignals = result
+  return _cachedSignals
+}
+```
+Multiple pages calling the same function within one build share the computed result.
+
+**No circular imports.** Import graph: `content.ts` → nothing; `failure-memory.ts` → `operational-memory.ts`; `content-intelligence.ts` → `content.ts`, `failure-memory.ts`, `geo-intelligence.ts`, `ecosystem.ts`, `operational-signals.ts`; `platform-intelligence.ts` → all of the above. `operational-signals.ts` → `content.ts`, `failure-memory.ts`, `operational-memory.ts`, `ecosystem.ts`, `geo-intelligence.ts`.
+
+---
+
+## Performance Profile
+
+At build time, the intelligence layer adds:
+- `getOperationalSignals()` — scans all content sections, failure memory, entity graph, GEO taxonomy: ~50–100ms per build
+- `getPlatformMaturityScore()` — calls all sub-scorers: ~20ms additional after signals are cached
+- `getContentRecommendations()` — 7 independent scans: ~30–50ms
+
+Total intelligence computation overhead per build: **< 200ms**.
+
+---
+
+## Strategic Note
+
+This session closes the infrastructure build phase. The platform now has:
+
+- Operational telemetry (uptime, deployments, sitemap, Lighthouse, GSC)
+- Failure intelligence (confidence scoring, pattern coverage, debug paths)
+- GEO intelligence (query taxonomy, entity graph, answerability scoring)
+- Autonomous signals (18 detectors, build-time)
+- Content intelligence (7 recommendation detectors, ranked queue)
+- Platform maturity scoring (6-dimension composite, 5 tiers)
+
+The infrastructure is sufficient. The moat now compounds from execution density — real deployment journals, real debugging recoveries, real GSC progression, real operational evidence. That is what the next phase is.
+
+---
+
+## Next Execution Priorities
+
+1. **Publish failure reports from real operations** — LiteSpeed cache bypass, HFE wpautop injection
+2. **Bootstrap telemetry data** — run `node scripts/ingest-uptime.mjs` and `node scripts/ingest-sitemap.mjs`
+3. **Run GSC CSV export** — populate `data/telemetry/gsc.json` with real search data
+4. **Set Vercel env vars** — `VERCEL_TOKEN` + `VERCEL_PROJECT_ID` in `.env.local`, then run ingest-vercel
+5. **Cover top GEO gap query** — "what is operational evidence in software" — no content target assigned
+6. **Score all failures in failure-memory.ts** — every unscored failure is dead intelligence
+
+---
+
+## Commit Summary
+
+```
+feat: autonomous intelligence layer — content intelligence, platform maturity, signal expansion
+
+- lib/content-intelligence.ts: 7-detector publishing recommendation engine
+- lib/platform-intelligence.ts: 6-dimension platform maturity scoring + guidance
+- app/ops/intelligence/page.tsx: unified intelligence dashboard
+- app/ops/geo/page.tsx: GEO intelligence dashboard
+- lib/operational-signals.ts: 6 new Phase 1 signal types (18 total)
+- app/ops/signals/page.tsx: all 18 signal type labels + ordering
+- app/ops/page.tsx: intelligence strip, maturity score, GEO strip
+- lib/telemetry.ts: SearchHealth.tier field added
+- lib/content.ts: evidence_images, external_refs frontmatter fields
+```

@@ -1,0 +1,223 @@
+---
+title: "WordPress Rollout Run Card — asquaresolution.com"
+description: "Single-session execution checklist for the full ecosystem integration rollout on asquaresolution.com. No explanations — pure action sequence with verification gates. Estimated 75 minutes."
+date: "2026-05-19"
+updated: "2026-05-19"
+tags: ["wordpress", "ecosystem", "integration", "schema", "ops", "checklist"]
+status: published
+difficulty: beginner
+section: operations
+evidence_images: []
+external_refs: []
+---
+
+**Open alongside WordPress admin.** Record start time. Do not skip verification gates — each one is a go/no-go before the next step.
+
+Full code, explanations, and rationale: [WordPress Ecosystem Integration Playbook](/playbooks/wordpress-ecosystem-integration)
+
+---
+
+## Pre-session (2 min)
+
+- [ ] Open: `asquaresolution.com/wp-admin` (logged in, Administrator role)
+- [ ] Open: `lab.asquaresolution.com` in new tab
+- [ ] Open: `search.google.com/test/rich-results` in new tab
+- [ ] Note start time: ___________
+
+---
+
+## Step 1 — Schema.org Markup (15 min)
+
+**WP Admin → WPCode → Add New Snippet → type: Header & Footer**
+
+Snippet name: `A Square Solutions — Organization + WebSite Schema`
+
+Paste into **Header** section:
+
+```html
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Organization","@id":"https://asquaresolution.com/#organization","name":"A Square Solutions","url":"https://asquaresolution.com","description":"A Square Solutions builds production AI tools and systems. Engineering decisions, deployment workflows, and production failures are documented publicly at AI Execution Lab.","sameAs":["https://lab.asquaresolution.com","https://trustseal.asquaresolution.com","https://scamcheck.asquaresolution.com"],"owns":[{"@type":"WebSite","@id":"https://lab.asquaresolution.com/#website","name":"AI Execution Lab","url":"https://lab.asquaresolution.com","description":"A Square Solutions' public operations journal for production AI engineering."},{"@type":"SoftwareApplication","@id":"https://trustseal.asquaresolution.com/#app","name":"TrustSeal","url":"https://trustseal.asquaresolution.com","applicationCategory":"BusinessApplication","description":"AI-powered trust verification for websites and businesses."},{"@type":"SoftwareApplication","@id":"https://scamcheck.asquaresolution.com/#app","name":"ScamCheck","url":"https://scamcheck.asquaresolution.com","applicationCategory":"SecurityApplication","description":"AI scam detection tool. Analyzes websites and businesses for scam signals."}]}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","@id":"https://asquaresolution.com/#website","url":"https://asquaresolution.com","name":"A Square Solutions","publisher":{"@id":"https://asquaresolution.com/#organization"}}
+</script>
+```
+
+**Set: Active → Save Snippet**
+
+**✓ Gate 1:** Rich Results Test → enter `https://asquaresolution.com` → confirm Organization detected → **PASS / FAIL**
+
+If FAIL: check WPCode snippet is Active, check for JSON syntax error (use jsonlint.com to validate).
+
+---
+
+## Step 2 — Navigation (5 min)
+
+**WP Admin → Appearance → Menus → [primary menu] → Custom Links**
+
+| Field | Value |
+|---|---|
+| URL | `https://lab.asquaresolution.com` |
+| Link Text | `AI Lab` |
+| Position | Last item in primary nav |
+| Open in new tab | Yes (add `target="_blank"` via screen options if needed) |
+
+**Add to Menu → Save Menu**
+
+**✓ Gate 2:** Front-end nav visible, link opens Lab in new tab → **PASS / FAIL**
+
+---
+
+## Step 3 — Homepage Sections (30 min)
+
+**WP Admin → Pages → [Homepage] → Edit**
+
+Switch to Code Editor: top-right ⋮ → **Code Editor** (or `Ctrl+Shift+Alt+M`)
+
+Find insertion point: after `<!-- /wp:group -->` closing the hero/intro block.
+
+**Paste Block A — AI Execution Lab Feature:**
+
+```html
+<!-- wp:group {"tagName":"section","style":{"spacing":{"padding":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|60"}}},"backgroundColor":"base-2","className":"ael-featured"} -->
+<section class="wp-block-group has-base-2-background-color has-background ael-featured" style="padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--60)"><!-- wp:group {"layout":{"type":"constrained","contentSize":"760px"}} --><div class="wp-block-group"><!-- wp:heading {"level":2,"style":{"typography":{"fontWeight":"700","fontSize":"1.75rem"}}} --><h2 class="wp-block-heading" style="font-weight:700;font-size:1.75rem">The Work, Made Public</h2><!-- /wp:heading --><!-- wp:paragraph {"style":{"typography":{"fontSize":"1.0625rem","lineHeight":"1.7"}},"textColor":"contrast-2"} --><p class="has-contrast-2-color has-text-color" style="font-size:1.0625rem;line-height:1.7">AI Execution Lab is where we document what we actually build — the systems, the failures, the operational decisions, and the workflows behind our products and client work. Not a tutorial site. A public record of a real AI operations practice. Everything is built first. Documented second.</p><!-- /wp:paragraph --><!-- wp:spacer {"height":"16px"} --><div style="height:16px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer --><!-- wp:paragraph --><p><a href="https://lab.asquaresolution.com" target="_blank" rel="noopener noreferrer"><strong>Read the Lab →</strong></a> &nbsp;·&nbsp; <a href="https://lab.asquaresolution.com/failures" target="_blank" rel="noopener noreferrer">Failure archive</a> &nbsp;·&nbsp; <a href="https://lab.asquaresolution.com/playbooks" target="_blank" rel="noopener noreferrer">Playbooks</a> &nbsp;·&nbsp; <a href="https://lab.asquaresolution.com/tracks" target="_blank" rel="noopener noreferrer">Execution tracks</a></p><!-- /wp:paragraph --></div><!-- /wp:group --></section>
+<!-- /wp:group -->
+```
+
+**Paste Block B — Ecosystem Architecture (3-column):**
+
+```html
+<!-- wp:group {"tagName":"section","style":{"spacing":{"padding":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|60"}}},"className":"ecosystem-cols"} -->
+<section class="wp-block-group ecosystem-cols" style="padding-top:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--60)"><!-- wp:group {"layout":{"type":"constrained","contentSize":"900px"}} --><div class="wp-block-group"><!-- wp:heading {"level":2,"style":{"typography":{"fontWeight":"700","fontSize":"1.5rem"}}} --><h2 class="wp-block-heading" style="font-weight:700;font-size:1.5rem">What We Build and Run</h2><!-- /wp:heading --><!-- wp:paragraph {"textColor":"contrast-2"} --><p class="has-contrast-2-color has-text-color">Three production AI systems, built and operated by the same team.</p><!-- /wp:paragraph --><!-- wp:spacer {"height":"24px"} --><div style="height:24px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer --><!-- wp:columns {"isStackedOnMobile":true} --><div class="wp-block-columns is-layout-flex"><!-- wp:column --><div class="wp-block-column"><!-- wp:heading {"level":3,"style":{"typography":{"fontSize":"1rem","fontWeight":"600"}}} --><h3 class="wp-block-heading" style="font-size:1rem;font-weight:600">AI Execution Lab</h3><!-- /wp:heading --><!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem","lineHeight":"1.6"}},"textColor":"contrast-2"} --><p class="has-contrast-2-color has-text-color" style="font-size:0.9375rem;line-height:1.6">Our public engineering journal — production failures, proven playbooks, and the full Claude Code operator track.</p><!-- /wp:paragraph --><!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem"}}} --><p style="font-size:0.9375rem"><a href="https://lab.asquaresolution.com" target="_blank" rel="noopener noreferrer">lab.asquaresolution.com →</a></p><!-- /wp:paragraph --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:heading {"level":3,"style":{"typography":{"fontSize":"1rem","fontWeight":"600"}}} --><h3 class="wp-block-heading" style="font-size:1rem;font-weight:600">TrustSeal</h3><!-- /wp:heading --><!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem","lineHeight":"1.6"}},"textColor":"contrast-2"} --><p class="has-contrast-2-color has-text-color" style="font-size:0.9375rem;line-height:1.6">AI-powered trust verification. Assesses credibility signals and issues verifiable trust badges for businesses.</p><!-- /wp:paragraph --><!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem"}}} --><p style="font-size:0.9375rem"><a href="https://trustseal.asquaresolution.com" target="_blank" rel="noopener noreferrer">trustseal.asquaresolution.com →</a></p><!-- /wp:paragraph --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:heading {"level":3,"style":{"typography":{"fontSize":"1rem","fontWeight":"600"}}} --><h3 class="wp-block-heading" style="font-size:1rem;font-weight:600">ScamCheck</h3><!-- /wp:heading --><!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem","lineHeight":"1.6"}},"textColor":"contrast-2"} --><p class="has-contrast-2-color has-text-color" style="font-size:0.9375rem;line-height:1.6">AI scam detection. Check any URL or business for scam signals — domain, content, and behavioral analysis.</p><!-- /wp:paragraph --><!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem"}}} --><p style="font-size:0.9375rem"><a href="https://scamcheck.asquaresolution.com" target="_blank" rel="noopener noreferrer">scamcheck.asquaresolution.com →</a></p><!-- /wp:paragraph --></div><!-- /wp:column --></div><!-- /wp:columns --></div><!-- /wp:group --></section>
+<!-- /wp:group -->
+```
+
+**Paste Block C — Authority CTA:**
+
+```html
+<!-- wp:group {"tagName":"section","style":{"spacing":{"padding":{"top":"var:preset|spacing|50","bottom":"var:preset|spacing|50"}}},"backgroundColor":"base-2"} -->
+<section class="wp-block-group has-base-2-background-color has-background" style="padding-top:var(--wp--preset--spacing--50);padding-bottom:var(--wp--preset--spacing--50)"><!-- wp:group {"layout":{"type":"constrained","contentSize":"720px"}} --><div class="wp-block-group"><!-- wp:heading {"level":2,"style":{"typography":{"fontWeight":"700","fontSize":"1.375rem"}}} --><h2 class="wp-block-heading" style="font-weight:700;font-size:1.375rem">If you're evaluating whether we know what we're doing</h2><!-- /wp:heading --><!-- wp:paragraph {"style":{"typography":{"lineHeight":"1.7"}},"textColor":"contrast-2"} --><p class="has-contrast-2-color has-text-color" style="line-height:1.7">The answer is at AI Execution Lab. Two years of production engineering work documented in public: what we built, what broke, how long things took, and what the operational cost was.</p><!-- /wp:paragraph --><!-- wp:paragraph {"style":{"typography":{"fontSize":"0.9375rem"}}} --><p style="font-size:0.9375rem"><a href="https://lab.asquaresolution.com/start-here" target="_blank" rel="noopener noreferrer"><strong>Start here →</strong></a> &nbsp; <a href="https://lab.asquaresolution.com/failures" target="_blank" rel="noopener noreferrer">failure archive</a> &nbsp;·&nbsp; <a href="https://lab.asquaresolution.com/playbooks" target="_blank" rel="noopener noreferrer">playbooks</a> &nbsp;·&nbsp; <a href="https://lab.asquaresolution.com/tracks" target="_blank" rel="noopener noreferrer">tracks</a></p><!-- /wp:paragraph --></div><!-- /wp:group --></section>
+<!-- /wp:group -->
+```
+
+Switch back to Visual Editor. **Save draft.** Preview.
+
+**✓ Gate 3:**
+- [ ] "The Work, Made Public" section visible
+- [ ] "What We Build and Run" 3-column visible
+- [ ] "If you're evaluating..." CTA visible
+- [ ] Three columns stack on mobile (resize browser to 375px)
+- [ ] All Lab links resolve (click each)
+
+If any column is broken: switch back to Code Editor, check for unclosed `<!-- /wp:column -->` tags.
+
+**Publish** after Gate 3 passes.
+
+---
+
+## Step 4 — Footer (10 min)
+
+**WP Admin → Appearance → Widgets → [footer widget area]**
+
+Add **Custom HTML** widget:
+- Title: `Our Work`
+- Content:
+
+```html
+<ul style="list-style:none;padding:0;margin:0;line-height:2.2">
+  <li><a href="https://lab.asquaresolution.com" target="_blank" rel="noopener noreferrer"><strong>AI Execution Lab</strong></a> — Engineering journal</li>
+  <li><a href="https://trustseal.asquaresolution.com" target="_blank" rel="noopener noreferrer"><strong>TrustSeal</strong></a> — AI trust verification</li>
+  <li><a href="https://scamcheck.asquaresolution.com" target="_blank" rel="noopener noreferrer"><strong>ScamCheck</strong></a> — AI scam detection</li>
+</ul>
+```
+
+**Save**
+
+**✓ Gate 4:** Footer shows "Our Work" with 3 links, all resolve → **PASS / FAIL**
+
+---
+
+## Step 5 — About Page (5 min)
+
+**WP Admin → Pages → About → Edit → Code Editor**
+
+Add before the final closing `<!-- /wp:group -->` of the page content:
+
+```html
+<!-- wp:group {"style":{"spacing":{"padding":{"top":"24px","bottom":"8px"},"margin":{"top":"32px"}},"border":{"top":{"color":"#e0e0e0","width":"1px"}}}} --><div class="wp-block-group" style="padding-top:24px;padding-bottom:8px;margin-top:32px;border-top:1px solid #e0e0e0"><!-- wp:heading {"level":3,"style":{"typography":{"fontSize":"1.0625rem","fontWeight":"600"}}} --><h3 class="wp-block-heading" style="font-size:1.0625rem;font-weight:600">Built in Public</h3><!-- /wp:heading --><!-- wp:paragraph {"textColor":"contrast-2"} --><p class="has-contrast-2-color has-text-color">The systems and decisions behind our work are documented at <a href="https://lab.asquaresolution.com" target="_blank" rel="noopener noreferrer">AI Execution Lab</a> — including the failures. If you're evaluating whether we know what we're doing: the Lab is the answer.</p><!-- /wp:paragraph --></div><!-- /wp:group -->
+```
+
+**Update**
+
+**✓ Gate 5:** About page shows "Built in Public" with Lab link → **PASS / FAIL**
+
+---
+
+## Step 6 — Internal Link Pass on Top 5 Posts (15 min)
+
+**WP Admin → Posts → All Posts → sort by Comments or use known top posts**
+
+For each of the top 5 posts, add ONE contextual Lab link:
+
+| Post topic | Lab target | Anchor text |
+|---|---|---|
+| Claude / AI tools | `/tracks/claude-code-operator` | "Claude Code operator track" |
+| WordPress / plugins | `/failures/litespeed-client-cache-bypass-ignored` | "LiteSpeed cache bypass fix" |
+| SEO / content | `/docs/geo-intelligence-architecture` | "GEO optimization approach" |
+| Deployment / hosting | `/failures/edge-runtime-deployment-failure` | "edge runtime deployment failure" |
+| General AI engineering | `https://lab.asquaresolution.com` | "AI Execution Lab" |
+
+Rule: maximum 1 Lab link per post. Must be editorially natural — not an SEO insertion.
+
+**✓ Gate 6:** 5 posts updated, links confirmed working → **PASS / FAIL**
+
+---
+
+## Step 7 — LiteSpeed Purge + Cache Rebuild (3 min)
+
+**WP Admin → LiteSpeed Cache → Purge → Purge All**
+
+Wait 30 seconds.
+
+**✓ Gate 7:** Homepage loads without stale content. All new sections visible to logged-out user (test in private/incognito window). → **PASS / FAIL**
+
+---
+
+## Post-Rollout Verification (5 min)
+
+Run through final checks:
+
+| Check | Method | Pass condition |
+|---|---|---|
+| Schema detected | Rich Results Test → `asquaresolution.com` | Organization + WebSite types shown |
+| Lab nav link | Front-end → primary menu | "AI Lab" visible, opens in new tab |
+| 3 homepage sections | Front-end → homepage | All 3 sections visible, all links working |
+| Mobile columns | DevTools → 375px width | 3 columns stack vertically |
+| Footer "Our Work" | Front-end → footer | 3 links visible |
+| About "Built in Public" | Front-end → /about | Paragraph + Lab link visible |
+| Page weight regression | DevTools → Network → Disable cache → reload | Total page size ≤ pre-rollout + 5KB |
+
+---
+
+## GSC Next Day (2 min)
+
+**Search Console → URL Inspection → Request Indexing** for:
+- `https://asquaresolution.com` (homepage)
+- `https://asquaresolution.com/about` (about page)
+
+---
+
+## Session Log Entry
+
+Create `content/logs/[YYYY-MM-DD]-wordpress-ecosystem-rollout.mdx` with:
+
+```
+duration: [measured time]
+outcome: Schema.org Organization markup live, 3 homepage sections, 
+         footer updated, About page updated, 5 posts linked. 
+         All verification gates passed.
+```
+
+---
+
+Record end time: ___________ · Total duration: ___________
