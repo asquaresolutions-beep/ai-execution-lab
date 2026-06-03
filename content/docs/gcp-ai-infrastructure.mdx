@@ -1,0 +1,129 @@
+---
+title: "GCP AI Infrastructure — Vertex Embeddings, BigQuery Vector Store, TrustScore API & Cloud Run"
+description: "Production, serverless GCP infrastructure for the A Square Solutions ecosystem: Vertex AI embeddings for Tier-A posts/service pages/ScamCheck/TrustSeal, a vector-ready BigQuery store with VECTOR_SEARCH, a TrustScore/ScamCheck API on Cloud Run, semantic internal-link intelligence, Cloud Scheduler automation, and a realistic spend model in INR. Serverless-first, scales to zero, no idle VMs."
+date: "2026-05-31"
+tags: ["gcp", "vertex-ai", "bigquery", "cloud-run", "embeddings", "trustscore", "scamcheck", "cost", "serverless"]
+status: published
+related_docs:
+  - vertex-ai-migration
+  - low-cost-autonomous-operation
+  - asquare-internal-linking-topical-map
+---
+
+Serverless GCP infrastructure for the ecosystem. **Serverless-first, scales to zero, no idle VMs.** Built as reusable code in this repo; this runbook is the deploy + spend guide.
+
+> **Execution note:** these steps require an authenticated GCP project (gcloud + a service account). They are written to be run by an operator with credentials — nothing here provisions billable resources automatically.
+
+## Components (what's built in-repo)
+| Component | Code | Serverless surface |
+|---|---|---|
+| Embeddings (multilingual) | `lib/ai/embeddings.ts` + `scripts/gen-embeddings-to-bigquery.mjs` | Vertex `:predict` |
+| BigQuery vector store | `lib/store/bigquery.ts` (schema, insert, VECTOR_SEARCH SQL) | BigQuery |
+| TrustScore / ScamCheck API | `lib/scam-intel/trustscore.ts` + `app/api/trustscore/route.ts` | Cloud Run |
+| Semantic internal links | `lib/seo/semantic-links.ts` (related / cluster / suggest / orphans) | runs in-process or as a job |
+| Autonomy | `app/api/cron/*` | Cloud Scheduler → Cloud Run |
+| Image (Dockerfile) | `Dockerfile` | Cloud Run container |
+
+## 1. Service account + APIs (once)
+```bash
+gcloud config set project "$GCP_PROJECT"
+gcloud services enable run.googleapis.com aiplatform.googleapis.com bigquery.googleapis.com cloudscheduler.googleapis.com
+gcloud iam service-accounts create asquare-ai
+SA="asquare-ai@$GCP_PROJECT.iam.gserviceaccount.com"
+for r in aiplatform.user bigquery.dataEditor bigquery.jobUser run.invoker; do
+  gcloud projects add-iam-policy-binding "$GCP_PROJECT" --member="serviceAccount:$SA" --role="roles/$r"; done
+```
+
+## 2. Embeddings → BigQuery (vector-ready, incremental)
+```bash
+# ADC-first: on Cloud Run/GCE it uses the attached SA + metadata project automatically.
+# Locally:
+export VERTEX_ACCESS_TOKEN=$(gcloud auth print-access-token)
+export GCP_PROJECT=ass-youtube-agent BQ_DATASET=asquare_ai VERTEX_LOCATION=us-central1
+node scripts/gen-embeddings-to-bigquery.mjs        # Tier-A posts, service pages, ScamCheck, TrustSeal
+```
+**Ingestion architecture — structured sources, never rendered-HTML scraping:**
+The pipeline must NOT scrape rendered public pages — behind Cloudflare that
+captures "Just a moment…" bot-challenge interstitials instead of article text,
+poisoning the corpus. Sources, in priority order:
+1. **WordPress REST API** (`/wp-json/wp/v2/posts` + `/pages`, `_embed=1`, paginated) —
+   clean JSON: `content.rendered` body, `title.rendered`, `excerpt`, `slug`,
+   embedded category, `date_gmt`/`modified_gmt`. Bypasses the HTML bot-challenge.
+2. **Quality-gated direct fetch** for non-WP apps we own (ScamCheck/TrustSeal) —
+   raw HTML, then sanitized (strip `script/style/nav/header/footer/aside` + cookie/
+   consent blocks) and decoded.
+3. **Sitemap-driven** discovery is supported as an extension point (`/sitemap.xml`).
+
+**Content-quality validation (gate before embedding):** rejects Cloudflare/junk
+titles & bodies (`just a moment`, `checking your browser`, `cf-chl`, …), thin pages
+(under 80 words), and low-lexical-diversity boilerplate. A `purgeJunk()` step also deletes
+any previously-ingested challenge pages / wrong-dim rows from the corpus by pattern.
+
+**Extracted per document:** real title, sanitized body (title+excerpt+body as the
+embedded text), `slug`, `category`, `published_at`/`updated_at`, `word_count`, `lang`
+(en/hi), `content_hash`, `source_type` (`tier_a_post`/`blog_post`/`service_page`/
+`page`/`scamcheck`/`trustseal`).
+
+**Pipeline behaviour (`scripts/gen-embeddings-to-bigquery.mjs`):**
+- **Incremental:** each doc gets a SHA-256 `content_hash`; **unchanged docs are skipped** (zero Vertex calls — the primary cost control). First run embeds all; re-runs only touch changed/new content.
+- **Dedup-correct:** changed/new ids are **DELETE-then-insert** (no duplicate rows). *(Note: BigQuery streaming-buffer rows can defer a DELETE for ~30–90 min after insert; space re-runs accordingly, or switch to a MERGE/load-job for high-frequency loads.)*
+- **Batched:** `EMBED_BATCH` (default 5) instances per Vertex `:predict` call.
+- **Retry:** exponential backoff + jitter on 429/5xx for Vertex and BigQuery.
+- **Semantic metadata stored:** `source_type, title, url, word_count, lang (en/hi), content_hash, dim, model, created_at, updated_at` — ready for search/recommendations/RAG.
+- **Schedule it:** add a Cloud Scheduler job hitting a small Cloud Run job/endpoint, or run nightly; because it's incremental, the steady-state cost is ~zero.
+Then create the vector index + query (from `lib/store/bigquery.ts`):
+```sql
+CREATE VECTOR INDEX IF NOT EXISTS embeddings_idx
+ON `PROJECT.asquare_ai.embeddings`(embedding)
+OPTIONS(index_type = 'IVF', distance_type = 'COSINE');
+-- nearest neighbours:
+SELECT base.id, base.title, base.url, distance
+FROM VECTOR_SEARCH(TABLE `PROJECT.asquare_ai.embeddings`,'embedding',
+  (SELECT @q AS embedding), top_k => 8, distance_type => 'COSINE');
+```
+
+## 3. Deploy the API on Cloud Run (TrustScore / ScamCheck / embeddings + dashboards)
+```bash
+gcloud run deploy asquare-ai \
+  --source . \
+  --region "$VERTEX_LOCATION" \
+  --service-account "$SA" \
+  --set-env-vars "VERTEX_PROJECT_ID=$GCP_PROJECT,VERTEX_LOCATION=$VERTEX_LOCATION,DEEP_TIER=flash,DAILY_BUDGET_USD=2,ADMIN_API_TOKEN=$ADMIN,CRON_SECRET=$CRON,NEXT_PUBLIC_SITE_URL=https://your-domain,FIREBASE_PROJECT_ID=$GCP_PROJECT,FIREBASE_API_KEY=$FBKEY" \
+  --min-instances 0 --max-instances 3 --cpu 1 --memory 1Gi --allow-unauthenticated
+```
+- `--min-instances 0` → **scales to zero, no idle compute.** Test: `POST /api/trustscore {"input":"..."}`.
+
+## 4. Automation (Cloud Scheduler → Cloud Run)
+```bash
+URL=$(gcloud run services describe asquare-ai --region "$VERTEX_LOCATION" --format='value(status.url)')
+gcloud scheduler jobs create http autopilot --schedule="0 6 * * *" \
+  --uri="$URL/api/cron/autopilot" --http-method=GET \
+  --headers="Authorization=Bearer $CRON" --location="$VERTEX_LOCATION"
+gcloud scheduler jobs create http drain --schedule="0 */6 * * *" --uri="$URL/api/cron/drain-queue" --headers="Authorization=Bearer $CRON" --http-method=GET --location="$VERTEX_LOCATION"
+```
+
+## 5. Semantic internal-link intelligence
+`lib/seo/semantic-links.ts` consumes the embeddings (from BigQuery or in-process) and produces: `relatedDocs`, `suggestInternalLinks` (contextual anchors, no exact-match cannibalization), `clusterCorpus` (topical clusters), `findSemanticOrphans`. Run as a one-off Node job or a Cloud Run endpoint to regenerate link suggestions after each embeddings refresh.
+
+## Estimated spend (realistic, INR)
+Vertex pricing is **estimated** — confirm on the pricing page; figures assume ~₹83/USD.
+| Activity | Volume | Est. cost |
+|---|---|---|
+| Embeddings (one full load) | ~20 docs × ~1.5k tokens | < ₹5 |
+| TrustScore inference (Flash) | ~1,000 checks (~1k in / ~0.2k out) | ~₹30–₹80 |
+| Autopilot bundle generation (Flash+Pro) | ~30 bundles | ~₹150–₹600 |
+| Cloud Run | scale-to-zero + light traffic | ~₹0–₹150 (free tier covers most) |
+| BigQuery | storage + a few GB scanned | ~₹0–₹50 (free tier covers most) |
+| Cloud Scheduler | 3 jobs | ~₹0 (free tier: 3 jobs free) |
+| **Total for a meaningful build/run day** | | **~₹400–₹1,500** |
+> To reach **₹1,500–₹2,500** of *meaningful* usage without waste: run the embeddings load, run a **batch of TrustScore + autopilot generations on Pro tier** (`DEEP_TIER=pro`), and let Cloud Run serve real API traffic. Track live via `/ops/analytics` (AI cost today + quota) and **GCP Billing → Budgets**. Keep `DAILY_BUDGET_USD` as the circuit breaker so it never overruns.
+
+## Anti-waste guardrails (enforced)
+- **Scale to zero** (`--min-instances 0`) — no idle VMs/compute.
+- **Serverless only** — Cloud Run + Vertex + BigQuery + Scheduler; no GCE.
+- **Budget breaker** — `DAILY_BUDGET_USD` halts Vertex generation; quota monitor backs off at 85%.
+- **Cache-first** — TrustScore + generations are content-addressed cached; embeddings load is idempotent (insertId = id).
+- **Spend tracking** — `lib/ai/usage.ts` logs per-call token + INR-convertible cost; `/ops/analytics` shows daily total.
+
+## What I could not execute here
+No authenticated GCP in this environment → I built the code/IaC/scripts but did **not** provision or spend. Run §1–§4 with your credentials to consume credits productively; the budget breaker + scale-to-zero keep it safe.

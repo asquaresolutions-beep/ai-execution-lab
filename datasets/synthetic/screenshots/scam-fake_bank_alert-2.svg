@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="304" viewBox="0 0 420 304">
+  <rect width="420" height="304" fill="#ECE5DD"/>
+  <rect width="420" height="56" fill="#1f2937"/>
+  <text x="20" y="35" font-family="Segoe UI, Arial" font-size="18" fill="#fff">SMS · Unknown</text>
+  <rect x="20" y="76" width="380" height="224" rx="12" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="40" y="112" font-family="Segoe UI, Arial" font-size="15" fill="#111">ALERT: Unusual login detected on your HDFC</text><text x="40" y="134" font-family="Segoe UI, Arial" font-size="15" fill="#111">account. If this wasn't you, re-activate</text><text x="40" y="156" font-family="Segoe UI, Arial" font-size="15" fill="#111">immediately at http://cutt.ly/win. Failure</text><text x="40" y="178" font-family="Segoe UI, Arial" font-size="15" fill="#111">to act will lock your account. सूचना: आपके</text><text x="40" y="200" font-family="Segoe UI, Arial" font-size="15" fill="#111">HDFC खाते में असामान्य लॉगिन। यदि यह आप</text><text x="40" y="222" font-family="Segoe UI, Arial" font-size="15" fill="#111">नहीं थे तो तुरंत यहाँ पुनः सक्रिय करें:</text><text x="40" y="244" font-family="Segoe UI, Arial" font-size="15" fill="#111">http://tinyurl.com/r</text>
+  <text x="380" y="290" text-anchor="end" font-family="Arial" font-size="11" fill="#6b7280">mixed · fake_bank_alert</text>
+</svg>

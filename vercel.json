@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "//": "Schedules are HOBBY-PLAN friendly (daily). On Pro, tighten drain-queue to */10 and autopilot to hourly. The drain route early-exits when the queue is empty, so frequent ticks are nearly free.",
+  "crons": [
+    { "path": "/api/cron/drain-queue", "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/autopilot", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/update-trending", "schedule": "0 5 * * *" },
+    { "path": "/api/cron/clean-cache", "schedule": "0 3 * * *" }
+  ],
+  "functions": {
+    "app/api/distribution/generate/route.ts": { "maxDuration": 60 },
+    "app/api/cron/autopilot/route.ts": { "maxDuration": 300 },
+    "app/api/cron/drain-queue/route.ts": { "maxDuration": 60 },
+    "app/api/cron/update-trending/route.ts": { "maxDuration": 60 },
+    "app/api/cron/clean-cache/route.ts": { "maxDuration": 60 }
+  }
+}

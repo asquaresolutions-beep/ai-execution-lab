@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="238" viewBox="0 0 420 238">
+  <rect width="420" height="238" fill="#ECE5DD"/>
+  <rect width="420" height="56" fill="#1f2937"/>
+  <text x="20" y="35" font-family="Segoe UI, Arial" font-size="18" fill="#fff">SMS · Unknown</text>
+  <rect x="20" y="76" width="380" height="158" rx="12" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="40" y="112" font-family="Segoe UI, Arial" font-size="15" fill="#111">Dear customer, your HDFC KYC is incomplete</text><text x="40" y="134" font-family="Segoe UI, Arial" font-size="15" fill="#111">and your account will be blocked today.</text><text x="40" y="156" font-family="Segoe UI, Arial" font-size="15" fill="#111">Verify now at http://paytm-cashback.buzz</text><text x="40" y="178" font-family="Segoe UI, Arial" font-size="15" fill="#111">or call 9346579838.</text>
+  <text x="380" y="224" text-anchor="end" font-family="Arial" font-size="11" fill="#6b7280">en · fake_kyc</text>
+</svg>

@@ -1,0 +1,110 @@
+---
+title: "Scam Intelligence Ingestion System — Architecture"
+description: "Scalable pipeline that ingests public scam reports and turns them into deduplicated, classified, severity-scored intelligence: rule+AI classification across 12 scam types, PII redaction, spam/abuse pre-filtering, Gemini moderation, embedding-based semantic deduplication and clustering, vector search, trending dashboard, regional heatmap, admin moderation queue, and a public alert feed. Includes Firestore collections, indexing strategy, prompt structure, and moderation flow."
+date: "2026-05-30"
+tags: ["gemini", "firebase", "firestore", "vector-search", "embeddings", "moderation", "scamcheck", "ingestion", "rate-limiting", "abuse-protection"]
+status: published
+related_docs:
+  - content-distribution-engine
+  - ai-cost-governance
+  - firebase-firestore-quota-enforcement
+---
+
+The scam intelligence system ingests free-text scam reports from the public and converts them into structured, deduplicated intelligence. It shares the AI + store infrastructure with the [content distribution engine](/docs/content-distribution-engine): same provider abstraction, embeddings, cache, rate limiter, audit log, and `DocumentStore`.
+
+## Pipeline (ordered, fail-fast)
+
+`lib/scam-intel/ingest.ts` runs these stages in order; each cheap stage can reject before any expensive one runs:
+
+```
+RawReport
+ 0. rate-limit per hashed identity      → abuse protection (429)
+ 1. redact PII                          → privacy, ALWAYS, before storage
+ 2. spam pre-filter (deterministic)     → drop junk for free (422)
+ 3. classify (rules → AI)               → category, platform, indicators
+ 4. embed                               → 768-d vector
+ 5. dedup + cluster (cosine vs centroid)→ duplicate | join | new
+ 6. severity score (explainable 0-100)  → low|medium|high|critical
+ 7. moderation (rules → Gemini)         → allow | review | block
+ 8. persist + route                     → approved | pending | duplicate
+```
+
+Stages 3, 4, and 7 are independent AI calls and are idempotent + cached — they can be split into a queue/worker fan-out unchanged when throughput demands it.
+
+## Classification — 12 scam types
+
+A **deterministic detector layer** (`classify.ts`) runs first: regex/heuristic detectors for phishing, OTP/KYC fraud, fake jobs, investment fraud, UPI fraud, loan/lottery scams, plus a WhatsApp signal detector for clustering. High-confidence rule hits (≥0.7) skip the AI call entirely (free, instant, offline). Otherwise a Gemini pass refines the category, platform, region, tactics, indicators, and a neutral summary. If AI is unavailable, the rule classification is the graceful fallback.
+
+Categories: `phishing · otp_fraud · whatsapp_scam · fake_job · investment_fraud · upi_fraud · loan_scam · lottery_prize · tech_support · romance · courier_customs · other`.
+
+## Deduplication & clustering
+
+Every report is embedded and compared to existing **cluster centroids** in the same category:
+
+- `cosine ≥ 0.92` → **duplicate**: increments the cluster's report count, does not create a new feed entry.
+- `cosine ≥ 0.78` → **join**: same scam pattern; centroid updated via running mean.
+- otherwise → **new cluster** seeded.
+
+Clusters carry rollups (report count, platforms, regions, first/last seen, severity, trend score) and *are* the unit of the trending dashboard. This collapses thousands of near-identical "you won a lottery" reports into one ranked pattern.
+
+## Severity scoring
+
+`severity.ts` produces an **explainable** 0–100 score from transparent factors: category base risk, classification confidence, distinct indicators, tactics, cluster spread (log of report count), recent velocity, and financial signals. Bands: `<35 low · 55 high · ≥75 critical`. Cluster severity escalates to the max observed.
+
+## Moderation flow
+
+1. **PII redaction** is unconditional — emails, phones, Aadhaar, card, and account numbers are replaced with tags *before* storage or display.
+2. **Deterministic spam/abuse** pre-filter drops obvious junk and short-circuits clearly abusive content.
+3. **Gemini moderation** returns `allow | review | block` + toxic/PII flags for nuanced cases; on AI outage anything with PII routes to human `review` (fail-safe).
+4. **Auto-approval** is conservative: only `allow`, no PII, confidence ≥ 0.6, severity ≤ high, non-duplicate. Everything else lands in the **moderator queue**.
+
+## Vector search
+
+`vector-search.ts` provides semantic search over reports and clusters and "find similar" for related alerts. In dev / Firestore-REST it is an in-process cosine scan (fine to a few thousand docs). At scale the **same interface** is served by Firestore Vector Search / Vertex Matching Engine — see indexing below.
+
+## Public surfaces
+
+- **Public feed** — approved canonical reports, newest first, facetable by category/region.
+- **Trending** — clusters ranked by recency-weighted `trendScore = reportCount / ageDays^0.6`.
+- **Heatmap** — region × category grid weighted by severity.
+
+## Firestore collections
+
+Defined as data in `lib/scam-intel/firestore-schema.ts` (single source of truth; emits `firestore.indexes.json` + `gcloud` vector-index commands).
+
+| Collection | Purpose | Vector | Key indexes |
+|---|---|---|---|
+| `scam_reports` | Processed, PII-redacted reports | `vector` (768, COSINE) | `(status, createdAt↓)`, `(status, category, createdAt↓)`, `(status, region, createdAt↓)` |
+| `scam_clusters` | Deduplicated patterns + centroid | `centroid` (768, COSINE) | `(category, lastSeen↓)`, `(trendScore↓)` |
+| `content_bundles` | Generated distribution bundles | — | `(createdAt↓)` |
+| `alerts` | Published-alert index for linking | `vector` (768, COSINE) | `(platform, publishedAt↓)` |
+| `publish_queue` | Per-channel publish jobs | — | `(status, runAt↑)`, `(status, createdAt↓)` |
+| `audit_log` | Append-only audit trail | — | `(ts↓)`, `(action, ts↓)` |
+| `_ai_cache` | AI generation cache | — | TTL on `expiresAt` |
+| `_rate_limits` | Fixed-window counters | — | TTL on `resetAt` |
+
+## Indexing strategy
+
+- **Composite indexes** back every dashboard/feed query (status + facet + time ordering). Single-field indexes are automatic in Firestore and omitted from the export.
+- **Vector indexes** on `scam_reports.vector`, `scam_clusters.centroid`, and `alerts.vector` enable native KNN at scale (`gcloud firestore indexes composite create … vector-config`).
+- **TTL policies** on `_ai_cache.expiresAt` and `_rate_limits.resetAt` keep ephemeral collections self-pruning at zero cost.
+
+## Abuse protection & cost
+
+- Per-hashed-identity ingest rate limit (20/min default) — the raw IP/contact is never stored, only a non-reversible hash.
+- Deterministic stages reject the majority of junk before any AI spend.
+- Classification and moderation are cached by content hash, so repeated/duplicate submissions are near-free.
+
+## API surface
+
+| Method | Route | Auth | Purpose |
+|---|---|---|---|
+| POST | `/api/scam-intel/ingest` | public (rate-limited) | Submit a report |
+| GET | `/api/scam-intel/feed` | public | `view=feed\|trending\|heatmap\|search` |
+| GET/POST | `/api/scam-intel/moderate` | admin | Queue + approve/reject |
+
+Admin dashboard: **`/ops/scam-intel`** — queue counters, moderation queue with severity/PII flags, trending patterns, regional heatmap, audit log.
+
+## Environment
+
+Shares the [distribution engine env](/docs/content-distribution-engine#required-environment). Additional: none — Firestore vector indexes are created via `gcloud`, not env.

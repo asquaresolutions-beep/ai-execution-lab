@@ -5,6 +5,8 @@ import { SECTION_META, ACCENT_CLASSES, formatDateMono } from '@/lib/utils'
 import { getPlatformStatus } from '@/lib/activity'
 import { FeaturedFailures }  from '@/components/homepage/featured-failures'
 import { LiveActivityBar } from '@/components/platform/live-activity-bar'
+import { CheckMessageBox } from '@/components/scam/check-message-box'
+import { TrendingTicker } from '@/components/scam/trending-ticker'
 import { getEvidenceMetrics, formatOperationalHours, formatAvgResolution } from '@/lib/evidence-metrics'
 
 // Code-split framer-motion components — reduces initial JS parse work
@@ -122,6 +124,12 @@ export default function HomePage() {
             Execution Tracks
           </Link>
           <Link
+            href="/scams"
+            className="inline-flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-4 py-2 text-sm font-medium text-amber-400 hover:bg-amber-500/[0.12] hover:border-amber-500/40 transition-colors"
+          >
+            Scam Alerts
+          </Link>
+          <Link
             href="/failures"
             className="inline-flex items-center gap-2 rounded-lg border border-red-500/25 bg-red-500/[0.06] px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/[0.12] hover:border-red-500/40 transition-colors"
           >
@@ -134,7 +142,13 @@ export default function HomePage() {
             Playbooks
           </Link>
         </div>
+
+        {/* ── Check a message (above-the-fold engagement) ──────── */}
+        <CheckMessageBox />
       </div>
+
+      {/* ── Live trending ticker (above fold, auto-rotating) ─── */}
+      <TrendingTicker />
 
       {/* ── Live activity bar ────────────────────────────────── */}
       <LiveActivityBar status={platformStatus} />
@@ -172,6 +186,37 @@ export default function HomePage() {
             <p className="text-[9px] text-surface-700 mt-0.5 font-mono">{item.sub}</p>
           </div>
         ))}
+      </div>
+
+      {/* ── Scam Intelligence (homepage → scam entity authority flow) ── */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-surface-600">
+            Scam Intelligence — live India scam alerts
+          </h2>
+          <Link href="/scams" className="text-[10px] font-mono text-surface-600 hover:text-amber-400 transition-colors">
+            All scams →
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {[
+            { href: '/scams/type/upi-fraud', q: 'Is this a UPI scam?', sub: 'refund / collect-request tricks' },
+            { href: '/scams/type/kyc-fraud', q: 'Got a KYC update link?', sub: 'fake KYC freeze threats' },
+            { href: '/scams/platform/whatsapp', q: 'Suspicious WhatsApp message?', sub: 'forwarded fraud warnings' },
+            { href: '/scams/type/fake-job', q: 'Offered an easy job?', sub: 'task / registration-fee scams' },
+            { href: '/scams/hub/festival-scams', q: 'Festival sale too good?', sub: 'seasonal scam alerts' },
+            { href: '/scams', label: 'See all scam alerts', sub: 'trending + active now', arrow: true },
+          ].map((c) => (
+            <Link
+              key={c.href}
+              href={c.href}
+              className="rounded-xl border border-amber-500/[0.12] bg-amber-500/[0.03] px-3 py-2.5 hover:border-amber-500/30 hover:bg-amber-500/[0.07] transition-colors"
+            >
+              <p className="text-sm font-medium text-surface-200">{c.arrow ? `${c.label} →` : c.q}</p>
+              <p className="text-[10px] text-surface-600 mt-0.5 font-mono">{c.sub}</p>
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* ── Topic cluster ───────────────────────────────────── */}

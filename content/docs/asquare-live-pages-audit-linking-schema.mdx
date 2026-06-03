@@ -1,0 +1,104 @@
+---
+title: "Live Pages — Optimization, Internal Linking & Schema/E-E-A-T Audit (verified)"
+description: "Verified audit of asquaresolution.com live service pages and Tier-A assets: cannibalization/differentiation rules, a do-not-duplicate canonical list, title/meta/H/CTA optimization, an internal-linking additions matrix connecting GEO/AI-Automation/AI-Consulting/Technical-SEO/Entity-SEO + ScamCheck + TrustSeal, and a schema + E-E-A-T audit based on actual JSON-LD output (FAQPage/Service/Article/Person/Organization verified live). Includes sitemap gaps, author-identity standardization, indexing priority, and schema validation report."
+date: "2026-05-31"
+tags: ["seo", "geo", "schema", "eeat", "internal-linking", "cannibalization", "scamcheck", "trustseal", "indexing"]
+status: published
+related_docs:
+  - asquare-internal-linking-topical-map
+  - asquare-tier-a-post-optimization
+  - asquare-tier-a-post-optimization-batch2
+  - asquare-blog-content-audit
+---
+
+Consolidated audit of the **live** site (re-fetched + schema verified via raw JSON-LD, not assumed). Covers all three asks: live-page optimization (no duplication), internal linking, and sitewide schema/E-E-A-T. **Reviewed before suggesting anything new — these pages exist; do not recreate them.**
+
+## Verified live inventory (do NOT duplicate)
+**Service pages (live, 200):** `/services/geo-seo/`, `/services/entity-seo/`, `/services/technical-seo/`, `/services/ai-automation/`, `/services/ai-consulting/`, `/digital-marketing-uk/`, `/digital-marketing-japan/` + hub `/services/`.
+**Informational/comparison (live):** `/geo-vs-seo/`.
+**Tier-A posts (live):** GEO guide, ChatGPT Search, AI-Overviews ×2, ScamCheck, TrustSeal, operationalizing-ai, ai-native-cloud, AI-coding (×2 → merge), calculating-seo-roi, digital-marketing-2026.
+**Products:** ScamCheck (scamcheck.asquaresolution.com), TrustSeal (trustseal.asquaresolution.com). **Tools:** QR, image-to-PDF. **Lab:** lab.asquaresolution.com.
+
+> **Canonical authority pages to preserve (never duplicate / always the link target):**
+> GEO → `/services/geo-seo/` (commercial) · "what is GEO" → the GEO blog guide · "GEO vs SEO" → `/geo-vs-seo/` · each service its own pillar · ScamCheck/TrustSeal = product homepages.
+
+## 🔴 Cannibalization & differentiation rules
+**GEO trio (main risk):** three GEO assets compete on informational intent.
+- `/services/geo-seo/` → **commercial** ("GEO services", buy). Keep transactional.
+- `/geo-vs-seo/` → **the canonical comparison** ("GEO vs SEO"). Owns that head term only.
+- GEO blog guide → **"what is GEO / complete guide"** (educational pillar).
+**Fix:** distinct titles/H1s by intent (service vs comparison vs guide); the guide + service link **to** `/geo-vs-seo/` for the comparison query (don't re-explain the comparison in depth on all three). One canonical per query.
+
+**Other checks:**
+- `/digital-marketing-uk/` vs `/digital-marketing-japan/` — different geo-markets, **not** cannibalizing; but Japan is off-core for a UK/India agency — keep only if it has demand/links, else consider de-prioritising (don't expand the country-page set → that's the listicle-bloat trap).
+- `/services/geo-seo/` vs `/services/entity-seo/` — entity SEO is a *component* of GEO; scope entity-seo to "knowledge graph / entity establishment" and link it as a sub-discipline of GEO (avoid both targeting "AI search optimization").
+- AI-coding posts ×2 → **merge** (per Batch-2). Avoid a third country/topic duplicate.
+
+## Optimization report (by page type — concise)
+**Service pages (all 7):** strong already (verified schema below). Tighten:
+- **Titles/meta:** lead with the entity + outcome + locale ("GEO Services — Get Cited by ChatGPT & Google AI Overviews | UK & Global"). Keep one primary intent each.
+- **H1/H2:** answer-first H1 + question-form H2s ("What is X?", "How long?", "X vs Y?") — most already have FAQ; ensure the body opens with a 2-sentence direct answer.
+- **CTA/conversion:** primary audit/consult CTA above the fold + after proof + sticky mobile; ensure each page routes to the right CTA (GEO/Technical → "Free GEO/Technical Audit"; Automation/Consulting → "Book a call").
+- **E-E-A-T:** add a real named author/reviewer + `Person` (see below); add a proof strip (ScamCheck/TrustSeal shipped).
+**`/geo-vs-seo/` + GEO guide:** keep informational; add prominent link to `/services/geo-seo/` (commercial) — capture intent that turns transactional.
+**Tier-A posts:** apply Batch 1+2 specs (already delivered).
+
+## Internal-linking additions (request #2 — added-links matrix)
+Contextual, entity-rich anchors; **one descriptive anchor per target per page** (no repeated exact-match cannibalization). Direction: commercial ⇄ informational ⇄ products.
+
+| From | → To | Anchor (contextual) |
+|---|---|---|
+| GEO guide / AI-Overviews posts | `/services/geo-seo/` | "our Generative Engine Optimization services" |
+| GEO guide | `/geo-vs-seo/` | "how GEO differs from traditional SEO" |
+| `/services/geo-seo/` | `/services/entity-seo/` | "entity SEO & knowledge-graph work" (sub-discipline) |
+| `/services/geo-seo/` | `/services/technical-seo/` | "the technical SEO foundation it depends on" |
+| calculating-seo-roi | `/services/technical-seo/` | "a technical SEO audit" |
+| operationalizing-ai / ai-native-cloud / AI-coding | `/services/ai-automation/` + `/services/ai-consulting/` | "AI workflow automation" / "AI consulting & product development" |
+| `/services/ai-consulting/` + `/services/ai-automation/` | ScamCheck + TrustSeal | "production AI products we've shipped" (proof) |
+| ScamCheck post + TrustSeal post | `/services/ai-consulting/` | "built by A Square Solutions — AI consulting" |
+| ScamCheck ⇄ TrustSeal | each other | "our AI fact-checking tool" / "our scam detector" |
+| All service pages | `/case-studies/` | "see implementation case studies" |
+| `/digital-marketing-uk/` | `/services/geo-seo/` + digital-marketing-2026 | "GEO services" / "digital marketing in 2026" |
+
+**Orphan/crawl fixes:** (1) **Add the 5 sitemap-missing pages** (ai-automation, ai-consulting, technical-seo, digital-marketing-japan, geo-vs-seo) to the XML sitemap + the `/services/` hub + main nav. (2) Cross-link products (ScamCheck/TrustSeal) **into** the WordPress authority graph (currently siloed on subdomains) via the consulting/automation pillars + a footer "Our AI products" block. (3) Ensure every service page is ≤2 clicks from the homepage via `/services/`.
+
+**Strongest authority hubs (concentrate links here):** `/services/geo-seo/` (GEO cluster), `/services/ai-consulting/` (proof magnet → products + automation), the GEO blog guide (informational pillar), `/digital-marketing-uk/` (UK commercial). Route cluster spokes up to these.
+
+## Schema + E-E-A-T audit (VERIFIED from live JSON-LD)
+**What's already correct (keep):**
+- Organization `@id` **consistent sitewide**: `https://asquaresolution.com/#organization` ✓
+- Homepage emits **Organization + WebSite** ✓
+- Service pages emit **Service + FAQPage + Offer + SoftwareApplication + BreadcrumbList + SpeakableSpecification** ✓ (geo-seo richest: +OfferCatalog/PriceSpecification)
+- Posts emit **Article/BlogPosting + FAQPage + Person + Breadcrumb** ✓
+- **TrustSeal post FAQPage now present** (prior gap fixed) ✓
+
+**🔴 Fixes:**
+1. **Author identity inconsistent in schema:** Person `name` is `"asquaresolution"` (raw WP username) on some posts vs `"A Square Solutions"` on others. **Fix:** set one consistent author display name; better — author posts as a **real named Person** (e.g., founder) with bio + `Person` schema, `worksFor` → Organization `@id`, `sameAs` → LinkedIn.
+2. **In-body fabricated experts:** quotes attribute "Dr. Anjali Sharma" vs "Dr. Ananya Sharma" (different names/titles). **Remove or unify** to one real, consistent author entity. (E-E-A-T liability.)
+3. **`/digital-marketing-uk/` missing `SpeakableSpecification`** that all peers have → add for parity.
+4. **Connect Person ↔ Organization:** ensure `author` is a `Person` with `@id`, referenced consistently, `worksFor` the Organization `@id` (don't let author = the Organization or a username).
+5. **5 live pages missing from sitemap** (indexing/discovery) — add them.
+
+**Missing schema opportunities:**
+- ScamCheck/TrustSeal posts → add `SoftwareApplication`/`Product` for the tools (some already present — extend with `aggregateRating` only if real).
+- Service pages → `Offer` with the free audit as `price: 0` (geo-seo has Offer; replicate the free-audit Offer on technical-seo).
+- `/geo-vs-seo/` + guides → ensure `FAQPage` + `Article` (verified present) + consider `DefinedTermSet` for GEO/SEO definitions (AI-citation value).
+
+## Schema validation report (live, verified)
+| Page | JSON-LD | Key @types | Status |
+|---|---|---|---|
+| `/` | 4 | Organization, WebSite | ✓ |
+| `/services/geo-seo/` | 6 | Service, FAQPage, Offer, OfferCatalog, SoftwareApplication, Speakable, Breadcrumb | ✓ richest |
+| `/services/ai-automation,ai-consulting,technical-seo,entity-seo/` | 3 | Service, FAQPage, Offer, SoftwareApplication, Speakable, Breadcrumb | ✓ |
+| `/digital-marketing-uk/` | 4 | Service, FAQPage, Offer, Breadcrumb | ⚠ no Speakable |
+| `/digital-marketing-japan/`, `/geo-vs-seo/` | 3 | Article, FAQPage, Person, Breadcrumb | ✓ |
+| Tier-A posts (GEO guide, TrustSeal, dm-2026, etc.) | 3–5 | Article/BlogPosting, FAQPage, Person, Breadcrumb | ✓ (fix Person name) |
+> Validate each in Google Rich Results Test after the author-name fix.
+
+## Indexing priority (post-fix)
+**P1 (add to sitemap + request indexing):** the 5 sitemap-missing live pages (ai-automation, ai-consulting, technical-seo, geo-vs-seo, digital-marketing-japan) — they're live but undiscoverable via sitemap. Then GEO/Technical/Consulting service pages.
+**P2:** Tier-A P1 posts (per Batch 1+2).
+**Do not index / redirect:** duplicate AI-coding post (→ merge), dated 2025 AI-search post (→ dm-2026), Tier-C bloat.
+
+## Net new pages needed: NONE
+All target pages exist. Work = strengthen + link + schema-fix + sitemap, not create. The only "new" artifacts recommended are: a consistent author Person entity, and adding the 5 live pages to the sitemap/nav.

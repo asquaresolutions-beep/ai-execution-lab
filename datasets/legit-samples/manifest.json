@@ -1,0 +1,22 @@
+{
+  "label": "legit",
+  "note": "OCR-text form of REAL, legitimate messages — deliberately including ones that contain scam-adjacent keywords (OTP, KYC, payment, courier) to measure FALSE POSITIVES and exercise the calibration layer.",
+  "samples": [
+    { "id": "real-otp-hdfc", "channel": "sms", "lang": "en", "category": "otp",
+      "ocrText": "123456 is your OTP for HDFC Bank NetBanking login. Do not share it with anyone. Valid for 10 minutes. -HDFC Bank" },
+    { "id": "real-bank-debit", "channel": "sms", "lang": "en", "category": "banking_notification",
+      "ocrText": "Rs.2,500.00 debited from A/c XX1234 on 03-06-26 to UPI/merchant grocery. Avl Bal Rs.12,300.00. Not you? Call 18004253800. -SBI" },
+    { "id": "real-amazon-delivery", "channel": "sms", "lang": "en", "category": "courier",
+      "ocrText": "Your Amazon package will be delivered today by 9 PM. Track your order at amazon.in/your-orders. No action needed." },
+    { "id": "real-flipkart-receipt", "channel": "app", "lang": "en", "category": "ecommerce_receipt",
+      "ocrText": "Order #FK1029 confirmed. Amount paid Rs 1,299 via UPI. Estimated delivery 6 June. Thank you for shopping on Flipkart." },
+    { "id": "real-otp-icici-hinglish", "channel": "sms", "lang": "hinglish", "category": "otp",
+      "ocrText": "Aapka OTP 884512 hai ICICI NetBanking ke liye. Ise kisi ke saath share na karein. 10 minute tak valid. -ICICI" },
+    { "id": "real-kyc-branch", "channel": "sms", "lang": "en", "category": "banking_notification",
+      "ocrText": "Dear customer, as per RBI guidelines please update your KYC at your nearest SBI branch by 30 June 2026. Carry valid ID. -SBI" },
+    { "id": "real-bluedart-delivery", "channel": "sms", "lang": "en", "category": "courier",
+      "ocrText": "Your Blue Dart shipment AWB 12345678 is out for delivery and will arrive today. No payment required." },
+    { "id": "real-gpay-payment", "channel": "app", "lang": "en", "category": "payment_success",
+      "ocrText": "You paid Rs 499 to Spotify India. UPI transaction ID 412345678901. Completed. -Google Pay" }
+  ]
+}

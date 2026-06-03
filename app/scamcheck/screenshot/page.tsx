@@ -1,0 +1,18 @@
+import type { Metadata } from 'next'
+import { ScreenshotAnalyzer } from '@/components/scamcheck/screenshot-analyzer'
+
+const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
+
+export const metadata: Metadata = {
+  title: 'Analyze a Screenshot — ScamCheck',
+  description: 'Upload, drag-and-drop, or paste a screenshot of a suspicious message to check it for scam signals instantly.',
+  alternates: { canonical: `${BASE}/scamcheck/screenshot` },
+}
+
+export default function ScreenshotPage() {
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-10">
+      <ScreenshotAnalyzer />
+    </main>
+  )
+}

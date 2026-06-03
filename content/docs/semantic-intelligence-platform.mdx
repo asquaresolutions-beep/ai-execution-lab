@@ -1,0 +1,88 @@
+---
+title: "Semantic Intelligence Platform — Retrieval, Enrichment, GEO & Scam Clustering APIs"
+description: "The A Square Solutions semantic intelligence layer built on Vertex AI embeddings + BigQuery VECTOR_SEARCH: intelligent chunking, hybrid lexical+vector retrieval, snippets & confidence, semantic enrichment (topic/scam/trust/GEO), scam-pattern clustering, GEO/AI-search readiness scoring, and retrieval observability. Production, serverless, scale-to-zero, canonical 768-dim."
+date: "2026-06-03"
+tags: ["semantic-search", "vertex-ai", "bigquery", "rag", "geo", "scamcheck", "trustseal", "intelligence", "api"]
+status: published
+related_docs:
+  - gcp-ai-infrastructure
+  - vertex-ai-migration
+---
+
+The semantic retrieval infrastructure (Vertex embeddings + BigQuery VECTOR_SEARCH on Cloud Run) is now a **product layer**: enrichment, scoring, clustering, and retrieval-quality APIs. All deterministic enrichers run with **zero Vertex cost**; only query/document embedding calls hit Vertex, and those are cached.
+
+## Architecture
+
+```
+            ┌──────────────── ingestion (scripts/gen-embeddings-to-bigquery.mjs) ────────────────┐
+WordPress REST API ─┐                                                                              │
+ScamCheck/TrustSeal ┼─► sanitize ─► quality gate ─► intelligent chunking ─► Vertex embed (768) ─► BigQuery
+sitemap (ext. pt.) ─┘                                                         (incremental, dedup)  │
+            └───────────────────────────────────────────────────────────────────────────────────┘
+
+  query ─► embedQuery (cached, 768) ─► VECTOR_SEARCH (k×3, +text) ─► hybrid rerank ─► snippets/confidence ─► JSON
+                                                                  └► metrics (hit-rate, latency, gaps)
+```
+
+- **Canonical embedding:** `text-multilingual-embedding-002`, **768-dim** (pinned), `RETRIEVAL_DOCUMENT` for corpus / `RETRIEVAL_QUERY` for queries.
+- **Preserved infra:** Vertex AI, BigQuery VECTOR_SEARCH, Cloud Run scale-to-zero, incremental ingestion.
+
+## Retrieval flow (`lib/intelligence/`)
+
+| Stage | Module | What it does |
+|---|---|---|
+| Chunking | `chunking.ts` | Heading/paragraph-aware split, ~380-token chunks + sentence overlap (ingestion mirrors this). Long articles become precisely-retrievable chunks (`parent_id`, `chunk_index`). |
+| Hybrid rerank | `hybrid.ts` | Blends dense (cosine) + sparse (BM25-lite over title+body) relevance. Default 0.7 vector / 0.3 lexical — catches exact entities ("OTP", "UPI", brand) that pure vector misses. |
+| Presentation | `snippets.ts` | Query-aware snippet window, term highlights (offsets), `confidence` (0..1 from cosine distance) + band, plain-language relevance explanation. |
+| Metrics | `metrics.ts` | In-memory ring buffer: hit-rate, avg confidence, latency, cache-hit-rate, and **low-confidence queries = content-gap signal**. |
+
+## Semantic enrichment flow (`enrichment.ts`, `geo.ts`, `clustering.ts`)
+
+Composes existing primitives (`scam-intel/classify`, `severity`, `seo/authority`) into one contract:
+
+- **Topic classification** + **content type** + **entities** + **GEO intent tags**.
+- **Scam signal:** category, confidence, severity, tactics (ScamCheck).
+- **Trust signal (TrustSeal):** official refs, helpline, citations, freshness, bilingual → 0..100 trust score + band.
+- **GEO readiness (`geo.ts`):** AI-Overview readiness, citation probability, semantic authority + **answer-first suggestions** prioritised by gain.
+- **Scam clustering (`clustering.ts`):** single-link agglomerative grouping by cosine threshold → clusters with centroid, cohesion, and top repeated tactics.
+
+## API contracts
+
+### `GET/POST /api/semantic-search` — retrieval (public)
+`?q=<query>&k=8` · `?diag=1` returns query vs corpus dims.
+```json
+{ "query":"…","model":"text-multilingual-embedding-002","dim":768,"embeddingLive":true,"cached":false,
+  "topConfidence":0.83,
+  "results":[{ "id":"…","title":"…","url":"…","slug":"…","category":"…","source_type":"tier_a_post",
+    "confidence":0.83,"confidenceBand":"high","vectorScore":0.86,"lexicalScore":0.71,
+    "snippet":"…","highlights":[{"term":"otp","start":12,"end":15}],"matchedTerms":["otp"],
+    "relevanceExplanation":"High relevance (83%): this result from a tier a post shares the terms “otp”." }] }
+```
+
+### `GET /api/intelligence/related` — recommendations (public)
+`?q=<text>&k=6` or `?id=<doc-id>` ("more like this"). Returns ranked `{id,title,url,slug,category,confidence,confidenceBand}`.
+
+### `POST /api/intelligence/analyze` — enrichment (public, rate-limited)
+Body `{ title?, text, url?, sourceType? }` → `{ enrichment: { scam, trust, tags, readingTimeMin, lang }, geo }`.
+
+### `POST /api/geo-score` — GEO/AI-search audit (public, rate-limited)
+Body `{ title?, text }` → `{ aiOverviewReadiness, citationProbability, semanticAuthority, overall, factors, suggestions[] }`.
+
+### `POST /api/scam-intel/similar` — scam-pattern similarity (public, rate-limited)
+Body `{ text, k? }` → `{ classification, category, tactics, severity, similar[] }`. Works offline for classification; similarity requires live infra.
+
+### `GET /api/intelligence/metrics` — observability (ADMIN)
+`?window=60` → `{ retrieval: { hitRate, avgTopConfidence, avgLatencyMs, cacheHitRate, byEndpoint, lowConfidenceQueries }, spend: { totalUsd, byTier }, estimatedInr }`.
+
+## Cost efficiency (task 9)
+- **Query-embedding cache** (24h) — repeat queries cost 0 Vertex calls; response shows `cached`.
+- **Incremental ingestion** — per-chunk `content_hash`; unchanged + already-768 chunks are skipped.
+- **Deterministic enrichers** — topic/scam/trust/GEO/clustering use no Vertex calls.
+- **Scale-to-zero** preserved; in-memory metrics add no storage cost.
+
+## Operational guidance
+- **Rebuild/refresh corpus:** `node scripts/gen-embeddings-to-bigquery.mjs` (idempotent; chunk-aware; migrates schema via `ADD COLUMN IF NOT EXISTS`).
+- **Tune chunking:** `CHUNK_TOKENS`, `CHUNK_OVERLAP`, `CHUNK_SINGLE_MAX`, `MAX_CHUNKS` env vars.
+- **Tune ranking:** `hybridRerank(query, hits, { vectorWeight })` — raise lexical weight for entity-heavy corpora.
+- **Find content gaps:** `metrics.lowConfidenceQueries` lists queries with weak matches — a direct content-creation backlog.
+- **Monetization:** `/api/geo-score` (content-audit SaaS), `/api/scam-intel/similar` (ScamCheck pro), `/api/intelligence/analyze` (TrustSeal trust API) are clean public, rate-limited surfaces.

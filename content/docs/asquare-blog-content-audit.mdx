@@ -1,0 +1,92 @@
+---
+title: "A Square Solutions — Full Blog & Page Content Audit (745 posts)"
+description: "URL-level content audit of asquaresolution.com: 745 blog posts + 12 pages classified into keep/improve, merge, redirect, noindex, or support. Finds severe topical dilution (mostly off-topic AI/science/geopolitics news) and index bloat, with a consolidation plan, redirect map, internal-linking opportunities, and strategic manual-indexing priorities to rebuild topical authority around GEO/AI-SEO, AI automation, AI consulting, ScamCheck and TrustSeal."
+date: "2026-05-31"
+tags: ["seo", "content-audit", "index-bloat", "topical-authority", "cannibalization", "geo", "scamcheck", "trustseal"]
+status: published
+related_docs:
+  - asquare-internal-linking-topical-map
+  - asquare-new-service-landing-pages
+---
+
+URL-level audit of the live WordPress site (enumerated from the sitemaps: 12 pages + **745 unique blog posts**). **Method note:** this is a *slug/URL-level* audit (intent, overlap, cannibalization, clustering, bloat) — body-level depth/E-E-A-T is inferred from pattern, not read for all 745. Pair with the GSC "Crawled – not indexed" export to confirm which Tier-C URLs Google is already ignoring (almost certainly most of the news/science filler).
+
+## Executive finding
+The blog reads as a **generic AI/tech news site**, not an AI-SEO/automation/scam-intelligence authority. Of 745 posts, only **~12–15 are strategically on-topic.** The rest dilute topical authority and create index bloat:
+- **~94** science/space/physics posts (quantum, telescopes, batteries, robotics, whales…)
+- **~29** geopolitics/world-news (oil, ceasefires, shutdowns, inflation…)
+- **~21** regional/Dubai "top digital marketing companies in X" listicles (duplicate intent, weak for a UK/global AI agency)
+- the bulk of **~100** generic "AI news" posts
+**Implication:** trimming/noindexing this dilution is likely the single biggest topical-authority lever — it tells search + AI engines what this site is actually about.
+
+## Classification (by segment — counts approximate, slug-derived)
+| Segment | Tier | Action | ~Count | Rationale |
+|---|---|---|---|---|
+| Service pages (GEO, Entity SEO, Digital Marketing UK) | A | keep & improve + index | 3 | money pages |
+| Strategic posts (GEO/AI-SEO, ScamCheck/TrustSeal, AI-automation/consulting, SEO-ROI) | A | keep & improve + link to services + index | ~12–15 | revenue/cluster value |
+| Legit AI-business / SEO how-to / AI-automation support | B | keep / improve / merge | ~40–60 | support clusters |
+| Tools (QR, image-to-PDF) | B | keep (noindex optional) | 2 | utility traffic |
+| Regional "top … companies in X" + Dubai listicles | C | **merge → 1 hub, or noindex**; keep only UK | ~21 | duplicate intent, weak commercial fit |
+| Off-topic **science/space/physics** news | C | **noindex / prune** | ~94 | zero topical relevance |
+| **Geopolitics / world-news** | C | **noindex / prune** | ~29 | zero topical relevance |
+| Generic dated **AI-news** roundups | C | **noindex / prune** (keep a few evergreen) | ~bulk of 100+ | news decay, dilution |
+| WP archives (tag/category/author/date/attachment/paginated) | C | **noindex via Rank Math** | many | classic index bloat |
+| Privacy / thank-you / search results | C | noindex | few | non-strategic |
+
+## Tier A — keep, improve, internally link, request indexing
+**GEO / AI-SEO (cluster → `/services/geo-seo/`):**
+- generative-engine-optimization-geo-end-of-traditional-seo
+- google-ai-overviews-impact-organic-clicks
+- google-ai-overviews-and-your-traffic-the-data-backed-analysis-april-2026
+- chatgpt-search-seo-how-to-appear-in-chatgpt-answers
+- google-ai-search-digital-marketing-2025
+
+**Scam / Trust (→ ScamCheck / TrustSeal + `/services/ai-consulting/` as proof):**
+- scamcheck-india-ai-scam-detector
+- trustseal-india-ai-fact-checker
+
+**AI automation / consulting (→ `/services/ai-automation/`, `/services/ai-consulting/`):**
+- operationalizing-ai-for-scale-and-sovereignty
+- ai-native-cloud-infrastructure-disruption-developer-empowerment
+- ai-coding-agent-costs-free-alternatives
+- open-source-ai-coding-disruption
+- build-business-website-with-ai
+
+**SEO commercial (→ `/services/technical-seo/`, `/digital-marketing-uk/`):**
+- calculating-seo-roi-google-analytics
+- digital-marketing-in-2026
+
+> These ~14 + the 6 service pages are the **manual-indexing priority list** — request indexing in GSC after adding schema + internal links.
+
+## Consolidation recommendations
+1. **Regional/Dubai digital-marketing listicles → one hub.** Build a single "Digital marketing companies & trends (global)" resource; **301 the rest into it**, keep the **UK** one and link it to `/digital-marketing-uk/`. Or noindex all but UK if they have no links/traffic.
+2. **GEO/AI-Overviews posts overlap each other + the GEO service page.** Designate the GEO service page as the commercial pillar; keep the 2 data-backed AI-Overviews posts as distinct *informational* spokes; merge any thinner GEO explainers into "generative-engine-optimization-geo" as the canonical explainer.
+3. **AI-news roundups → keep 1–2 evergreen explainers, noindex/prune the dated rest.** Don't try to maintain a news desk.
+4. **Science/space/geopolitics → bulk noindex** (or move off-domain / delete). They cannot be made topically relevant.
+
+## Redirect mapping (pattern-level)
+| From (pattern) | To | Type |
+|---|---|---|
+| `top-N-digital-marketing-companies-in-{country}` (non-UK) | the new global hub (or `/digital-marketing-uk/`) | 301 |
+| Dubai marketing listicles (if not targeting Dubai) | global hub | 301 |
+| Thin/duplicate GEO explainers | generative-engine-optimization-geo post | 301 |
+| Off-topic science/geopolitics/AI-news (no links/traffic) | — | **noindex, not redirect** (nothing relevant to point to) |
+| Off-topic posts **with backlinks** | nearest relevant pillar | 301 (preserve equity) |
+> Rule: redirect only where there's a topically-relevant target or link equity to preserve; otherwise noindex/prune (irrelevant redirects get treated as soft-404s).
+
+## Internal linking opportunities
+- Every Tier-A post gets a **blog→service** link with a contextual anchor (GEO posts → "our GEO services"; automation posts → "AI workflow automation services"; SEO-ROI → "technical SEO audit"; scam/trust posts → ScamCheck/TrustSeal + "AI products we've shipped" → AI consulting).
+- Interlink the GEO spokes to each other (1–2 max) and all up to the GEO pillar.
+- Add the surviving listicle hub → `/digital-marketing-uk/`.
+- Remove internal links *into* pruned/noindexed pages (don't waste crawl on dead ends).
+
+## Strategic manual-indexing priorities (do in GSC)
+1. The 3 live service pages + the 3 new ones (once published).
+2. The ~14 Tier-A posts above (after schema + internal links added).
+3. The new digital-marketing hub (after consolidation).
+**Do NOT request indexing** for any Tier-C (let them drop out as you noindex).
+
+## Caveats + recommended execution
+- Slug-level audit: confirm borderline Tier-B vs C by skimming bodies (I can deep-read specific URLs on request).
+- **Highest-ROI sequence:** (1) Rank Math bulk-noindex archives + science/geopolitics/news segments → instant bloat reduction; (2) consolidate listicles with redirects; (3) add blog→service links + schema on Tier A; (4) request indexing on the priority list. 
+- Send the **GSC crawled-not-indexed export** and I'll map it onto these tiers so you only act on URLs Google is actually flagging.

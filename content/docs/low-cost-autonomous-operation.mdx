@@ -1,0 +1,65 @@
+---
+title: "Low-Cost Autonomous Operation — Cost Model & Optimizations"
+description: "How AI Execution Lab runs autonomously on free/hobby plans: model-tier routing, content-addressed caching, semantic deduplication, publish throttling, empty-queue early-exit crons, Firestore read/write minimization via increment counters, and batched embeddings. Includes expensive-operation analysis, scaling bottlenecks, the cheapest viable architecture, and estimated monthly cost ranges."
+date: "2026-05-30"
+tags: ["cost", "vertex-ai", "vercel", "firestore", "caching", "scamcheck", "autonomous", "production"]
+status: published
+related_docs:
+  - vertex-ai-migration
+  - content-distribution-engine
+  - scam-intelligence-ingestion
+---
+
+The system is designed to run **autonomously and cheaply** — ideally inside free tiers. Every expensive operation is gated, cached, deduplicated, or throttled.
+
+## Where cost actually comes from
+
+| Operation | Cost driver | Mitigation |
+|---|---|---|
+| Article generation (Pro) | output tokens (~$10/1M) | `DEEP_TIER=flash` switch; cached by content hash; 1 bundle per scam pattern |
+| Structured outputs (Flash) | many small calls | Flash tier; strict-JSON (fewer tokens); cached |
+| Embeddings | per-token | multilingual model; **batched 25/request**; hash fallback offline |
+| Vercel function time | invocations × duration | empty-queue **early-exit**; daily crons on hobby |
+| Firestore | reads/writes/scans | **increment counters** instead of scans; dedup avoids re-writes |
+
+## The seven cost controls
+
+1. **Model-tier routing** — Flash for everything fast; Pro only for the article (and switchable to Flash).
+2. **Content-addressed cache** (`_ai_cache`, 7-day TTL) — identical inputs are free; cache hits are audited so the hit-rate shows on the dashboard.
+3. **Semantic dedup** — near-identical scam reports collapse into one cluster; the autopilot generates **one bundle per pattern** and stamps `cluster.bundleId` so it never regenerates.
+4. **Publish throttling** — `PUBLISH_PER_HOUR` (12) + `BUNDLES_PER_DAY` (20) caps; throttled jobs requeue **without** consuming a retry.
+5. **Empty-queue early-exit** — the drain cron does one tiny indexed query and returns immediately when there is no work, so frequent ticks are nearly free.
+6. **Increment counters** — token/cost/quota aggregates use `increment()` (1 write), never collection scans, on the hot path.
+7. **Batched embeddings** — up to 25 texts per Vertex request.
+
+## Scaling bottlenecks (and the fix)
+
+- **In-process vector scans** (`vector-search.ts`, dashboard aggregations) read up to a few thousand docs — fine to ~10k. **Fix at scale:** Firestore **Vector Search** (indexes already defined) replaces the scan with native KNN; dashboards move to pre-aggregated counters.
+- **Single-instance memory store** is dev-only; production uses Firestore (horizontal by default).
+- **Cron fan-out**: one autopilot run is capped at `AUTOPILOT_PER_RUN` (3). Raise gradually as budget allows.
+
+## Cheapest viable architecture
+
+- **Vercel Hobby** + **Firestore Spark (free)** + **Vertex pay-as-you-go**.
+- Crons daily (Hobby allows 1/day cadence): autopilot 06:00, trending 05:00, cache cleanup 03:00, drain every 6h (early-exits when idle).
+- `DEEP_TIER=flash`, small `AUTOPILOT_PER_RUN`, aggressive cache TTL.
+
+## Reducing cold starts
+- Routes are lightweight (≈103 kB first load) and import lazily; the store/provider are singletons created on first use.
+- Health + drain pre-checks avoid waking heavy code paths.
+- Keep `maxDuration` generous only where needed (autopilot 300s; others 60s).
+
+## Estimated monthly cost ranges
+
+Assumes Vertex pay-as-you-go at the **estimated** prices in `usage.ts` (confirm against Google's pricing). Token estimate per full bilingual bundle ≈ 6 generations × (~600 in / ~900 out) plus one Pro article (~700 in / ~1.2k out).
+
+| Scenario | Bundles/mo | AI tier | Est. AI cost | Vercel | Firestore | **Total/mo** |
+|---|---|---|---|---|---|---|
+| **Idle / pilot** | ~30 | Flash-only (`DEEP_TIER=flash`) | ~$0.30–$1 | Hobby $0 | Spark $0 | **~$0.30–$1** |
+| **Light autonomous** | ~90 (3/day) | Flash + Pro article | ~$3–$8 | Hobby $0 | Spark $0 | **~$3–$8** |
+| **Active** | ~300 (10/day) | Flash + Pro article | ~$12–$30 | Hobby/Pro $0–$20 | Spark→Blaze ~$0–$5 | **~$15–$55** |
+| **Heavy** | ~1000 | Flash + Pro article | ~$45–$110 | Pro $20 | Blaze ~$5–$20 | **~$70–$150** |
+
+Flash-only mode cuts the AI line ~3–4×. Caching + dedup typically remove 30–60% of generations in steady state (re-runs, near-duplicates), so real cost trends toward the low end of each range.
+
+> These are planning estimates, not quotes. Set budget alerts in Google Cloud Billing and watch `/ops/analytics` → AI cost today.

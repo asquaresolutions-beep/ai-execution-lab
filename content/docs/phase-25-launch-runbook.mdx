@@ -1,0 +1,97 @@
+---
+title: "Phase 25 — Production Rollout & Traffic Activation Runbook"
+description: "The launch runbook for the ScamCheck growth engine: static-first deploy sequence, GSC submission + indexing-acceleration checklist, Discover activation checks, traffic + analytics activation, cost-protection settings, launch monitoring + early-warning signals, and a launch-readiness report. Keeps Vertex capped and infrastructure low-cost."
+date: "2026-05-31"
+tags: ["scamcheck", "launch", "google-search-console", "google-discover", "cost", "monitoring", "indexing", "seo"]
+status: published
+related_docs:
+  - low-cost-autonomous-operation
+  - autonomous-growth-authority-estimates
+  - launch-content-pack
+---
+
+Execution runbook for Phase 25. **Static-first, Vertex capped, Firestore-light.** Items marked **[you]** are click-actions on your accounts (Vercel/GCP/Search Console) — code is rollout-ready.
+
+## 0) Critical pre-deploy config
+- **`NEXT_PUBLIC_SITE_URL`** (and optional `NEXT_PUBLIC_SCAM_BASE_URL`) **must equal the real serving origin.** Canonicals + sitemap derive from it; a mismatch breaks indexing. Verify `/scams/...` canonical resolves to a live URL on that origin.
+- Confirm the chosen domain has a **Search Console property**.
+
+## A) Static SEO rollout (deploy first, zero AI/DB)
+Deploy the branch with **Vertex + Firebase env UNSET** → pages, OG, widgets run in mock/memory: zero cost, zero risk.
+- [you] Deploy branch to Vercel (preview → production).
+- ✅ SSG scam pages (250) + hubs + trust pages prerender at build.
+- ✅ OG routes (`/api/og?template=scam`) render; robots now allows `/api/og`.
+- ✅ Widgets (`/widget.js`, `/widgets`) serve.
+- Verify after deploy: `/sitemap.xml` (valid), `/robots.txt` (allows `/`, `/api/og`; blocks `/api/`,`/ops`), canonical tags, JSON-LD (Article+FAQPage+BreadcrumbList) via Rich Results Test, mobile rendering (viewport present, responsive).
+
+## B) Search / indexing activation **[you]**
+- [ ] Add/verify the Search Console property for the serving origin.
+- [ ] Submit `/sitemap.xml` in GSC → Sitemaps.
+- [ ] Use URL Inspection → Request Indexing for the **tier-1 hubs first**: `/scams`, `/scams/type/{upi-fraud,otp-fraud,kyc-fraud,investment-fraud,phishing}`.
+- [ ] Confirm crawl paths: `/scams` links all types, hubs, and **every facet** (orphan fix shipped) → strong internal discovery.
+- [ ] Add a header/footer nav link to `/scams` from the main site for homepage discovery.
+- Fresh sitemap timestamps regenerate on every build/redeploy (build-time `new Date()`).
+- Orphans: **none** — every city/bank/UPI/platform page is linked from the hub + in the sitemap.
+
+## C) Discover activation
+- ✅ Discover-friendly metadata: honest headlines, `max-image-preview:large`, article freshness dates, speakable + ImageObject schema.
+- ✅ OG image dimensions 1200×630 (1.91:1), `<= 1y` CDN-cached.
+- ✅ Freshness indicators: trending strip (viral/active badges), "updated" labels.
+- ✅ Mobile performance: static HTML, lazy ads/client widgets, reserved heights (no CLS).
+- **Strongest Discover candidates:** UPI fraud, OTP fraud, KYC fraud, phishing, investment fraud (tier-1 demand + high severity + freshable). Promote these first.
+
+## D) Traffic activation (priority batches)
+Generate the first pages **without Vertex** (templated/deterministic) or with Vertex **capped**. Priority order:
+1. UPI scams · 2. WhatsApp scams · 3. Telegram investment scams · 4. fake KYC scams · 5. fake job scams.
+The 20-topic batch + Shorts/X/LinkedIn/Hindi are in [launch-content-pack](/docs/launch-content-pack). Channel snippets: `/api/scam-intel/alert-formats?type=<id>`.
+
+## E) Analytics activation
+- ✅ Event/CTR tracking: Vercel Analytics + WebVitals wired in the root layout; `/ops/analytics` aggregates publishing/AI/cost.
+- ✅ Widget analytics: widget links are first-party anchors (trackable in GA/Plausible by destination).
+- ✅ Scam-entity + Discover-candidate + fastest-growing tracking: `/api/scam-intel/growth?view=discover|entities|leverage|backlink|converting` (admin).
+- [you] Optional: set `NEXT_PUBLIC_GA_ID` / `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` for client analytics.
+
+## F) Cost protection (initial launch posture)
+- **Keep Vertex unset (mock) or capped:** `DAILY_BUDGET_USD=1`, `DEEP_TIER=flash`, `AUTOPILOT_PER_RUN=1`, `BUNDLES_PER_DAY=5`.
+- Low Firestore reads: trending served from a CDN-cached materialized snapshot; counters (not scans) on hot paths; static pages hit neither AI nor DB.
+- Cache effectiveness: AI generations content-addressed (7-day TTL); OG + APIs CDN-cached (`s-maxage`); cache-hit rate visible on `/ops/analytics`.
+- Avoid unnecessary AI: quality gate + budget breaker + dedup prevent regeneration; crons early-exit when idle.
+
+## G) Launch monitoring + early-warning signals
+Watch daily for the first 1–2 weeks:
+| Signal | Where | Red flag |
+|---|---|---|
+| AI cost today vs cap | /ops/analytics | approaching `DAILY_BUDGET_USD` |
+| Quota utilization | /ops/analytics | over 85% (nearLimit) |
+| Queue failure rate / DLQ | /ops/analytics | failure over 5% or DLQ above 0 |
+| Function errors/duration | Vercel logs | spikes, timeouts |
+| Indexing coverage | GSC | pages "Discovered – not indexed" stalling |
+| Discover impressions | GSC → Discover | zero after 2–3 weeks of indexing |
+| Rich results | GSC → Enhancements | FAQ/Article errors |
+| CWV | GSC/PSI | CLS > 0.1, poor LCP |
+| Firestore usage | GCP | nearing Spark limits |
+**Indexing issues:** canonical mismatch (origin config), sitemap not submitted, noindex leak. **Discover failures:** no large image (robots blocked `/api/og` → now fixed), thin content, missing freshness. **Cost spikes:** budget breaker not set, autopilot caps too high, cache disabled.
+
+## H) Distribution prep
+Ready-to-use in [launch-content-pack](/docs/launch-content-pack): 20 scam topics, 10 Shorts ideas, 5 LinkedIn posts, 5 X threads, 10 Hindi targets, Discover candidates. Per-topic channel snippets via the alert-formats API.
+
+## I) Launch-readiness report
+| Check | Status |
+|---|---|
+| Build / typecheck | ✅ green |
+| Prerender (250 scam + 7 trust) | ✅ |
+| Sitemap valid + fresh timestamps | ✅ |
+| robots allows `/api/og`, blocks tools | ✅ |
+| Canonicals consistent with sitemap origin | ✅ (set SITE_URL correctly) |
+| Structured data (Article/FAQ/Breadcrumb/Speakable/ImageObject) | ✅ |
+| Mobile viewport + responsive | ✅ |
+| OG images (all variants) | ✅ |
+| Widgets / widget.js | ✅ |
+| Auth-gated admin APIs (401/200) | ✅ |
+| No CLS / no hydration mismatch | ✅ |
+| Cost: mock default, capped, cache-first | ✅ |
+
+**Go/No-go:** GO for static-first deploy. Gate Vertex behind caps; enable crons after a clean cost day; enable ads last.
+
+## Immediate post-launch KPIs (first 2–4 weeks)
+Pages indexed (target: majority of 250) · Discover impressions appear · AI cost/day under cap · DLQ ≈ 0 / failure under 5% · CWV good (CLS≈0) · first widget embeds / referring domains · trending-strip + subscribe engagement.

@@ -1,0 +1,65 @@
+---
+title: "Monetization + Discover CTR — Revenue Analysis & Placement Strategy"
+description: "Revenue analysis for the ScamCheck/TrustSeal growth engine: highest-RPM scam topics, best ad placements (desktop + mobile), paid-user ad removal, and estimated Google Discover CTR uplift from dynamic OG images, verdict badges, and freshness signals. Lightweight, CLS-safe, Vercel-hobby-friendly implementation."
+date: "2026-05-30"
+tags: ["adsense", "rpm", "google-discover", "ctr", "monetization", "scamcheck", "trustseal", "core-web-vitals", "seo"]
+status: published
+related_docs:
+  - growth-roadmap-scamcheck-trustseal
+  - low-cost-autonomous-operation
+  - vertex-ai-migration
+---
+
+This phase adds revenue (AdSense) and click-through (Discover/social) to the programmatic scam pages, without harming UX or Core Web Vitals, and removes ads for paid users automatically.
+
+## What shipped
+- **Reusable ad components** (`components/ads/*`): lazy (IntersectionObserver), responsive, **CLS-safe reserved height**, single-init, **auto-hidden for paid users**, graceful no-op when unconfigured.
+- **Placements**: a **below-verdict** unit (highest viewability) + an **in-article** unit before the FAQ. Two units max — protects UX and viewability-based RPM.
+- **Paid-user removal**: `usePaidUser` reads a shared cookie/localStorage flag; ads + the AdSense script never load for paid users. Hydration-safe (decision happens post-mount; server HTML matches first client render).
+- **Dynamic OG images** (`/api/og?template=scam`): severity-coloured, bilingual (EN + हिन्दी), with the 1930 helpline — CDN-cached for a year.
+- **CTR badges**: severity (risk), trust score, freshness, EN·हिन्दी — all truthful.
+- **Schema**: ImageObject + SpeakableSpecification + article freshness dates.
+
+## Highest-RPM scam topics (India context)
+Advertiser demand (and thus RPM) is highest where the reader has financial/commercial intent adjacent to the topic:
+1. **Investment / trading / crypto fraud** — finance & brokerage advertisers; **highest RPM tier**.
+2. **Loan-app scams** — lending/credit advertisers.
+3. **UPI / banking / KYC fraud** — fintech, banking, security apps.
+4. **Tech-support scams** — antivirus/security software.
+5. **Fake-job scams** — job boards, upskilling.
+Lower RPM but high *volume*: OTP, lottery, courier, romance — monetize via sheer traffic + Discover.
+
+> Strategy: route the highest-RPM topics to the **below-verdict** slot (best viewability), and lean on volume topics for Discover-driven sessions.
+
+## Best ad placements
+**Desktop / tablet:**
+- **Below the verdict** (after the answer, before bullets) — reader is engaged, content above keeps it in-view → high viewability RPM.
+- **In-article** before the FAQ — natural break, fluid format blends in.
+- Sidebar: only worthwhile on wide multi-column layouts; the current single-column reading layout intentionally omits it (avoids low-viewability filler).
+
+**Mobile (majority of India traffic):**
+- The **below-verdict in-content** unit is the top mobile earner (above the fold after a short answer).
+- A single in-article unit second.
+- **Avoid** anchor/interstitial/vignette formats — they hurt CWV and risk policy issues; we deliberately don't use them.
+- Reserved heights prevent the layout shift that mobile users (and CLS scoring) punish.
+
+## Paid-user experience
+Active paid plans (`sc_plan` cookie/localStorage matching paid|pro|basic|premium|active) → **zero ads, script not even downloaded**. No hydration mismatch (post-mount decision), graceful fallback (free users with blocked storage simply see ads).
+
+## Estimated Discover CTR uplift
+Discover CTR is driven by **image quality + headline + freshness + trust**. The combined changes target a meaningful lift over a bare SPA card:
+- **Dedicated 1200×630 OG image** (vs none / generic): the single biggest Discover lever — large-image preview is enabled via `max-image-preview:large`.
+- **Severity-coloured, bilingual card + helpline**: strong, honest visual signal.
+- **Freshness + verdict + trust badges**: reinforce relevance/credibility.
+
+Planning estimate: pages with a strong dedicated image + honest headline typically see **roughly +15–40% CTR** versus text-only/generic-image cards in Discover and social. Combined with eligibility from freshness + schema, expect Discover to become a material traffic source for trending scam pages within weeks of indexing. *Estimate, not a guarantee — actual lift depends on topic, competition, and Discover's per-user ranking.*
+
+## Performance & cost protections
+- **Static-first**: pages are SSG; ads + paid-check are client-only and lazy → no impact on LCP/TTI.
+- **CLS-safe**: every ad slot reserves height before fill.
+- **OG images** render once per unique URL then serve from CDN for a year (1y immutable Cache-Control) → negligible compute, Vercel-hobby safe.
+- **No AI** on the monetization/OG path. **Low memory** (Node OG render is short-lived, font fetched once + cached in module scope).
+- Lighthouse-safe: no intrusive formats, no layout shift, deferred script.
+
+## Setup
+Set in Vercel: `NEXT_PUBLIC_ADSENSE_CLIENT` (ca-pub-…), `NEXT_PUBLIC_ADSENSE_SLOT_BELOW_VERDICT`, `NEXT_PUBLIC_ADSENSE_SLOT_IN_CONTENT`. Ensure the consumer apps set the shared `sc_plan` flag for paid users (override key via `NEXT_PUBLIC_PAID_FLAG_KEY`). Until slots are set, pages render cleanly with **no ad boxes** (no CLS, no empty space).

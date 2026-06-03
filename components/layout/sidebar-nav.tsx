@@ -17,6 +17,13 @@ const NAV = [
     ],
   },
   {
+    group: 'Scam Intelligence',
+    items: [
+      { href: '/scams', label: 'Scam Alerts' },
+      { href: '/scams/hub/upi-payment-scams', label: 'Trending Hubs' },
+    ],
+  },
+  {
     group: 'Knowledge',
     items: [
       { href: '/docs',    label: 'Docs'     },
