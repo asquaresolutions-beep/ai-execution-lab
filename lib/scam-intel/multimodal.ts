@@ -16,6 +16,7 @@ import { ocrImage, type OcrResult, type OcrWord } from './ocr'
 import { enrich } from '@/lib/intelligence/enrichment'
 import { extractEntities, entityRiskCount, type ExtractedEntities } from './extract-entities'
 import { analyzeUrls, type UrlFinding } from './url-intel'
+import { fingerprint as scamFingerprint } from './fingerprint'
 import { calibrate } from './calibration'
 import { computeTrustScore } from './trustscore'
 import { embedQuery, EMBED_DIM } from '@/lib/ai/embeddings'
@@ -48,6 +49,8 @@ export interface MultimodalVerdict {
   confidence: number             // 0..1 (calibrated)
   confidenceBand: 'high' | 'medium' | 'low'
   explanation: string
+  fingerprint: string            // stable campaign id
+  campaignLabel: string          // human-readable scam fingerprint label
   safetyAdvice: string[]
   explainability: Explainability
   ocr: { text: string; engine: string; lang: string; wordCount: number }
@@ -228,10 +231,13 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
   // Cost estimate: embeddings ~$0.000025/1k tok; flash vision ~$0.075/1M in.
   const estCostUsd = Math.round(((embedTokens / 1000) * 0.000025 + (deepTokens / 1_000_000) * 0.3) * 1e6) / 1e6
 
+  const fp = scamFingerprint({ category: enrichment.scam.category, text, entities, signals: signals.map((s) => s.id) })
   const result: MultimodalVerdict = {
     verdict, riskScore, scamProbability: Math.round(scamProbability * 1000) / 1000, trustScore,
     confidence: cal.confidence, confidenceBand: cal.band,
     explanation: baseExplanation,
+    fingerprint: fp.fingerprint,
+    campaignLabel: fp.label,
     safetyAdvice: safetyAdvice(enrichment.scam.category, entities, signals),
     explainability,
     ocr: { text, engine: ocr.engine, lang: ocr.lang, wordCount: text.split(/\s+/).filter(Boolean).length },

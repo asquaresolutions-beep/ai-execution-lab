@@ -412,6 +412,92 @@ export async function imageDashboard(days = 30): Promise<ImageDashboard> {
   }
 }
 
+// ── Real-image scam intelligence corpus (goals 3, 6, 8) ───────────
+export interface ScamCorpusRow {
+  id: string                 // image hash
+  fingerprint: string
+  label: string
+  category: string
+  brand: string
+  domain_core: string
+  lang: string
+  ocr_text: string
+  embedding: number[]        // 768-dim
+  upi_ids: string[]
+  phones: string[]
+  risk_score: number
+  created_at: string
+}
+const SCAM_CORPUS_TABLE = process.env.BQ_SCAM_CORPUS_TABLE || 'scam_corpus'
+let _scamCorpusReady = false
+async function ensureScamCorpusTable(PROJECT: string): Promise<void> {
+  if (_scamCorpusReady) return
+  const schema = { fields: [
+    { name: 'id', type: 'STRING', mode: 'REQUIRED' }, { name: 'fingerprint', type: 'STRING' }, { name: 'label', type: 'STRING' },
+    { name: 'category', type: 'STRING' }, { name: 'brand', type: 'STRING' }, { name: 'domain_core', type: 'STRING' }, { name: 'lang', type: 'STRING' },
+    { name: 'ocr_text', type: 'STRING' }, { name: 'embedding', type: 'FLOAT64', mode: 'REPEATED' },
+    { name: 'upi_ids', type: 'STRING', mode: 'REPEATED' }, { name: 'phones', type: 'STRING', mode: 'REPEATED' },
+    { name: 'risk_score', type: 'INT64' }, { name: 'created_at', type: 'TIMESTAMP' },
+  ] }
+  const res = await authedFetch(`${BASE}/projects/${PROJECT}/datasets/${DATASET}/tables`, { method: 'POST', body: JSON.stringify({ tableReference: { projectId: PROJECT, datasetId: DATASET, tableId: SCAM_CORPUS_TABLE }, schema }) })
+  if (!res.ok && res.status !== 409) throw new Error(`ensureScamCorpusTable ${res.status}`)
+  _scamCorpusReady = true
+}
+
+/** Insert scam-corpus rows (idempotent on id = image hash). Best-effort. */
+export async function insertScamCorpusRows(rows: ScamCorpusRow[]): Promise<{ inserted: number }> {
+  if (!rows.length || !bqConfigured()) return { inserted: 0 }
+  const PROJECT = await bqProject()
+  await ensureDataset().catch(() => {})
+  await ensureScamCorpusTable(PROJECT)
+  const res = await authedFetch(`${BASE}/projects/${PROJECT}/datasets/${DATASET}/tables/${SCAM_CORPUS_TABLE}/insertAll`, { method: 'POST', body: JSON.stringify({ rows: rows.map((r) => ({ insertId: r.id, json: r })) }) })
+  if (!res.ok) { log.warn({ event: 'bq.scam_corpus_insert_failed', status: res.status }); return { inserted: 0 } }
+  const data = (await res.json()) as { insertErrors?: unknown[] }
+  return { inserted: rows.length - (data.insertErrors?.length ?? 0) }
+}
+
+export interface ScamNeighbor { id: string; label: string; fingerprint: string; category: string; distance: number }
+/** Nearest known scams to a query embedding (campaign history for a new upload). */
+export async function scamCorpusNearest(embedding: number[], topK = 8): Promise<ScamNeighbor[]> {
+  const PROJECT = await bqProject()
+  const k = Math.max(1, Math.min(50, Math.floor(topK)))
+  const sql = `SELECT base.id AS id, base.label AS label, base.fingerprint AS fingerprint, base.category AS category, distance
+FROM VECTOR_SEARCH(TABLE \`${PROJECT}.${DATASET}.${SCAM_CORPUS_TABLE}\`, 'embedding', (SELECT @q AS embedding), top_k => ${k}, distance_type => 'COSINE')
+ORDER BY distance ASC`
+  const rows = await runQuery(sql, [{ name: 'q', type: 'ARRAY', arrayType: 'FLOAT64', value: embedding }])
+  return rows.map((r) => ({ id: r.id ?? '', label: r.label ?? '', fingerprint: r.fingerprint ?? '', category: r.category ?? '', distance: Number(r.distance) }))
+}
+
+export interface ScamLeaderboard {
+  total: number
+  topBrands: Array<{ k: string; n: number }>
+  topDomains: Array<{ k: string; n: number }>
+  topUpiIds: Array<{ k: string; n: number }>
+  topPhones: Array<{ k: string; n: number }>
+  topCampaigns: Array<{ k: string; n: number }>
+  fastestGrowing: Array<{ fingerprint: string; label: string; last7d: number; total: number }>
+}
+/** Leaderboard analytics over the scam corpus (goal 8). */
+export async function scamLeaderboard(days = 90): Promise<ScamLeaderboard> {
+  const PROJECT = await bqProject()
+  const T = `\`${PROJECT}.${DATASET}.${SCAM_CORPUS_TABLE}\``
+  const top = async (expr: string, unnest = false) => {
+    const from = unnest ? `${T}, UNNEST(${expr}) AS k` : T
+    const col = unnest ? 'k' : expr
+    const rows = await runQuery(`SELECT ${col} AS k, COUNT(*) AS n FROM ${from} WHERE ${unnest ? 'k' : expr} IS NOT NULL AND ${unnest ? 'k' : expr} != '' GROUP BY k ORDER BY n DESC LIMIT 10`).catch(() => [])
+    return rows.map((r) => ({ k: r.k ?? '', n: Number(r.n) }))
+  }
+  const totalRow = await runQuery(`SELECT COUNT(*) AS n FROM ${T}`).catch(() => [])
+  const growing = (await runQuery(`SELECT fingerprint, ANY_VALUE(label) AS label, COUNTIF(created_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)) AS last7d, COUNT(*) AS total FROM ${T} GROUP BY fingerprint HAVING total > 1 ORDER BY last7d DESC, total DESC LIMIT 10`).catch(() => []))
+    .map((r) => ({ fingerprint: r.fingerprint ?? '', label: r.label ?? '', last7d: Number(r.last7d), total: Number(r.total) }))
+  return {
+    total: Number(totalRow[0]?.n ?? 0),
+    topBrands: await top('brand'), topDomains: await top('domain_core'),
+    topUpiIds: await top('upi_ids', true), topPhones: await top('phones', true),
+    topCampaigns: await top('label'), fastestGrowing: growing,
+  }
+}
+
 export function bigQueryReady(): boolean { return bqConfigured() }
 
 export { PROJECT as BIGQUERY_PROJECT, DATASET as BIGQUERY_DATASET }

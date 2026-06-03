@@ -17,7 +17,21 @@ const BANKS = ['SBI', 'HDFC', 'ICICI', 'Axis', 'Kotak', 'PNB']
 const WALLETS = ['Paytm', 'PhonePe', 'Google Pay', 'BHIM']
 const COURIERS = ['India Post', 'Blue Dart', 'DTDC', 'FedEx', 'Delhivery']
 const SHORTENERS = ['bit.ly/x' , 'tinyurl.com/r', 't.me/joinpay', 'cutt.ly/win']
-const SCAM_DOMAINS = ['sbi-kyc-verify.xyz', 'hdfc-secure.top', 'icici-verify.click', 'kyc-update.info', 'rbi-refund.live', 'paytm-cashback.buzz']
+// Per-category domain pools so a scam domain correlates with its campaign
+// (realistic: a "Fake SBI KYC" campaign reuses its own landing domain).
+const CAT_DOMAINS = {
+  fake_kyc: ['sbi-kyc-verify.xyz', 'hdfc-kyc-update.top', 'icici-kyc.click'],
+  upi_refund: ['rbi-refund.live', 'upi-refund-portal.buzz'],
+  fake_bank_alert: ['secure-bank-login.top', 'netbanking-alert.click'],
+  courier: ['indiapost-customs.top', 'parcel-customs-fee.xyz'],
+  investment: ['vip-trading-profit.live', 'forex-guaranteed.buzz'],
+  job: ['wfh-jobs-apply.xyz', 'parttime-earn.click'],
+  crypto: ['btc-airdrop-claim.top', 'crypto-reward.live'],
+  fake_payment: ['payment-confirm.click', 'upi-credit.xyz'],
+  fake_whatsapp_support: ['wallet-support-help.top', 'account-restore.click'],
+  fake_ecommerce_refund: ['order-refund-portal.xyz', 'shopping-refund.buzz'],
+}
+let CURRENT_CAT = ''
 const LEGIT_DOMAINS = ['amazon.in/orders', 'flipkart.com', 'sbi.co.in', 'hdfcbank.com', 'indiapost.gov.in']
 const LANGS = ['en', 'hi', 'hinglish', 'mixed']
 const phone = () => `${pick(['9', '8', '7', '6'])}${int(100000000, 999999999)}`
@@ -26,7 +40,8 @@ const otp = () => int(100000, 999999)
 
 // scamUrl: sometimes a brand-lookalike domain, sometimes shortener, sometimes obfuscated
 function scamUrl(adv = false) {
-  const base = rnd() < 0.5 ? pick(SCAM_DOMAINS) : pick(SHORTENERS)
+  const pool = CAT_DOMAINS[CURRENT_CAT] || ['scam-verify.xyz']
+  const base = rnd() < 0.7 ? pick(pool) : pick(SHORTENERS)
   if (adv) return rnd() < 0.5 ? `hxxp://${base.replace(/\./g, '[.]')}` : `http://${base.replace('o', '0').replace('i', '1')}`
   return `http://${base}`
 }
@@ -135,6 +150,7 @@ function build(set, label, count) {
   const out = []
   for (let i = 0; i < count; i++) {
     const category = cats[i % cats.length]
+    CURRENT_CAT = category
     const { lang, text } = langText(set[category])
     out.push({ id: `${label}-${category}-${i}`, label, category, lang, channel: pick(CHANNELS), ocrText: text })
   }

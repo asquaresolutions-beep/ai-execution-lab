@@ -122,6 +122,38 @@ layer's precision is proven · batch-embed at ingestion only.
   JSON-only contract; instructions inside images are never executed.
 - No SSRF — URLs found in screenshots are analysed as strings, never fetched.
 
+## Real-image scam-intelligence corpus + clustering
+
+A production pipeline to turn real screenshots into a queryable campaign corpus
+(run against live GCP; the deterministic layers are verified offline):
+- **Ingest:** `POST /api/scam-intel/corpus-ingest` (admin) — OCR + Gemini vision
+  + fingerprint + embed + write to the BigQuery `scam_corpus` vector table.
+  Driver: `scripts/build-scam-corpus.mjs ./datasets/real-images` (bounded
+  concurrency, dedup by hash, live cost tracking).
+- **Fingerprints** (`lib/scam-intel/fingerprint.ts`): stable campaign id +
+  human label ("Fake SBI KYC Suspension", "Courier Customs Fee Scam", "Refund QR
+  Collection Scam", …) from category + spoofed brand + domain + wording skeleton.
+- **Campaign clustering** (`lib/scam-intel/campaign-clustering.ts`): union-find
+  over shared domain / UPI / phone / wording-skeleton / fingerprint;
+  link-shorteners excluded as non-distinctive.
+- **NN retrieval** (`scamCorpusNearest`): every upload returns its nearest known
+  campaigns + cluster confidence (campaign history).
+- **Leaderboard** (`GET /api/scam-intel/leaderboard`): top spoofed brands, scam
+  domains, UPI IDs, phones, campaigns, and 7-day fastest-growing campaigns.
+
+**Clustering quality (offline, `node scripts/eval-clustering.mjs`, 500 scam):**
+
+```
+clusters = 44 (26 multi-member)   weighted purity = 1.000
+distinct fingerprints = 22
+top campaigns: Work-From-Home Job (50), Crypto Airdrop/Seed-Phrase (50),
+  Fake Ecommerce Refund (50), Fake Customer-Support (48), Fake KYC Suspension (46) …
+```
+
+A bug this surfaced and fixed: link-shorteners (bit.ly/tinyurl/t.me) were merging
+unrelated campaigns — excluding them from the join key lifted weighted purity to
+1.000 on category-correlated domains.
+
 ## Architecture (goal 10) — unchanged
 Serverless, scale-to-zero, no GPU; Vertex AI + BigQuery + Cloud Run only. All
 evaluation uses the live pipeline's real logic; nothing is mocked.
