@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="304" viewBox="0 0 420 304">
+  <rect width="420" height="304" fill="#ECE5DD"/>
+  <rect width="420" height="56" fill="#4285F4"/>
+  <text x="20" y="35" font-family="Segoe UI, Arial" font-size="18" fill="#fff">Inbox</text>
+  <rect x="20" y="76" width="380" height="224" rx="12" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="40" y="112" font-family="Segoe UI, Arial" font-size="15" fill="#111">Blue Dart: Your parcel is held at customs.</text><text x="40" y="134" font-family="Segoe UI, Arial" font-size="15" fill="#111">Pay ₹2,500 customs fee to release:</text><text x="40" y="156" font-family="Segoe UI, Arial" font-size="15" fill="#111">http://hdfc-secure.top. Failure to pay</text><text x="40" y="178" font-family="Segoe UI, Arial" font-size="15" fill="#111">within 24 hours returns the parcel.</text><text x="40" y="200" font-family="Segoe UI, Arial" font-size="15" fill="#111">Delhivery: आपका पार्सल कस्टम में रुका है।</text><text x="40" y="222" font-family="Segoe UI, Arial" font-size="15" fill="#111">₹999 शुल्क का भुगतान करें:</text><text x="40" y="244" font-family="Segoe UI, Arial" font-size="15" fill="#111">http://paytm-cashback.buzz</text>
+  <text x="380" y="290" text-anchor="end" font-family="Arial" font-size="11" fill="#6b7280">mixed · courier</text>
+</svg>

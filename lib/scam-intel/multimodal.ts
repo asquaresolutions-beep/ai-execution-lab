@@ -76,7 +76,7 @@ const DETECTORS: Array<{ id: string; label: string; severity: VisualSignal['seve
   { id: 'otp_request', label: 'OTP / PIN / CVV sharing request', severity: 'danger', re: /(?<!do not )(?<!don'?t )(?<!never )\b(share|send|tell|give|enter|forward)\b[^.\n]{0,15}\b(otp|one[\s-]?time password|cvv|pin|code)\b|\b(otp|cvv|pin|code)\b[^.\n]{0,14}\b(bhejo|batao|bhej do|share karo|chahiye)\b|ओटीपी[^।\n]{0,12}(भेजो|बताओ)/i },
   { id: 'kyc_phish', label: 'KYC / account-verification request', severity: 'warn', re: /\b(kyc|verify your account|update (your )?(kyc|pan|details)|re-?activate|kyc (update|karo|karein|karna)|verify karo|account (verify|update) karo|केवाईसी|सत्यापित)\b/i },
   { id: 'impersonation', label: 'Brand/authority impersonation', severity: 'warn', re: /\b(rbi|sbi|hdfc|icici|axis|kotak|pnb|paytm|phonepe|google ?pay|gpay|amazon|flipkart|netflix|india ?post|blue ?dart|dtdc|fedex|delhivery|courier|customs|customer care|bank official|income tax|uidai|aadhaar|npci|gst|बैंक|कस्टम)\b/i },
-  { id: 'reward_bait', label: 'Lottery / reward / job bait', severity: 'warn', re: /\b(congratulations|you (have )?won|lottery|prize|reward|work from home|earn \d|part[\s-]?time job|lucky draw|inaam|inam|jeeta|prize jeeta|ghar baithe|बधाई|इनाम|लॉटरी)\b/i },
+  { id: 'reward_bait', label: 'Lottery / reward / job / investment bait', severity: 'warn', re: /\b(congratulations|you (have )?won|lottery|prize|reward|work from home|earn \d|part[\s-]?time job|lucky draw|inaam|inam|jeeta|prize jeeta|ghar baithe|guaranteed return|airdrop|kamao|invest)\b|बधाई|इनाम|लॉटरी|गारंटीड|रिटर्न|निवेश|कमाएँ|जीता/i },
   { id: 'suspicious_link', label: 'Suspicious link / shortener', severity: 'danger', re: /\b(bit\.ly|tinyurl|t\.me|wa\.me|http:\/\/|[a-z0-9-]+\.(xyz|top|click|info)\b)/i },
   { id: 'contact_handoff', label: 'Move-to-WhatsApp / call-this-number', severity: 'warn', re: /\b(whatsapp|call (us|this number)|\+?\d{10,}|message me on|whatsapp (karo|par)|call karo)\b/i },
 ]
@@ -155,6 +155,9 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
   const urlDanger = urlFindings.filter((f) => f.severity === 'danger').length
   const regions = suspiciousRegions(ocr, signals)
   let rawRisk = Math.min(100, scoreFromSignals(signals, enrichment.scam.confidence) + entityRiskCount(entities) * 6 + urlDanger * 10)
+  // Soliciting an OTP/PIN/seed-phrase is inherently high-risk (legit messages
+  // say "do NOT share") — floor the risk so lone-OTP scams aren't under-scored.
+  if (signals.some((s) => s.id === 'otp_request')) rawRisk = Math.max(rawRisk, 55)
 
   // 3. trustscore + retrieval grounding (semantic-search/scam-intel). (task 5, goal 8)
   let trustScore = 50, scamProbability = rawRisk / 100, baseExplanation = enrichment.scam.tactics.length ? `Detected ${enrichment.scam.category.replace(/_/g, ' ')} with tactics: ${enrichment.scam.tactics.join(', ')}.` : 'Heuristic assessment from extracted text.'

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="238" viewBox="0 0 420 238">
+  <rect width="420" height="238" fill="#ECE5DD"/>
+  <rect width="420" height="56" fill="#1f2937"/>
+  <text x="20" y="35" font-family="Segoe UI, Arial" font-size="18" fill="#fff">SMS · Unknown</text>
+  <rect x="20" y="76" width="380" height="158" rx="12" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="40" y="112" font-family="Segoe UI, Arial" font-size="15" fill="#111">Congratulations! You have received a</text><text x="40" y="134" font-family="Segoe UI, Arial" font-size="15" fill="#111">refund of ₹2,500. Scan the QR or approve</text><text x="40" y="156" font-family="Segoe UI, Arial" font-size="15" fill="#111">the collect request in your Google Pay app</text><text x="40" y="178" font-family="Segoe UI, Arial" font-size="15" fill="#111">to credit it. UPI REF 8681607.</text>
+  <text x="380" y="224" text-anchor="end" font-family="Arial" font-size="11" fill="#6b7280">en · upi_refund</text>
+</svg>

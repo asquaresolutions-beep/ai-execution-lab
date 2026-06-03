@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="194" viewBox="0 0 420 194">
+  <rect width="420" height="194" fill="#ECE5DD"/>
+  <rect width="420" height="56" fill="#1f2937"/>
+  <text x="20" y="35" font-family="Segoe UI, Arial" font-size="18" fill="#fff">SMS · Bank</text>
+  <rect x="20" y="76" width="380" height="114" rx="12" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="40" y="112" font-family="Segoe UI, Arial" font-size="15" fill="#111">ऑर्डर #4624 पुष्ट। भुगतान INR 2,500।</text><text x="40" y="134" font-family="Segoe UI, Arial" font-size="15" fill="#111">धन्यवाद।</text>
+  <text x="380" y="180" text-anchor="end" font-family="Arial" font-size="11" fill="#6b7280">hi · ecommerce_receipt</text>
+</svg>
