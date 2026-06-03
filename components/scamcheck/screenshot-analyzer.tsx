@@ -35,6 +35,10 @@ const VERDICT_STYLE: Record<Verdict['verdict'], string> = {
   needs_review: 'bg-sky-500/15 text-sky-300 border-sky-500/40',
 }
 const ALLOWED = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+// Feature flags (NEXT_PUBLIC_* are inlined at build). Default ON; set to the
+// string "false" to disable in a given environment. (task 4)
+const UPLOAD_ENABLED = process.env.NEXT_PUBLIC_UPLOAD_ENABLED !== 'false'
+const GEO_ENABLED = process.env.NEXT_PUBLIC_GEO_ENABLED !== 'false'
 
 // Client-side downscale + recompress → smaller upload → lower Vertex/OCR cost.
 async function optimizeImage(file: File): Promise<{ dataUrl: string; mime: string }> {
@@ -67,7 +71,9 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
   const imgRef = useRef<HTMLImageElement>(null)
 
   // Country detection: browser locale first, then CDN geo header (best-effort).
+  // Gated by NEXT_PUBLIC_GEO_ENABLED. (task 4)
   useEffect(() => {
+    if (!GEO_ENABLED) return
     const locale = navigator.language || ''
     const d = resolveCountryDetailed({ locale })
     setCountry(d.config); setGeo({ source: d.source, locale, headerCode: null })
@@ -92,8 +98,10 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
       const v = data as Verdict
       setResult(v)
       // Refine country from phone numbers in the screenshot if found.
-      const refined = resolveCountryDetailed({ phones: v.entities?.phones, geoHeader: geo.headerCode, locale: geo.locale })
-      setCountry(refined.config); setGeo((g) => ({ ...g, source: refined.source }))
+      if (GEO_ENABLED) {
+        const refined = resolveCountryDetailed({ phones: v.entities?.phones, geoHeader: geo.headerCode, locale: geo.locale })
+        setCountry(refined.config); setGeo((g) => ({ ...g, source: refined.source }))
+      }
       setStage('done')
     } catch (e) { setError(e instanceof Error ? e.message : 'Network error.'); setStage('error') }
   }, [geo.headerCode, geo.locale])
@@ -125,7 +133,12 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
       </div>
       <p className="mt-2 text-sm text-zinc-400">{t(lang, 'sub')}</p>
 
+      {!UPLOAD_ENABLED && (
+        <div className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-200">Screenshot upload is temporarily disabled. Please check back shortly.</div>
+      )}
+
       {/* Primary, highly-visible upload CTA (always above the fold). */}
+      {UPLOAD_ENABLED && (<>
       <button onClick={pick} aria-label={t(lang, 'ctaUpload')}
         className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-400 active:scale-[0.99]">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
@@ -146,6 +159,7 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
         <p className="text-sm text-zinc-300">{t(lang, 'dropzone')}</p>
         <p className="mt-1 text-xs text-zinc-500">{t(lang, 'formats')}</p>
       </div>
+      </>)}
 
       {error && <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>}
       {busy && (
