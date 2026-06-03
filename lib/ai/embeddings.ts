@@ -13,6 +13,13 @@
 import { getAccessToken, getProjectId } from './vertex-auth'
 import { vertexConfigured } from './provider'
 import { recordUsage } from './usage'
+import { log } from '@/lib/observability/logger'
+
+// Last live-embedding failure reason (status + body snippet). Surfaced by the
+// semantic-search route so operators can see EXACTLY why a query fell back to
+// the non-semantic vector, without digging through Cloud Run logs.
+let lastEmbedError: string | null = null
+export function getLastEmbedError(): string | null { return lastEmbedError }
 
 // ── CANONICAL EMBEDDING CONFIG (single source of truth) ────────────
 // One model + one dimensionality across the whole platform so the stored
@@ -70,32 +77,58 @@ export async function embedBatch(texts: string[], taskType: EmbedTaskType = 'RET
   for (let i = 0; i < inputs.length; i += BATCH_SIZE) {
     const chunk = inputs.slice(i, i + BATCH_SIZE)
     try {
-      out.push(...(await predictChunk(chunk, taskType)))
-    } catch {
-      // Degrade gracefully — never break ingestion on an embedding hiccup.
+      const res = await predictChunk(chunk, taskType)
+      out.push(...res)
+      lastEmbedError = null // clear on success
+    } catch (e) {
+      // Degrade gracefully — never break ingestion on an embedding hiccup —
+      // but RECORD why so it can be surfaced/diagnosed instead of silently lost.
+      lastEmbedError = e instanceof Error ? e.message : String(e)
+      log.warn({ event: 'embeddings.fallback', model: EMBED_MODEL, taskType, reason: lastEmbedError })
       out.push(...chunk.map((t) => ({ vector: hashEmbedding(t), model: 'mock-hash-fallback', live: false })))
     }
   }
   return out
 }
 
-async function predictChunk(chunk: string[], taskType: EmbedTaskType): Promise<EmbeddingResult[]> {
-  const project = await getProjectId()
-  if (!project) throw new Error('Vertex project not resolvable')
-  const token = await getAccessToken()
-  const url = `${base()}/v1/projects/${project}/locations/${LOCATION}/publishers/google/models/${EMBED_MODEL}:predict`
+/** POST to the Vertex :predict endpoint; throws a rich error on non-2xx. */
+async function callPredict(url: string, token: string, body: unknown): Promise<VertexEmbedResponse> {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({
-      instances: chunk.map((content) => ({ content, task_type: taskType })),
-      // PIN dimensionality so output is always EMBED_DIM regardless of model
-      // default — guarantees query/corpus VECTOR_SEARCH compatibility.
-      parameters: { outputDimensionality: EMBED_DIM, autoTruncate: true },
-    }),
+    body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`Vertex embed ${res.status}`)
-  const data = (await res.json()) as VertexEmbedResponse
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300)
+    throw new Error(`Vertex embed ${res.status}: ${detail}`)
+  }
+  return (await res.json()) as VertexEmbedResponse
+}
+
+async function predictChunk(chunk: string[], taskType: EmbedTaskType): Promise<EmbeddingResult[]> {
+  const project = await getProjectId()
+  if (!project) throw new Error('Vertex project not resolvable (ADC/metadata + VERTEX_PROJECT_ID)')
+  const token = await getAccessToken()
+  const url = `${base()}/v1/projects/${project}/locations/${LOCATION}/publishers/google/models/${EMBED_MODEL}:predict`
+  const instances = chunk.map((content) => ({ content, task_type: taskType }))
+
+  // Attempt 1: with pinned dimensionality. Attempt 2 (only on a 4xx that
+  // suggests an unsupported parameter): retry WITHOUT `parameters`. The
+  // canonical model's native output is already 768, so dropping the param
+  // keeps query vectors corpus-compatible while self-healing a request-format
+  // rejection. Auth/permission/404 errors are NOT masked — they re-throw.
+  let data: VertexEmbedResponse
+  try {
+    data = await callPredict(url, token, { instances, parameters: { outputDimensionality: EMBED_DIM, autoTruncate: true } })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    if (/\b400\b/.test(msg)) {
+      log.warn({ event: 'embeddings.retry_no_params', reason: msg.slice(0, 160) })
+      data = await callPredict(url, token, { instances })
+    } else {
+      throw e
+    }
+  }
   const preds = data.predictions ?? []
   let tokenCount = 0
   const results = chunk.map((_, idx) => {

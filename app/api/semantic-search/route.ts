@@ -4,7 +4,7 @@
 // recommendations + RAG context retrieval. Live only when Vertex + BigQuery
 // are configured; otherwise returns a clear 'not configured' response.
 import { NextResponse } from 'next/server'
-import { embedQuery, EMBED_DIM, EMBED_MODEL } from '@/lib/ai/embeddings'
+import { embedQuery, EMBED_DIM, EMBED_MODEL, getLastEmbedError } from '@/lib/ai/embeddings'
 import { vectorSearch, bigQueryReady } from '@/lib/store/bigquery'
 import { vertexConfigured } from '@/lib/ai/provider'
 
@@ -25,7 +25,14 @@ async function handle(q: string, k: number) {
   // — it would either dimension-mismatch or return meaningless results.
   if (!live) {
     return NextResponse.json(
-      { error: 'embedding_unavailable', detail: 'Live Vertex embedding required for semantic search; the query embedding fell back to a non-semantic vector.' },
+      {
+        error: 'embedding_unavailable',
+        detail: 'Live Vertex embedding required for semantic search; the query embedding fell back to a non-semantic vector.',
+        // The actual Vertex :predict failure (status + body) so the cause is
+        // visible without trawling Cloud Run logs.
+        reason: getLastEmbedError() ?? 'unknown (no error captured — check vertexConfigured/ADC)',
+        model: EMBED_MODEL,
+      },
       { status: 503 },
     )
   }
