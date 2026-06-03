@@ -2,19 +2,21 @@
 // lib/ai/vertex-auth.ts
 // Vertex AI authentication — dependency-free.
 //
-// Two supported modes (checked in order):
-//   1. VERTEX_ACCESS_TOKEN            — a pre-minted OAuth token (simplest;
-//                                       e.g. injected by Workload Identity).
-//   2. GOOGLE_SERVICE_ACCOUNT_JSON    — a service-account key; we mint a
-//      (or GCP_SERVICE_ACCOUNT_KEY)     short-lived access token by signing
-//                                       a JWT (RS256) with node:crypto and
-//                                       exchanging it at the Google token
-//                                       endpoint. Tokens are cached ~55 min.
-//
-// No google-auth-library needed.
+// Modes (checked in order):
+//   1. VERTEX_ACCESS_TOKEN            — a pre-minted OAuth token.
+//   2. GOOGLE_SERVICE_ACCOUNT_JSON    — a service-account key (inline or
+//      (or GCP_SERVICE_ACCOUNT_KEY,     base64, or a file path via
+//       or GOOGLE_APPLICATION_CREDENTIALS file) → mint a JWT (RS256) and
+//                                       exchange for a token.
+//   3. Application Default Credentials (ADC) — on Cloud Run / GCE, fetch a
+//                                       token from the metadata server using
+//                                       the ATTACHED service account. No env
+//                                       token or key needed.
+// Tokens cached ~55 min. No google-auth-library needed.
 // ─────────────────────────────────────────────────────────────────
 
 import { createSign } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 
 interface ServiceAccount {
   client_email: string
@@ -35,10 +37,14 @@ const SCOPE = 'https://www.googleapis.com/auth/cloud-platform'
 
 function loadServiceAccount(): ServiceAccount | null {
   if (_sa !== undefined) return _sa
-  const raw =
+  let raw =
     process.env.GOOGLE_SERVICE_ACCOUNT_JSON ||
     process.env.GCP_SERVICE_ACCOUNT_KEY ||
     ''
+  // GOOGLE_APPLICATION_CREDENTIALS may point to a service-account key FILE.
+  if (!raw && process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    try { raw = readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'utf8') } catch { /* not a readable SA file */ }
+  }
   if (!raw) return (_sa = null)
   try {
     // Accept raw JSON or base64-encoded JSON (handy for env vars).
@@ -55,9 +61,43 @@ function loadServiceAccount(): ServiceAccount | null {
   }
 }
 
-/** True when Vertex auth can produce a token (token or service account present). */
+/**
+ * True when ADC is available — i.e. we're on a GCP runtime (Cloud Run / GCE /
+ * Cloud Functions) whose metadata server can mint a token for the attached
+ * service account. Detected from runtime env signals (no network call).
+ */
+export function adcAvailable(): boolean {
+  return !!(
+    process.env.K_SERVICE ||           // Cloud Run
+    process.env.K_REVISION ||          // Cloud Run
+    process.env.FUNCTION_TARGET ||     // Cloud Functions
+    process.env.GAE_SERVICE ||         // App Engine
+    process.env.GCE_METADATA_HOST ||   // explicit metadata host
+    process.env.USE_ADC                // explicit opt-in
+  )
+}
+
+/** True when Vertex auth can produce a token (explicit token, service account, or ADC). */
 export function hasVertexAuth(): boolean {
-  return !!process.env.VERTEX_ACCESS_TOKEN || !!loadServiceAccount()
+  return !!process.env.VERTEX_ACCESS_TOKEN || !!loadServiceAccount() || adcAvailable()
+}
+
+/** Fetch an access token from the GCP metadata server (ADC / attached SA). */
+async function fetchMetadataToken(): Promise<CachedToken | null> {
+  const host = process.env.GCE_METADATA_HOST || 'metadata.google.internal'
+  const url = `http://${host}/computeMetadata/v1/instance/service-accounts/default/token`
+  try {
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), 1500)
+    const res = await fetch(url, { headers: { 'Metadata-Flavor': 'Google' }, signal: ctrl.signal })
+    clearTimeout(t)
+    if (!res.ok) return null
+    const d = (await res.json()) as { access_token?: string; expires_in?: number }
+    if (!d.access_token) return null
+    return { token: d.access_token, expiresAt: Date.now() + (d.expires_in ?? 3600) * 1000 }
+  } catch {
+    return null
+  }
 }
 
 export function serviceAccountProjectId(): string {
@@ -73,7 +113,13 @@ export async function getAccessToken(): Promise<string> {
   if (_cache && _cache.expiresAt > now + 60_000) return _cache.token
 
   const sa = loadServiceAccount()
-  if (!sa) throw new Error('No Vertex credentials: set VERTEX_ACCESS_TOKEN or GOOGLE_SERVICE_ACCOUNT_JSON')
+  if (!sa) {
+    // No explicit key → use Application Default Credentials (Cloud Run / GCE
+    // attached service account) via the metadata server.
+    const adc = await fetchMetadataToken()
+    if (adc) { _cache = adc; return adc.token }
+    throw new Error('No Vertex credentials: set VERTEX_ACCESS_TOKEN / GOOGLE_SERVICE_ACCOUNT_JSON, or run on a GCP runtime with an attached service account (ADC).')
+  }
 
   const tokenUri = sa.token_uri || 'https://oauth2.googleapis.com/token'
   const iat = Math.floor(now / 1000)

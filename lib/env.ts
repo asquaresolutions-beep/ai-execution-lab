@@ -64,10 +64,13 @@ export interface EnvReport {
  * warnings, not failures.
  */
 export function validateProductionEnv(): EnvReport {
-  const vertexAuth = !!(env.vertexAccessToken || env.serviceAccountJson)
+  // ADC: on Cloud Run / GCE the attached service account provides auth via
+  // the metadata server — no explicit token/key needed.
+  const adc = !!(process.env.K_SERVICE || process.env.K_REVISION || process.env.FUNCTION_TARGET || process.env.GAE_SERVICE || process.env.GCE_METADATA_HOST || process.env.USE_ADC)
+  const vertexAuth = !!(env.vertexAccessToken || env.serviceAccountJson) || adc
   const checks: EnvCheck[] = [
     { key: 'VERTEX_PROJECT_ID (or FIREBASE_PROJECT_ID)', present: !!env.vertexProjectId, required: true, note: 'Vertex AI project for Gemini' },
-    { key: 'VERTEX_ACCESS_TOKEN / GOOGLE_SERVICE_ACCOUNT_JSON', present: vertexAuth, required: true, note: 'Vertex AI auth (token or service account)' },
+    { key: 'VERTEX auth (token / service account / Cloud Run ADC)', present: vertexAuth, required: true, note: 'Vertex AI auth — explicit token, SA key, or attached service account (ADC)' },
     { key: 'FIREBASE_PROJECT_ID', present: !!env.firebaseProjectId, required: true, note: 'Firestore project' },
     { key: 'FIREBASE_API_KEY / FIREBASE_ACCESS_TOKEN', present: !!(env.firebaseApiKey || env.firebaseAccessToken), required: true, note: 'Firestore auth (API key or service-account token)' },
     { key: 'ADMIN_API_TOKEN', present: !!env.adminApiToken, required: true, note: 'Gates admin routes + dashboards data' },

@@ -49,6 +49,7 @@ const LOCATION = process.env.VERTEX_LOCATION || 'us-central1'
 const PROJECT =
   process.env.VERTEX_PROJECT_ID ||
   process.env.FIREBASE_PROJECT_ID ||
+  process.env.GOOGLE_CLOUD_PROJECT ||
   serviceAccountProjectId()
 
 const MODELS: Record<ModelTier, string> = {

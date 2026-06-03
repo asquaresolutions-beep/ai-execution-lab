@@ -18,6 +18,7 @@ const LOCATION = process.env.VERTEX_LOCATION || 'us-central1'
 const PROJECT =
   process.env.VERTEX_PROJECT_ID ||
   process.env.FIREBASE_PROJECT_ID ||
+  process.env.GOOGLE_CLOUD_PROJECT ||
   serviceAccountProjectId()
 const EMBED_MODEL = process.env.VERTEX_EMBED_MODEL || 'text-multilingual-embedding-002'
 const BATCH_SIZE = 25 // Vertex allows up to 250 instances; keep payloads modest.

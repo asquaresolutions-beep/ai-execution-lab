@@ -8,13 +8,14 @@
 // roles/bigquery.dataEditor + roles/bigquery.jobUser). No SDK.
 // ─────────────────────────────────────────────────────────────────
 
-import { getAccessToken, serviceAccountProjectId } from '@/lib/ai/vertex-auth'
+import { getAccessToken, serviceAccountProjectId, hasVertexAuth } from '@/lib/ai/vertex-auth'
 import { log } from '@/lib/observability/logger'
 
 const PROJECT =
   process.env.BIGQUERY_PROJECT_ID ||
   process.env.VERTEX_PROJECT_ID ||
   process.env.FIREBASE_PROJECT_ID ||
+  process.env.GOOGLE_CLOUD_PROJECT ||
   serviceAccountProjectId()
 const DATASET = process.env.BIGQUERY_DATASET || 'asquare_ai'
 const BASE = 'https://bigquery.googleapis.com/bigquery/v2'
@@ -47,7 +48,8 @@ export const EMBEDDINGS_SCHEMA = {
 }
 
 function bqConfigured(): boolean {
-  return !!PROJECT && (!!process.env.VERTEX_ACCESS_TOKEN || !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON || !!process.env.GCP_SERVICE_ACCOUNT_KEY)
+  // Auth via explicit token, SA key, or Cloud Run ADC (attached service account).
+  return !!PROJECT && hasVertexAuth()
 }
 
 async function authedFetch(url: string, init: RequestInit): Promise<Response> {
