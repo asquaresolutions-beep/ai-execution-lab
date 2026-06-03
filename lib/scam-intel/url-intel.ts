@@ -6,6 +6,8 @@
 // raw-IP URLs, excessive subdomains, and insecure http. (goal 6)
 // ─────────────────────────────────────────────────────────────────
 
+import { detectImpersonation } from './impersonation'
+
 export type UrlRisk =
   | 'punycode' | 'non_ascii_homoglyph' | 'shortener' | 'suspicious_tld'
   | 'ip_url' | 'excessive_subdomains' | 'insecure_http' | 'digit_substitution'
@@ -73,6 +75,10 @@ export function analyzeUrl(url: string): UrlFinding {
       risks.push(`brand_lookalike:${b.core}`)
     }
   }
+
+  // Comprehensive brand-impersonation pass (typosquat/homoglyph/deceptive subdomain).
+  const imp = detectImpersonation(host)
+  if (imp.isImpersonation && imp.brand && !risks.some((r) => r.startsWith('brand_lookalike'))) risks.push(`brand_lookalike:${imp.brand}`)
 
   const severity: UrlFinding['severity'] = risks.some((r) => r === 'punycode' || r === 'non_ascii_homoglyph' || r.startsWith('brand_lookalike') || r === 'ip_url')
     ? 'danger'

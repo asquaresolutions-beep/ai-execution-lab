@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import { analyzeTextSignals } from '@/lib/scam-intel/multimodal'
 import { analyzeUrls } from '@/lib/scam-intel/url-intel'
 import { domainReputation, emailReputation, upiReputation, phoneReputation, applyReputation } from '@/lib/scam-intel/reputation'
+import { detectImpersonations } from '@/lib/scam-intel/impersonation'
 import { enforceRateLimit, RateLimitError } from '@/lib/ai/rate-limit'
 import { clientIp } from '@/lib/admin-auth'
 import { resolveSubject } from '@/lib/api/identify'
@@ -55,8 +56,16 @@ export const POST = jsonRoute('scam-intel/quick-check', async (req) => {
   for (const u of ts.entities.urls) reputations.push(domainReputation(u))
   for (const u of ts.entities.upiIds) reputations.push(upiReputation(u))
 
+  // Brand-impersonation / look-alike detection over the value + any extracted
+  // links/emails (catches typosquats, homoglyphs, deceptive subdomains).
+  const emailsInText = value.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi) ?? []
+  const impCandidates = [...(type === 'link' || type === 'email' || type === 'upi' ? [value] : []), ...ts.entities.urls, ...emailsInText]
+  const impersonations = detectImpersonations(impCandidates)
+  const impDanger = impersonations.some((i) => i.severity === 'danger')
+
   let risk = scoreSignals(ts.signals, entityRisk, urlDanger)
-  const strongFraudSignal = ts.signals.some((s) => STRONG.has(s.id)) || urlDanger > 0
+  if (impersonations.length) risk = Math.max(risk, impDanger ? 85 : 60)
+  const strongFraudSignal = ts.signals.some((s) => STRONG.has(s.id)) || urlDanger > 0 || impDanger
   const rep = applyReputation(risk, {
     domains: [...(type === 'link' ? [value] : []), ...ts.entities.urls],
     emails: type === 'email' ? [value] : [],
@@ -67,6 +76,7 @@ export const POST = jsonRoute('scam-intel/quick-check', async (req) => {
 
   const verdict = risk >= 70 ? 'likely_scam' : risk >= 35 ? 'suspicious' : rep.trusted ? 'likely_safe' : value.length < 12 ? 'unclear' : 'likely_safe'
   const advice: string[] = []
+  if (impersonations.length) advice.push(`This looks like a fake look-alike of ${impersonations[0].brand} (real: ${impersonations[0].legitDomain}). Do not trust it — open the official app/website directly, never via this link.`)
   if (ts.signals.some((s) => s.id === 'otp_request')) advice.push('Never share an OTP/PIN/CVV — no bank or company asks for them.')
   if (ts.entities.qrPaymentRefs.length || ts.entities.upiIds.length) advice.push('Receiving money on UPI never needs a PIN or QR scan.')
   if (urlDanger) advice.push('Do not open look-alike/shortened links.')
@@ -78,7 +88,8 @@ export const POST = jsonRoute('scam-intel/quick-check', async (req) => {
     credits: { remaining: credit.remaining, quota: credit.quota, resetsAt: credit.resetsAt },
     trusted: rep.trusted,
     category: ts.category, tactics: ts.tactics,
-    signals: ts.signals,
+    impersonation: impersonations.map((i) => ({ host: i.host, brand: i.brand, legitDomain: i.legitDomain, techniques: i.techniques, detail: i.detail })),
+    signals: [...impersonations.map((i) => ({ id: 'brand_impersonation', label: `Look-alike of ${i.brand}`, severity: i.severity === 'danger' ? 'danger' : 'warn' })), ...ts.signals],
     entities: { urls: ts.entities.urls, emails: type === 'email' ? [value] : [], phones: ts.entities.phones, upiIds: ts.entities.upiIds, amounts: ts.entities.amounts },
     urlFindings,
     reputation: reputations.slice(0, 6),
