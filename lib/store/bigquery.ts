@@ -166,6 +166,24 @@ ORDER BY distance`
   return rows.map((r) => ({ id: r.id ?? '', title: r.title ?? '', url: r.url ?? '', source_type: r.source_type ?? '', distance: Number(r.distance) }))
 }
 
+export interface CorpusDim { dim: number; recorded_dim: number; model: string; rows: number }
+
+/**
+ * Inspect the ACTUAL stored embedding dimensions in the corpus (the real
+ * source of truth — never assumed). Groups by the on-disk vector length so a
+ * mixed/legacy corpus is visible. Used to diagnose VECTOR_SEARCH dimension
+ * mismatches instead of guessing.
+ */
+export async function corpusDimensions(table = 'embeddings'): Promise<CorpusDim[]> {
+  const PROJECT = await bqProject()
+  const sql = `SELECT ARRAY_LENGTH(embedding) AS dim, ANY_VALUE(dim) AS recorded_dim, ANY_VALUE(model) AS model, COUNT(*) AS rows
+FROM \`${PROJECT}.${DATASET}.${table}\`
+GROUP BY dim
+ORDER BY rows DESC`
+  const rows = await runQuery(sql)
+  return rows.map((r) => ({ dim: Number(r.dim), recorded_dim: Number(r.recorded_dim), model: r.model ?? '', rows: Number(r.rows) }))
+}
+
 export function bigQueryReady(): boolean { return bqConfigured() }
 
 export { PROJECT as BIGQUERY_PROJECT, DATASET as BIGQUERY_DATASET }

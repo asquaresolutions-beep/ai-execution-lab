@@ -104,10 +104,13 @@ async function ensureTable(p) {
 }
 
 async function existingHashes(p) {
+  // Fetch hash AND the ACTUAL stored vector length per row. A row counts as
+  // up-to-date only if its content is unchanged AND its dimension is already
+  // canonical — so a legacy/wrong-dim corpus is re-embedded automatically.
   try {
-    const j = await authedFetch(`${BQ_BASE}/projects/${p}/queries`, { query: `SELECT id, content_hash FROM \`${p}.${DATASET}.${TABLE}\``, useLegacySql: false, timeoutMs: 30000 })
+    const j = await authedFetch(`${BQ_BASE}/projects/${p}/queries`, { query: `SELECT id, content_hash, ARRAY_LENGTH(embedding) AS dim FROM \`${p}.${DATASET}.${TABLE}\``, useLegacySql: false, timeoutMs: 30000 })
     const out = {}
-    for (const r of j.rows ?? []) out[r.f[0].v] = r.f[1].v
+    for (const r of j.rows ?? []) out[r.f[0].v] = { hash: r.f[1].v, dim: Number(r.f[2].v) }
     return out
   } catch (e) { console.warn('  (no existing rows / table new):', e.message.slice(0, 60)); return {} }
 }
@@ -156,7 +159,9 @@ async function insertRows(p, rows) {
       const meta = extract(html)
       if (meta.text.length < 100) { console.log(`skip (thin): ${t.url}`); continue }
       const id = slug(t.url)
-      if (known[id] === meta.contentHash) { console.log(`unchanged (skip): ${id}`); continue }
+      const prev = known[id]
+      if (prev && prev.hash === meta.contentHash && prev.dim === EMBED_DIM) { console.log(`unchanged (skip): ${id}`); continue }
+      if (prev && prev.dim !== EMBED_DIM) console.log(`re-embed (dim ${prev.dim} -> ${EMBED_DIM}): ${id}`)
       candidates.push({ id, ...t, ...meta })
     } catch (e) { console.warn(`fetch failed: ${t.url} — ${e.message.slice(0, 60)}`) }
   }
