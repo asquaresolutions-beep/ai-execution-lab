@@ -257,3 +257,5 @@ Not deployed. No auth. No monetization. Building the foundation correctly before
 ---
 
 *A Square Solutions · [asquaresolution.com](https://asquaresolution.com)*
+
+<!-- redeploy: vercel.json schema fix (c8989a5) -->
