@@ -21,6 +21,7 @@ import {
   applyQuery,
   genId,
 } from './adapter'
+import { getAccessToken, hasVertexAuth } from '@/lib/ai/vertex-auth'
 
 const PROJECT = process.env.FIREBASE_PROJECT_ID || ''
 const API_KEY = process.env.FIREBASE_API_KEY || ''
@@ -31,21 +32,28 @@ const ROOT = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/
 export class FirestoreStore implements DocumentStore {
   readonly name = 'firestore'
 
-  private authQS(): string {
-    return ACCESS_TOKEN ? '' : `?key=${API_KEY}`
+  // Auth precedence: explicit FIREBASE_ACCESS_TOKEN → service-account/ADC token
+  // (admin-level, BYPASSES security rules → credits persist with locked rules)
+  // → API key (rules-governed fallback). Tokens are cached by getAccessToken().
+  private async bearer(): Promise<string> {
+    if (ACCESS_TOKEN) return ACCESS_TOKEN
+    if (hasVertexAuth()) { try { return await getAccessToken() } catch { return '' } }
+    return ''
   }
-  private headers(): HeadersInit {
-    const h: Record<string, string> = { 'content-type': 'application/json' }
-    if (ACCESS_TOKEN) h.authorization = `Bearer ${ACCESS_TOKEN}`
-    return h
+  private async auth(): Promise<{ qs: string; headers: Record<string, string> }> {
+    const t = await this.bearer()
+    const headers: Record<string, string> = { 'content-type': 'application/json' }
+    if (t) { headers.authorization = `Bearer ${t}`; return { qs: '', headers } }
+    return { qs: `?key=${API_KEY}`, headers }
   }
 
   async set<T extends object = DocData>(collection: string, id: string | null, data: T): Promise<string> {
     const docId = id || genId()
-    const url = `${ROOT}/${collection}/${docId}${this.authQS()}`
+    const { qs, headers } = await this.auth()
+    const url = `${ROOT}/${collection}/${docId}${qs}`
     const res = await fetch(url, {
       method: 'PATCH', // PATCH on a named doc = create-or-replace
-      headers: this.headers(),
+      headers,
       body: JSON.stringify({ fields: toFirestoreFields({ ...data, id: docId }) }),
     })
     if (!res.ok) throw new Error(`Firestore set ${res.status}: ${await res.text()}`)
@@ -54,17 +62,19 @@ export class FirestoreStore implements DocumentStore {
 
   async update<T extends object = DocData>(collection: string, id: string, patch: Partial<T>): Promise<void> {
     const mask = Object.keys(patch).map((k) => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&')
-    const url = `${ROOT}/${collection}/${id}?${ACCESS_TOKEN ? '' : `key=${API_KEY}&`}${mask}`
+    const { qs, headers } = await this.auth()
+    const url = `${ROOT}/${collection}/${id}?${qs ? `${qs.slice(1)}&` : ''}${mask}`
     const res = await fetch(url, {
       method: 'PATCH',
-      headers: this.headers(),
+      headers,
       body: JSON.stringify({ fields: toFirestoreFields(patch as DocData) }),
     })
     if (!res.ok) throw new Error(`Firestore update ${res.status}: ${await res.text()}`)
   }
 
   async get<T extends object = DocData>(collection: string, id: string): Promise<StoredDoc<T> | null> {
-    const res = await fetch(`${ROOT}/${collection}/${id}${this.authQS()}`, { headers: this.headers() })
+    const { qs, headers } = await this.auth()
+    const res = await fetch(`${ROOT}/${collection}/${id}${qs}`, { headers })
     if (res.status === 404) return null
     if (!res.ok) throw new Error(`Firestore get ${res.status}`)
     const doc = (await res.json()) as FirestoreDoc
@@ -96,9 +106,10 @@ export class FirestoreStore implements DocumentStore {
     if (opts.limit != null) structured.limit = opts.limit
     if (opts.offset) structured.offset = opts.offset
 
-    const res = await fetch(`${ROOT}:runQuery${this.authQS()}`, {
+    const { qs, headers } = await this.auth()
+    const res = await fetch(`${ROOT}:runQuery${qs}`, {
       method: 'POST',
-      headers: this.headers(),
+      headers,
       body: JSON.stringify({ structuredQuery: structured }),
     })
     if (!res.ok) throw new Error(`Firestore query ${res.status}: ${await res.text()}`)
@@ -115,20 +126,22 @@ export class FirestoreStore implements DocumentStore {
   }
 
   async delete(collection: string, id: string): Promise<void> {
-    const res = await fetch(`${ROOT}/${collection}/${id}${this.authQS()}`, {
+    const { qs, headers } = await this.auth()
+    const res = await fetch(`${ROOT}/${collection}/${id}${qs}`, {
       method: 'DELETE',
-      headers: this.headers(),
+      headers,
     })
     if (!res.ok && res.status !== 404) throw new Error(`Firestore delete ${res.status}`)
   }
 
   async increment(collection: string, id: string, field: string, by: number): Promise<number> {
     // Firestore supports server-side transforms; use commit with increment.
-    const url = `${ROOT.replace('/documents', '')}/documents:commit${this.authQS()}`
+    const { qs, headers } = await this.auth()
+    const url = `${ROOT.replace('/documents', '')}/documents:commit${qs}`
     const docPath = `projects/${PROJECT}/databases/${DB}/documents/${collection}/${id}`
     const res = await fetch(url, {
       method: 'POST',
-      headers: this.headers(),
+      headers,
       body: JSON.stringify({
         writes: [{
           transform: {
