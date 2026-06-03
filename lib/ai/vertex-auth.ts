@@ -82,22 +82,39 @@ export function hasVertexAuth(): boolean {
   return !!process.env.VERTEX_ACCESS_TOKEN || !!loadServiceAccount() || adcAvailable()
 }
 
-/** Fetch an access token from the GCP metadata server (ADC / attached SA). */
-async function fetchMetadataToken(): Promise<CachedToken | null> {
+// Last metadata-token failure reason — so an ADC timeout on a GCP runtime is
+// reported truthfully instead of being mislabeled "no credentials".
+let _lastMetaError: string | null = null
+export function lastMetadataError(): string | null { return _lastMetaError }
+
+/**
+ * Fetch an access token from the GCP metadata server (ADC / attached SA).
+ * Cold Cloud Run instances (min-instances 0) can take >1.5s for the FIRST
+ * metadata call, so use a generous timeout and retry — a single short timeout
+ * was being misread as "no credentials" even though ADC is available.
+ */
+async function fetchMetadataToken(retries = 2, timeoutMs = 3500): Promise<CachedToken | null> {
   const host = process.env.GCE_METADATA_HOST || 'metadata.google.internal'
   const url = `http://${host}/computeMetadata/v1/instance/service-accounts/default/token`
-  try {
-    const ctrl = new AbortController()
-    const t = setTimeout(() => ctrl.abort(), 1500)
-    const res = await fetch(url, { headers: { 'Metadata-Flavor': 'Google' }, signal: ctrl.signal })
-    clearTimeout(t)
-    if (!res.ok) return null
-    const d = (await res.json()) as { access_token?: string; expires_in?: number }
-    if (!d.access_token) return null
-    return { token: d.access_token, expiresAt: Date.now() + (d.expires_in ?? 3600) * 1000 }
-  } catch {
-    return null
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const ctrl = new AbortController()
+      const t = setTimeout(() => ctrl.abort(), timeoutMs)
+      const res = await fetch(url, { headers: { 'Metadata-Flavor': 'Google' }, signal: ctrl.signal })
+      clearTimeout(t)
+      if (!res.ok) {
+        _lastMetaError = `metadata token HTTP ${res.status}`
+      } else {
+        const d = (await res.json()) as { access_token?: string; expires_in?: number }
+        if (d.access_token) { _lastMetaError = null; return { token: d.access_token, expiresAt: Date.now() + (d.expires_in ?? 3600) * 1000 } }
+        _lastMetaError = 'metadata token response had no access_token'
+      }
+    } catch (e) {
+      _lastMetaError = e instanceof Error ? `${e.name}: ${e.message}` : String(e)
+    }
+    if (attempt < retries) await new Promise((r) => setTimeout(r, 300 * (attempt + 1)))
   }
+  return null
 }
 
 export function serviceAccountProjectId(): string {
@@ -126,7 +143,7 @@ export async function getProjectId(): Promise<string> {
   try {
     const host = process.env.GCE_METADATA_HOST || 'metadata.google.internal'
     const ctrl = new AbortController()
-    const t = setTimeout(() => ctrl.abort(), 1500)
+    const t = setTimeout(() => ctrl.abort(), 3500)
     const res = await fetch(`http://${host}/computeMetadata/v1/project/project-id`, { headers: { 'Metadata-Flavor': 'Google' }, signal: ctrl.signal })
     clearTimeout(t)
     _projectId = res.ok ? (await res.text()).trim() : null
@@ -150,6 +167,11 @@ export async function getAccessToken(): Promise<string> {
     // attached service account) via the metadata server.
     const adc = await fetchMetadataToken()
     if (adc) { _cache = adc; return adc.token }
+    // On a known GCP runtime, a failure here is a metadata/timeout problem,
+    // NOT missing credentials — report it truthfully so it isn't misdiagnosed.
+    if (adcAvailable()) {
+      throw new Error(`ADC token unavailable on GCP runtime (attached service account): ${_lastMetaError ?? 'metadata server did not return a token'}.`)
+    }
     throw new Error('No Vertex credentials: set VERTEX_ACCESS_TOKEN / GOOGLE_SERVICE_ACCOUNT_JSON, or run on a GCP runtime with an attached service account (ADC).')
   }
 
