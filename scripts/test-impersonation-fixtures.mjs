@@ -43,6 +43,7 @@ const FIX = [
   { v: 'sbi-verify-login.xyz', imp: true },           // brand keyword + suspicious tld
   { v: 'hdfcbank.secure-login.top', imp: true },      // deceptive subdomain
   { v: 'phonepe-rewards.top', imp: true },            // brand keyword + suspicious tld
+  { v: 'scamcheck-asquaresolution.com.xyz', imp: true }, // deceptive multi-label + suspicious tld
   { v: 'pаytm.com', imp: true },                      // homoglyph (cyrillic а)
   { v: 'support@asquaresolution.com', imp: false },   // legit
   { v: 'alerts@hdfcbank.com', imp: false },           // legit

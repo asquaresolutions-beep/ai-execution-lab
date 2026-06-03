@@ -12,6 +12,10 @@ export interface ReputationResult { reputation: Reputation; reason: string; enti
 
 // First-party (A Square Solutions) — always trusted absent strong fraud signals.
 const FIRST_PARTY_DOMAINS = ['asquaresolution.com', 'scamcheck.asquaresolution.com', 'trustseal.asquaresolution.com', 'lab.asquaresolution.com']
+// Exact official email addresses — incl. free-mail addresses that are official
+// (their domain alone isn't trusted, so the full address must be allow-listed).
+const FIRST_PARTY_EMAILS = new Set(['support@asquaresolution.com', 'asquaresolutions@hotmail.com'])
+export function isFirstPartyEmail(email: string): boolean { return FIRST_PARTY_EMAILS.has(email.toLowerCase().trim()) }
 // Well-known legitimate orgs (official domains only).
 const TRUSTED_DOMAINS = new Set<string>([
   ...FIRST_PARTY_DOMAINS,
@@ -46,6 +50,7 @@ export function domainReputation(host: string): ReputationResult {
 
 export function emailReputation(email: string): ReputationResult {
   const e = email.toLowerCase().trim()
+  if (isFirstPartyEmail(e)) return { reputation: 'trusted', reason: 'official A Square Solutions email (allow-listed)', entity: e, kind: 'email' }
   const domain = e.split('@')[1] || ''
   const d = domainReputation(domain)
   return { reputation: d.reputation, reason: d.reason, entity: e, kind: 'email' }
