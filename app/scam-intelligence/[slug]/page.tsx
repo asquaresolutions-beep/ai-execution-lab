@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { allIntelSlugs, getIntelPage } from '@/lib/scam-intel/intel-pages'
+import { getCountry } from '@/lib/scam-intel/countries'
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 
@@ -29,17 +30,21 @@ export default async function IntelPage({ params }: Props) {
   const p = getIntelPage(slug)
   if (!p) notFound()
   const url = `${BASE}/scam-intelligence/${p.slug}`
+  const country = getCountry(p.country)
+  const inLanguage = p.lang ?? 'en-IN'
 
   const ld = [
     {
       '@context': 'https://schema.org', '@type': 'Article',
       headline: p.h1, description: p.metaDescription, datePublished: p.updated, dateModified: p.updated,
-      mainEntityOfPage: url, author: { '@type': 'Organization', name: 'A Square Solutions' },
+      inLanguage, mainEntityOfPage: url,
+      author: { '@type': 'Organization', name: 'A Square Solutions' },
       publisher: { '@type': 'Organization', name: 'A Square Solutions' },
       about: p.brands.map((b) => ({ '@type': 'Thing', name: b })),
+      ...(country.code !== 'INT' ? { spatialCoverage: { '@type': 'Country', name: country.name } } : {}),
     },
     {
-      '@context': 'https://schema.org', '@type': 'FAQPage',
+      '@context': 'https://schema.org', '@type': 'FAQPage', inLanguage,
       mainEntity: p.faqs.map((f) => ({ '@type': 'Question', name: f.question, acceptedAnswer: { '@type': 'Answer', text: f.answer } })),
     },
     {
@@ -89,7 +94,14 @@ export default async function IntelPage({ params }: Props) {
         </ul>
       </section>
 
-      <p className="mt-8 text-xs text-zinc-500">This is general safety information, not legal or financial advice. If you have lost money or shared sensitive details, call the cybercrime helpline 1930 or report at cybercrime.gov.in.</p>
+      <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 text-sm">
+        <h2 className="text-base font-semibold text-zinc-200">Report it — {country.name}</h2>
+        <p className="mt-1 text-zinc-400">{country.bankingGuidance}</p>
+        <p className="mt-1 text-zinc-300">{country.agency}: <span className="text-zinc-100">{country.helpline}</span></p>
+        <a href={country.reportUrl} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">{country.reportUrl.replace(/^https?:\/\//, '')}</a>
+      </section>
+
+      <p className="mt-6 text-xs text-zinc-500">This is general safety information, not legal or financial advice. If you have lost money or shared sensitive details, contact your bank and your national fraud agency immediately.</p>
     </main>
   )
 }
