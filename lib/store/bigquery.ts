@@ -163,41 +163,79 @@ export interface VectorSearchOptions {
   withText?: boolean       // include a truncated body for snippets/hybrid rerank
 }
 
+// Columns we'd LIKE to project, in order. Only those present in the live
+// schema are actually selected — older corpora may lack slug/category/text.
+const SELECTABLE = ['id', 'title', 'url', 'source_type', 'slug', 'category'] as const
+
+/** Live column names for a table (cached). Schema-safe SQL is built from this. */
+let _tableCols: Record<string, string[]> = {}
+export async function tableColumns(table = 'embeddings'): Promise<string[]> {
+  if (_tableCols[table]) return _tableCols[table]
+  const PROJECT = await bqProject()
+  const res = await authedFetch(`${BASE}/projects/${PROJECT}/datasets/${DATASET}/tables/${table}`, { method: 'GET' })
+  if (!res.ok) throw new Error(`BQ tables.get ${res.status}: ${(await res.text()).slice(0, 200)}`)
+  const data = (await res.json()) as { schema?: { fields?: { name: string }[] } }
+  const cols = (data.schema?.fields ?? []).map((f) => f.name)
+  _tableCols[table] = cols
+  return cols
+}
+export function resetSchemaCache(): void { _tableCols = {} }
+
+interface SelectPlan { selected: string[]; missing: string[]; textIncluded: boolean; clause: string }
+function selectPlan(cols: string[], withText: boolean): SelectPlan {
+  const present = SELECTABLE.filter((c) => cols.includes(c))
+  const missing = SELECTABLE.filter((c) => !cols.includes(c))
+  const parts = present.map((c) => `base.${c} AS ${c}`)
+  const textIncluded = !!withText && cols.includes('text')
+  if (textIncluded) parts.push('SUBSTR(base.text, 0, 1200) AS text')
+  parts.push('distance')
+  return { selected: textIncluded ? [...present, 'text'] : present, missing, textIncluded, clause: parts.join(', ') }
+}
+
 /**
- * Build the current-syntax VECTOR_SEARCH SQL. Single source of truth so the
- * live query and the ?diag preview are always identical.
+ * Build current-syntax, SCHEMA-SAFE VECTOR_SEARCH SQL. Only projects columns
+ * that exist in `cols` (the live schema) — never hardcodes optional columns.
  * - Named args only (`top_k =>`, `distance_type =>`) — current GoogleSQL.
- * - No ROWS / LIMIT inside VECTOR_SEARCH (unsupported).
- * - `ORDER BY distance` (ascending) returns nearest neighbours first.
+ * - No ROWS / LIMIT inside VECTOR_SEARCH. `ORDER BY distance ASC` = nearest first.
  */
-export function buildVectorSearchSQL(project: string, k: number, o: VectorSearchOptions = {}): string {
+export function buildVectorSearchSQL(project: string, k: number, cols: string[], o: VectorSearchOptions = {}): string {
   const table = o.table || 'embeddings'
-  const textCol = o.withText ? ', SUBSTR(base.text, 0, 1200) AS text' : ''
-  const tableExpr = o.sourceTypes?.length
+  const { clause } = selectPlan(cols, !!o.withText)
+  // source_type filter only when that column exists.
+  const tableExpr = o.sourceTypes?.length && cols.includes('source_type')
     ? `(SELECT * FROM \`${project}.${DATASET}.${table}\` WHERE source_type IN (${o.sourceTypes.map((s) => `'${s.replace(/'/g, '')}'`).join(',')}))`
     : `TABLE \`${project}.${DATASET}.${table}\``
-  return `SELECT base.id AS id, base.title AS title, base.url AS url, base.source_type AS source_type, base.slug AS slug, base.category AS category${textCol}, distance
+  return `SELECT ${clause}
 FROM VECTOR_SEARCH(
   ${tableExpr}, 'embedding',
   (SELECT @q AS embedding), top_k => ${k}, distance_type => 'COSINE')
 ORDER BY distance ASC`
 }
 
-/** Resolve the exact SQL that vectorSearch() would run (for ?diag). */
-export async function vectorSearchSQL(topK = 8, opts: VectorSearchOptions | string = {}): Promise<string> {
+export interface VectorSearchPlan { sql: string; selectedColumns: string[]; missingColumns: string[]; liveSchema: string[] }
+/** Resolve the exact SQL + column plan vectorSearch() would run (for ?diag). */
+export async function vectorSearchPlan(topK = 8, opts: VectorSearchOptions | string = {}): Promise<VectorSearchPlan> {
   const o: VectorSearchOptions = typeof opts === 'string' ? { table: opts } : opts
   const k = Math.max(1, Math.min(50, Math.floor(topK)))
-  return buildVectorSearchSQL(await bqProject(), k, o)
+  const PROJECT = await bqProject()
+  const liveSchema = await tableColumns(o.table || 'embeddings')
+  const plan = selectPlan(liveSchema, !!o.withText)
+  return { sql: buildVectorSearchSQL(PROJECT, k, liveSchema, o), selectedColumns: plan.selected, missingColumns: plan.missing, liveSchema }
 }
 
-/** Live semantic search via BigQuery VECTOR_SEARCH (brute-force or index-backed). */
+/** Live semantic search via BigQuery VECTOR_SEARCH (schema-safe). */
 export async function vectorSearch(queryEmbedding: number[], topK = 8, opts: VectorSearchOptions | string = {}): Promise<VectorHit[]> {
   // Back-compat: a string 3rd arg was previously the table name.
   const o: VectorSearchOptions = typeof opts === 'string' ? { table: opts } : opts
   const k = Math.max(1, Math.min(50, Math.floor(topK)))
   const PROJECT = await bqProject()
-  const sql = buildVectorSearchSQL(PROJECT, k, o)
-  log.info({ event: 'bq.vector_search', queryDim: queryEmbedding.length, k, sourceTypes: o.sourceTypes ?? null })
+  // Only project columns that actually exist; fall back to the required core.
+  const cols = await tableColumns(o.table || 'embeddings').catch((e) => {
+    log.warn({ event: 'bq.schema_fallback', detail: String(e).slice(0, 120) })
+    return ['id', 'title', 'url', 'source_type', 'text']
+  })
+  const sql = buildVectorSearchSQL(PROJECT, k, cols, o)
+  log.info({ event: 'bq.vector_search', queryDim: queryEmbedding.length, k, selected: selectPlan(cols, !!o.withText).selected, sourceTypes: o.sourceTypes ?? null })
   const rows = await runQuery(sql, [{ name: 'q', type: 'ARRAY', arrayType: 'FLOAT64', value: queryEmbedding }])
   return rows.map((r) => ({ id: r.id ?? '', title: r.title ?? '', url: r.url ?? '', source_type: r.source_type ?? '', slug: r.slug ?? undefined, category: r.category ?? undefined, distance: Number(r.distance), text: r.text ?? undefined }))
 }

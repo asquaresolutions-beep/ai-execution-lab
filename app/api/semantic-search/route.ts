@@ -5,7 +5,7 @@
 // are configured; otherwise returns a clear 'not configured' response.
 import { NextResponse } from 'next/server'
 import { embedQuery, EMBED_DIM, EMBED_MODEL, getLastEmbedError } from '@/lib/ai/embeddings'
-import { vectorSearch, bigQueryReady, corpusDimensions, vectorSearchSQL } from '@/lib/store/bigquery'
+import { vectorSearch, bigQueryReady, corpusDimensions, vectorSearchPlan } from '@/lib/store/bigquery'
 import { vertexConfigured } from '@/lib/ai/provider'
 import { log } from '@/lib/observability/logger'
 import { getCached, setCached } from '@/lib/ai/cache'
@@ -56,9 +56,9 @@ async function handle(q: string, k: number, diag: boolean) {
   // model, and the EXACT generated VECTOR_SEARCH SQL — without running it.
   if (diag) {
     const corpus = await corpusDimensions().catch((e) => [{ dim: -1, recorded_dim: -1, model: `error: ${e instanceof Error ? e.message : e}`, rows: 0 }])
-    const generatedSQL = await vectorSearchSQL(k, { withText: true }).catch((e) => `error: ${e instanceof Error ? e.message : e}`)
+    const plan = await vectorSearchPlan(k, { withText: true }).catch((e) => ({ sql: `error: ${e instanceof Error ? e.message : e}`, selectedColumns: [], missingColumns: [], liveSchema: [] }))
     const rowCount = corpus.reduce((a, c) => a + (c.rows || 0), 0)
-    log.info({ event: 'semantic_search.diag', queryDim: vector.length, rowCount, corpus })
+    log.info({ event: 'semantic_search.diag', queryDim: vector.length, rowCount, selectedColumns: plan.selectedColumns, missingColumns: plan.missingColumns })
     return NextResponse.json({
       diag: true,
       queryDim: vector.length,
@@ -68,7 +68,10 @@ async function handle(q: string, k: number, diag: boolean) {
       queryModel: model,
       rowCount,
       corpus,
-      generatedSQL,
+      selectedColumns: plan.selectedColumns,
+      missingColumns: plan.missingColumns,
+      liveSchema: plan.liveSchema,
+      generatedSQL: plan.sql,
     })
   }
 
