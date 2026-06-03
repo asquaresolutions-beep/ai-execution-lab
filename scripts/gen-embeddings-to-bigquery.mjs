@@ -101,6 +101,33 @@ async function ensureTable(p) {
     { name: 'word_count', type: 'INT64' }, { name: 'lang', type: 'STRING' }, { name: 'created_at', type: 'TIMESTAMP' }, { name: 'updated_at', type: 'TIMESTAMP' },
   ] }
   await authedFetch(`${BQ_BASE}/projects/${p}/datasets/${DATASET}/tables`, { tableReference: { projectId: p, datasetId: DATASET, tableId: TABLE }, schema }).catch((e) => { if (!/409/.test(e.message)) throw e })
+  await ensureSchema(p)
+}
+
+// Migrate a PRE-EXISTING (legacy) table created before the metadata columns
+// existed. insertAll rejects every row with "no such field" if these columns
+// are missing — this is the actual cause of "insert errors: N / upserted 0".
+// ADD COLUMN IF NOT EXISTS is idempotent and non-destructive (existing data
+// and columns are preserved).
+async function ensureSchema(p) {
+  const ddl = `ALTER TABLE \`${p}.${DATASET}.${TABLE}\`
+    ADD COLUMN IF NOT EXISTS content_hash STRING,
+    ADD COLUMN IF NOT EXISTS word_count INT64,
+    ADD COLUMN IF NOT EXISTS lang STRING,
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP`
+  await withRetry(() => authedFetch(`${BQ_BASE}/projects/${p}/queries`, { query: ddl, useLegacySql: false, timeoutMs: 60000 }), 'bq-alter')
+    .then(() => console.log('  schema ensured (metadata columns present)'))
+    .catch((e) => console.warn('  schema alter:', e.message.slice(0, 160)))
+}
+
+// Count rows for a set of ids — used to CONFIRM deletion before re-insert so a
+// streaming-buffer-deferred delete can't silently leave duplicate/old rows.
+async function countIds(p, ids) {
+  if (!ids.length) return 0
+  const list = ids.map((i) => `'${i.replace(/'/g, '')}'`).join(',')
+  const j = await authedFetch(`${BQ_BASE}/projects/${p}/queries`, { query: `SELECT COUNT(*) AS n FROM \`${p}.${DATASET}.${TABLE}\` WHERE id IN (${list})`, useLegacySql: false, timeoutMs: 30000 })
+  return Number(j.rows?.[0]?.f?.[0]?.v ?? 0)
 }
 
 async function existingHashes(p) {
@@ -139,8 +166,17 @@ async function deleteIds(p, ids) {
 
 async function insertRows(p, rows) {
   if (!rows.length) return 0
-  const j = await withRetry(() => authedFetch(`${BQ_BASE}/projects/${p}/datasets/${DATASET}/tables/${TABLE}/insertAll`, { rows: rows.map((r) => ({ insertId: r.id, json: r })) }), 'bq-insert')
-  if (j.insertErrors?.length) console.warn(`  insert errors: ${j.insertErrors.length}`)
+  const j = await withRetry(() => authedFetch(`${BQ_BASE}/projects/${p}/datasets/${DATASET}/tables/${TABLE}/insertAll`, {
+    rows: rows.map((r) => ({ insertId: r.id, json: r })),
+    skipInvalidRows: false,
+    ignoreUnknownValues: false,
+  }), 'bq-insert')
+  if (j.insertErrors?.length) {
+    // STOP MASKING — print the raw BigQuery per-row error payload so the exact
+    // rejection reason (e.g. "no such field: content_hash") is visible.
+    console.error(`  insert errors: ${j.insertErrors.length}/${rows.length} — RAW BigQuery response (first 3):`)
+    console.error(JSON.stringify(j.insertErrors.slice(0, 3), null, 2))
+  }
   return rows.length - (j.insertErrors?.length ?? 0)
 }
 
@@ -182,9 +218,28 @@ async function insertRows(p, rows) {
     })
   }
 
-  // 3. Dedup-correct upsert: delete changed ids, then insert.
-  await deleteIds(p, rows.map((r) => r.id))
+  // 3. Safe migration: DELETE existing rows for these ids → CONFIRM deletion →
+  //    INSERT canonical 768-dim rows. Confirmation prevents a streaming-buffer-
+  //    deferred delete from silently leaving old wrong-dim rows behind.
+  const ids = rows.map((r) => r.id)
+  await deleteIds(p, ids)
+  const remaining = await countIds(p, ids)
+  if (remaining > 0) {
+    console.warn(`  ⚠ ${remaining} old row(s) still present after DELETE — almost certainly BigQuery's STREAMING BUFFER (rows streamed <~90 min ago cannot be deleted yet).`)
+    console.warn('    Wait ~90 minutes since the last insert, then re-run — otherwise new 768-dim rows would coexist with the old ones.')
+  } else {
+    console.log(`  deletion confirmed (0 old rows remain for ${ids.length} ids)`)
+  }
   const inserted = await insertRows(p, rows)
+
+  // 4. Verify FINAL corpus dimensions directly from BigQuery (task 7).
+  const dimCheck = await authedFetch(`${BQ_BASE}/projects/${p}/queries`, {
+    query: `SELECT ARRAY_LENGTH(embedding) AS dim, COUNT(*) AS rows FROM \`${p}.${DATASET}.${TABLE}\` GROUP BY dim ORDER BY rows DESC`,
+    useLegacySql: false, timeoutMs: 30000,
+  }).catch((e) => ({ rows: [], error: e.message }))
+  const dims = (dimCheck.rows ?? []).map((r) => `${r.f[0].v}-dim × ${r.f[1].v} rows`)
   console.log(`\n✓ upserted ${inserted}/${rows.length} rows into ${p}.${DATASET}.${TABLE}`)
-  console.log('Est. cost: embeddings ~$0.000025/1k tokens → this run << ₹5. Next: create vector index, query VECTOR_SEARCH.')
+  console.log(`Corpus dimensions now: ${dims.length ? dims.join(', ') : '(could not verify)'}`)
+  if (dims.length === 1 && dims[0].startsWith(`${EMBED_DIM}-dim`)) console.log(`✓ corpus is uniformly ${EMBED_DIM}-dim — VECTOR_SEARCH ready.`)
+  else if (dims.length > 1) console.warn('⚠ corpus has MIXED dimensions — re-run after the streaming buffer clears to finish migration.')
 })().catch((e) => { console.error('PIPELINE FAILED:', e.message); process.exit(1) })
