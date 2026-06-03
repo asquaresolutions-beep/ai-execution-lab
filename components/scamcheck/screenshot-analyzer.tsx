@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { LANGS, t, type Lang } from '@/lib/i18n/scamcheck'
-import { getCountry, resolveCountry, type CountryConfig } from '@/lib/scam-intel/countries'
+import { getCountry, resolveCountryDetailed, type CountryConfig, type GeoSource } from '@/lib/scam-intel/countries'
 
 interface VisualSignal { id: string; label: string; severity: 'info' | 'warn' | 'danger'; evidence: string }
 interface OcrWord { text: string; x: number; y: number; w: number; h: number }
@@ -56,6 +56,7 @@ async function optimizeImage(file: File): Promise<{ dataUrl: string; mime: strin
 export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang?: Lang }) {
   const [lang, setLang] = useState<Lang>(defaultLang)
   const [country, setCountry] = useState<CountryConfig>(getCountry())
+  const [geo, setGeo] = useState<{ source: GeoSource; locale: string; headerCode: string | null }>({ source: 'fallback', locale: '', headerCode: null })
   const [preview, setPreview] = useState('')
   const [nat, setNat] = useState({ w: 1, h: 1 })
   const [stage, setStage] = useState<Stage>('idle')
@@ -67,9 +68,13 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
 
   // Country detection: browser locale first, then CDN geo header (best-effort).
   useEffect(() => {
-    setCountry(resolveCountry({ locale: navigator.language }))
-    fetch('/api/geo').then((r) => r.json()).then((g) => { if (g.countryCode) setCountry(getCountry(g.countryCode)) }).catch(() => {})
-    if (/^hi/i.test(navigator.language)) setLang('hinglish')
+    const locale = navigator.language || ''
+    const d = resolveCountryDetailed({ locale })
+    setCountry(d.config); setGeo({ source: d.source, locale, headerCode: null })
+    fetch('/api/geo').then((r) => r.json()).then((g) => {
+      if (g.countryCode) { const d2 = resolveCountryDetailed({ geoHeader: g.countryCode, locale }); setCountry(d2.config); setGeo({ source: d2.source, locale, headerCode: g.countryCode }) }
+    }).catch(() => {})
+    if (/^hi/i.test(locale)) setLang('hinglish')
   }, [])
 
   const analyze = useCallback(async (file: File) => {
@@ -87,11 +92,11 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
       const v = data as Verdict
       setResult(v)
       // Refine country from phone numbers in the screenshot if found.
-      const refined = resolveCountry({ phones: v.entities?.phones, locale: navigator.language, override: country.code !== 'INT' ? country.code : null })
-      setCountry(refined)
+      const refined = resolveCountryDetailed({ phones: v.entities?.phones, geoHeader: geo.headerCode, locale: geo.locale })
+      setCountry(refined.config); setGeo((g) => ({ ...g, source: refined.source }))
       setStage('done')
     } catch (e) { setError(e instanceof Error ? e.message : 'Network error.'); setStage('error') }
-  }, [country.code])
+  }, [geo.headerCode, geo.locale])
 
   // Paste-to-analyze (clipboard screenshot).
   useEffect(() => {
@@ -120,9 +125,15 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
       </div>
       <p className="mt-2 text-sm text-zinc-400">{t(lang, 'sub')}</p>
 
-      {/* CTAs (all open the picker; semantic entry points for SEO + clarity) */}
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button onClick={pick} className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400">{t(lang, 'ctaUpload')}</button>
+      {/* Primary, highly-visible upload CTA (always above the fold). */}
+      <button onClick={pick} aria-label={t(lang, 'ctaUpload')}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-400 active:scale-[0.99]">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+        {t(lang, 'ctaUpload')}
+      </button>
+
+      {/* Secondary entry points (semantic, SEO + clarity). */}
+      <div className="mt-2 flex flex-wrap gap-2">
         <button onClick={pick} className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:border-zinc-500">{t(lang, 'ctaWhatsApp')}</button>
         <button onClick={pick} className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:border-zinc-500">{t(lang, 'ctaSms')}</button>
       </div>
@@ -219,6 +230,9 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
       </div>
 
       <p className="mt-3 text-xs text-zinc-500">{t(lang, 'disclaimer')} Images are optimized on your device and processed securely, not stored.</p>
+
+      {/* TEMPORARY geo-detection debug label (remove after verification). */}
+      <p className="mt-2 font-mono text-[11px] text-zinc-600">debug · country={country.code} ({country.name}) · locale={geo.locale || 'n/a'} · header={geo.headerCode || 'none'} · source={geo.source} · ui={lang}</p>
     </div>
   )
 }

@@ -67,16 +67,23 @@ export function countryFromPhones(phones: string[]): string | null {
   return null
 }
 
+export type GeoSource = 'override' | 'phone' | 'geo-header' | 'locale' | 'fallback'
+
 /**
- * Resolve country from the strongest available signal, in order:
- * explicit override → phone codes → locale → geo header → default.
+ * Resolve country + the SIGNAL that decided it, in priority order:
+ * explicit override → phone codes → CDN geo header → locale → default fallback.
  */
-export function resolveCountry(opts: { override?: string | null; phones?: string[]; locale?: string | null; geoHeader?: string | null }): CountryConfig {
+export function resolveCountryDetailed(opts: { override?: string | null; phones?: string[]; locale?: string | null; geoHeader?: string | null }): { config: CountryConfig; source: GeoSource; code: string } {
+  if (opts.override && COUNTRIES[opts.override.toUpperCase()]) return { config: getCountry(opts.override), source: 'override', code: opts.override.toUpperCase() }
   const fromPhones = opts.phones?.length ? countryFromPhones(opts.phones) : null
-  const code = (opts.override && opts.override.toUpperCase())
-    || fromPhones
-    || countryFromLocale(opts.locale)
-    || (opts.geoHeader && COUNTRIES[opts.geoHeader.toUpperCase()] ? opts.geoHeader.toUpperCase() : null)
-    || DEFAULT_COUNTRY
-  return getCountry(code)
+  if (fromPhones) return { config: getCountry(fromPhones), source: 'phone', code: fromPhones }
+  if (opts.geoHeader && COUNTRIES[opts.geoHeader.toUpperCase()]) return { config: getCountry(opts.geoHeader), source: 'geo-header', code: opts.geoHeader.toUpperCase() }
+  const fromLocale = countryFromLocale(opts.locale)
+  if (fromLocale) return { config: getCountry(fromLocale), source: 'locale', code: fromLocale }
+  return { config: getCountry(DEFAULT_COUNTRY), source: 'fallback', code: DEFAULT_COUNTRY }
+}
+
+/** Convenience wrapper returning only the config. */
+export function resolveCountry(opts: { override?: string | null; phones?: string[]; locale?: string | null; geoHeader?: string | null }): CountryConfig {
+  return resolveCountryDetailed(opts).config
 }
