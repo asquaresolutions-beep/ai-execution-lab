@@ -5,7 +5,7 @@
 // are configured; otherwise returns a clear 'not configured' response.
 import { NextResponse } from 'next/server'
 import { embedQuery, EMBED_DIM, EMBED_MODEL, getLastEmbedError } from '@/lib/ai/embeddings'
-import { vectorSearch, bigQueryReady, corpusDimensions, vectorSearchPlan } from '@/lib/store/bigquery'
+import { vectorSearch, bigQueryReady, corpusDimensions, vectorSearchPlan, corpusHealth } from '@/lib/store/bigquery'
 import { vertexConfigured } from '@/lib/ai/provider'
 import { log } from '@/lib/observability/logger'
 import { getCached, setCached } from '@/lib/ai/cache'
@@ -57,8 +57,9 @@ async function handle(q: string, k: number, diag: boolean) {
   if (diag) {
     const corpus = await corpusDimensions().catch((e) => [{ dim: -1, recorded_dim: -1, model: `error: ${e instanceof Error ? e.message : e}`, rows: 0 }])
     const plan = await vectorSearchPlan(k, { withText: true }).catch((e) => ({ sql: `error: ${e instanceof Error ? e.message : e}`, selectedColumns: [], missingColumns: [], liveSchema: [] }))
+    const health = await corpusHealth().catch((e) => ({ total: 0, avgWordCount: 0, avgUniqueRatio: 0, junkRows: 0, healthScore: 0, suspiciousRows: [{ id: 'error', title: e instanceof Error ? e.message : String(e) }] }))
     const rowCount = corpus.reduce((a, c) => a + (c.rows || 0), 0)
-    log.info({ event: 'semantic_search.diag', queryDim: vector.length, rowCount, selectedColumns: plan.selectedColumns, missingColumns: plan.missingColumns })
+    log.info({ event: 'semantic_search.diag', queryDim: vector.length, rowCount, healthScore: health.healthScore, junkRows: health.junkRows })
     return NextResponse.json({
       diag: true,
       queryDim: vector.length,
@@ -68,6 +69,15 @@ async function handle(q: string, k: number, diag: boolean) {
       queryModel: model,
       rowCount,
       corpus,
+      corpusHealth: {
+        total: health.total,
+        avgTokenCount: health.avgWordCount,
+        avgUniqueRatio: health.avgUniqueRatio,
+        junkRows: health.junkRows,
+        healthScore: health.healthScore,
+        // rows still in the corpus that look like anti-bot/junk pages
+        rejected: health.suspiciousRows,
+      },
       selectedColumns: plan.selectedColumns,
       missingColumns: plan.missingColumns,
       liveSchema: plan.liveSchema,

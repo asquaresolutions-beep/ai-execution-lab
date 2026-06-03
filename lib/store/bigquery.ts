@@ -251,6 +251,53 @@ export async function getDocById(id: string, table = 'embeddings'): Promise<{ id
   return r ? { id: r.id ?? '', title: r.title ?? '', url: r.url ?? '', source_type: r.source_type ?? '' } : null
 }
 
+const JUNK_RE = "checking your browser before accessing|please wait while we verify|enable javascript and cookies|just a moment|attention required|cf-browser-verification|challenge-platform|performance (and|&) security by cloudflare|access denied|ddos protection"
+
+export interface CorpusHealth {
+  total: number
+  avgWordCount: number
+  avgUniqueRatio: number
+  junkRows: number
+  healthScore: number          // 0..100
+  suspiciousRows: Array<{ id: string; title: string }>
+}
+
+/**
+ * Corpus quality health check (task 8): avg word count, avg unique-token ratio
+ * (over a sample), count of rows that still look like anti-bot/junk pages, and
+ * a 0..100 health score. Read-only; used by ?diag=1.
+ */
+export async function corpusHealth(table = 'embeddings'): Promise<CorpusHealth> {
+  const PROJECT = await bqProject()
+  const cols = await tableColumns(table).catch(() => [] as string[])
+  const hasText = cols.includes('text')
+  const hasWords = cols.includes('word_count')
+  const titleBody = `LOWER(CONCAT(IFNULL(title,''),' ',${hasText ? "IFNULL(SUBSTR(text,0,500),'')" : "''"}))`
+  const agg = await runQuery(
+    `SELECT COUNT(*) AS total, ${hasWords ? 'AVG(word_count)' : '0'} AS avg_words, COUNTIF(REGEXP_CONTAINS(${titleBody}, r'${JUNK_RE}')) AS junk FROM \`${PROJECT}.${DATASET}.${table}\``,
+  )
+  const total = Number(agg[0]?.total ?? 0)
+  const avgWordCount = Math.round(Number(agg[0]?.avg_words ?? 0))
+  const junkRows = Number(agg[0]?.junk ?? 0)
+
+  // Unique-token ratio over a bounded sample (text column only).
+  let avgUniqueRatio = 0
+  if (hasText && total) {
+    const sample = await runQuery(`SELECT SUBSTR(text, 0, 1500) AS t FROM \`${PROJECT}.${DATASET}.${table}\` LIMIT 25`).catch(() => [])
+    const ratios = sample.map((r) => { const toks = (r.t ?? '').toLowerCase().match(/[a-z0-9ऀ-ॿ]+/g) ?? []; return toks.length ? new Set(toks).size / toks.length : 0 })
+    if (ratios.length) avgUniqueRatio = Math.round((ratios.reduce((a, b) => a + b, 0) / ratios.length) * 1000) / 1000
+  }
+
+  const suspiciousRows = total
+    ? (await runQuery(`SELECT id, title FROM \`${PROJECT}.${DATASET}.${table}\` WHERE REGEXP_CONTAINS(${titleBody}, r'${JUNK_RE}') LIMIT 10`).catch(() => []))
+        .map((r) => ({ id: r.id ?? '', title: r.title ?? '' }))
+    : []
+
+  // Health = clean-fraction × content-depth factor.
+  const healthScore = total ? Math.max(0, Math.round(100 * (1 - junkRows / total) * Math.min(1, (avgWordCount || 1) / 120))) : 0
+  return { total, avgWordCount, avgUniqueRatio, junkRows, healthScore, suspiciousRows }
+}
+
 export interface CorpusDim { dim: number; recorded_dim: number; model: string; rows: number }
 
 /**

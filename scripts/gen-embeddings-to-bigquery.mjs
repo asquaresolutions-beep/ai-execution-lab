@@ -106,18 +106,58 @@ function stripHtml(html, { dropChrome = false } = {}) {
   return decodeEntities(h.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim()
 }
 
-// ── Content-quality validation (task 9) ────────────────────────────
-const JUNK_TITLE = /just a moment|checking your browser|attention required|enable javascript and cookies|cloudflare|access denied|are you human|verify you are human|403 forbidden/i
-const JUNK_BODY = /cf-browser-verification|cf_chl|challenge-platform|enable javascript and cookies to continue|performance & security by cloudflare/i
-function validate({ title, text }) {
-  if (!title || JUNK_TITLE.test(title)) return 'cloudflare/junk title'
-  if (JUNK_BODY.test(text)) return 'cloudflare challenge body'
-  const words = text.split(/\s+/).filter(Boolean).length
-  if (words < 80) return `too thin (${words} words)`
-  // Reject pages dominated by boilerplate (low unique-word ratio).
-  const uniq = new Set(text.toLowerCase().split(/\s+/)).size
-  if (uniq / words < 0.18) return `low lexical diversity (${uniq}/${words})`
-  return null // OK
+// ── Content-quality validation (anti-bot / thin / boilerplate) ─────
+// Checked against BOTH title and body (challenge text often lives in the body,
+// not the title — that was the leak that let "Checking your browser…" through).
+const JUNK_PATTERNS = [
+  /checking your browser before accessing/i,
+  /please wait while we verify/i,
+  /enable javascript and cookies/i,
+  /just a moment/i,
+  /attention required/i,
+  /verify(ing)? you are (a )?human/i,
+  /are you a human/i,
+  /cf-browser-verification|cf[_-]?chl|challenge-platform/i,
+  /performance (and|&) security by cloudflare/i,
+  /access denied|403 forbidden|ddos protection/i,
+  /your browser will redirect/i,
+]
+const STOPISH = new Set(['the','a','an','and','or','of','to','in','for','on','is','are','with','this','that','it','as','by','from','your','you','we','our'])
+
+function uniqueRatio(text) {
+  const toks = text.toLowerCase().match(/[a-z0-9ऀ-ॿ]+/g) ?? []
+  if (!toks.length) return 0
+  return new Set(toks).size / toks.length
+}
+// Largest fraction any single line occupies (repeated-boilerplate detector).
+function maxLineRepeat(text) {
+  const lines = text.split(/[.\n]/).map((l) => l.trim().toLowerCase()).filter((l) => l.length > 12)
+  if (lines.length < 4) return 0
+  const counts = new Map()
+  for (const l of lines) counts.set(l, (counts.get(l) ?? 0) + 1)
+  return Math.max(...counts.values()) / lines.length
+}
+
+/**
+ * Returns { ok, reason, score, wordCount, ratio, repeat }.
+ * score 0..100 = extraction quality (words + diversity − repetition).
+ */
+function validate({ title = '', text = '' }) {
+  const hay = `${title}\n${text}`
+  const wordCount = text.split(/\s+/).filter(Boolean).length
+  const ratio = Math.round(uniqueRatio(text) * 1000) / 1000
+  const repeat = Math.round(maxLineRepeat(text) * 1000) / 1000
+  const score = Math.max(0, Math.min(100, Math.round(
+    Math.min(60, wordCount / 5) + ratio * 40 - repeat * 50,
+  )))
+  const hit = JUNK_PATTERNS.find((re) => re.test(hay))
+  let reason = null
+  if (!title.trim()) reason = 'empty title'
+  else if (hit) reason = `anti-bot/challenge page (${hit.source.slice(0, 28)})`
+  else if (wordCount < 80) reason = `too thin (${wordCount} words)`
+  else if (ratio < 0.2) reason = `low unique-token ratio (${ratio})`
+  else if (repeat > 0.5) reason = `repeated boilerplate (${repeat})`
+  return { ok: !reason, reason, score, wordCount, ratio, repeat }
 }
 
 function metaOf(text) {
@@ -264,16 +304,26 @@ async function ensureSchema(p) {
     .catch((e) => console.warn('  schema alter:', e.message.slice(0, 160)))
 }
 
-// Purge previously-ingested junk (Cloudflare challenge pages etc.) by title
-// pattern, regardless of id scheme — cleans a poisoned corpus.
+// Purge previously-ingested junk (anti-bot/challenge pages, thin, wrong-dim)
+// by title AND body pattern — cleans a poisoned corpus regardless of id scheme.
 async function purgeJunk(p) {
   const ddl = `DELETE FROM \`${p}.${DATASET}.${TABLE}\`
-    WHERE REGEXP_CONTAINS(LOWER(title), r'just a moment|checking your browser|attention required|enable javascript and cookies|cloudflare|access denied|verify you are human')
-       OR title IS NULL OR ARRAY_LENGTH(embedding) != ${EMBED_DIM}`
+    WHERE REGEXP_CONTAINS(LOWER(CONCAT(IFNULL(title,''),' ',IFNULL(SUBSTR(text,0,800),''))),
+      r'checking your browser before accessing|please wait while we verify|enable javascript and cookies|just a moment|attention required|verifying you are human|cf-browser-verification|challenge-platform|performance (and|&) security by cloudflare|access denied|ddos protection')
+       OR title IS NULL OR ARRAY_LENGTH(embedding) != ${EMBED_DIM} OR word_count < 80`
   const j = await withRetry(() => authedFetch(`${BQ_BASE}/projects/${p}/queries`, { query: ddl, useLegacySql: false, timeoutMs: 60000 }), 'bq-purge')
     .then((r) => Number(r.numDmlAffectedRows ?? 0))
     .catch((e) => { console.warn('  purge junk (streaming buffer may defer):', e.message.slice(0, 100)); return 0 })
-  console.log(`  purged ${j} junk/wrong-dim row(s)`)
+  console.log(`  purged ${j} junk/thin/wrong-dim row(s)`)
+}
+
+// FORCE_REEMBED=1 — wipe the whole corpus and rebuild from scratch.
+async function purgeAll(p) {
+  const ddl = `DELETE FROM \`${p}.${DATASET}.${TABLE}\` WHERE TRUE`
+  const j = await withRetry(() => authedFetch(`${BQ_BASE}/projects/${p}/queries`, { query: ddl, useLegacySql: false, timeoutMs: 60000 }), 'bq-purge-all')
+    .then((r) => Number(r.numDmlAffectedRows ?? 0))
+    .catch((e) => { console.warn('  FORCE_REEMBED purge (streaming buffer may defer):', e.message.slice(0, 100)); return 0 })
+  console.log(`  FORCE_REEMBED: purged ALL ${j} row(s) — full rebuild`)
 }
 
 // Count rows for a set of ids — used to CONFIRM deletion before re-insert so a
@@ -340,8 +390,10 @@ async function insertRows(p, rows) {
   const p = await project()
   console.log(`project=${p} dataset=${DATASET} table=${TABLE} model=${EMBED_MODEL} batch=${BATCH}`)
   await ensureTable(p)
-  await purgeJunk(p)            // remove poisoned (Cloudflare/junk/wrong-dim) rows
-  const known = await existingHashes(p)
+  const forceReembed = process.env.FORCE_REEMBED === '1'
+  if (forceReembed) await purgeAll(p)
+  else await purgeJunk(p)       // remove poisoned (challenge/thin/wrong-dim) rows
+  const known = forceReembed ? {} : await existingHashes(p)
 
   // 1. DISCOVER documents from structured sources (WordPress REST API +
   //    quality-gated direct fetch), VALIDATE quality, then decide what needs
@@ -361,22 +413,29 @@ async function insertRows(p, rows) {
   // decide per-chunk what needs embedding (incremental: skip unchanged + 768).
   const candidates = []
   let rejected = 0, chunked = 0
+  const rejectedPages = []
   const seenDocs = new Set()
   for (const d of discovered) {
     if (seenDocs.has(d.id)) continue
     seenDocs.add(d.id)
-    const why = validate(d)                       // content-quality gate (task 9)
-    if (why) { console.log(`  reject [${why}]: ${d.url}`); rejected++; continue }
-    const units = expandToChunks(d)               // intelligent chunking (task 1)
+    // Per-page extraction diagnostics (task 6).
+    const v = validate(d)
+    if (!v.ok) {
+      console.log(`  ✗ reject [${v.reason}] words=${v.wordCount} uniq=${v.ratio} repeat=${v.repeat} :: ${d.url}`)
+      rejected++; rejectedPages.push({ url: d.url, reason: v.reason }); continue
+    }
+    console.log(`  ✓ ${d.source_type}/${d.slug} words=${v.wordCount} uniqRatio=${v.ratio} quality=${v.score}`)
+    const units = expandToChunks(d)               // intelligent chunking
     if (units.length > 1) chunked++
     for (const u of units) {
       const prev = known[u.id]
       if (prev && prev.hash === u.contentHash && prev.dim === EMBED_DIM) continue // unchanged
-      if (prev && prev.dim !== EMBED_DIM) console.log(`  re-embed (dim ${prev.dim} -> ${EMBED_DIM}): ${u.id}`)
+      if (prev && prev.dim !== EMBED_DIM) console.log(`    re-embed (dim ${prev.dim} -> ${EMBED_DIM}): ${u.id}`)
       candidates.push(u)
     }
   }
   console.log(`\n${discovered.length} docs discovered (${chunked} chunked), ${rejected} rejected, ${candidates.length} chunk(s) to (re)embed.`)
+  if (rejectedPages.length) console.log(`Rejected: ${rejectedPages.map((r) => `${r.url} [${r.reason}]`).join('; ')}`)
   if (!candidates.length) { console.log('✓ nothing new/changed — 0 Vertex calls. Corpus up to date.'); return }
 
   // 2. Batched embeddings (clean semantic text: title + excerpt + body).
