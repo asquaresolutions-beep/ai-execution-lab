@@ -120,12 +120,73 @@ function validate({ title, text }) {
   return null // OK
 }
 
-function buildDoc({ url, source_type, title, body, excerpt = '', slugVal = '', category = '', publishedAt = '', updatedAt = '' }) {
-  const text = `${title}\n\n${excerpt ? excerpt + '\n\n' : ''}${body}`.replace(/\s+/g, ' ').trim().slice(0, 8000)
+function metaOf(text) {
   const wordCount = text.split(/\s+/).filter(Boolean).length
   const lang = /[ऀ-ॿ]/.test(text) ? 'hi' : 'en'
+  return { wordCount, lang }
+}
+function buildDoc({ url, source_type, title, body, excerpt = '', slugVal = '', category = '', publishedAt = '', updatedAt = '' }) {
+  const text = `${title}\n\n${excerpt ? excerpt + '\n\n' : ''}${body}`.replace(/\s+/g, ' ').trim().slice(0, 8000)
+  const { wordCount, lang } = metaOf(text)
   const contentHash = createHash('sha256').update(`${title}\n${text}`).digest('hex')
-  return { id: slug(url), url, source_type, title, text, slug: slugVal || slug(url), category, published_at: publishedAt || null, updated_at: updatedAt || null, wordCount, lang, contentHash }
+  // Keep the full body for chunking; `text` stays the canonical doc-level field.
+  return { id: slug(url), url, source_type, title, text, body, excerpt, slug: slugVal || slug(url), category, published_at: publishedAt || null, updated_at: updatedAt || null, wordCount, lang, contentHash }
+}
+
+// ── Intelligent chunking (task 1) ──────────────────────────────────
+// Long articles lose local detail in one 768-dim vector. Split on paragraph
+// boundaries into ~380-token chunks with sentence overlap; embed each as its
+// own row (id `${docId}__c${i}`, parent_id + chunk_index) for precise
+// retrieval. Short docs stay a single chunk. Bounded to MAX_CHUNKS for cost.
+const estTokens = (t) => Math.ceil(t.split(/\s+/).filter(Boolean).length * 1.3)
+const MAX_SINGLE_TOKENS = Number(process.env.CHUNK_SINGLE_MAX || 420)
+const CHUNK_TOKENS = Number(process.env.CHUNK_TOKENS || 380)
+const CHUNK_OVERLAP = Number(process.env.CHUNK_OVERLAP || 60)
+const MAX_CHUNKS = Number(process.env.MAX_CHUNKS || 12)
+
+function chunkBody(title, body) {
+  const paras = body.split(/(?<=[.!?])\s+(?=[A-Z0-9])|\n{2,}/).map((p) => p.trim()).filter(Boolean)
+  const chunks = []
+  let buf = [], bufTok = 0
+  const flush = () => {
+    if (!buf.length) return
+    chunks.push(`${title}\n\n${buf.join(' ')}`)
+    if (CHUNK_OVERLAP > 0) {
+      const carry = []; let ct = 0
+      for (let i = buf.length - 1; i >= 0 && ct < CHUNK_OVERLAP; i--) { carry.unshift(buf[i]); ct += estTokens(buf[i]) }
+      buf = carry; bufTok = ct
+    } else { buf = []; bufTok = 0 }
+  }
+  for (const para of paras) {
+    const t = estTokens(para)
+    if (bufTok + t > CHUNK_TOKENS && bufTok > 0) flush()
+    buf.push(para); bufTok += t
+    if (chunks.length >= MAX_CHUNKS) break
+  }
+  flush()
+  return chunks.slice(0, MAX_CHUNKS)
+}
+
+/** Expand a doc into 1+ chunk-rows (parent_id, chunk_index, per-chunk hash). */
+function expandToChunks(doc) {
+  const full = doc.text
+  if (estTokens(full) <= MAX_SINGLE_TOKENS) {
+    return [{ ...doc, parent_id: doc.id, chunk_index: 0, chunk_total: 1 }]
+  }
+  const parts = chunkBody(doc.title, doc.body || full)
+  return parts.map((text, i) => {
+    const { wordCount, lang } = metaOf(text)
+    return {
+      ...doc,
+      id: `${doc.id}__c${i}`,
+      parent_id: doc.id,
+      chunk_index: i,
+      chunk_total: parts.length,
+      text: text.slice(0, 8000),
+      wordCount, lang,
+      contentHash: createHash('sha256').update(`${doc.id}#${i}\n${text}`).digest('hex'),
+    }
+  })
 }
 
 // ── Source: WordPress REST API (clean structured content) ──────────
@@ -173,6 +234,7 @@ async function ensureTable(p) {
     { name: 'model', type: 'STRING' }, { name: 'dim', type: 'INT64' }, { name: 'content_hash', type: 'STRING' },
     { name: 'word_count', type: 'INT64' }, { name: 'lang', type: 'STRING' }, { name: 'slug', type: 'STRING' },
     { name: 'category', type: 'STRING' }, { name: 'published_at', type: 'TIMESTAMP' },
+    { name: 'parent_id', type: 'STRING' }, { name: 'chunk_index', type: 'INT64' }, { name: 'chunk_total', type: 'INT64' },
     { name: 'created_at', type: 'TIMESTAMP' }, { name: 'updated_at', type: 'TIMESTAMP' },
   ] }
   await authedFetch(`${BQ_BASE}/projects/${p}/datasets/${DATASET}/tables`, { tableReference: { projectId: p, datasetId: DATASET, tableId: TABLE }, schema }).catch((e) => { if (!/409/.test(e.message)) throw e })
@@ -192,6 +254,9 @@ async function ensureSchema(p) {
     ADD COLUMN IF NOT EXISTS slug STRING,
     ADD COLUMN IF NOT EXISTS category STRING,
     ADD COLUMN IF NOT EXISTS published_at TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS parent_id STRING,
+    ADD COLUMN IF NOT EXISTS chunk_index INT64,
+    ADD COLUMN IF NOT EXISTS chunk_total INT64,
     ADD COLUMN IF NOT EXISTS created_at TIMESTAMP,
     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP`
   await withRetry(() => authedFetch(`${BQ_BASE}/projects/${p}/queries`, { query: ddl, useLegacySql: false, timeoutMs: 60000 }), 'bq-alter')
@@ -292,20 +357,26 @@ async function insertRows(p, rows) {
     try { discovered.push(await fetchPageDoc(s)) } catch (e) { console.warn(`  fetch ${s.url}: ${e.message.slice(0, 60)}`) }
   }
 
+  // Validate (quality gate) on the full doc, then expand into chunks, then
+  // decide per-chunk what needs embedding (incremental: skip unchanged + 768).
   const candidates = []
-  let rejected = 0
-  const seen = new Set()
+  let rejected = 0, chunked = 0
+  const seenDocs = new Set()
   for (const d of discovered) {
-    if (seen.has(d.id)) continue
-    seen.add(d.id)
+    if (seenDocs.has(d.id)) continue
+    seenDocs.add(d.id)
     const why = validate(d)                       // content-quality gate (task 9)
     if (why) { console.log(`  reject [${why}]: ${d.url}`); rejected++; continue }
-    const prev = known[d.id]
-    if (prev && prev.hash === d.contentHash && prev.dim === EMBED_DIM) { continue } // unchanged
-    if (prev && prev.dim !== EMBED_DIM) console.log(`  re-embed (dim ${prev.dim} -> ${EMBED_DIM}): ${d.id}`)
-    candidates.push(d)
+    const units = expandToChunks(d)               // intelligent chunking (task 1)
+    if (units.length > 1) chunked++
+    for (const u of units) {
+      const prev = known[u.id]
+      if (prev && prev.hash === u.contentHash && prev.dim === EMBED_DIM) continue // unchanged
+      if (prev && prev.dim !== EMBED_DIM) console.log(`  re-embed (dim ${prev.dim} -> ${EMBED_DIM}): ${u.id}`)
+      candidates.push(u)
+    }
   }
-  console.log(`\n${discovered.length} discovered, ${rejected} rejected by quality gate, ${candidates.length} to (re)embed.`)
+  console.log(`\n${discovered.length} docs discovered (${chunked} chunked), ${rejected} rejected, ${candidates.length} chunk(s) to (re)embed.`)
   if (!candidates.length) { console.log('✓ nothing new/changed — 0 Vertex calls. Corpus up to date.'); return }
 
   // 2. Batched embeddings (clean semantic text: title + excerpt + body).
@@ -321,9 +392,10 @@ async function insertRows(p, rows) {
         id: c.id, source_type: c.source_type, url: c.url, title: c.title, text: c.text,
         embedding, model: EMBED_MODEL, dim: embedding.length, content_hash: c.contentHash,
         word_count: c.wordCount, lang: c.lang, slug: c.slug, category: c.category,
-        published_at: c.published_at, created_at: now, updated_at: now,
+        published_at: c.published_at, parent_id: c.parent_id, chunk_index: c.chunk_index,
+        chunk_total: c.chunk_total, created_at: now, updated_at: now,
       })
-      console.log(`  embedded ${c.source_type}/${c.slug} (dim ${embedding.length}, ${c.lang}, ${c.wordCount}w)`)
+      console.log(`  embedded ${c.source_type}/${c.slug}#${c.chunk_index} (dim ${embedding.length}, ${c.lang}, ${c.wordCount}w)`)
     })
   }
 

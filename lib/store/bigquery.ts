@@ -151,19 +151,44 @@ export async function runQuery(sql: string, params: Array<{ name: string; type: 
   return (data.rows ?? []).map((r) => Object.fromEntries(r.f.map((cell, i) => [cols[i], cell.v])))
 }
 
-export interface VectorHit { id: string; title: string; url: string; source_type: string; distance: number }
+export interface VectorHit { id: string; title: string; url: string; source_type: string; distance: number; text?: string; slug?: string; category?: string }
+
+export interface VectorSearchOptions {
+  table?: string
+  sourceTypes?: string[]   // restrict to these source_type values (e.g. scam corpus)
+  withText?: boolean       // include a truncated body for snippets/hybrid rerank
+}
 
 /** Live semantic search via BigQuery VECTOR_SEARCH (brute-force or index-backed). */
-export async function vectorSearch(queryEmbedding: number[], topK = 8, table = 'embeddings'): Promise<VectorHit[]> {
+export async function vectorSearch(queryEmbedding: number[], topK = 8, opts: VectorSearchOptions | string = {}): Promise<VectorHit[]> {
+  // Back-compat: a string 3rd arg was previously the table name.
+  const o: VectorSearchOptions = typeof opts === 'string' ? { table: opts } : opts
+  const table = o.table || 'embeddings'
   const k = Math.max(1, Math.min(50, Math.floor(topK)))
   const PROJECT = await bqProject()
-  const sql = `SELECT base.id AS id, base.title AS title, base.url AS url, base.source_type AS source_type, distance
+  const textCol = o.withText ? ', SUBSTR(base.text, 0, 1200) AS text' : ''
+  // Pre-filter the searched set by source_type when requested.
+  const tableExpr = o.sourceTypes?.length
+    ? `(SELECT * FROM \`${PROJECT}.${DATASET}.${table}\` WHERE source_type IN (${o.sourceTypes.map((s) => `'${s.replace(/'/g, '')}'`).join(',')}))`
+    : `TABLE \`${PROJECT}.${DATASET}.${table}\``
+  const sql = `SELECT base.id AS id, base.title AS title, base.url AS url, base.source_type AS source_type, base.slug AS slug, base.category AS category${textCol}, distance
 FROM VECTOR_SEARCH(
-  TABLE \`${PROJECT}.${DATASET}.${table}\`, 'embedding',
+  ${tableExpr}, 'embedding',
   (SELECT @q AS embedding), top_k => ${k}, distance_type => 'COSINE')
 ORDER BY distance`
   const rows = await runQuery(sql, [{ name: 'q', type: 'ARRAY', arrayType: 'FLOAT64', value: queryEmbedding }])
-  return rows.map((r) => ({ id: r.id ?? '', title: r.title ?? '', url: r.url ?? '', source_type: r.source_type ?? '', distance: Number(r.distance) }))
+  return rows.map((r) => ({ id: r.id ?? '', title: r.title ?? '', url: r.url ?? '', source_type: r.source_type ?? '', slug: r.slug ?? undefined, category: r.category ?? undefined, distance: Number(r.distance), text: r.text ?? undefined }))
+}
+
+/** Fetch a single corpus document's display fields by id (project-safe). */
+export async function getDocById(id: string, table = 'embeddings'): Promise<{ id: string; title: string; url: string; source_type: string } | null> {
+  const PROJECT = await bqProject()
+  const rows = await runQuery(
+    `SELECT id, title, url, source_type FROM \`${PROJECT}.${DATASET}.${table}\` WHERE id = @id LIMIT 1`,
+    [{ name: 'id', type: 'STRING', value: id }],
+  )
+  const r = rows[0]
+  return r ? { id: r.id ?? '', title: r.title ?? '', url: r.url ?? '', source_type: r.source_type ?? '' } : null
 }
 
 export interface CorpusDim { dim: number; recorded_dim: number; model: string; rows: number }

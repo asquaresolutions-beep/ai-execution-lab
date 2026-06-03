@@ -8,20 +8,35 @@ import { embedQuery, EMBED_DIM, EMBED_MODEL, getLastEmbedError } from '@/lib/ai/
 import { vectorSearch, bigQueryReady, corpusDimensions } from '@/lib/store/bigquery'
 import { vertexConfigured } from '@/lib/ai/provider'
 import { log } from '@/lib/observability/logger'
+import { getCached, setCached } from '@/lib/ai/cache'
+import { hybridRerank } from '@/lib/intelligence/hybrid'
+import { buildSnippet, highlights, matchedTerms, confidenceBand, relevanceExplanation } from '@/lib/intelligence/snippets'
+import { recordRetrieval } from '@/lib/intelligence/metrics'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
+/** Cache the query embedding (24h) — identical queries cost 0 Vertex calls. */
+async function cachedQueryEmbedding(q: string): Promise<{ vector: number[]; live: boolean; model: string; cached: boolean }> {
+  const key = `qembed:${EMBED_MODEL}:${q.toLowerCase().trim()}`
+  const hit = await getCached<{ vector: number[]; model: string }>(key)
+  if (hit && Array.isArray(hit.vector) && hit.vector.length === EMBED_DIM) return { ...hit, live: true, cached: true }
+  const { vector, live, model } = await embedQuery(q)
+  if (live && vector.length === EMBED_DIM) await setCached(key, 'qembed', { vector, model }, 24 * 60 * 60_000)
+  return { vector, live, model, cached: false }
+}
+
 async function handle(q: string, k: number, diag: boolean) {
+  const started = Date.now()
   if (!vertexConfigured() || !bigQueryReady()) {
     return NextResponse.json(
       { error: 'not_configured', detail: 'Requires Vertex AI + BigQuery credentials (VERTEX_PROJECT_ID + service account/token).' },
       { status: 503 },
     )
   }
-  // Canonical query embedding: same model + 768-dim as the stored corpus,
+  // Canonical query embedding (cached): same model + 768-dim as the corpus,
   // task_type=RETRIEVAL_QUERY.
-  const { vector, live, model } = await embedQuery(q)
+  const { vector, live, model, cached } = await cachedQueryEmbedding(q)
   // Never run VECTOR_SEARCH with a non-live (hash) fallback or wrong-dim vector
   // — it would either dimension-mismatch or return meaningless results.
   if (!live) {
@@ -69,9 +84,36 @@ async function handle(q: string, k: number, diag: boolean) {
     )
   }
 
-  const hits = await vectorSearch(vector, k)
+  // Retrieve with body text, hybrid-rerank (dense + lexical), then build
+  // snippets / highlights / confidence / relevance explanations. (tasks 1, 6)
+  const raw = await vectorSearch(vector, Math.min(50, k * 3), { withText: true })
+  const ranked = hybridRerank(q, raw).slice(0, k)
+  const results = ranked.map((h) => {
+    const snippet = buildSnippet(h.text ?? h.title, q)
+    const terms = matchedTerms(`${h.title} ${h.text ?? ''}`, q)
+    const confidence = h.hybridScore
+    return {
+      id: h.id,
+      title: h.title,
+      url: h.url,
+      slug: h.slug,
+      category: h.category,
+      source_type: h.source_type,
+      distance: h.distance,
+      confidence,
+      confidenceBand: confidenceBand(confidence),
+      vectorScore: h.vectorScore,
+      lexicalScore: h.lexicalScore,
+      snippet,
+      highlights: highlights(snippet, q),
+      matchedTerms: terms,
+      relevanceExplanation: relevanceExplanation({ confidence, matchedTerms: terms, sourceType: h.source_type }),
+    }
+  })
+  const topConfidence = results[0]?.confidence ?? 0
+  recordRetrieval({ endpoint: 'semantic-search', query: q, results: results.length, topConfidence, hit: topConfidence >= 0.6, latencyMs: Date.now() - started, embeddingLive: live, cached })
   return NextResponse.json(
-    { query: q, model, dim: vector.length, embeddingLive: live, count: hits.length, results: hits },
+    { query: q, model, dim: vector.length, embeddingLive: live, cached, count: results.length, topConfidence, results },
     { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600' } },
   )
 }
