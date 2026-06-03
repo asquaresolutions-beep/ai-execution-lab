@@ -5,7 +5,7 @@
 // are configured; otherwise returns a clear 'not configured' response.
 import { NextResponse } from 'next/server'
 import { embedQuery, EMBED_DIM, EMBED_MODEL, getLastEmbedError } from '@/lib/ai/embeddings'
-import { vectorSearch, bigQueryReady, corpusDimensions } from '@/lib/store/bigquery'
+import { vectorSearch, bigQueryReady, corpusDimensions, vectorSearchSQL } from '@/lib/store/bigquery'
 import { vertexConfigured } from '@/lib/ai/provider'
 import { log } from '@/lib/observability/logger'
 import { getCached, setCached } from '@/lib/ai/cache'
@@ -52,11 +52,24 @@ async function handle(q: string, k: number, diag: boolean) {
     )
   }
 
-  // Diagnostic mode (?diag=1): report the REAL query dim and the REAL stored
-  // corpus dims side by side, without running VECTOR_SEARCH. Stops guessing.
+  // Diagnostic mode (?diag=1): report query dim, corpus row count + dims,
+  // model, and the EXACT generated VECTOR_SEARCH SQL — without running it.
   if (diag) {
     const corpus = await corpusDimensions().catch((e) => [{ dim: -1, recorded_dim: -1, model: `error: ${e instanceof Error ? e.message : e}`, rows: 0 }])
-    return NextResponse.json({ diag: true, queryDim: vector.length, queryModel: model, canonicalDim: EMBED_DIM, corpus })
+    const generatedSQL = await vectorSearchSQL(k, { withText: true }).catch((e) => `error: ${e instanceof Error ? e.message : e}`)
+    const rowCount = corpus.reduce((a, c) => a + (c.rows || 0), 0)
+    log.info({ event: 'semantic_search.diag', queryDim: vector.length, rowCount, corpus })
+    return NextResponse.json({
+      diag: true,
+      queryDim: vector.length,
+      embeddingDimension: vector.length,
+      canonicalDim: EMBED_DIM,
+      model: EMBED_MODEL,
+      queryModel: model,
+      rowCount,
+      corpus,
+      generatedSQL,
+    })
   }
 
   // Hard runtime assertion: query vector MUST be canonical 768.

@@ -58,7 +58,7 @@ echo "-- health --"; curl -s "$URL/api/health" | head -c 300; echo
 echo "-- trustscore (live Vertex) --"; curl -s -X POST "$URL/api/trustscore" -H 'content-type: application/json' \
   -d '{"input":"URGENT: share the OTP to unblock your bank account http://bit.ly/x"}' | head -c 400; echo
 echo "-- semantic search (BigQuery VECTOR_SEARCH) --"; curl -s "$URL/api/semantic-search?q=how%20to%20appear%20in%20AI%20Overviews&k=5"; echo
-echo "-- row count --"; bq query --use_legacy_sql=false "SELECT COUNT(*) AS rows, COUNT(DISTINCT source_type) AS types FROM \`${PROJECT}.${DATASET}.embeddings\`"
+echo "-- row count --"; bq query --use_legacy_sql=false "SELECT COUNT(*) AS n, COUNT(DISTINCT source_type) AS types FROM \`${PROJECT}.${DATASET}.embeddings\`"
 
 cat <<EONOTE
 

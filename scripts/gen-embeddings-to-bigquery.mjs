@@ -415,7 +415,7 @@ async function insertRows(p, rows) {
 
   // 4. Verify FINAL corpus dimensions directly from BigQuery (task 7).
   const dimCheck = await authedFetch(`${BQ_BASE}/projects/${p}/queries`, {
-    query: `SELECT ARRAY_LENGTH(embedding) AS dim, COUNT(*) AS rows FROM \`${p}.${DATASET}.${TABLE}\` GROUP BY dim ORDER BY rows DESC`,
+    query: `SELECT ARRAY_LENGTH(embedding) AS dim, COUNT(*) AS n FROM \`${p}.${DATASET}.${TABLE}\` GROUP BY dim ORDER BY n DESC`,
     useLegacySql: false, timeoutMs: 30000,
   }).catch((e) => ({ rows: [], error: e.message }))
   const dims = (dimCheck.rows ?? []).map((r) => `${r.f[0].v}-dim × ${r.f[1].v} rows`)

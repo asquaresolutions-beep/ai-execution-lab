@@ -145,7 +145,11 @@ export async function runQuery(sql: string, params: Array<{ name: string; type: 
     method: 'POST',
     body: JSON.stringify({ query: sql, useLegacySql: false, parameterMode: params.length ? 'NAMED' : undefined, queryParameters, timeoutMs: 30000 }),
   })
-  if (!res.ok) throw new Error(`BQ query ${res.status}: ${(await res.text()).slice(0, 300)}`)
+  if (!res.ok) {
+    const body = (await res.text()).slice(0, 500)
+    log.error({ event: 'bq.query_error', status: res.status, body, sql: sql.slice(0, 400) })
+    throw new Error(`BQ query ${res.status}: ${body}`)
+  }
   const data = (await res.json()) as { schema?: { fields?: { name: string }[] }; rows?: { f: { v: string | null }[] }[] }
   const cols = data.schema?.fields?.map((f) => f.name) ?? []
   return (data.rows ?? []).map((r) => Object.fromEntries(r.f.map((cell, i) => [cols[i], cell.v])))
@@ -159,23 +163,41 @@ export interface VectorSearchOptions {
   withText?: boolean       // include a truncated body for snippets/hybrid rerank
 }
 
+/**
+ * Build the current-syntax VECTOR_SEARCH SQL. Single source of truth so the
+ * live query and the ?diag preview are always identical.
+ * - Named args only (`top_k =>`, `distance_type =>`) — current GoogleSQL.
+ * - No ROWS / LIMIT inside VECTOR_SEARCH (unsupported).
+ * - `ORDER BY distance` (ascending) returns nearest neighbours first.
+ */
+export function buildVectorSearchSQL(project: string, k: number, o: VectorSearchOptions = {}): string {
+  const table = o.table || 'embeddings'
+  const textCol = o.withText ? ', SUBSTR(base.text, 0, 1200) AS text' : ''
+  const tableExpr = o.sourceTypes?.length
+    ? `(SELECT * FROM \`${project}.${DATASET}.${table}\` WHERE source_type IN (${o.sourceTypes.map((s) => `'${s.replace(/'/g, '')}'`).join(',')}))`
+    : `TABLE \`${project}.${DATASET}.${table}\``
+  return `SELECT base.id AS id, base.title AS title, base.url AS url, base.source_type AS source_type, base.slug AS slug, base.category AS category${textCol}, distance
+FROM VECTOR_SEARCH(
+  ${tableExpr}, 'embedding',
+  (SELECT @q AS embedding), top_k => ${k}, distance_type => 'COSINE')
+ORDER BY distance ASC`
+}
+
+/** Resolve the exact SQL that vectorSearch() would run (for ?diag). */
+export async function vectorSearchSQL(topK = 8, opts: VectorSearchOptions | string = {}): Promise<string> {
+  const o: VectorSearchOptions = typeof opts === 'string' ? { table: opts } : opts
+  const k = Math.max(1, Math.min(50, Math.floor(topK)))
+  return buildVectorSearchSQL(await bqProject(), k, o)
+}
+
 /** Live semantic search via BigQuery VECTOR_SEARCH (brute-force or index-backed). */
 export async function vectorSearch(queryEmbedding: number[], topK = 8, opts: VectorSearchOptions | string = {}): Promise<VectorHit[]> {
   // Back-compat: a string 3rd arg was previously the table name.
   const o: VectorSearchOptions = typeof opts === 'string' ? { table: opts } : opts
-  const table = o.table || 'embeddings'
   const k = Math.max(1, Math.min(50, Math.floor(topK)))
   const PROJECT = await bqProject()
-  const textCol = o.withText ? ', SUBSTR(base.text, 0, 1200) AS text' : ''
-  // Pre-filter the searched set by source_type when requested.
-  const tableExpr = o.sourceTypes?.length
-    ? `(SELECT * FROM \`${PROJECT}.${DATASET}.${table}\` WHERE source_type IN (${o.sourceTypes.map((s) => `'${s.replace(/'/g, '')}'`).join(',')}))`
-    : `TABLE \`${PROJECT}.${DATASET}.${table}\``
-  const sql = `SELECT base.id AS id, base.title AS title, base.url AS url, base.source_type AS source_type, base.slug AS slug, base.category AS category${textCol}, distance
-FROM VECTOR_SEARCH(
-  ${tableExpr}, 'embedding',
-  (SELECT @q AS embedding), top_k => ${k}, distance_type => 'COSINE')
-ORDER BY distance`
+  const sql = buildVectorSearchSQL(PROJECT, k, o)
+  log.info({ event: 'bq.vector_search', queryDim: queryEmbedding.length, k, sourceTypes: o.sourceTypes ?? null })
   const rows = await runQuery(sql, [{ name: 'q', type: 'ARRAY', arrayType: 'FLOAT64', value: queryEmbedding }])
   return rows.map((r) => ({ id: r.id ?? '', title: r.title ?? '', url: r.url ?? '', source_type: r.source_type ?? '', slug: r.slug ?? undefined, category: r.category ?? undefined, distance: Number(r.distance), text: r.text ?? undefined }))
 }
@@ -201,12 +223,14 @@ export interface CorpusDim { dim: number; recorded_dim: number; model: string; r
  */
 export async function corpusDimensions(table = 'embeddings'): Promise<CorpusDim[]> {
   const PROJECT = await bqProject()
-  const sql = `SELECT ARRAY_LENGTH(embedding) AS dim, ANY_VALUE(dim) AS recorded_dim, ANY_VALUE(model) AS model, COUNT(*) AS rows
-FROM \`${PROJECT}.${DATASET}.${table}\`
-GROUP BY dim
-ORDER BY rows DESC`
+  // `rows` is a RESERVED keyword in GoogleSQL — alias the count as `n`.
+  // Use a subquery so we don't reference a SELECT alias within the same list.
+  const sql = `SELECT actual_dim, ANY_VALUE(stored_dim) AS recorded_dim, ANY_VALUE(model) AS model, COUNT(*) AS n
+FROM (SELECT ARRAY_LENGTH(embedding) AS actual_dim, dim AS stored_dim, model FROM \`${PROJECT}.${DATASET}.${table}\`)
+GROUP BY actual_dim
+ORDER BY n DESC`
   const rows = await runQuery(sql)
-  return rows.map((r) => ({ dim: Number(r.dim), recorded_dim: Number(r.recorded_dim), model: r.model ?? '', rows: Number(r.rows) }))
+  return rows.map((r) => ({ dim: Number(r.actual_dim), recorded_dim: Number(r.recorded_dim), model: r.model ?? '', rows: Number(r.n) }))
 }
 
 export function bigQueryReady(): boolean { return bqConfigured() }
