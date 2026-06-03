@@ -72,6 +72,19 @@ Always returns structured JSON (wrapped by `lib/api/json.ts` — no HTML error p
 - **BigQuery telemetry (task 8):** `logImageAnalysis()` writes one best-effort row per scan to `scam_image_analysis` (verdict, risk, scam probability, trust, category, entity counts, deep-used) — self-ensuring table, never blocks the response.
 - **Test fixtures (task 11):** `lib/scam-intel/__fixtures__/screenshot-scams.ts` (fake SBI SMS, fake courier customs, fake UPI refund, fake KYC) + runnable `scripts/test-screenshot-fixtures.mjs` asserting expected signals/entities/risk (4/4 passing, offline).
 
+## v3 hardening — calibration, multilingual, URL/QR intel, eval, dashboard
+
+- **Confidence calibration** (`lib/scam-intel/calibration.ts`): uncertainty penalty (high raw risk + thin evidence → pulled toward neutral, confidence cut), evidence-weighted boost, source-reliability weighting, and a **low-confidence `needs_review` fallback** when OCR text is too sparse. Anti over-confidence.
+- **Multilingual (en / Hindi / Hinglish / transliterated):** detectors match "KYC update karo", "account block ho jayega", "OTP bhejo", "refund ke liye", plus Devanagari.
+- **URL/domain intel** (`lib/scam-intel/url-intel.ts`): punycode, non-ASCII homoglyphs, brand look-alikes (edit-distance vs SBI/HDFC/ICICI/Paytm/PhonePe/Amazon/India Post…), shorteners, suspicious TLDs, raw-IP URLs, digit-substitution, excessive subdomains.
+- **QR / payment intel:** QR/collect-request detection + UPI VPA extraction feed the risk score (a real credit never needs you to scan/approve).
+- **Visual spoof detection:** the gated Gemini-vision prompt explicitly checks fake bank/courier logos, fake WhatsApp/UPI system screens, and fake payment-success screens — **retrieval-grounded** with the top similar corpus scams to reduce hallucination.
+- **Explainability:** `explainability { whyFlagged, evidence[], matchingPatterns[], confidenceReasoning[] }`.
+- **Observability:** per-stage `timings { ocrMs, embedMs, vectorMs, deepMs, totalMs }` + `estCostUsd` returned and logged (`event=multimodal.analyzed`).
+- **Abuse protection:** per-minute (12) + per-day (200) IP caps, 6 MB limit, and **magic-byte sniffing** (rejects payloads whose bytes aren't a real PNG/JPEG/WebP regardless of declared mime).
+- **Evaluation:** labeled dataset under `/datasets/{scam,legit}-samples/` + `scripts/benchmark-scamcheck.mjs` (precision/recall/F1/FP/FN/entity accuracy; offline deterministic layer = **P/R/F1 1.0** on the 16-sample set, live mode for OCR/retrieval).
+- **Dashboard:** `GET /api/scam-intel/dashboard?days=30` (ADMIN) — totals, verdict + category distribution, OCR failures, deep-vision usage, avg risk/scam-probability, entity totals, daily trend (from `scam_image_analysis`).
+
 ## Operational guidance
 - **Enable Cloud Vision** (`gcloud services enable vision.googleapis.com`) for cheap OCR + region boxes; without it, the Gemini OCR fallback still works (slightly higher cost, no boxes).
 - **Env:** `VERTEX_VISION_MODEL` (deep, default `gemini-2.5-flash`), `VERTEX_OCR_VISION_MODEL` (OCR fallback). ADC on Cloud Run needs no keys.

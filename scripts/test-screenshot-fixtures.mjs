@@ -19,10 +19,10 @@ const FIXTURES = [
 
 // ── Detectors (mirror of multimodal.ts DETECTORS) ──
 const DETECTORS = [
-  { id: 'fake_payment', sev: 'danger', re: /\b(payment successful|₹\s?\d|paid to|upi ref|transaction id|money received|credited|debited|cashback)\b/i },
+  { id: 'fake_payment', sev: 'danger', re: /\b(refund (of|credited|received|amount|ke liye)|you (have )?received (rs|₹|inr|money|a refund)|money received|cashback (of|credited)|scan (the |this )?qr|collect request|claim (your|rs|₹)|received a refund|paise? (aa gaye|wapas|milenge))\b|congratulations[^.\n]{0,40}(refund|cashback|won|prize)/i },
   { id: 'urgency', sev: 'warn', re: /\b(urgent|immediately|within \d+\s?(min|hour|day)s?|account (will be )?(blocked|suspended|closed)|act now|last chance|expir(?:e|es|ing|ed)|failure to|do not ignore)\b/i },
-  { id: 'otp_request', sev: 'danger', re: /\b(otp|one[\s-]?time password|cvv|pin|share .*code|do not share)\b/i },
-  { id: 'kyc_phish', sev: 'danger', re: /\b(kyc|verify your account|update (your )?(kyc|pan|details)|re-?activate)\b/i },
+  { id: 'otp_request', sev: 'danger', re: /(?<!do not )(?<!don'?t )(?<!never )\b(share|send|tell|give|enter|forward)\b[^.\n]{0,15}\b(otp|one[\s-]?time password|cvv|pin|code)\b|\b(otp|cvv|pin|code)\b[^.\n]{0,14}\b(bhejo|batao|bhej do|share karo|chahiye)\b/i },
+  { id: 'kyc_phish', sev: 'warn', re: /\b(kyc|verify your account|update (your )?(kyc|pan|details)|re-?activate)\b/i },
   { id: 'impersonation', sev: 'warn', re: /\b(rbi|sbi|hdfc|icici|axis|kotak|pnb|paytm|phonepe|google ?pay|gpay|amazon|flipkart|netflix|india ?post|blue ?dart|dtdc|fedex|delhivery|courier|customs|customer care|bank official|income tax|uidai|aadhaar|npci|gst)\b/i },
   { id: 'reward_bait', sev: 'warn', re: /\b(congratulations|you (have )?won|lottery|prize|reward|work from home|earn \d|part[\s-]?time job)\b/i },
   { id: 'suspicious_link', sev: 'danger', re: /\b(bit\.ly|tinyurl|t\.me|wa\.me|http:\/\/|[a-z0-9-]+\.(xyz|top|click|info)\b)/i },

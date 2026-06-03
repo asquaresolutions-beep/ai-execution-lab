@@ -1,0 +1,30 @@
+{
+  "label": "scam",
+  "note": "OCR-text form of representative scam screenshots (en + Hinglish). Each sample is what OCR would extract from a real screenshot. Used by scripts/benchmark-scamcheck.mjs and as canned inputs for /api/scam-intel/screenshot.",
+  "samples": [
+    { "id": "wa-sbi-kyc", "channel": "whatsapp", "lang": "en", "category": "phishing",
+      "ocrText": "Dear Customer, your SBI account will be BLOCKED today due to incomplete KYC. Update immediately at http://sbi-kyc-verify.xyz or your account is suspended. For help call 9876543210. - SBI",
+      "expectEntities": ["urls", "shorteners", "phones"] },
+    { "id": "sms-courier-customs", "channel": "sms", "lang": "en", "category": "courier_customs",
+      "ocrText": "India Post: Your parcel is held at customs clearance. A customs fee of Rs 25 is pending. Pay now to release your package: http://bit.ly/parcel-clear-pay. Failure to pay within 24 hours will return the parcel.",
+      "expectEntities": ["urls", "shorteners", "amounts"] },
+    { "id": "upi-refund", "channel": "whatsapp", "lang": "en", "category": "upi_fraud",
+      "ocrText": "Congratulations! You have received a refund of Rs 4,999. To credit the amount, scan the QR code below or approve the collect request in your UPI app (PhonePe/Google Pay). Refund reference UPI REF 8821934.",
+      "expectEntities": ["amounts", "qrPaymentRefs"] },
+    { "id": "kyc-hdfc", "channel": "sms", "lang": "en", "category": "phishing",
+      "ocrText": "URGENT: Your HDFC Bank PAN-Aadhaar KYC is incomplete and your account is suspended. Verify now at http://hdfc-kyc.top within 24 hours. Share the OTP sent to your phone to confirm. Do not ignore this message.",
+      "expectEntities": ["urls", "shorteners"] },
+    { "id": "hinglish-kyc", "channel": "whatsapp", "lang": "hinglish", "category": "phishing",
+      "ocrText": "Dear customer, aapka SBI KYC update karo warna account block ho jayega. Abhi verify karo is link par: http://sbi-verify.top - SBI Bank",
+      "expectEntities": ["urls", "shorteners"] },
+    { "id": "hinglish-otp-refund", "channel": "sms", "lang": "hinglish", "category": "otp_fraud",
+      "ocrText": "Aapko Rs 2000 ka refund mila hai. Refund ke liye OTP bhejo jo abhi aapke phone par aaya hai. Jaldi karo warna refund cancel ho jayega.",
+      "expectEntities": ["amounts"] },
+    { "id": "email-phish-login", "channel": "email", "lang": "en", "category": "phishing",
+      "ocrText": "Your ICICI NetBanking will be deactivated. We detected unusual login. Re-activate your account immediately: http://icici-secure-login.xyz/verify Failure to act will permanently lock your account.",
+      "expectEntities": ["urls", "shorteners"] },
+    { "id": "job-bait", "channel": "whatsapp", "lang": "en", "category": "fake_job",
+      "ocrText": "Congratulations! You are selected for a work from home job. Earn 5000 daily part-time. Pay Rs 199 registration to start. Message me on WhatsApp 9123456780 or visit bit.ly/wfh-join",
+      "expectEntities": ["urls", "shorteners", "phones", "amounts"] }
+  ]
+}

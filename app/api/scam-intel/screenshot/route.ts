@@ -13,13 +13,25 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const MAX_BYTES = 6 * 1024 * 1024 // 6MB
-const ALLOWED = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+
+// Magic-byte signatures — reject payloads whose bytes don't match an allowed
+// image type, regardless of declared mime (anti malicious-payload). (goal 11)
+function sniffImage(buf: Buffer): string | null {
+  if (buf.length < 12) return null
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return 'image/png'
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'image/jpeg'
+  if (buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') return 'image/webp'
+  return null
+}
 
 export const POST = jsonRoute('scam-intel/screenshot', async (req) => {
+  const ip = clientIp(req)
   try {
-    await enforceRateLimit({ key: `screenshot:${clientIp(req)}`, limit: 12, windowMs: 60_000 })
+    // Per-minute + per-day caps (anti image-spam / repeated uploads). (goal 11)
+    await enforceRateLimit({ key: `screenshot:min:${ip}`, limit: 12, windowMs: 60_000 })
+    await enforceRateLimit({ key: `screenshot:day:${ip}`, limit: 200, windowMs: 86_400_000 })
   } catch (e) {
-    if (e instanceof RateLimitError) return NextResponse.json({ error: 'rate_limited', detail: 'Too many screenshot scans; try again shortly.' }, { status: 429 })
+    if (e instanceof RateLimitError) return NextResponse.json({ error: 'rate_limited', detail: 'Too many screenshot scans; try again later.' }, { status: 429 })
   }
 
   let base64 = ''
@@ -32,19 +44,22 @@ export const POST = jsonRoute('scam-intel/screenshot', async (req) => {
     const file = form.get('image')
     forceDeep = form.get('forceDeep') === 'true'
     if (!(file instanceof File)) throw new ApiError('no_image', 'multipart form must include an `image` file', 400)
-    mime = file.type || 'image/png'
-    if (!ALLOWED.includes(mime)) throw new ApiError('unsupported_type', `image type ${mime} not supported (png/jpeg/webp)`, 415)
     const buf = Buffer.from(await file.arrayBuffer())
     if (buf.length > MAX_BYTES) throw new ApiError('too_large', `image exceeds ${MAX_BYTES} bytes`, 413)
+    const sniffed = sniffImage(buf)
+    if (!sniffed) throw new ApiError('invalid_payload', 'file is not a valid PNG/JPEG/WebP image', 415)
+    mime = sniffed
     base64 = buf.toString('base64')
   } else {
     const body = await req.json().catch(() => ({})) as { imageBase64?: string; mime?: string; forceDeep?: boolean }
     base64 = (body.imageBase64 || '').replace(/^data:[^;]+;base64,/, '')
-    mime = body.mime || 'image/png'
     forceDeep = !!body.forceDeep
     if (!base64) throw new ApiError('no_image', 'provide imageBase64 (or multipart `image`)', 400)
-    if (!ALLOWED.includes(mime)) throw new ApiError('unsupported_type', `image type ${mime} not supported (png/jpeg/webp)`, 415)
     if (Buffer.byteLength(base64, 'base64') > MAX_BYTES) throw new ApiError('too_large', `image exceeds ${MAX_BYTES} bytes`, 413)
+    const buf = Buffer.from(base64, 'base64')
+    const sniffed = sniffImage(buf)
+    if (!sniffed) throw new ApiError('invalid_payload', 'data is not a valid PNG/JPEG/WebP image', 415)
+    mime = sniffed
   }
 
   const result = await analyzeScreenshot(base64, mime, { forceDeep })

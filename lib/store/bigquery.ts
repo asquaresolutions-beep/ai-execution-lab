@@ -373,6 +373,45 @@ export async function logImageAnalysis(row: ImageAnalysisRow): Promise<void> {
   }
 }
 
+export interface ImageDashboard {
+  total: number
+  byVerdict: Record<string, number>
+  byCategory: Record<string, number>
+  ocrFailures: number
+  deepUsageRate: number
+  avgRisk: number
+  avgScamProbability: number
+  entityTotals: { phones: number; urls: number; shorteners: number; upiIds: number }
+  daily: Array<{ day: string; n: number; scam: number }>
+}
+
+/** Aggregate image-analysis telemetry for the evaluation dashboard. (goal 10) */
+export async function imageDashboard(days = 30): Promise<ImageDashboard> {
+  const PROJECT = await bqProject()
+  const T = `\`${PROJECT}.${DATASET}.${IMAGE_TABLE}\``
+  const where = `WHERE created_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${Math.max(1, Math.min(365, days))} DAY)`
+  const agg = await runQuery(`SELECT COUNT(*) AS total, COUNTIF(ocr_chars = 0) AS ocr_fail, COUNTIF(deep_used) AS deep, AVG(risk_score) AS avg_risk, AVG(scam_probability) AS avg_sp, SUM(phones) AS phones, SUM(urls) AS urls, SUM(shorteners) AS short, SUM(upi_ids) AS upi FROM ${T} ${where}`)
+  const a = agg[0] ?? {}
+  const total = Number(a.total ?? 0)
+  const grp = async (col: string) => {
+    const rows = await runQuery(`SELECT ${col} AS k, COUNT(*) AS n FROM ${T} ${where} GROUP BY k ORDER BY n DESC LIMIT 20`).catch(() => [])
+    return Object.fromEntries(rows.map((r) => [r.k ?? 'unknown', Number(r.n)]))
+  }
+  const daily = (await runQuery(`SELECT FORMAT_TIMESTAMP('%Y-%m-%d', created_at) AS day, COUNT(*) AS n, COUNTIF(verdict IN ('likely_scam','suspicious')) AS scam FROM ${T} ${where} GROUP BY day ORDER BY day DESC LIMIT 30`).catch(() => []))
+    .map((r) => ({ day: r.day ?? '', n: Number(r.n), scam: Number(r.scam) }))
+  return {
+    total,
+    byVerdict: await grp('verdict'),
+    byCategory: await grp('category'),
+    ocrFailures: Number(a.ocr_fail ?? 0),
+    deepUsageRate: total ? Math.round((Number(a.deep ?? 0) / total) * 1000) / 1000 : 0,
+    avgRisk: Math.round(Number(a.avg_risk ?? 0)),
+    avgScamProbability: Math.round(Number(a.avg_sp ?? 0) * 1000) / 1000,
+    entityTotals: { phones: Number(a.phones ?? 0), urls: Number(a.urls ?? 0), shorteners: Number(a.short ?? 0), upiIds: Number(a.upi ?? 0) },
+    daily,
+  }
+}
+
 export function bigQueryReady(): boolean { return bqConfigured() }
 
 export { PROJECT as BIGQUERY_PROJECT, DATASET as BIGQUERY_DATASET }
