@@ -6,8 +6,8 @@
 
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || ''
 
-export function AdSlot({ id, format = 'horizontal', className = '' }: { id: string; format?: 'horizontal' | 'rectangle'; className?: string }) {
-  const h = format === 'rectangle' ? 'min-h-[250px]' : 'min-h-[90px]'
+export function AdSlot({ id, format = 'horizontal', className = '' }: { id: string; format?: 'horizontal' | 'rectangle' | 'leaderboard'; className?: string }) {
+  const h = format === 'rectangle' ? 'min-h-[250px]' : format === 'leaderboard' ? 'min-h-[90px] sm:min-h-[90px]' : 'min-h-[90px]'
   // When AdSense is configured later, swap this placeholder for the <ins> unit.
   return (
     <aside aria-label="advertisement" data-ad-slot={id} className={`my-6 ${className}`}>

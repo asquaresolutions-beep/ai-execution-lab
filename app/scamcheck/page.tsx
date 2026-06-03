@@ -74,6 +74,8 @@ export default function ScamCheckHome() {
             {CHECKERS.map((c) => <li key={c.slug}><Link href={`/${c.slug}`} className="text-sky-400 hover:underline">{c.h1}</Link></li>)}
           </ul>
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+            <Link href="/scam-database" className="hover:text-zinc-300">Scam database</Link>
+            <Link href="/latest-scams" className="hover:text-zinc-300">Latest scams</Link>
             <Link href="/scam-intelligence" className="hover:text-zinc-300">Scam intelligence</Link>
             <Link href="/scamcheck/account" className="hover:text-zinc-300">My dashboard</Link>
             <Link href="/contact" className="hover:text-zinc-300">Report a scam</Link>

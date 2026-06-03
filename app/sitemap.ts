@@ -89,6 +89,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Public scam-intelligence pages + the screenshot tool
   const intelRoutes: MetadataRoute.Sitemap = [
     { url: `${BASE_URL}/scam-intelligence`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
+    { url: `${BASE_URL}/scam-database`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
+    { url: `${BASE_URL}/latest-scams`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
     { url: `${BASE_URL}/scamcheck/screenshot`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
     ...allIntelSlugs().map((slug) => ({
       url: `${BASE_URL}/scam-intelligence/${slug}`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 0.7,
