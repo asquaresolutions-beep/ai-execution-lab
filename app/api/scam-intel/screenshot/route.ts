@@ -9,6 +9,7 @@ import { enforceRateLimit, RateLimitError } from '@/lib/ai/rate-limit'
 import { clientIp } from '@/lib/admin-auth'
 import { resolveSubject } from '@/lib/api/identify'
 import { consumeCredits } from '@/lib/credits/server-credits'
+import { recordScan } from '@/lib/scamcheck/scan-history'
 import { jsonRoute, ApiError } from '@/lib/api/json'
 
 export const dynamic = 'force-dynamic'
@@ -72,6 +73,7 @@ export const POST = jsonRoute('scam-intel/screenshot', async (req) => {
   }
 
   const result = await analyzeScreenshot(base64, mime, { forceDeep })
+  if (sid.loggedIn && sid.uid) void recordScan(sid.uid, { ts: Date.now(), type: 'screenshot', verdict: result.verdict, risk: result.riskScore, label: result.campaignLabel })
   return NextResponse.json({ ...result, credits: { remaining: credit.remaining, quota: credit.quota, resetsAt: credit.resetsAt } }, { headers: { 'Cache-Control': 'no-store' } })
 })
 

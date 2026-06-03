@@ -6,6 +6,7 @@ import { buildTagIndex } from '@/lib/tags'
 import { allScamPaths } from '@/lib/seo/paths'
 import { trustPageSlugs } from '@/lib/seo/trust-pages'
 import { allIntelSlugs } from '@/lib/scam-intel/intel-pages'
+import { allCheckerSlugs } from '@/lib/scamcheck/checkers'
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 const SCAM_BASE = process.env.NEXT_PUBLIC_SCAM_BASE_URL ?? BASE_URL
@@ -91,6 +92,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/scamcheck/screenshot`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
     ...allIntelSlugs().map((slug) => ({
       url: `${BASE_URL}/scam-intelligence/${slug}`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 0.7,
+    })),
+    ...allCheckerSlugs().map((slug) => ({
+      url: `${BASE_URL}/${slug}`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 0.8,
     })),
   ]
 

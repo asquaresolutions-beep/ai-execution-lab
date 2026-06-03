@@ -6,6 +6,8 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useCredits, authHeaders } from '@/hooks/use-credits'
 import { useAuth } from '@/components/auth/auth-provider'
+import { ShareResult } from '@/components/scamcheck/share-result'
+import { SCAMCHECK_BASE as SITE } from '@/lib/seo/scamcheck-meta'
 
 type Tab = 'message' | 'link' | 'email' | 'phone' | 'screenshot'
 const TABS: { id: Tab; label: string }[] = [
@@ -32,8 +34,8 @@ const STYLE: Record<string, string> = {
   unclear: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/40',
 }
 
-export function QuickAnalyzer() {
-  const [tab, setTab] = useState<Tab>('message')
+export function QuickAnalyzer({ initialTab = 'message' as Tab }: { initialTab?: Tab }) {
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [value, setValue] = useState('')
   const [result, setResult] = useState<QuickResult | null>(null)
   const [busy, setBusy] = useState(false)
@@ -108,6 +110,7 @@ export function QuickAnalyzer() {
           {result.advice?.length > 0 && (
             <ul className="list-inside list-disc space-y-1 text-sm text-zinc-300">{result.advice.map((a, i) => <li key={i}>{a}</li>)}</ul>
           )}
+          <ShareResult summary={`ScamCheck result: ${result.verdict.replace(/_/g, ' ')} (risk ${result.riskScore}/100) — ${result.category.replace(/_/g, ' ')}. Checked free at ${SITE}/scamcheck`} />
         </div>
       )}
     </section>
