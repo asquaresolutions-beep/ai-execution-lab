@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { getAllMeta } from '@/lib/content'
 import { buildSectionMetadata } from '@/lib/metadata'
 import { formatDateMono } from '@/lib/utils'
+import { FeaturedArticles } from '@/components/lab/featured-articles'
 import type { Metadata } from 'next'
 import type { ContentMeta } from '@/lib/content'
 
@@ -310,6 +311,9 @@ export default function DocsPage() {
           )}
         </div>
       </div>
+
+      {/* Featured (above the normal lists) */}
+      <FeaturedArticles heading="Featured" />
 
       {/* ── Groups ─────────────────────────────────────────── */}
       {groups.map(group => (
