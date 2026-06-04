@@ -8,6 +8,7 @@ import type { ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { ScamCheckNav } from '@/components/scamcheck/scamcheck-nav'
 import { ScamCheckFooter } from '@/components/scamcheck/scamcheck-footer'
+import { SearchModal } from '@/components/search/search-modal'
 
 const SC_PREFIXES = ['/scamcheck', '/scam-intelligence', '/scam-database', '/latest-scams']
 const SC_EXACT = new Set(['/privacy-policy', '/terms', '/contact', '/about', '/how-it-works', '/methodology'])
@@ -36,6 +37,8 @@ export function SiteChrome({ children, labSidebar, labTopBar, labFooter }: { chi
         <main className="flex-1">{children}</main>
         {labFooter}
       </div>
+      {/* Cmd+K palette indexes lab routes → lab chrome only (kept off the ScamCheck product domain). */}
+      <SearchModal />
     </div>
   )
 }

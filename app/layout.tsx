@@ -3,7 +3,6 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import { Sidebar } from '@/components/layout/sidebar'
 import { TopBar } from '@/components/layout/top-bar'
-import { SearchModal } from '@/components/search/search-modal'
 import { Analytics } from '@/components/analytics'
 import { WebVitals } from '@/components/analytics/web-vitals'
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react'
@@ -172,9 +171,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SiteChrome labSidebar={<Sidebar />} labTopBar={<TopBar />} labFooter={<EcosystemFooter />}>
           {children}
         </SiteChrome>
-
-        {/* Global search modal — registers Cmd+K globally */}
-        <SearchModal />
 
         {/* Plausible + GA4 — production only, env-gated via NEXT_PUBLIC_* vars */}
         <Analytics />
