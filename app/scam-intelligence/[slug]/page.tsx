@@ -16,10 +16,10 @@ export function generateStaticParams(): { slug: string }[] {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const p = getIntelPage(slug)
-  if (!p) return { title: 'Scam Intelligence | ScamCheck' }
+  if (!p) return { title: { absolute: 'Scam Intelligence | ScamCheck' } }
   const url = `${BASE}/scam-intelligence/${p.slug}`
   return {
-    title: p.title,
+    title: { absolute: p.title },
     description: p.metaDescription,
     alternates: { canonical: url },
     openGraph: { title: p.h1, description: p.metaDescription, url, type: 'article' },

@@ -7,7 +7,7 @@ import { AdSlot } from '@/components/ads/ad-slot'
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 
 export const metadata: Metadata = {
-  title: 'Scam Intelligence — Trending Scam Campaigns & How to Spot Them | ScamCheck',
+  title: { absolute: 'Scam Intelligence — Trending Scam Campaigns & How to Spot Them | ScamCheck' },
   description: 'Public scam intelligence for India: fake SBI KYC, UPI refund, courier customs, and Telegram investment scams — how they work, the red flags, and an instant screenshot checker.',
   alternates: { canonical: `${BASE}/scam-intelligence` },
   openGraph: { title: 'Scam Intelligence — Trending Scam Campaigns', description: 'How the latest scams work and how to check a screenshot instantly.', url: `${BASE}/scam-intelligence`, type: 'website' },

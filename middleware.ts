@@ -60,10 +60,12 @@ export function middleware(req: NextRequest) {
     const url = req.nextUrl.clone(); url.pathname = '/scam-intelligence'; url.search = ''
     return NextResponse.redirect(url, 301)
   }
-  // 2. Root experience = the screenshot analyzer.
+  // 2. Root experience = the ScamCheck homepage. Use a 308 redirect (not a
+  //    rewrite) so the browser URL becomes /scamcheck — the client chrome keys
+  //    off usePathname(), and a rewrite would leave it at "/" → lab sidebar.
   if (pathname === '/') {
     const url = req.nextUrl.clone(); url.pathname = '/scamcheck'
-    return NextResponse.rewrite(url)
+    return NextResponse.redirect(url, 308)
   }
   // 3. Temporary 404-protection for non-ScamCheck routes on this domain.
   if (!isAllowed(pathname)) {

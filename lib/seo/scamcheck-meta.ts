@@ -12,7 +12,8 @@ export function buildMeta(opts: { path: string; title: string; description: stri
   const url = `${SCAMCHECK_BASE}${opts.path.startsWith('/') ? opts.path : `/${opts.path}`}`
   const ogImage = `${SCAMCHECK_BASE}/opengraph-image`
   return {
-    title: opts.title,
+    // absolute → the root layout's "%s | AI Execution Lab" template never appends to ScamCheck pages
+    title: { absolute: opts.title },
     description: opts.description,
     keywords: opts.keywords,
     alternates: { canonical: url },
