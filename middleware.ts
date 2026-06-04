@@ -47,6 +47,12 @@ export function middleware(req: NextRequest) {
     const url = req.nextUrl.clone(); url.pathname = LEGACY_301[pathname]
     return NextResponse.redirect(url, 301)
   }
+  // Lab programmatic /scams + /scams/hub/* aren't part of the product → 301 to
+  // the product's trending intelligence (fixes those 404s on this domain).
+  if (pathname === '/scams' || pathname.startsWith('/scams/')) {
+    const url = req.nextUrl.clone(); url.pathname = '/scam-intelligence'; url.search = ''
+    return NextResponse.redirect(url, 301)
+  }
   // 2. Root experience = the screenshot analyzer.
   if (pathname === '/') {
     const url = req.nextUrl.clone(); url.pathname = '/scamcheck'

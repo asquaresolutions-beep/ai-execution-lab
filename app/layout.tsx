@@ -8,6 +8,7 @@ import { Analytics } from '@/components/analytics'
 import { WebVitals } from '@/components/analytics/web-vitals'
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react'
 import { EcosystemFooter } from '@/components/platform/ecosystem-footer'
+import { SiteChrome } from '@/components/layout/site-chrome'
 
 // ─── Fonts ───────────────────────────────────────────────────
 const fontSans = Inter({
@@ -157,22 +158,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="text-surface-200 antialiased">
-        <div className="flex min-h-screen">
-          {/* Desktop sidebar */}
-          <Sidebar />
-
-          {/* Main content column */}
-          <div className="flex-1 flex flex-col min-w-0">
-            {/* Mobile top bar */}
-            <TopBar />
-
-            <main className="flex-1">
-              {children}
-            </main>
-
-            <EcosystemFooter />
-          </div>
-        </div>
+        {/* Chrome is route-aware: ScamCheck product nav/footer on ScamCheck
+            routes, AI Execution Lab chrome (passed as props) elsewhere. */}
+        <SiteChrome labSidebar={<Sidebar />} labTopBar={<TopBar />} labFooter={<EcosystemFooter />}>
+          {children}
+        </SiteChrome>
 
         {/* Global search modal — registers Cmd+K globally */}
         <SearchModal />

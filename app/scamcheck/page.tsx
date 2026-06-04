@@ -7,8 +7,8 @@ import { QuickAnalyzer } from '@/components/scamcheck/quick-analyzer'
 import { ScreenshotAnalyzer } from '@/components/scamcheck/screenshot-analyzer'
 import { AdSlot } from '@/components/ads/ad-slot'
 import { TrustSignals } from '@/components/scamcheck/trust-signals'
+import { TrustStats } from '@/components/scamcheck/trust-stats'
 import { INTEL_PAGES } from '@/lib/scam-intel/intel-pages'
-import { CHECKERS } from '@/lib/scamcheck/checkers'
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://scamcheck.asquaresolution.com'
 
@@ -33,14 +33,13 @@ export default function ScamCheckHome() {
       <main className="mx-auto max-w-3xl px-4 py-8">
         {ld.map((j, i) => <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(j) }} />)}
 
-        <header className="mb-6 flex items-center justify-between">
+        <header className="mb-6 flex items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-100">ScamCheck</h1>
-            <p className="text-xs text-zinc-500">AI scam detector · by A Square Solutions</p>
+            <h1 className="text-2xl font-bold text-zinc-100">Free AI Scam Detector</h1>
+            <p className="text-xs text-zinc-500">Check a message, link, email, phone, or screenshot — instantly.</p>
           </div>
           <div className="flex items-center gap-3">
             <CreditsDashboard />
-            <Link href="/scamcheck/account" className="hidden rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500 sm:inline">My dashboard</Link>
             <AuthButton />
           </div>
         </header>
@@ -63,27 +62,11 @@ export default function ScamCheckHome() {
           <p className="mt-4"><Link href="/scam-intelligence" className="text-sky-400 hover:underline">All trending scam campaigns →</Link></p>
         </section>
 
+        <TrustStats />
         <TrustSignals />
 
-        {/* Ad slot kept far from the tool / trust UI (page footer). */}
+        {/* Ad slot kept far from the tool / trust UI. */}
         <AdSlot id="scamcheck-home-footer" format="horizontal" />
-
-        <footer className="mt-10 border-t border-zinc-800 pt-6 text-sm text-zinc-400">
-          <h2 className="text-base font-semibold text-zinc-200">Scam checkers</h2>
-          <ul className="mt-2 grid gap-1 sm:grid-cols-2">
-            {CHECKERS.map((c) => <li key={c.slug}><Link href={`/${c.slug}`} className="text-sky-400 hover:underline">{c.h1}</Link></li>)}
-          </ul>
-          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
-            <Link href="/scam-database" className="hover:text-zinc-300">Scam database</Link>
-            <Link href="/latest-scams" className="hover:text-zinc-300">Latest scams</Link>
-            <Link href="/scam-intelligence" className="hover:text-zinc-300">Scam intelligence</Link>
-            <Link href="/scamcheck/account" className="hover:text-zinc-300">My dashboard</Link>
-            <Link href="/contact" className="hover:text-zinc-300">Report a scam</Link>
-            <Link href="/privacy-policy" className="hover:text-zinc-300">Privacy</Link>
-            <Link href="/terms" className="hover:text-zinc-300">Terms</Link>
-            <span className="text-zinc-600">ScamCheck by A Square Solutions</span>
-          </div>
-        </footer>
       </main>
     </AuthProvider>
   )
