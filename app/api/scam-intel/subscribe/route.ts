@@ -7,6 +7,7 @@ import { getStore, genId } from '@/lib/store/adapter'
 import { enforceRateLimit, RateLimitError } from '@/lib/ai/rate-limit'
 import { clientIp } from '@/lib/admin-auth'
 import { audit } from '@/lib/ai/audit'
+import { notifySubscribe, emailConfigured } from '@/lib/email/notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,7 +38,13 @@ export async function POST(req: Request) {
     token: genId('cf_'), // for a future double-opt-in confirmation link
   })
   await audit({ action: 'admin.action', actor: `public:${ipHash}`, ok: true, message: 'subscribe', subject: id })
-  return NextResponse.json({ ok: true, message: 'Subscribed. Please confirm via the email we send (coming soon).' }, { status: 201 })
+  let emailed = false
+  try { emailed = await notifySubscribe(email) } catch { /* non-fatal */ }
+  return NextResponse.json({
+    ok: true,
+    message: emailConfigured() ? 'Subscribed — check your inbox to confirm.' : 'Subscribed. You\'ll be notified about new scam alerts.',
+    emailed,
+  }, { status: 201 })
 }
 
 function hash(s: string): string {

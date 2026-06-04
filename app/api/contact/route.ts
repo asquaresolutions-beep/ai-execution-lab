@@ -1,11 +1,12 @@
-// POST /api/contact  (PUBLIC, rate-limited) — store a contact/scam-report message.
-// Best-effort persistence to the document store; never sends email directly
-// (no SMTP configured). Always returns JSON.
+// POST /api/contact  (PUBLIC, rate-limited) — store a contact/scam-report message
+// and (when RESEND_API_KEY is set) email an admin notification + user
+// autoresponder. Persistence is best-effort; email is env-gated. Always JSON.
 import { NextResponse } from 'next/server'
 import { getStore } from '@/lib/store/adapter'
 import { enforceRateLimit, RateLimitError } from '@/lib/ai/rate-limit'
 import { clientIp } from '@/lib/admin-auth'
 import { jsonRoute, ApiError } from '@/lib/api/json'
+import { notifyContact } from '@/lib/email/notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,5 +29,8 @@ export const POST = jsonRoute('contact', async (req) => {
   try {
     await getStore().set('_contact', id, { name: (b.name || '').slice(0, 120), email, kind: (b.kind || 'general').slice(0, 40), message: message.slice(0, 4000), ip: clientIp(req), createdAt: new Date().toISOString() })
   } catch { /* best-effort */ }
+  // Email notifications (admin + autoresponder). Awaited so the send completes in
+  // the serverless lifecycle; never fails the request if email isn't configured.
+  try { await notifyContact({ name: b.name, email, kind: b.kind, message }) } catch { /* non-fatal */ }
   return NextResponse.json({ ok: true, detail: 'Thanks — we received your message.' }, { headers: { 'Cache-Control': 'no-store' } })
 })
