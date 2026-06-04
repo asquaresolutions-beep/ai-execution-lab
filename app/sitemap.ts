@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next'
 import { allIntelSlugs } from '@/lib/scam-intel/intel-pages'
 import { allCheckerSlugs } from '@/lib/scamcheck/checkers'
+import { ES_CHECKERS } from '@/lib/scamcheck/es-pages'
 
 // The public product served on this domain is ScamCheck. The sitemap therefore
 // lists ONLY the ScamCheck product surface — every URL here is reachable (200)
@@ -29,5 +30,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${BASE}/scam-intelligence/${slug}`, lastModified: now, changeFrequency: 'weekly', priority: 0.7,
   }))
 
-  return [...fixed, ...checkers, ...intel]
+  // Spanish (es) pages — homepage + checkers, with hreflang alternates.
+  const es: MetadataRoute.Sitemap = [
+    { url: `${BASE}/es`, lastModified: now, changeFrequency: 'daily', priority: 0.8, alternates: { languages: { en: `${BASE}/`, es: `${BASE}/es` } } },
+    ...ES_CHECKERS.map((c) => ({
+      url: `${BASE}/es/${c.slug}`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.7,
+      alternates: { languages: { en: `${BASE}/${c.enSlug}`, es: `${BASE}/es/${c.slug}` } },
+    })),
+  ]
+
+  return [...fixed, ...checkers, ...intel, ...es]
 }

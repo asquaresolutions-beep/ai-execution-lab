@@ -9,6 +9,7 @@ import { QuickAnalyzer } from '@/components/scamcheck/quick-analyzer'
 import { ScreenshotAnalyzer } from '@/components/scamcheck/screenshot-analyzer'
 import { TrustSignals } from '@/components/scamcheck/trust-signals'
 import { CHECKER_CONTENT } from '@/lib/scamcheck/checker-content'
+import { ES_CHECKERS } from '@/lib/scamcheck/es-pages'
 import { AdSlot } from '@/components/ads/ad-slot'
 
 type Props = { params: Promise<{ checker: string }> }
@@ -21,7 +22,12 @@ export function generateStaticParams(): { checker: string }[] {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const c = getChecker((await params).checker)
   if (!c) return { title: 'ScamCheck' }
-  return buildMeta({ path: `/${c.slug}`, title: c.title, description: c.description })
+  // Reciprocal hreflang when a Spanish equivalent exists.
+  const es = ES_CHECKERS.find((x) => x.enSlug === c.slug)
+  return buildMeta({
+    path: `/${c.slug}`, title: c.title, description: c.description,
+    ...(es ? { languages: { en: `/${c.slug}`, es: `/es/${es.slug}`, 'x-default': `/${c.slug}` } } : {}),
+  })
 }
 
 export default async function CheckerPage({ params }: Props) {

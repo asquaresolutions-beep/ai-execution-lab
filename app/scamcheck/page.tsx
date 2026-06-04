@@ -11,6 +11,8 @@ import { TrendingIsland } from '@/components/scam-intel/trending-island'
 import { AdSlot } from '@/components/ads/ad-slot'
 import { buildMeta } from '@/lib/seo/scamcheck-meta'
 import { INTEL_PAGES } from '@/lib/scam-intel/intel-pages'
+import { CHECKERS } from '@/lib/scamcheck/checkers'
+import { SUPPORTED_COUNTRIES } from '@/lib/scam-intel/countries'
 
 export const metadata: Metadata = buildMeta({
   // Canonical homepage is the root "/" (served here via the middleware rewrite).
@@ -20,6 +22,7 @@ export const metadata: Metadata = buildMeta({
   keywords: ['scam detector', 'AI scam checker', 'WhatsApp scam', 'SMS scam', 'UPI fraud', 'phishing checker', 'screenshot scam check',
     // Spanish SEO
     'detector de estafas', 'verificar enlace estafa', 'comprobar mensaje fraude', 'detector de phishing', 'es esto una estafa'],
+  languages: { en: '/', es: '/es', 'x-default': '/' },
 })
 
 const CATEGORIES = [
@@ -68,6 +71,28 @@ export default function ScamCheckHome() {
               <AuthButton />
             </div>
             <TrustBadges className="mt-6" />
+
+            {/* Above-the-fold trust metrics (real data) */}
+            <dl className="mx-auto mt-7 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { v: `${INTEL_PAGES.length}+`, l: 'Fraud patterns tracked' },
+                { v: `${SUPPORTED_COUNTRIES.length}`, l: 'Countries protected' },
+                { v: `${CHECKERS.length}`, l: 'Scan channels' },
+                { v: '0', l: 'Screenshots stored' },
+              ].map((s) => (
+                <div key={s.l} className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-3">
+                  <dt className="text-2xl font-bold text-sky-300">{s.v}</dt>
+                  <dd className="mt-0.5 text-[11px] uppercase tracking-wide text-zinc-500">{s.l}</dd>
+                </div>
+              ))}
+            </dl>
+
+            {/* Live scam alert (latest tracked campaign) */}
+            <p className="mx-auto mt-4 flex max-w-xl items-center justify-center gap-2 text-xs text-zinc-400">
+              <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-red-500" aria-hidden />
+              <span className="font-medium text-zinc-300">Live alert:</span>
+              <Link href={`/scam-intelligence/${INTEL_PAGES[0].slug}`} className="truncate text-sky-400 hover:underline">{INTEL_PAGES[0].h1}</Link>
+            </p>
           </div>
         </section>
 
