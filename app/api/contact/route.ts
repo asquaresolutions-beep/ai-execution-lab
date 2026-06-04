@@ -32,6 +32,7 @@ export const POST = jsonRoute('contact', async (req) => {
   // Email notifications (admin + autoresponder). Awaited so the send completes in
   // the serverless lifecycle; never fails the request if email isn't configured.
   let emailed = { admin: false, user: false }
-  try { emailed = await notifyContact({ name: b.name, email, kind: b.kind, message }) } catch { /* non-fatal */ }
-  return NextResponse.json({ ok: true, detail: 'Thanks — we received your message.', emailed }, { headers: { 'Cache-Control': 'no-store' } })
+  let emailError: string | undefined
+  try { const r = await notifyContact({ name: b.name, email, kind: b.kind, message }); emailed = { admin: r.admin, user: r.user }; emailError = r.error } catch (e) { emailError = (e as Error).message }
+  return NextResponse.json({ ok: true, detail: 'Thanks — we received your message.', emailed, ...(emailError ? { emailError } : {}) }, { headers: { 'Cache-Control': 'no-store' } })
 })

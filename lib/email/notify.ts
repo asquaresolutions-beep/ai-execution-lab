@@ -21,7 +21,7 @@ export function emailConfigured(): boolean { return !!RESEND_API_KEY }
 
 const esc = (s: string) => s.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] as string))
 
-async function send(opts: { to: string; subject: string; html: string; replyTo?: string }): Promise<{ ok: boolean; skipped?: boolean; status?: number }> {
+async function send(opts: { to: string; subject: string; html: string; replyTo?: string }): Promise<{ ok: boolean; skipped?: boolean; status?: number; error?: string }> {
   if (!RESEND_API_KEY) return { ok: false, skipped: true }
   try {
     const r = await fetch('https://api.resend.com/emails', {
@@ -29,9 +29,12 @@ async function send(opts: { to: string; subject: string; html: string; replyTo?:
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'content-type': 'application/json' },
       body: JSON.stringify({ from: EMAIL_FROM, to: [opts.to], subject: opts.subject, html: opts.html, ...(opts.replyTo ? { reply_to: opts.replyTo } : {}) }),
     })
-    return { ok: r.ok, status: r.status }
-  } catch {
-    return { ok: false }
+    if (r.ok) return { ok: true, status: r.status }
+    let error = ''
+    try { const d = await r.json(); error = (d.message || d.name || JSON.stringify(d)) } catch { error = await r.text().catch(() => '') }
+    return { ok: false, status: r.status, error: String(error).slice(0, 300) }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message?.slice(0, 300) }
   }
 }
 
@@ -43,7 +46,7 @@ const wrap = (title: string, body: string) =>
    </div>`
 
 /** Admin notification + user autoresponder for a contact / scam-report submission. */
-export async function notifyContact(d: { name?: string; email?: string; kind?: string; message: string }): Promise<{ admin: boolean; user: boolean }> {
+export async function notifyContact(d: { name?: string; email?: string; kind?: string; message: string }): Promise<{ admin: boolean; user: boolean; error?: string }> {
   const kind = d.kind || 'general'
   const admin = await send({
     to: ADMIN_EMAIL,
@@ -67,12 +70,13 @@ export async function notifyContact(d: { name?: string; email?: string; kind?: s
         <p style="white-space:pre-wrap;color:#52525b;border-left:3px solid #e4e4e7;padding-left:10px">${esc(d.message)}</p>`),
     })
     user = res.ok
+    return { admin: admin.ok, user, error: admin.error || res.error }
   }
-  return { admin: admin.ok, user }
+  return { admin: admin.ok, user, error: admin.error }
 }
 
 /** Welcome / confirmation for a scam-alert subscription. */
-export async function notifySubscribe(email: string): Promise<boolean> {
+export async function notifySubscribe(email: string): Promise<{ ok: boolean; error?: string }> {
   const res = await send({
     to: email,
     subject: 'You\'re subscribed to ScamCheck alerts',
@@ -80,5 +84,5 @@ export async function notifySubscribe(email: string): Promise<boolean> {
       <p>Thanks for subscribing to ScamCheck scam alerts. You'll get notified about new and trending scam campaigns relevant to your region.</p>
       <p>Check a suspicious message any time at <a href="https://scamcheck.asquaresolution.com">scamcheck.asquaresolution.com</a>.</p>`),
   })
-  return res.ok
+  return { ok: res.ok, error: res.error }
 }

@@ -39,11 +39,13 @@ export async function POST(req: Request) {
   })
   await audit({ action: 'admin.action', actor: `public:${ipHash}`, ok: true, message: 'subscribe', subject: id })
   let emailed = false
-  try { emailed = await notifySubscribe(email) } catch { /* non-fatal */ }
+  let emailError: string | undefined
+  try { const r = await notifySubscribe(email); emailed = r.ok; emailError = r.error } catch (e) { emailError = (e as Error).message }
   return NextResponse.json({
     ok: true,
     message: emailConfigured() ? 'Subscribed — check your inbox to confirm.' : 'Subscribed. You\'ll be notified about new scam alerts.',
     emailed,
+    ...(emailError ? { emailError } : {}),
   }, { status: 201 })
 }
 
