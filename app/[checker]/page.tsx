@@ -54,6 +54,14 @@ export default async function CheckerPage({ params }: Props) {
         </div>
 
         <TrustSignals />
+
+        {c.guide && (
+          <a href={c.guide.url} className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-sky-500/30 bg-sky-500/[0.06] px-4 py-3 text-sm hover:border-sky-500/50">
+            <span className="text-zinc-200">📘 Read the full guide: <strong className="text-sky-300">{c.guide.title}</strong></span>
+            <span className="shrink-0 text-sky-400">Read guide →</span>
+          </a>
+        )}
+
         <AdSlot id={`checker-${c.slug}`} format="horizontal" />
 
         {(() => { const ct = CHECKER_CONTENT[c.tab]; return (
