@@ -1,63 +1,72 @@
 'use client'
 
 // components/i18n/language-switcher.tsx
-// Language switcher for ScamCheck (English / Hindi / Hinglish). Persists the
-// choice to localStorage + a cookie (for future SSR), reflects it on <html lang>,
-// and broadcasts a 'sc-lang' CustomEvent so any client component (e.g. the
-// analyzer, which already ships an en/hi/es dictionary in lib/i18n) can
-// react. Architecture is ready for more languages — add to LANGS in
-// lib/i18n/scamcheck.ts (Spanish intentionally excluded for now).
+// Locale selector for ScamCheck. Page content is rendered per-route (English at
+// the root, full Spanish at /es), so switching language NAVIGATES to the
+// localized URL rather than trying to swap text in place (which previously did
+// nothing — the selector changed state but no content was bound to it).
+//
+// Languages offered here are the ones with real translated pages: English +
+// Español. The screenshot scanner additionally supports Hindi via its own
+// in-component control; dedicated Hindi pages don't exist yet.
 
-import { useEffect, useState } from 'react'
-import { LANGS, type Lang } from '@/lib/i18n/scamcheck'
+import { usePathname, useRouter } from 'next/navigation'
+import { ES_CHECKERS } from '@/lib/scamcheck/es-pages'
 
-const KEY = 'sc-lang'
+type Loc = 'en' | 'es'
+const OPTIONS: { code: Loc; label: string }[] = [
+  { code: 'en', label: 'English' },
+  { code: 'es', label: 'Español' },
+]
 
-export function getStoredLang(): Lang {
-  if (typeof window === 'undefined') return 'en'
-  try {
-    const v = localStorage.getItem(KEY)
-    if (v === 'en' || v === 'hi' || v === 'es') return v
-  } catch { /* ignore */ }
-  return 'en'
+/** Current locale from the path. */
+function localeOf(path: string): Loc {
+  return path === '/es' || path.startsWith('/es/') ? 'es' : 'en'
 }
 
-export function useLang(): Lang {
-  const [lang, setLang] = useState<Lang>('en')
-  useEffect(() => {
-    setLang(getStoredLang())
-    const on = (e: Event) => setLang((e as CustomEvent<Lang>).detail)
-    window.addEventListener('sc-lang', on as EventListener)
-    return () => window.removeEventListener('sc-lang', on as EventListener)
-  }, [])
-  return lang
+/** Map the current path to its equivalent in the target locale. */
+export function localizedPath(path: string, target: Loc): string {
+  // Normalise to the English equivalent first.
+  let en = path
+  if (path === '/es') en = '/'
+  else if (path.startsWith('/es/')) {
+    const esSlug = path.slice('/es/'.length)
+    const m = ES_CHECKERS.find((c) => c.slug === esSlug)
+    en = m ? `/${m.enSlug}` : '/'
+  }
+  if (target === 'en') return en
+  // Target Spanish: map known English checker slugs → /es/<slug>, else /es home.
+  if (en === '/') return '/es'
+  const slug = en.replace(/^\//, '')
+  const m = ES_CHECKERS.find((c) => c.enSlug === slug)
+  return m ? `/es/${m.slug}` : '/es'
 }
 
 export function LanguageSwitcher({ className = '' }: { className?: string }) {
-  const [lang, setLang] = useState<Lang>('en')
-  useEffect(() => { setLang(getStoredLang()) }, [])
+  const router = useRouter()
+  const pathname = usePathname() || '/'
+  const current = localeOf(pathname)
 
-  function choose(next: Lang) {
-    setLang(next)
+  function choose(target: Loc) {
+    if (target === current) return
     try {
-      localStorage.setItem(KEY, next)
-      document.cookie = `${KEY}=${next};path=/;max-age=31536000;samesite=lax`
-      document.documentElement.lang = next
+      localStorage.setItem('sc-lang', target)
+      document.cookie = `sc-lang=${target};path=/;max-age=31536000;samesite=lax`
     } catch { /* ignore */ }
-    window.dispatchEvent(new CustomEvent<Lang>('sc-lang', { detail: next }))
+    router.push(localizedPath(pathname, target))
   }
 
   return (
     <label className={`flex items-center gap-1 text-xs text-zinc-400 ${className}`}>
-      <span className="sr-only">Language</span>
+      <span className="sr-only">Language / Idioma</span>
       <span aria-hidden>🌐</span>
       <select
-        value={lang}
-        onChange={(e) => choose(e.target.value as Lang)}
+        value={current}
+        onChange={(e) => choose(e.target.value as Loc)}
         aria-label="Choose language"
         className="rounded-md border border-zinc-700 bg-zinc-900 px-1.5 py-1 text-xs text-zinc-200"
       >
-        {LANGS.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+        {OPTIONS.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
       </select>
     </label>
   )
