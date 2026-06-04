@@ -1,12 +1,9 @@
 import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
-import { Sidebar } from '@/components/layout/sidebar'
-import { TopBar } from '@/components/layout/top-bar'
 import { Analytics } from '@/components/analytics'
 import { WebVitals } from '@/components/analytics/web-vitals'
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react'
-import { EcosystemFooter } from '@/components/platform/ecosystem-footer'
 import { SiteChrome } from '@/components/layout/site-chrome'
 
 // ─── Fonts ───────────────────────────────────────────────────
@@ -168,7 +165,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="text-surface-200 antialiased">
         {/* Chrome is route-aware: ScamCheck product nav/footer on ScamCheck
             routes, AI Execution Lab chrome (passed as props) elsewhere. */}
-        <SiteChrome labSidebar={<Sidebar />} labTopBar={<TopBar />} labFooter={<EcosystemFooter />}>
+        <SiteChrome>
           {children}
         </SiteChrome>
 
