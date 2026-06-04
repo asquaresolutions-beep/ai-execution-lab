@@ -8,6 +8,7 @@ import { AuthProvider } from '@/components/auth/auth-provider'
 import { QuickAnalyzer } from '@/components/scamcheck/quick-analyzer'
 import { ScreenshotAnalyzer } from '@/components/scamcheck/screenshot-analyzer'
 import { TrustSignals } from '@/components/scamcheck/trust-signals'
+import { CHECKER_CONTENT } from '@/lib/scamcheck/checker-content'
 import { AdSlot } from '@/components/ads/ad-slot'
 
 type Props = { params: Promise<{ checker: string }> }
@@ -48,6 +49,27 @@ export default async function CheckerPage({ params }: Props) {
 
         <TrustSignals />
         <AdSlot id={`checker-${c.slug}`} format="horizontal" />
+
+        {(() => { const ct = CHECKER_CONTENT[c.tab]; return (
+          <div className="mt-8 space-y-6 text-sm text-zinc-300">
+            <section>
+              <h2 className="text-lg font-semibold text-zinc-100">How these scams work</h2>
+              <ol className="mt-2 list-inside list-decimal space-y-1">{ct.howItWorks.map((s, i) => <li key={i}>{s}</li>)}</ol>
+            </section>
+            <section>
+              <h2 className="text-lg font-semibold text-zinc-100">Red flags</h2>
+              <ul className="mt-2 list-inside list-disc space-y-1">{ct.redFlags.map((s, i) => <li key={i}>{s}</li>)}</ul>
+            </section>
+            <section>
+              <h2 className="text-lg font-semibold text-zinc-100">Real examples</h2>
+              <ul className="mt-2 space-y-2">{ct.examples.map((s, i) => <li key={i} className="rounded-lg border-l-4 border-red-500/50 bg-zinc-900/60 p-3 text-zinc-300">{s}</li>)}</ul>
+            </section>
+            <section>
+              <h2 className="text-lg font-semibold text-zinc-100">How to protect yourself</h2>
+              <ul className="mt-2 list-inside list-disc space-y-1">{ct.protect.map((s, i) => <li key={i}>{s}</li>)}</ul>
+            </section>
+          </div>
+        ) })()}
 
         <section className="mt-8 text-sm">
           <h2 className="text-base font-semibold text-zinc-200">FAQ</h2>

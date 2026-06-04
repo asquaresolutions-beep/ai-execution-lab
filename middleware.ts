@@ -17,13 +17,19 @@ const LEGACY_301: Record<string, string> = {
   '/types-of-scams': '/scam-intelligence',
   '/how-to-report': '/scam-intelligence',
   '/protect-yourself': '/scam-intelligence',
+  // Clean nav aliases → canonical pages (no nav item 404s).
+  '/trending-scams': '/scam-intelligence',
+  '/screenshot-scanner': '/scamcheck/screenshot',
+  '/report-scam': '/contact',
+  '/my-dashboard': '/scamcheck/account',
+  '/scam-guides': '/scam-database',
 }
 
 // Path prefixes allowed on the scamcheck product domain.
 const ALLOW_PREFIXES = [
-  '/scamcheck', '/scam-intelligence',
-  '/privacy-policy', '/terms', '/contact',           // legal pages (task 11)
-  '/api/scam-intel', '/api/geo', '/api/semantic-search', // required APIs (task 8)
+  '/scamcheck', '/scam-intelligence', '/scam-database', '/latest-scams',
+  '/privacy-policy', '/terms', '/contact', '/about', '/how-it-works', '/methodology', // legal + E-E-A-T
+  '/api/scam-intel', '/api/geo', '/api/semantic-search', '/api/credits', '/api/scans', '/api/contact',
   '/_next', '/sitemap', '/robots', '/manifest', '/icon', '/apple-icon', '/opengraph-image', '/favicon',
 ]
 
@@ -33,6 +39,7 @@ function isScamCheckHost(host: string): boolean {
 function isAllowed(path: string): boolean {
   if (path === '/') return true
   if (/\.[a-z0-9]+$/i.test(path)) return true        // static assets (.png/.xml/.ico…)
+  if (path.endsWith('-scam-checker')) return true     // SEO checker landing pages
   return ALLOW_PREFIXES.some((p) => path === p || path.startsWith(p + '/') || path.startsWith(p))
 }
 

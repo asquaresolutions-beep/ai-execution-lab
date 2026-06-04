@@ -10,7 +10,7 @@ import { ScamCheckNav } from '@/components/scamcheck/scamcheck-nav'
 import { ScamCheckFooter } from '@/components/scamcheck/scamcheck-footer'
 
 const SC_PREFIXES = ['/scamcheck', '/scam-intelligence', '/scam-database', '/latest-scams']
-const SC_EXACT = new Set(['/privacy-policy', '/terms', '/contact'])
+const SC_EXACT = new Set(['/privacy-policy', '/terms', '/contact', '/about', '/how-it-works', '/methodology'])
 function isScamCheckRoute(path: string): boolean {
   if (SC_EXACT.has(path)) return true
   if (path.endsWith('-scam-checker')) return true

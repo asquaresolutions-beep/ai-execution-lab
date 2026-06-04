@@ -1,23 +1,24 @@
 import type { Metadata } from 'next'
+import { buildMeta } from '@/lib/seo/scamcheck-meta'
+import { ContactForm } from '@/components/scamcheck/contact-form'
 
-const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://scamcheck.asquaresolution.com'
-export const metadata: Metadata = {
-  title: 'Contact — ScamCheck',
-  description: 'Contact A Square Solutions about ScamCheck. To report fraud, use your national cybercrime agency (e.g. 1930 / cybercrime.gov.in in India).',
-  alternates: { canonical: `${BASE}/contact` },
-}
+export const metadata: Metadata = buildMeta({
+  path: '/contact',
+  title: 'Contact & Report a Scam — ScamCheck',
+  description: 'Contact ScamCheck (by A Square Solutions) or report a scam. Reach us at contact@asquaresolution.com. For fraud, also report to your national agency (e.g. 1930 / cybercrime.gov.in in India).',
+})
 
 export default function Contact() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 text-zinc-200">
-      <h1 className="text-2xl font-bold">Contact</h1>
-      <div className="mt-6 space-y-4 text-sm leading-relaxed text-zinc-300">
-        <p>ScamCheck is built by <strong>A Square Solutions</strong>.</p>
-        <p>For product feedback or questions, reach us at <a href="mailto:hello@asquaresolution.com" className="text-sky-400 hover:underline">hello@asquaresolution.com</a>.</p>
-        <h2 className="text-lg font-semibold text-zinc-100">Reporting a scam</h2>
-        <p>ScamCheck does not file reports on your behalf. To report fraud, contact your national agency — for example, in India call <strong>1930</strong> or report at <a href="https://cybercrime.gov.in" className="text-sky-400 hover:underline" target="_blank" rel="noopener noreferrer">cybercrime.gov.in</a>. See a scam&apos;s page under <a href="/scam-intelligence" className="text-sky-400 hover:underline">Scam Intelligence</a> for country-specific reporting.</p>
-        <p>If you have lost money or shared sensitive details, contact your bank immediately.</p>
-      </div>
+      <h1 className="text-2xl font-bold">Contact &amp; Report a Scam</h1>
+      <p className="mt-2 text-sm text-zinc-400">ScamCheck is built by <strong>A Square Solutions</strong>. Send feedback, a question, or report a scam below. We read every message.</p>
+      <div className="mt-6"><ContactForm /></div>
+      <section className="mt-8 text-sm text-zinc-400">
+        <h2 className="text-base font-semibold text-zinc-200">Reporting fraud</h2>
+        <p className="mt-1">ScamCheck does not file official reports for you. If you have lost money or shared sensitive details, contact your bank immediately and report to your national agency — for example, in India call <strong>1930</strong> or report at <a href="https://cybercrime.gov.in" className="text-sky-400 hover:underline" target="_blank" rel="noopener noreferrer">cybercrime.gov.in</a>. Each scam page lists country-specific reporting.</p>
+        <p className="mt-3">Email: <a href="mailto:contact@asquaresolution.com" className="text-sky-400 hover:underline">contact@asquaresolution.com</a></p>
+      </section>
     </main>
   )
 }

@@ -156,6 +156,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
         />
+        {/* Google AdSense Auto Ads — loads only when a publisher ID is set;
+            ad placement is controlled in the AdSense dashboard (not forced). */}
+        {process.env.NEXT_PUBLIC_ADSENSE_CLIENT && (
+          <script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT}`}
+            crossOrigin="anonymous"
+          />
+        )}
       </head>
       <body className="text-surface-200 antialiased">
         {/* Chrome is route-aware: ScamCheck product nav/footer on ScamCheck
