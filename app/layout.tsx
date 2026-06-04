@@ -74,7 +74,10 @@ export const metadata: Metadata = {
     creator: '@asquaresolution',
   },
   robots: { index: true, follow: true },
-  alternates: { canonical: SITE_URL },
+  // No hardcoded canonical here: a fixed canonical made every page that didn't
+  // override it (all Lab pages) canonicalize to the ScamCheck domain. Each page
+  // now self-canonicalizes (ScamCheck pages set their own via buildMeta; Lab
+  // pages default to the requested URL).
 }
 
 // ─── JSON-LD structured data ─────────────────────────────────

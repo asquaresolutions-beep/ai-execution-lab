@@ -26,6 +26,8 @@ export function buildMeta(opts: {
     title: { absolute: opts.title },
     description: opts.description,
     keywords: opts.keywords,
+    // ScamCheck shield favicon — overrides the app-wide Lab icon on ScamCheck routes.
+    icons: { icon: [{ url: '/scamcheck-icon.svg', type: 'image/svg+xml' }], shortcut: '/scamcheck-icon.svg', apple: '/scamcheck-icon.svg' },
     alternates: { canonical: url, ...(languages ? { languages } : {}) },
     openGraph: { title: opts.title, description: opts.description, url, type: opts.type ?? 'website', siteName: 'ScamCheck', locale: opts.locale ?? 'en_US', images: [{ url: ogImage }] },
     twitter: { card: 'summary_large_image', title: opts.title, description: opts.description, images: [ogImage] },
