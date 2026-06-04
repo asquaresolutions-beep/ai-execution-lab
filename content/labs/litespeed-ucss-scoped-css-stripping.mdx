@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: LiteSpeed UCSS Strips Scoped CSS — Confirmed
 description: LiteSpeed's UCSS optimizer removes all CSS rules scoped to post-specific body classes (.postid-XXXX) because it crawls pages without those classes active. Any stylesheet-based per-post typography fix is silently neutralised.
 date: "2026-05-17"
@@ -7,7 +9,6 @@ status: published
 hypothesis: LiteSpeed UCSS strips .postid-XXXX scoped CSS rules, making Kit CSS and any scoped stylesheet fix invisible to browsers.
 result: confirmed
 ---
-
 ## Background
 
 A Square Solutions runs a WordPress blog on Astra + LiteSpeed Cache. The Astra Customizer sets a global heading size of **90px for all `h2` elements** — a landing-page setting that bleeds into every editorial article.

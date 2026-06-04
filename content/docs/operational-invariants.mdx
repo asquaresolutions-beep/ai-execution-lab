@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Operational Invariants — A Square Solutions Reliability Doctrine"
 description: "The 20 operational invariants governing the A Square Solutions ecosystem, extracted from real production failures and operational history. Each invariant is a condition that must remain true for the system to behave safely and predictably — an explicit reliability contract derived from TrustSeal, ScamCheck, AI Execution Lab, and WordPress production experience."
 date: "2026-05-25"
@@ -21,7 +23,6 @@ related_docs:
   - razorpay-subscription-integration
   - firebase-firestore-quota-enforcement
 ---
-
 An operational invariant is a condition that must remain true for the system to behave safely and predictably. These are not aspirational guidelines — they are production-derived reliability contracts. Each one was extracted from a real failure or a real architectural decision whose violation would produce a documented failure class.
 
 Twenty invariants are documented here, organized into five clusters. Every invariant includes the failure or production event that established it, the consequence of violation, and the verification method.

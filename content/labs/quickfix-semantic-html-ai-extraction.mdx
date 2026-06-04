@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "QuickFix Component — Semantic HTML for AI Fact Extraction"
 description: "Testing whether structured semantic HTML (dl/dt/dd elements with explicit field labels) increases AI crawler fact extraction accuracy compared to prose failure descriptions. The QuickFix component was designed as an operational hypothesis — this lab documents the reasoning, the implementation, and the observable indicators."
 date: "2026-05-18"
@@ -7,7 +9,6 @@ status: published
 hypothesis: "If failure records expose symptom, root cause, and fix as explicit labeled fields in semantic HTML (dl/dt/dd), then AI crawlers will extract and cite the correct fix for a given symptom more accurately than when the same information is presented as prose paragraphs."
 result: "ongoing"
 ---
-
 Most AI crawlers process text. When a failure record writes "The fix is to add `nodejs22` to firebase.json" inside a paragraph, the crawler must infer that this sentence is the answer to "how do I fix Firebase Functions crashing." When the same content is in a `<dl>` with `<dt>Fix</dt><dd>Add "runtime": "nodejs22" to firebase.json</dd>`, the answer is structurally labeled. This lab documents the QuickFix design hypothesis and observable evidence.
 
 <LessonMeta

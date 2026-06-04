@@ -8,6 +8,9 @@ import { LiveActivityBar } from '@/components/platform/live-activity-bar'
 import { CheckMessageBox } from '@/components/scam/check-message-box'
 import { TrendingTicker } from '@/components/scam/trending-ticker'
 import { getEvidenceMetrics, formatOperationalHours, formatAvgResolution } from '@/lib/evidence-metrics'
+import { FeaturedArticles } from '@/components/lab/featured-articles'
+import { PopularArticles } from '@/components/lab/popular-articles'
+import { NewsletterSignup } from '@/components/lab/newsletter-signup'
 
 // Code-split framer-motion components — reduces initial JS parse work
 const StatsBar = dynamic(
@@ -155,6 +158,15 @@ export default function HomePage() {
 
       {/* ── Stats bar ────────────────────────────────────────── */}
       <StatsBar stats={stats} />
+
+      {/* ── Featured articles ────────────────────────────────── */}
+      <FeaturedArticles heading="Featured Articles" />
+
+      {/* ── Popular + Newsletter ─────────────────────────────── */}
+      <div className="mb-12 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2"><PopularArticles heading="Popular Articles" /></div>
+        <NewsletterSignup />
+      </div>
 
       {/* ── Operational evidence strip ───────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-10 -mt-6">

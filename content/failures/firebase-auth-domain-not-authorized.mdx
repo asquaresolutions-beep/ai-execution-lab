@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Firebase Auth Session Lost on Custom Domain"
 description: "Firebase Auth login succeeded but session was lost on every page refresh after moving to a custom domain. Root cause: the custom domain was not added to Firebase Console's Authorized Domains list for the Authentication project. Session cookies and token refresh calls require the domain to be explicitly authorized."
 date: "2026-03-05"
@@ -28,7 +30,6 @@ evidence_images: []
 external_refs:
   - "https://firebase.google.com/docs/auth/web/google-signin#before_you_begin"
 ---
-
 <QuickFix
   symptom="Firebase Auth login flow completes successfully but the user is logged out on every page refresh. Browser console shows auth/unauthorized-domain error. Works on localhost but fails on custom domain."
   rootCause="The custom domain (e.g., trustseal.asquaresolution.com) is not in Firebase Console → Authentication → Settings → Authorized Domains. Firebase Auth rejects session persistence and token refresh requests from unlisted domains."

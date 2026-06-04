@@ -1,11 +1,12 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Failure Intelligence Architecture"
 description: "Design spec for the operational failure intelligence system — severity indexing, recovery complexity, prevention patterns, related failures, deployment risk scoring, and ecosystem impact mapping."
 date: "2026-05-18"
 tags: ["ops", "failures", "architecture", "intelligence", "debugging", "platform"]
 status: "published"
 ---
-
 Individual failure reports are useful. A documented failure with a clear root cause and a verified fix prevents that failure from happening to the next operator who hits the same condition. That value is real and immediate.
 
 But failure reports in isolation only solve the problem once. The deeper value — the value that scales — comes from patterns across failures: which root causes recur, which fixes prevent multiple failures, which deployment patterns carry the highest risk, which categories of failure produce the highest repeat rate. This is what the Failure Intelligence layer exists to extract.

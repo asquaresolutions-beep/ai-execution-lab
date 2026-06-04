@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "WordPress Sitemap Returns 404 While robots.txt Declares It"
 description: "asquaresolution.com/sitemap_index.xml returned HTTP 404 despite robots.txt correctly declaring the sitemap URL and Rank Math's XML sitemap being enabled in plugin settings. Root cause: WordPress rewrite rules cache was stale — the URL handler for the sitemap was no longer registered. Fix: flush and rebuild rewrite rules by saving Permalinks settings without any changes."
 date: "2026-05-19"
@@ -28,7 +30,6 @@ external_refs:
   - "https://rankmath.com/kb/sitemap/"
   - "https://developer.wordpress.org/reference/hooks/init/"
 ---
-
 <QuickFix
   symptom="curl -I https://yourdomain.com/sitemap_index.xml returns HTTP 404. GSC shows sitemap submission errors or 'Couldn't fetch' status. robots.txt correctly declares the sitemap URL. Rank Math XML Sitemap is confirmed enabled in plugin settings."
   rootCause="WordPress permalink/rewrite rules cache is stale. Rewrite rules map /sitemap_index.xml to Rank Math's internal handler — if these rules are flushed (e.g., after a plugin update, core update, or server migration) and not rebuilt, the URL has no registered handler and WordPress returns 404."

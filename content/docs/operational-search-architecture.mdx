@@ -1,11 +1,12 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Operational Search Architecture"
 description: "Design for AI-native operational retrieval: semantic search, debugging lookup, failure pattern retrieval, and entity relationship queries for the AI Execution Lab knowledge base."
 date: "2026-05-18"
 tags: ["search", "retrieval", "ai", "architecture", "ops", "semantic", "intelligence"]
 status: "published"
 ---
-
 This document is not about building a search engine. It is about designing retrieval that serves operational use cases — specifically: "I'm debugging X, what does the platform know about this?" and "I want to learn Y, what's the execution path?"
 
 The difference is not academic. A user searching "Vercel edge runtime error" is not looking for a page. They are looking for: the diagnosis of the specific error they have, the root cause, the verified fix, the prevention checklist so it doesn't happen again, and — if available — the build log from a real deployment where this exact failure occurred. That is a structured operational context, not a list of search results.

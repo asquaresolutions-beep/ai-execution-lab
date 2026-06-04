@@ -1,4 +1,12 @@
 ---
+faqs:
+  - question: What is multimodal ScamCheck?
+    answer: It analyses screenshots and images for scams using OCR, AI vision, and semantic retrieval against known scam campaigns.
+  - question: Are uploaded screenshots stored?
+    answer: No. Images are optimised on-device and processed in-request; they are not stored.
+featured: true
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Multimodal ScamCheck — Screenshot & Image Scam Analysis (OCR + Vision + Semantic Retrieval)"
 description: "Production multimodal scam-intelligence for ScamCheck: screenshot/image upload, lightweight OCR (Cloud Vision + Gemini fallback), deterministic fraud-signal detection, gated deep Gemini-vision analysis, and semantic comparison against known scam clusters via BigQuery VECTOR_SEARCH. Cost-gated, serverless, scale-to-zero."
 date: "2026-06-03"
@@ -8,7 +16,6 @@ related_docs:
   - semantic-intelligence-platform
   - gcp-ai-infrastructure
 ---
-
 ScamCheck now analyzes **screenshots** (WhatsApp/Telegram/Instagram DMs, fake UPI/payment confirmations, phishing UIs, banking SMS) in addition to text. The pipeline is **cost-gated**: cheap OCR + deterministic signals run first; expensive Gemini-vision inference fires only when the verdict is ambiguous.
 
 ## Pipeline (cost-gated)

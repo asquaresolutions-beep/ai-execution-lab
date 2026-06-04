@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Third-Party API Mode Isolation"
 description: "Operational pattern for managing test vs. live mode separation across payment processors, analytics platforms, and authentication providers. Covers the full failure surface: mode-mixed credentials, preview environment contamination, domain authorization gaps, and the unifying root cause — credentials or configuration valid in one scope that are absent, wrong, or mismatched in production."
 date: "2026-05-24"
@@ -16,7 +18,6 @@ related_case_studies:
 related_docs:
   - failure-pattern-library
 ---
-
 Third-party integrations — payment processors, analytics platforms, authentication providers — operate in multiple modes: test vs. live, development vs. production, authorized vs. unauthorized. The failure pattern across all of them is structurally identical: a credential, configuration, or authorization that is valid in one scope is absent, incorrect, or mismatched in another.
 
 The four failures in the archive that exemplify this pattern each cost between 2 minutes and 2 hours to diagnose. They were all preventable with scope-verification steps at deployment time. This document names the pattern, describes each variant, and gives the specific prevention procedure for each.

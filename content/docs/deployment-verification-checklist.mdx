@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Deployment Verification Checklist — A Square Solutions"
 description: "Platform-specific deployment verification checklists for Vercel (AI Execution Lab), Firebase (TrustSeal and ScamCheck Cloud Functions), GitHub Pages (TrustSeal and ScamCheck SPAs), and WordPress (asquaresolution.com). A deploy is not safe until every item on the relevant checklist has been confirmed in production — not in the emulator, not locally, not from build logs."
 date: "2026-05-25"
@@ -17,7 +19,6 @@ related_failures:
   - ga4-preview-environment-contamination
   - dns-subdomain-propagation-delay
 ---
-
 A deployment is not safe until verified in production. Build success, test suite pass, and emulator verification are necessary but not sufficient. Three production failures in the archive passed all pre-deploy checks and were only discovered when a real user request failed after go-live.
 
 This checklist is organized by deployment target. Run the relevant section for every deploy. "Safe" means a real production request returned a successful response — not that the deploy command exited 0.

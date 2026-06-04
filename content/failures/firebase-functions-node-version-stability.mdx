@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Firebase Cloud Functions Crashing on Default Node Runtime"
 description: "Firebase Cloud Functions deployed and appeared active in the console but crashed on every invocation in production. Cold start succeeded but function execution failed with unhandled promise rejections and module resolution errors not present in local development. Root cause: default Node runtime version (Node 18) had known incompatibilities with the npm packages used. Migrating to Node 22 runtime resolved production crashes."
 date: "2026-02-01"
@@ -28,7 +30,6 @@ evidence_images: []
 external_refs:
   - "https://firebase.google.com/docs/functions/manage-functions?gen=2nd#set_nodejs_version"
 ---
-
 <QuickFix
   symptom="Firebase Cloud Functions deploy without errors but crash on every invocation in production. Firebase Console → Functions → Logs shows function started but immediately fails with unhandled rejections or module errors. Local emulator works fine."
   rootCause="Firebase Functions default Node runtime (Node 18 at time of incident) was incompatible with specific npm packages or ESM module resolution used in the function code. The local Node version (typically 20 or 22) worked correctly, masking the incompatibility until production deployment."

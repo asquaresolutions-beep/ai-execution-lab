@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ContentMeta, ContentSection } from '@/lib/content'
 import { SECTION_META, ACCENT_CLASSES, formatDateMono, cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { FeaturedArticles } from '@/components/lab/featured-articles'
 
 // Tag pill — links to /tags/[tag]
 function TagPill({ tag }: { tag: string }) {
@@ -57,6 +58,9 @@ export function SectionIndex({ section, items }: SectionIndexProps) {
           {meta.description}
         </p>
       </div>
+
+      {/* ── Featured (above the normal list) ─────────────────── */}
+      <FeaturedArticles heading="Featured" />
 
       {/* ── Item count ─────────────────────────────────────────── */}
       {items.length > 0 && (

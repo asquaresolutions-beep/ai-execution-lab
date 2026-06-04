@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Missing Production Environment Variable Caused Silent Feature Failure"
 description: "A new Gemini API key environment variable was added to .env.local but not to Vercel production. Feature worked locally and in dev but silently returned undefined in production. Root cause: variable scoped to Development only."
 date: "2026-04-05"
@@ -24,7 +26,6 @@ related_docs:
 linked_incidents:
   - wordpress-rest-api-auth-failure
 ---
-
 <IncidentReport
   severity="high"
   status="resolved"

@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Gemini API 429 Rate Limit Returns Hanging Spinner Instead of User Feedback"
 description: "ScamCheck's Gemini scam detection Cloud Function hit the free tier rate limit (429 Too Many Requests) during rapid testing. The client had no handling for the 429 case and showed an indefinite spinning loader. Root cause: the Cloud Function did not return a structured error response for 429, and the client had no branch for anything other than success. Fix: return { rateLimited: true } from the Cloud Function on 429, detect it client-side, and render a specific message."
 date: "2026-02-10"
@@ -28,7 +30,6 @@ external_refs:
   - "https://ai.google.dev/gemini-api/docs/rate-limits"
   - "https://firebase.google.com/docs/functions/error-handling"
 ---
-
 <QuickFix
   symptom="User submits a scam check request. The submit button shows a loading spinner that never resolves. No error message appears. The Cloud Function logs show HTTP 429 Too Many Requests from the Gemini API."
   rootCause="The Gemini free tier enforces a requests-per-minute (RPM) limit. When multiple requests are submitted in rapid succession, the Gemini API returns 429. The Cloud Function was not handling the 429 case — it propagated the error as an unhandled exception, which the client interpreted as a generic failure and left the spinner running indefinitely."

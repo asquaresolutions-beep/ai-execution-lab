@@ -8,6 +8,8 @@ import { ContentRenderer } from './content-renderer'
 import { TableOfContents } from './layout/toc'
 import { ReadingProgress } from './layout/reading-progress'
 import { ArticleShare } from './article-share'
+import { AuthorBox } from '@/components/lab/author-box'
+import { NewsletterSignup } from '@/components/lab/newsletter-signup'
 
 interface ContentPageProps {
   item: ContentItem
@@ -91,6 +93,26 @@ export async function ContentPage({ item, prev, next, afterContent }: ContentPag
     ...(fm.hypothesis  ? { description: `${fm.description} Hypothesis: ${fm.hypothesis}` } : {}),
   }
 
+  // ── Breadcrumb JSON-LD ────────────────────────────────────
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: sectionMeta.title, item: `${SITE_URL}${sectionMeta.href}` },
+      { '@type': 'ListItem', position: 3, name: fm.title, item: canonicalUrl },
+    ],
+  }
+
+  // ── FAQPage JSON-LD (when faqs present) ───────────────────
+  const faqSchema = fm.faqs?.length
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: fm.faqs.map((f) => ({ '@type': 'Question', name: f.question, acceptedAnswer: { '@type': 'Answer', text: f.answer } })),
+      }
+    : null
+
   return (
     <>
       {/* Article JSON-LD */}
@@ -98,6 +120,8 @@ export async function ContentPage({ item, prev, next, afterContent }: ContentPag
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
       />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      {faqSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />}
 
       {/* Reading progress bar (client, fixed to viewport top) */}
       <ReadingProgress />
@@ -262,6 +286,27 @@ export async function ContentPage({ item, prev, next, afterContent }: ContentPag
 
             {/* Section-specific after-content panel (e.g. debug context for failures) */}
             {afterContent}
+
+            {/* FAQ (renders + emits FAQPage schema above) */}
+            {fm.faqs && fm.faqs.length > 0 && (
+              <section className="mt-12 pt-8 border-t border-white/[0.06]">
+                <h2 className="text-lg font-bold text-surface-100 mb-4">Frequently asked questions</h2>
+                <div className="space-y-3">
+                  {fm.faqs.map((f, i) => (
+                    <details key={i} className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                      <summary className="cursor-pointer text-sm font-medium text-surface-200">{f.question}</summary>
+                      <p className="mt-2 text-sm leading-relaxed text-surface-400">{f.answer}</p>
+                    </details>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Author box */}
+            <AuthorBox authorName={fm.author} />
+
+            {/* Newsletter signup (article footer) */}
+            <div className="mt-8"><NewsletterSignup compact /></div>
 
             {/* Related content */}
             {related.length > 0 && (

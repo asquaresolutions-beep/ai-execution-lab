@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Operational Search Design"
 description: "Design for semantic operational search: entity matching, tag overlap retrieval, pattern similarity, and the /api/operational-search endpoint architecture."
 date: "2026-05-18"
@@ -6,7 +8,6 @@ tags: ["search", "ops", "architecture", "retrieval", "debugging", "intelligence"
 status: published
 noindex: true
 ---
-
 The current `/api/search` endpoint returns documents. That is correct — for document retrieval. But the use case this platform serves is not document retrieval. An operator searching "edge runtime error" during a live debugging session does not need a list of pages that mention edge runtime. They need: the failure entity, its pattern family, its confidence score, and the verified fix. That is an operational package, not a page list.
 
 This document specifies the design for a second-tier search system — `/api/operational-search` — that closes the gap between standard content retrieval and operational context delivery. It covers query classification, entity routing logic, confidence scoring, the response TypeScript interface, and the path toward MCP tool integration.

@@ -1,4 +1,7 @@
 ---
+featured: true
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "ScamCheck Multimodal v3 — Production Evaluation Report"
 description: "Large-scale evaluation of the ScamCheck multimodal scam-detection pipeline: a 1,000-sample synthetic corpus (en/hi/hinglish/mixed, 10 scam + 7 legit categories), precision/recall/F1, per-language and per-category breakdown, adversarial robustness, leaderboard analytics, caching/stress harnesses, cost model, scaling path, and known weaknesses."
 date: "2026-06-03"
@@ -8,7 +11,6 @@ related_docs:
   - multimodal-scamcheck
   - gcp-ai-infrastructure
 ---
-
 Production evaluation of multimodal ScamCheck. Nothing is mocked: the offline
 numbers below are produced by the **real deterministic detection + entity +
 URL-intel + calibration layer** (the cheap layer that gates the live pipeline),

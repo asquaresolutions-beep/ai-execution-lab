@@ -1,11 +1,12 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Failure Memory Architecture"
 description: "Design for persistent debugging intelligence: recurring failure memory, prevention inheritance, confidence scoring, debugging lineage, and ecosystem-wide impact relationships."
 date: "2026-05-18"
 tags: ["failures", "debugging", "memory", "architecture", "patterns", "intelligence", "ops"]
 status: published
 ---
-
 Eight incident reports exist in the Failure Archive. Each documents a specific production incident with a root cause, a fix, and a set of prevention patterns. That documentation has immediate value: a developer who has read `failure:edge-runtime-deployment-failure` will not waste 23 minutes on the same Edge Runtime crypto error.
 
 But isolated incident reports don't scale. As the archive grows, the question changes from "what happened here?" to "why does this keep happening?" and "how confident am I that I know the fix when I see this error?" Answering those questions requires a different structure — a persistent debugging intelligence layer that aggregates incident data into queryable patterns, scores confidence, tracks prevention coverage, and maps the blast radius of failures across the ecosystem.

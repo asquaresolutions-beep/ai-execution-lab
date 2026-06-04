@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Gemini API Returns Malformed JSON — Cloud Function Parse Failure"
 description: "Gemini 1.5-flash intermittently wraps JSON output in markdown code fences or includes explanation text before/after the JSON object. JSON.parse() throws SyntaxError, Cloud Function crashes, client receives no response and shows infinite spinner. Fix: pre-parse cleaning + structured error return."
 date: "2026-02-15"
@@ -18,7 +20,6 @@ related_docs:
   - gemini-production-operations
   - ai-output-structure-validation
 ---
-
 Gemini is a language model, not a JSON serializer. It produces text that looks like JSON most of the time, but it can and does add decoration — markdown code fences, explanation sentences, commentary after the closing brace — especially when the prompt does not explicitly constrain the output format. `JSON.parse()` treats all of this as fatal.
 
 This failure was first observed in ScamCheck (February 2026) during heavy testing after the Gemini integration was initially working. The model was returning valid JSON for most inputs but failing on a subset of inputs, particularly those that triggered longer model reasoning about ambiguous scam signals.

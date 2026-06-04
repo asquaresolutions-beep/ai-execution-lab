@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Firestore Quota Enforcement for AI Features"
 description: "Production pattern for per-user quota tracking, monthly reset logic, atomic increment, pre-AI-call enforcement, and abuse prevention using Firestore. Implemented in TrustSeal (10 free checks/month, premium tier) and ScamCheck (unlimited free after sign-up). Covers the data model, the enforcement code, the reset mechanism, and the cost protection logic that prevents free-tier Gemini quota from being exhausted by a single user."
 date: "2026-05-24"
@@ -15,7 +17,6 @@ related_docs:
   - gemini-production-operations
   - firebase-firestore-quota-enforcement
 ---
-
 Quota enforcement for AI features serves two purposes: product monetization (limiting what free users can do to drive upgrade) and cost protection (preventing a single user from exhausting the Gemini free tier quota for all users).
 
 This document describes the Firestore quota enforcement pattern used in TrustSeal and ScamCheck. The pattern is simple, operationally reliable, and requires no additional infrastructure beyond Firestore.

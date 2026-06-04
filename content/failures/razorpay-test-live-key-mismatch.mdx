@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Razorpay Test/Live Key Mode Mismatch"
 description: "Razorpay checkout modal opened and payment appeared to complete, but the webhook was never fired and the subscription wasn't activated. Root cause: client-side key was in test mode (rzp_test_) while the server-side Cloud Function key was in live mode (rzp_live_), or vice versa. Both keys must match modes simultaneously."
 date: "2026-02-20"
@@ -28,7 +30,6 @@ evidence_images: []
 external_refs:
   - "https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/build-integration/"
 ---
-
 <QuickFix
   symptom="Razorpay checkout modal opens, user completes payment steps, but no webhook fires and subscription is not activated. The payment appears successful client-side but the server has no record of it."
   rootCause="Client-side Razorpay key prefix (rzp_test_ or rzp_live_) does not match the server-side Cloud Function key. Mixed-mode keys use separate payment rails — test payments are invisible to the live environment and vice versa."

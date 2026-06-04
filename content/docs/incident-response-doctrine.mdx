@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Incident Response and Recovery Doctrine — A Square Solutions"
 description: "Recovery invariants, incident classification, blast radius model, and recovery posture for the A Square Solutions ecosystem. Extracted from real production incidents across TrustSeal, ScamCheck, AI Execution Lab, and WordPress. Answers the question: when production behavior diverges from expected state, how do we restore safe operation predictably and without making the incident worse?"
 date: "2026-05-25"
@@ -10,7 +12,6 @@ related_docs:
   - deployment-verification-checklist
   - incident-detection-playbook
 ---
-
 An incident is any condition where production behavior has diverged from expected safe operation. This doctrine defines how incidents are classified, how blast radius is assessed, what recovery posture applies to each failure class, and how restored state is confirmed.
 
 Ten recovery invariants are defined here — extracted from the same production failure history that produced the [Operational Invariants](/docs/operational-invariants). Each recovery invariant addresses a failure mode that recovery actions themselves can introduce.

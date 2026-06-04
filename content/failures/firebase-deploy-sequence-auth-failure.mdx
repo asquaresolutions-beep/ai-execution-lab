@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Firebase Functions 403 After Redeploy — Firestore Rules Deployment Order"
 description: "Firebase Cloud Functions returned 403 errors with missing auth context for 12 minutes after a redeploy that included a Firestore rules update. Root cause: Functions were deployed before Rules, creating a window where new function code ran against stale IAM/rules state. Fix: always deploy Firestore rules before Cloud Functions when both change in the same release."
 date: "2026-05-24"
@@ -19,7 +21,6 @@ related_docs:
 related_logs:
   - 2026-05-24-trustseal-product-memory
 ---
-
 Firebase Functions and Firestore rules are separate deployment artifacts that Firebase manages with separate IAM and configuration states. When both change in the same release and are deployed in the wrong order, there is a window where the function is live against an inconsistent backend state. This produced a 12-minute production outage on TrustSeal in which users could not verify trust claims.
 
 ---

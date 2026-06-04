@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Operational Security Doctrine — A Square Solutions"
 description: "Security invariants, credential governance, trust boundary model, and access discipline for the A Square Solutions ecosystem. Documents the three-tier access architecture across TrustSeal and ScamCheck, all credentials and where they are allowed, the security implications of historical operational failures, silent security drift scenarios, and lightweight security observability patterns. Grounded entirely in real production architecture."
 date: "2026-05-25"
@@ -17,7 +19,6 @@ related_failures:
   - ga4-preview-environment-contamination
   - environment-variable-missing-production
 ---
-
 Security in this ecosystem is not a separate layer — it is an emergent property of the access architecture. The most dangerous security scenarios are not external attacks against hardened endpoints. They are internal configuration states where the system grants more access than intended, or where a credential reaches a context it should not be in. Both are silent. Neither produces a log entry.
 
 This document formalizes the access model, credential inventory, security invariants, trust boundaries, and the conditions that produce silent security drift.

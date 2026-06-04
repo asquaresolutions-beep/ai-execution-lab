@@ -1,11 +1,12 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Evidence Indexing Architecture"
 description: "Metadata standards, evidence tagging, retrieval relationships, and operational relevance scoring for the AI Execution Lab evidence archive."
 date: "2026-05-18"
 tags: ["evidence", "architecture", "indexing", "metadata", "ops", "retrieval"]
 status: "published"
 ---
-
 The `/public/evidence/` directory is growing. As of May 2026, it holds evidence directories for 8 failure reports, 3 case studies, and several operational docs — each containing screenshots, build logs, terminal output, and before/after pairs. That number will reach 50+ content pieces within the next six months.
 
 At that scale, a flat directory-plus-naming-convention is still retrievable if you know what you're looking for. But it stops being queryable. You can't answer "show me all deployment-log evidence from May 2026" or "find all before/after screenshot pairs for Vercel deployments" without reading every directory manually. The evidence archive becomes an evidence silo.

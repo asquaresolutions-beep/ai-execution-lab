@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Vertex AI Gemini — Setup & Provider Architecture"
 description: "How AI Execution Lab uses Vertex AI Gemini 2.5 (Flash + Pro) exclusively: dependency-free service-account auth, model-tier routing with automatic fallback, graceful rate-limit handling, token usage + cost tracking, Vertex quota monitoring, batched multilingual embeddings, and a deterministic mock fallback. Includes the exact env vars, IAM roles, and a go-live checklist."
 date: "2026-05-30"
@@ -9,7 +11,6 @@ related_docs:
   - scam-intelligence-ingestion
   - low-cost-autonomous-operation
 ---
-
 The platform talks to **Vertex AI exclusively** — no direct Generative Language (API-key) calls. The provider abstraction is unchanged for callers: `getProvider().generate()`, `generateJSON()`, and the embeddings API keep their old signatures, so nothing downstream broke.
 
 ## Why Vertex

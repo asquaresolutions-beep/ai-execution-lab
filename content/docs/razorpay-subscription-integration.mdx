@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Razorpay Subscription Integration with Firebase"
 description: "Production implementation reference for Razorpay subscription payments with Firebase Cloud Functions and Firestore. Covers the full flow: subscription creation, checkout modal, webhook verification, Firestore state synchronization, realtime client unlock via onSnapshot, idempotency, and failure modes. Built and verified in production on TrustSeal."
 date: "2026-05-24"
@@ -17,7 +19,6 @@ related_logs:
   - 2026-05-18-trustseal-operations-review
   - 2026-05-24-trustseal-product-memory
 ---
-
 This is the production implementation reference for Razorpay subscription payments with Firebase. It is based on the TrustSeal implementation — a live product that accepts real INR subscription payments from Indian users. The implementation covers both the code and the failure modes that must be handled for this integration to be production-reliable.
 
 **Why Razorpay over Stripe for Indian products:** Stripe processes Indian payments via Stripe India with higher fees and lower conversion rates on UPI and net banking compared to Razorpay, which is purpose-built for the Indian payment ecosystem. For a product targeting Indian users paying in INR, Razorpay is the correct choice.

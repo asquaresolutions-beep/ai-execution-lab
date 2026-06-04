@@ -59,6 +59,9 @@ export interface ContentFrontmatter {
   // Authorship fields
   author?: string
   author_role?: string
+  // Editorial flags + FAQ
+  featured?: boolean
+  faqs?: { question: string; answer: string }[]
   // GEO / evidence fields
   evidence_images?: string[]   // paths or URLs to evidence screenshots/assets
   external_refs?: string[]     // external citations used in the content
@@ -182,6 +185,46 @@ export function getRecentItems(limit = 6): ContentMeta[] {
       new Date(b.frontmatter.date).getTime() - new Date(a.frontmatter.date).getTime()
     )
     .slice(0, limit)
+}
+
+const ALL_SECTIONS: ContentSection[] = ['playbooks', 'systems', 'labs', 'case-studies', 'docs', 'failures', 'logs']
+
+/** All published items across every section, newest first. */
+export function getAllItems(): ContentMeta[] {
+  return ALL_SECTIONS.flatMap((s) => getAllMeta(s))
+    .sort((a, b) => new Date(b.frontmatter.date).getTime() - new Date(a.frontmatter.date).getTime())
+}
+
+/** Featured items (frontmatter.featured === true), newest first. */
+export function getFeaturedItems(limit = 6): ContentMeta[] {
+  return getAllItems().filter((i) => i.frontmatter.featured === true).slice(0, limit)
+}
+
+/**
+ * Popular items via deterministic fallback ranking (no analytics needed):
+ *   1) featured, 2) most internally-linked (inbound related/linked refs), 3) recent.
+ */
+export function getPopularItems(limit = 6): ContentMeta[] {
+  const all = getAllItems()
+  const inbound = new Map<string, number>()
+  const relKeys = ['related_docs', 'related_failures', 'related_logs', 'related_case_studies', 'related_playbooks', 'linked_incidents'] as const
+  for (const item of all) {
+    for (const k of relKeys) {
+      const refs = (item.frontmatter as unknown as Record<string, unknown>)[k] as string[] | undefined
+      if (Array.isArray(refs)) for (const slug of refs) inbound.set(slug, (inbound.get(slug) ?? 0) + 1)
+    }
+  }
+  return all
+    .map((i) => ({ i, score: (i.frontmatter.featured ? 1000 : 0) + (inbound.get(i.slug) ?? 0) * 10, date: new Date(i.frontmatter.date).getTime() }))
+    .sort((a, b) => b.score - a.score || b.date - a.date)
+    .map((x) => x.i)
+    .slice(0, limit)
+}
+
+/** All items authored by a given author name (case-insensitive). */
+export function getItemsByAuthor(name: string): ContentMeta[] {
+  const n = name.toLowerCase()
+  return getAllItems().filter((i) => (i.frontmatter.author ?? '').toLowerCase() === n)
 }
 
 /** Previous and next items within a section — for article navigation. */

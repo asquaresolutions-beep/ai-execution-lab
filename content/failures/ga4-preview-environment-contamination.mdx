@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "GA4 Production Analytics Contaminated by Vercel Preview Deployments"
 description: "NEXT_PUBLIC_GA_MEASUREMENT_ID was scoped to all Vercel environments (Production, Preview, Development). Every preview deployment URL accessed during development fired GA4 events to the production analytics property. Production session counts, traffic sources, and pageview totals were inflated by developer and build-verification activity until the variable was rescoped to Production only."
 date: "2026-03-20"
@@ -27,7 +29,6 @@ external_refs:
   - "https://vercel.com/docs/projects/environment-variables"
   - "https://nextjs.org/docs/app/building-your-application/configuring/environment-variables"
 ---
-
 <QuickFix
   symptom="GA4 Realtime report shows active users on production analytics URL (G-XXXXXXXX) while you are browsing a Vercel preview deployment. Production analytics session counts are higher than expected given known traffic. Direct traffic attribution is inflated."
   rootCause="NEXT_PUBLIC_GA_MEASUREMENT_ID is set in Vercel with environment scope 'All Environments' (Production + Preview + Development). Vercel inlines NEXT_PUBLIC_ variables at build time — preview deployments receive the same GA4 ID as production. Every page view on a preview deployment fires to the production GA4 property."

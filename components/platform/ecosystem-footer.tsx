@@ -155,6 +155,7 @@ export function EcosystemFooter() {
             <Link href="/ops/retrieval" className="hover:text-surface-400 transition-colors">Retrieval →</Link>
             <Link href="/ops/seo" className="hover:text-surface-400 transition-colors">SEO →</Link>
             <Link href="/sitemap.xml" className="hover:text-surface-400 transition-colors">Sitemap →</Link>
+            <a href="/feed.xml" className="hover:text-surface-400 transition-colors">RSS →</a>
           </div>
         </div>
 

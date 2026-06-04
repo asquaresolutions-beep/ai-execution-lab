@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Node.js fs Module Pulled into Client Bundle"
 description: "lib/tracks.ts imported fs and path at the top level. track-roadmap.tsx (a 'use client' component) imported from lib/tracks.ts, pulling Node.js modules into the browser bundle. Build failed with Module not found: Can't resolve 'fs'."
 date: "2026-05-14"
@@ -28,7 +30,6 @@ linked_incidents:
   - edge-runtime-deployment-failure
 deployment_ref: 2026-05-14-tracks-failure-archive-build
 ---
-
 <FailureIntelligence
   severity="high"
   recoveryComplexity="minutes"

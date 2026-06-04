@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "AI Output Structure Validation"
 description: "Operational pattern for handling structured output from AI APIs (Gemini, GPT, Claude) in production. Covers the failure surface when AI output is used as data: JSON parse failures, schema drift, missing fields, type mismatches, markdown code fence wrapping, and the architectural patterns that make AI-driven data pipelines robust against model output variation."
 date: "2026-05-24"
@@ -14,7 +16,6 @@ related_docs:
   - gemini-production-operations
   - failure-pattern-library
 ---
-
 AI APIs return text. When you need structured data — a JSON object with typed fields, an array of categorized items, a numeric score — you are parsing AI-generated text and treating it as a data contract. This is a reliability problem: the text that an AI model generates varies across calls, model versions, temperature settings, and prompt variations. Your parser does not vary. Every mismatch between the model's output format and your parser's expectations is a production failure.
 
 This document names the failure pattern, describes the specific ways it manifests in production, and gives the architectural patterns that make AI output parsing robust.

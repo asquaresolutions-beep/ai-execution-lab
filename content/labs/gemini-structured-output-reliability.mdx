@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Gemini Structured Output Reliability — Prompt Iteration Experiment"
 description: "Testing whether embedding an exact JSON schema + explicit format constraint in the prompt reduces malformed output frequency in Gemini 1.5-flash. Three prompt iterations tested during ScamCheck and TrustSeal build. Schema-in-prompt approach reduced parse failures from ~6% to <1% of calls."
 date: "2026-02-15"
@@ -7,7 +9,6 @@ status: published
 hypothesis: "If we embed the exact expected JSON schema and explicit format-suppression instructions in the Gemini prompt, then parse failure frequency (SyntaxError on JSON.parse) will decrease from ~6% observed baseline to under 1%, because language models produce decorated output by default in the absence of explicit format constraints."
 result: "confirmed"
 ---
-
 Gemini 1.5-flash does not reliably produce raw JSON without explicit format constraints. The model's default behavior — wrapping output in markdown code fences, prepending explanation text — is correct for chat contexts and incorrect for API consumers calling `JSON.parse()`. This experiment tested three prompt structures against observed parse failure rates during ScamCheck and TrustSeal development (February 2026).
 
 <LessonMeta

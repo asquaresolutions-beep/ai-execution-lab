@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Low-Cost Autonomous Operation — Cost Model & Optimizations"
 description: "How AI Execution Lab runs autonomously on free/hobby plans: model-tier routing, content-addressed caching, semantic deduplication, publish throttling, empty-queue early-exit crons, Firestore read/write minimization via increment counters, and batched embeddings. Includes expensive-operation analysis, scaling bottlenecks, the cheapest viable architecture, and estimated monthly cost ranges."
 date: "2026-05-30"
@@ -9,7 +11,6 @@ related_docs:
   - content-distribution-engine
   - scam-intelligence-ingestion
 ---
-
 The system is designed to run **autonomously and cheaply** — ideally inside free tiers. Every expensive operation is gated, cached, deduplicated, or throttled.
 
 ## Where cost actually comes from

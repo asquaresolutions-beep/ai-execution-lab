@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "AI Cost Governance and Resource Discipline — A Square Solutions"
 description: "Operational cost governance doctrine for TrustSeal and ScamCheck. Documents where costs originate, concrete free-tier economics, the 7 cost invariants that prevent runaway resource consumption, scaling thresholds with upgrade triggers, abuse containment strategy, and silent cost escalation vectors. All figures derived from real architecture — Gemini 1.5-flash free tier, Firebase Spark plan, Razorpay transaction fees."
 date: "2026-05-25"
@@ -14,7 +16,6 @@ related_failures:
   - firebase-functions-node-version-stability
   - firebase-deploy-sequence-auth-failure
 ---
-
 The primary cost question for an AI-native product is not "how much does infrastructure cost?" — it is "what operational conditions create unexpected cost?" For TrustSeal and ScamCheck, most infrastructure costs are zero at current scale. The risk is not steady-state cost. The risk is a specific failure mode, abuse pattern, or scaling event that silently accelerates consumption beyond sustainable thresholds.
 
 This document formalizes the cost architecture, the operational invariants that govern resource consumption, the concrete scaling economics, and the abuse containment strategy derived from the real production architecture.

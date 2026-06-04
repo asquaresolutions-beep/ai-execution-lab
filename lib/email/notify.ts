@@ -75,6 +75,24 @@ export async function notifyContact(d: { name?: string; email?: string; kind?: s
   return { admin: admin.ok, user, error: admin.error }
 }
 
+/** AI Execution Lab Weekly newsletter: admin notification + subscriber welcome. */
+export async function notifyLabSignup(d: { name?: string; email: string }): Promise<{ admin: boolean; user: boolean; error?: string }> {
+  const admin = await send({
+    to: ADMIN_EMAIL,
+    subject: `New AI Execution Lab Weekly signup${d.name ? ` — ${d.name}` : ''}`,
+    replyTo: d.email,
+    html: wrap('New newsletter signup', `<p><b>Name:</b> ${esc(d.name || '—')}</p><p><b>Email:</b> ${esc(d.email)}</p><p>List: AI Execution Lab Weekly</p>`),
+  })
+  const user = await send({
+    to: d.email,
+    subject: 'Welcome to AI Execution Lab Weekly',
+    html: wrap('You\'re subscribed to AI Execution Lab Weekly', `
+      <p>Hi${d.name ? ' ' + esc(d.name) : ''}, thanks for subscribing. Each week you'll get the latest production AI engineering notes, systems, and failure post-mortems from the AI Execution Lab.</p>
+      <p>Read the latest at <a href="https://lab.asquaresolution.com">lab.asquaresolution.com</a>.</p>`),
+  })
+  return { admin: admin.ok, user: user.ok, error: admin.error || user.error }
+}
+
 /** Welcome / confirmation for a scam-alert subscription. */
 export async function notifySubscribe(email: string): Promise<{ ok: boolean; error?: string }> {
   const res = await send({

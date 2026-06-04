@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "GitHub Pages SPA Deployment: dist/.git Worktree Pattern"
 description: "Production deployment pattern for React + Vite SPAs on GitHub Pages with custom domains. Covers the dist/.git worktree setup, 404.html SPA routing redirect, CNAME handling, Vite base path configuration, and every failure mode encountered deploying TrustSeal and ScamCheck to GitHub Pages with custom subdomains."
 date: "2026-05-24"
@@ -17,7 +19,6 @@ related_logs:
   - 2026-05-18-trustseal-operations-review
   - 2026-05-18-scamcheck-operations-review
 ---
-
 GitHub Pages serves static files from a Git branch. A React SPA with client-side routing is not natively compatible with this architecture — there is no catch-all route that serves `index.html` for every path. Two patterns are required to make it work: the `dist/.git` worktree for clean deployments, and the `404.html` redirect for SPA routing. Both TrustSeal and ScamCheck use this pattern in production.
 
 This document is the complete operational reference. It documents the setup, the deployment workflow, every failure mode encountered across two products, and why each piece of the pattern exists.

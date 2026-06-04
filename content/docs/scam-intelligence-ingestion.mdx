@@ -1,4 +1,6 @@
 ---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
 title: "Scam Intelligence Ingestion System — Architecture"
 description: "Scalable pipeline that ingests public scam reports and turns them into deduplicated, classified, severity-scored intelligence: rule+AI classification across 12 scam types, PII redaction, spam/abuse pre-filtering, Gemini moderation, embedding-based semantic deduplication and clustering, vector search, trending dashboard, regional heatmap, admin moderation queue, and a public alert feed. Includes Firestore collections, indexing strategy, prompt structure, and moderation flow."
 date: "2026-05-30"
@@ -9,7 +11,6 @@ related_docs:
   - ai-cost-governance
   - firebase-firestore-quota-enforcement
 ---
-
 The scam intelligence system ingests free-text scam reports from the public and converts them into structured, deduplicated intelligence. It shares the AI + store infrastructure with the [content distribution engine](/docs/content-distribution-engine): same provider abstraction, embeddings, cache, rate limiter, audit log, and `DocumentStore`.
 
 ## Pipeline (ordered, fail-fast)
