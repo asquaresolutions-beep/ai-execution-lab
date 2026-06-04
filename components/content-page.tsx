@@ -60,12 +60,19 @@ export async function ContentPage({ item, prev, next, afterContent }: ContentPag
       width: 1200,
       height: 630,
     },
-    author: {
-      '@type': 'Organization',
-      '@id': ORG_ID,
-      name: 'A Square Solutions',
-      url: 'https://asquaresolution.com',
-    },
+    author: fm.author
+      ? {
+          '@type': 'Person',
+          name: fm.author,
+          ...(fm.author_role ? { jobTitle: fm.author_role } : {}),
+          worksFor: { '@type': 'Organization', '@id': ORG_ID, name: 'A Square Solutions', url: 'https://asquaresolution.com' },
+        }
+      : {
+          '@type': 'Organization',
+          '@id': ORG_ID,
+          name: 'A Square Solutions',
+          url: 'https://asquaresolution.com',
+        },
     publisher: {
       '@type': 'Organization',
       '@id': ORG_ID,
@@ -156,6 +163,9 @@ export async function ContentPage({ item, prev, next, afterContent }: ContentPag
               {/* Meta row */}
               <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-surface-600 font-mono">
                 <time dateTime={fm.date}>{formatDate(fm.date)}</time>
+                {fm.author && (
+                  <span className="text-surface-700">· by <span className="text-surface-400">{fm.author}</span>{fm.author_role ? `, ${fm.author_role}` : ''}</span>
+                )}
                 {fm.updated && fm.updated !== fm.date && (
                   <span className="text-surface-700">· updated {formatDate(fm.updated)}</span>
                 )}
