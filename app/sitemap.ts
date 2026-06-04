@@ -2,6 +2,7 @@ import { MetadataRoute } from 'next'
 import { allIntelSlugs } from '@/lib/scam-intel/intel-pages'
 import { allCheckerSlugs } from '@/lib/scamcheck/checkers'
 import { ES_CHECKERS } from '@/lib/scamcheck/es-pages'
+import { HI_CHECKERS } from '@/lib/scamcheck/hi-pages'
 
 // The public product served on this domain is ScamCheck. The sitemap therefore
 // lists ONLY the ScamCheck product surface — every URL here is reachable (200)
@@ -32,12 +33,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   // Spanish (es) pages — homepage + checkers, with hreflang alternates.
   const es: MetadataRoute.Sitemap = [
-    { url: `${BASE}/es`, lastModified: now, changeFrequency: 'daily', priority: 0.8, alternates: { languages: { en: `${BASE}/`, es: `${BASE}/es` } } },
+    { url: `${BASE}/es`, lastModified: now, changeFrequency: 'daily', priority: 0.8, alternates: { languages: { en: `${BASE}/`, es: `${BASE}/es`, hi: `${BASE}/hi` } } },
     ...ES_CHECKERS.map((c) => ({
       url: `${BASE}/es/${c.slug}`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.7,
-      alternates: { languages: { en: `${BASE}/${c.enSlug}`, es: `${BASE}/es/${c.slug}` } },
+      alternates: { languages: { en: `${BASE}/${c.enSlug}`, es: `${BASE}/es/${c.slug}`, hi: `${BASE}/hi/${c.slug}` } },
     })),
   ]
 
-  return [...fixed, ...checkers, ...intel, ...es]
+  // Hindi (hi) pages — homepage + checkers, with hreflang alternates.
+  const hi: MetadataRoute.Sitemap = [
+    { url: `${BASE}/hi`, lastModified: now, changeFrequency: 'daily', priority: 0.8, alternates: { languages: { en: `${BASE}/`, es: `${BASE}/es`, hi: `${BASE}/hi` } } },
+    ...HI_CHECKERS.map((c) => ({
+      url: `${BASE}/hi/${c.slug}`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.7,
+      alternates: { languages: { en: `${BASE}/${c.enSlug}`, es: `${BASE}/es/${c.slug}`, hi: `${BASE}/hi/${c.slug}` } },
+    })),
+  ]
+
+  return [...fixed, ...checkers, ...intel, ...es, ...hi]
 }

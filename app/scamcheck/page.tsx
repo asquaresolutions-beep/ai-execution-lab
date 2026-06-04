@@ -22,7 +22,7 @@ export const metadata: Metadata = buildMeta({
   keywords: ['scam detector', 'AI scam checker', 'WhatsApp scam', 'SMS scam', 'UPI fraud', 'phishing checker', 'screenshot scam check',
     // Spanish SEO
     'detector de estafas', 'verificar enlace estafa', 'comprobar mensaje fraude', 'detector de phishing', 'es esto una estafa'],
-  languages: { en: '/', es: '/es', 'x-default': '/' },
+  languages: { en: '/', es: '/es', hi: '/hi', 'x-default': '/' },
 })
 
 const CATEGORIES = [

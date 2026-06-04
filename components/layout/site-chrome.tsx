@@ -26,7 +26,7 @@ const SearchModal = dynamic(() => import('@/components/search/search-modal').the
 // homepage rewrite ("/" → /scamcheck) resolves to segment "scamcheck" and gets
 // product chrome, while the lab homepage (segment === null) keeps lab chrome.
 const SC_SEGMENTS = new Set([
-  'scamcheck', 'scam-intelligence', 'scam-database', 'latest-scams', 'es',
+  'scamcheck', 'scam-intelligence', 'scam-database', 'latest-scams', 'es', 'hi',
   'about', 'how-it-works', 'methodology', 'contact', 'privacy-policy', 'terms', 'disclaimer',
 ])
 function isScamCheckSegment(seg: string | null): boolean {

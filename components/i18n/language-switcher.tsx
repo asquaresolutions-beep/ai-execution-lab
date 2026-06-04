@@ -6,40 +6,44 @@
 // localized URL rather than trying to swap text in place (which previously did
 // nothing — the selector changed state but no content was bound to it).
 //
-// Languages offered here are the ones with real translated pages: English +
-// Español. The screenshot scanner additionally supports Hindi via its own
-// in-component control; dedicated Hindi pages don't exist yet.
+// Languages offered all have full translated pages: English (/), Español (/es),
+// हिन्दी (/hi). Selecting a language navigates to the localized URL.
 
 import { usePathname, useRouter } from 'next/navigation'
 import { ES_CHECKERS } from '@/lib/scamcheck/es-pages'
 
-type Loc = 'en' | 'es'
+type Loc = 'en' | 'es' | 'hi'
 const OPTIONS: { code: Loc; label: string }[] = [
   { code: 'en', label: 'English' },
+  { code: 'hi', label: 'हिन्दी' },
   { code: 'es', label: 'Español' },
 ]
+// es and hi share the same localized checker slugs, so one map covers both.
+const SLUGS = ES_CHECKERS.map((c) => ({ slug: c.slug, enSlug: c.enSlug }))
 
 /** Current locale from the path. */
 function localeOf(path: string): Loc {
-  return path === '/es' || path.startsWith('/es/') ? 'es' : 'en'
+  if (path === '/es' || path.startsWith('/es/')) return 'es'
+  if (path === '/hi' || path.startsWith('/hi/')) return 'hi'
+  return 'en'
 }
 
 /** Map the current path to its equivalent in the target locale. */
 export function localizedPath(path: string, target: Loc): string {
   // Normalise to the English equivalent first.
   let en = path
-  if (path === '/es') en = '/'
-  else if (path.startsWith('/es/')) {
-    const esSlug = path.slice('/es/'.length)
-    const m = ES_CHECKERS.find((c) => c.slug === esSlug)
-    en = m ? `/${m.enSlug}` : '/'
+  const m = /^\/(es|hi)(?:\/(.*))?$/.exec(path)
+  if (m) {
+    const sub = m[2]
+    if (!sub) en = '/'
+    else { const hit = SLUGS.find((s) => s.slug === sub); en = hit ? `/${hit.enSlug}` : '/' }
   }
   if (target === 'en') return en
-  // Target Spanish: map known English checker slugs → /es/<slug>, else /es home.
-  if (en === '/') return '/es'
+  const prefix = `/${target}` // /es or /hi
+  if (en === '/') return prefix
   const slug = en.replace(/^\//, '')
-  const m = ES_CHECKERS.find((c) => c.enSlug === slug)
-  return m ? `/es/${m.slug}` : '/es'
+  const hit = SLUGS.find((s) => s.enSlug === slug)
+  return hit ? `${prefix}/${hit.slug}` : prefix
 }
 
 export function LanguageSwitcher({ className = '' }: { className?: string }) {

@@ -22,11 +22,11 @@ export function generateStaticParams(): { checker: string }[] {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const c = getChecker((await params).checker)
   if (!c) return { title: 'ScamCheck' }
-  // Reciprocal hreflang when a Spanish equivalent exists.
+  // Reciprocal hreflang when localized equivalents exist (es + hi share slugs).
   const es = ES_CHECKERS.find((x) => x.enSlug === c.slug)
   return buildMeta({
     path: `/${c.slug}`, title: c.title, description: c.description,
-    ...(es ? { languages: { en: `/${c.slug}`, es: `/es/${es.slug}`, 'x-default': `/${c.slug}` } } : {}),
+    ...(es ? { languages: { en: `/${c.slug}`, es: `/es/${es.slug}`, hi: `/hi/${es.slug}`, 'x-default': `/${c.slug}` } } : {}),
   })
 }
 

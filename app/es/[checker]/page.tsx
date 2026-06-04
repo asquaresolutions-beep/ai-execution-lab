@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ checker: 
   if (!c) return buildMeta({ path: `/es/${checker}`, title: 'ScamCheck', description: 'Detector de estafas con IA gratis.' })
   return buildMeta({
     path: `/es/${c.slug}`, title: c.title, description: c.description,
-    languages: { es: `/es/${c.slug}`, en: `/${c.enSlug}`, 'x-default': `/${c.enSlug}` },
+    languages: { es: `/es/${c.slug}`, en: `/${c.enSlug}`, hi: `/hi/${c.slug}`, 'x-default': `/${c.enSlug}` },
     locale: 'es_ES',
   })
 }
