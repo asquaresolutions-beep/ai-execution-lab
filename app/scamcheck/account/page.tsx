@@ -14,7 +14,7 @@ export default function AccountPage() {
         <header className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-zinc-100">My Dashboard</h1>
-            <p className="text-xs text-zinc-500"><Link href="/scamcheck" className="hover:underline">← Back to ScamCheck</Link></p>
+            <p className="text-xs text-zinc-500"><Link href="/" className="hover:underline">← Back to ScamCheck</Link></p>
           </div>
           <AuthButton />
         </header>

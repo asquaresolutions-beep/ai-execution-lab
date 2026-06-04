@@ -13,6 +13,10 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 const LEGACY_301: Record<string, string> = {
+  // Canonical homepage is the root "/". The product page lives at /scamcheck and
+  // is served at "/" via an internal rewrite (below); direct hits on /scamcheck
+  // 301 to "/" to avoid duplicate content.
+  '/scamcheck': '/',
   '/scam-alerts': '/scam-intelligence',
   '/types-of-scams': '/scam-intelligence',
   '/how-to-report': '/scam-intelligence',
@@ -28,7 +32,7 @@ const LEGACY_301: Record<string, string> = {
 // Path prefixes allowed on the scamcheck product domain.
 const ALLOW_PREFIXES = [
   '/scamcheck', '/scam-intelligence', '/scam-database', '/latest-scams',
-  '/privacy-policy', '/terms', '/contact', '/about', '/how-it-works', '/methodology', // legal + E-E-A-T
+  '/privacy-policy', '/terms', '/disclaimer', '/contact', '/about', '/how-it-works', '/methodology', // legal + E-E-A-T
   '/api/scam-intel', '/api/geo', '/api/semantic-search', '/api/credits', '/api/scans', '/api/contact',
   '/_next', '/sitemap', '/robots', '/manifest', '/icon', '/apple-icon', '/opengraph-image', '/favicon',
 ]
@@ -60,12 +64,15 @@ export function middleware(req: NextRequest) {
     const url = req.nextUrl.clone(); url.pathname = '/scam-intelligence'; url.search = ''
     return NextResponse.redirect(url, 301)
   }
-  // 2. Root experience = the ScamCheck homepage. Use a 308 redirect (not a
-  //    rewrite) so the browser URL becomes /scamcheck — the client chrome keys
-  //    off usePathname(), and a rewrite would leave it at "/" → lab sidebar.
+  // 2. Root experience = the ScamCheck homepage. Internal rewrite so the URL
+  //    stays "/" (the canonical homepage) while serving the prerendered
+  //    /scamcheck route. Chrome selection uses useSelectedLayoutSegment(), which
+  //    reflects the *rendered* segment ("scamcheck") under a rewrite — so the
+  //    product chrome renders correctly with no hydration mismatch and no
+  //    visible /scamcheck in the address bar.
   if (pathname === '/') {
     const url = req.nextUrl.clone(); url.pathname = '/scamcheck'
-    return NextResponse.redirect(url, 308)
+    return NextResponse.rewrite(url)
   }
   // 3. Temporary 404-protection for non-ScamCheck routes on this domain.
   if (!isAllowed(pathname)) {

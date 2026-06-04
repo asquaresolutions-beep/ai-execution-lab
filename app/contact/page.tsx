@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { buildMeta } from '@/lib/seo/scamcheck-meta'
 import { ContactForm } from '@/components/scamcheck/contact-form'
+import { CountryReporting } from '@/components/scamcheck/country-reporting'
 
 export const metadata: Metadata = buildMeta({
   path: '/contact',
@@ -14,10 +15,9 @@ export default function Contact() {
       <h1 className="text-2xl font-bold">Contact &amp; Report a Scam</h1>
       <p className="mt-2 text-sm text-zinc-400">ScamCheck is built by <strong>A Square Solutions</strong>. Send feedback, a question, or report a scam below. We read every message.</p>
       <div className="mt-6"><ContactForm /></div>
-      <section className="mt-8 text-sm text-zinc-400">
-        <h2 className="text-base font-semibold text-zinc-200">Reporting fraud</h2>
-        <p className="mt-1">ScamCheck does not file official reports for you. If you have lost money or shared sensitive details, contact your bank immediately and report to your national agency — for example, in India call <strong>1930</strong> or report at <a href="https://cybercrime.gov.in" className="text-sky-400 hover:underline" target="_blank" rel="noopener noreferrer">cybercrime.gov.in</a>. Each scam page lists country-specific reporting.</p>
-        <p className="mt-3">Email: <a href="mailto:contact@asquaresolution.com" className="text-sky-400 hover:underline">contact@asquaresolution.com</a></p>
+      <section className="mt-8">
+        <CountryReporting />
+        <p className="mt-3 text-sm text-zinc-400">Email: <a href="mailto:contact@asquaresolution.com" className="text-sky-400 hover:underline">contact@asquaresolution.com</a></p>
       </section>
     </main>
   )

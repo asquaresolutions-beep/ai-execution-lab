@@ -30,7 +30,7 @@ export default function HowItWorks() {
       </ol>
       <p className="mt-6 text-sm text-zinc-400">Privacy-first: images are optimized on your device and processed in-request, not stored. ScamCheck gives automated guidance, not legal/financial advice. Built by A Square Solutions.</p>
       <p className="mt-3 flex flex-wrap gap-x-4 text-sm text-sky-400">
-        <Link href="/scamcheck" className="hover:underline">Try the scanner →</Link>
+        <Link href="/" className="hover:underline">Try the scanner →</Link>
         <Link href="/methodology" className="hover:underline">Methodology →</Link>
         <Link href="/about" className="hover:underline">About →</Link>
       </p>

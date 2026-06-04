@@ -39,7 +39,7 @@ export default async function CheckerPage({ params }: Props) {
     <AuthProvider>
       <main className="mx-auto max-w-3xl px-4 py-8">
         {ld.map((j, i) => <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(j) }} />)}
-        <nav className="text-xs text-zinc-500"><Link href="/scamcheck" className="hover:underline">ScamCheck</Link> / {c.h1}</nav>
+        <nav className="text-xs text-zinc-500"><Link href="/" className="hover:underline">ScamCheck</Link> / {c.h1}</nav>
         <h1 className="mt-2 text-2xl font-bold text-zinc-100">{c.h1}</h1>
         <p className="mt-2 text-sm text-zinc-400">{c.intro}</p>
 

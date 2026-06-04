@@ -43,7 +43,7 @@ export default function LatestScams() {
 
       <p className="mt-6 flex flex-wrap gap-x-4 text-xs text-zinc-500">
         <Link href="/scam-database" className="hover:text-zinc-300">Search the scam database →</Link>
-        <Link href="/scamcheck" className="hover:text-zinc-300">Check a message →</Link>
+        <Link href="/" className="hover:text-zinc-300">Check a message →</Link>
         <Link href="/contact" className="hover:text-zinc-300">Report a scam →</Link>
       </p>
     </main>

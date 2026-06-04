@@ -47,7 +47,7 @@ export function AccountDashboard() {
       <div>
         <h2 className="mb-2 text-sm font-semibold text-zinc-200">Scan history &amp; reports</h2>
         {items.length === 0 ? (
-          <p className="text-sm text-zinc-500">No scans yet. <Link href="/scamcheck" className="text-sky-400 hover:underline">Run your first check →</Link></p>
+          <p className="text-sm text-zinc-500">No scans yet. <Link href="/" className="text-sky-400 hover:underline">Run your first check →</Link></p>
         ) : (
           <ul className="divide-y divide-zinc-800 rounded-lg border border-zinc-800">
             {items.map((e, i) => (

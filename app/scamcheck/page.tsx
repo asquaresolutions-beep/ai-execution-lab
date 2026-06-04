@@ -6,13 +6,15 @@ import { CreditsDashboard } from '@/components/scamcheck/credits-dashboard'
 import { QuickAnalyzer } from '@/components/scamcheck/quick-analyzer'
 import { ScreenshotAnalyzer } from '@/components/scamcheck/screenshot-analyzer'
 import { TrustStats } from '@/components/scamcheck/trust-stats'
+import { TrustBadges } from '@/components/scamcheck/trust-badges'
 import { TrendingIsland } from '@/components/scam-intel/trending-island'
 import { AdSlot } from '@/components/ads/ad-slot'
 import { buildMeta } from '@/lib/seo/scamcheck-meta'
 import { INTEL_PAGES } from '@/lib/scam-intel/intel-pages'
 
 export const metadata: Metadata = buildMeta({
-  path: '/scamcheck',
+  // Canonical homepage is the root "/" (served here via the middleware rewrite).
+  path: '/',
   title: 'ScamCheck — Free AI Scam Detector | WhatsApp, SMS, UPI & Screenshot Fraud Checker',
   description: 'Free AI scam detector. Scan messages, links, emails, phone numbers, and screenshots for phishing and fraud. WhatsApp, SMS, UPI, banking & investment scam checker — instant, multilingual, mobile-first.',
   keywords: ['scam detector', 'AI scam checker', 'WhatsApp scam', 'SMS scam', 'UPI fraud', 'phishing checker', 'screenshot scam check'],
@@ -53,6 +55,7 @@ export default function ScamCheckHome() {
             <a href="#scanner" className="rounded-xl bg-sky-500 px-6 py-3 font-semibold text-white shadow-lg shadow-sky-500/20 hover:bg-sky-400">Start free scan</a>
             <AuthButton />
           </div>
+          <TrustBadges className="mt-5" />
         </section>
 
         {/* 2. Quick Scanner */}

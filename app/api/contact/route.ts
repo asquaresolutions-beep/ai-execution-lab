@@ -13,7 +13,12 @@ export const POST = jsonRoute('contact', async (req) => {
   try { await enforceRateLimit({ key: `contact:${clientIp(req)}`, limit: 5, windowMs: 600_000 }) }
   catch (e) { if (e instanceof RateLimitError) return NextResponse.json({ error: 'rate_limited', detail: 'Too many submissions; try again later.' }, { status: 429 }) }
 
-  const b = await req.json().catch(() => ({})) as { name?: string; email?: string; message?: string; kind?: string }
+  const b = await req.json().catch(() => ({})) as { name?: string; email?: string; message?: string; kind?: string; hp?: string; elapsedMs?: number }
+  // Spam protection: honeypot field + submit-too-fast check. Return ok to avoid
+  // signalling bots, but never persist.
+  if ((b.hp || '').trim() || (typeof b.elapsedMs === 'number' && b.elapsedMs >= 0 && b.elapsedMs < 1500)) {
+    return NextResponse.json({ ok: true, detail: 'Thanks — we received your message.' }, { headers: { 'Cache-Control': 'no-store' } })
+  }
   const message = (b.message || '').trim()
   const email = (b.email || '').trim().slice(0, 200)
   if (message.length < 5) throw new ApiError('empty', 'Please enter a message.', 400)

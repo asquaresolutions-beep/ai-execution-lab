@@ -5,6 +5,20 @@ import { Analytics } from '@/components/analytics'
 import { WebVitals } from '@/components/analytics/web-vitals'
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react'
 import { SiteChrome } from '@/components/layout/site-chrome'
+import { ConsentBanner } from '@/components/consent/consent-banner'
+
+// A Square Solutions AdSense publisher ID (shared across properties). Overridable
+// via env. Used to load AdSense + render ad units.
+const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || 'ca-pub-3102382127523426'
+
+// Google Consent Mode v2 — set BEFORE any ad/analytics tag loads. Defaults to
+// denied (GDPR/UK/EU); the consent banner upgrades on user choice. Reflects a
+// previously-stored "accept" immediately to avoid a denied flash.
+const CONSENT_DEFAULT = `
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',wait_for_update:500});
+try{var c=JSON.parse(localStorage.getItem('sc-consent-v1')||'null');if(c){gtag('consent','update',{ad_storage:c.ads?'granted':'denied',ad_user_data:c.ads?'granted':'denied',ad_personalization:c.ads?'granted':'denied',analytics_storage:c.analytics?'granted':'denied'});}}catch(e){}
+`
 
 // ─── Fonts ───────────────────────────────────────────────────
 const fontSans = Inter({
@@ -144,6 +158,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`dark ${fontSans.variable} ${fontMono.variable}`}>
       <head>
+        {/* Consent Mode v2 defaults — MUST run before AdSense/analytics load. */}
+        <script dangerouslySetInnerHTML={{ __html: CONSENT_DEFAULT }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
@@ -152,12 +168,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
         />
-        {/* Google AdSense Auto Ads — loads only when a publisher ID is set;
-            ad placement is controlled in the AdSense dashboard (not forced). */}
-        {process.env.NEXT_PUBLIC_ADSENSE_CLIENT && (
+        {/* Google AdSense loader — consent governs personalisation (non-personalised
+            ads serve until the visitor accepts). Placement is explicit via <AdSlot>. */}
+        {ADSENSE_CLIENT && (
           <script
             async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT}`}
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
             crossOrigin="anonymous"
           />
         )}
@@ -177,6 +193,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Web Vitals reporter — logs in dev, beacons to /api/vitals in prod */}
         <WebVitals />
+
+        {/* GDPR/UK/EU cookie consent — Google Consent Mode v2 */}
+        <ConsentBanner />
       </body>
     </html>
   )

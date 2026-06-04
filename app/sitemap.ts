@@ -92,7 +92,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/scam-database`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
     { url: `${BASE_URL}/latest-scams`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
     { url: `${BASE_URL}/scamcheck/screenshot`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
-    ...['/about', '/how-it-works', '/methodology', '/contact', '/privacy-policy', '/terms'].map((p) => ({
+    ...['/about', '/how-it-works', '/methodology', '/contact', '/privacy-policy', '/terms', '/disclaimer'].map((p) => ({
       url: `${BASE_URL}${p}`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.5,
     })),
     ...allIntelSlugs().map((slug) => ({

@@ -28,7 +28,7 @@ export default function ScamDatabase() {
           {INTEL_PAGES.map((p) => <li key={p.slug}><Link href={`/scam-intelligence/${p.slug}`} className="text-sky-400 hover:underline">{p.h1}</Link></li>)}
         </ul>
         <p className="mt-4 flex flex-wrap gap-x-4 text-xs text-zinc-500">
-          <Link href="/scamcheck" className="hover:text-zinc-300">Check a message →</Link>
+          <Link href="/" className="hover:text-zinc-300">Check a message →</Link>
           <Link href="/latest-scams" className="hover:text-zinc-300">Latest scams →</Link>
           <Link href="/scam-intelligence" className="hover:text-zinc-300">Trending campaigns →</Link>
         </p>

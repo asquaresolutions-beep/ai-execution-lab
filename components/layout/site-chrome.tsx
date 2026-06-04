@@ -12,7 +12,7 @@
 // payload entirely, while the lab site still renders them. Pages stay static.
 import type { ReactNode } from 'react'
 import dynamic from 'next/dynamic'
-import { usePathname } from 'next/navigation'
+import { useSelectedLayoutSegment } from 'next/navigation'
 import { ScamCheckNav } from '@/components/scamcheck/scamcheck-nav'
 import { ScamCheckFooter } from '@/components/scamcheck/scamcheck-footer'
 
@@ -21,17 +21,23 @@ const TopBar = dynamic(() => import('@/components/layout/top-bar').then((m) => m
 const EcosystemFooter = dynamic(() => import('@/components/platform/ecosystem-footer').then((m) => m.EcosystemFooter))
 const SearchModal = dynamic(() => import('@/components/search/search-modal').then((m) => m.SearchModal))
 
-const SC_PREFIXES = ['/scamcheck', '/scam-intelligence', '/scam-database', '/latest-scams']
-const SC_EXACT = new Set(['/privacy-policy', '/terms', '/contact', '/about', '/how-it-works', '/methodology'])
-function isScamCheckRoute(path: string): boolean {
-  if (SC_EXACT.has(path)) return true
-  if (path.endsWith('-scam-checker')) return true
-  return SC_PREFIXES.some((p) => path === p || path.startsWith(p + '/'))
+// Top-level route segments that belong to the ScamCheck product. We key off the
+// *rendered* segment (useSelectedLayoutSegment) rather than the URL, so the
+// homepage rewrite ("/" → /scamcheck) resolves to segment "scamcheck" and gets
+// product chrome, while the lab homepage (segment === null) keeps lab chrome.
+const SC_SEGMENTS = new Set([
+  'scamcheck', 'scam-intelligence', 'scam-database', 'latest-scams',
+  'about', 'how-it-works', 'methodology', 'contact', 'privacy-policy', 'terms', 'disclaimer',
+])
+function isScamCheckSegment(seg: string | null): boolean {
+  if (!seg) return false
+  if (seg.endsWith('-scam-checker')) return true
+  return SC_SEGMENTS.has(seg)
 }
 
 export function SiteChrome({ children }: { children: ReactNode }) {
-  const path = usePathname() || '/'
-  if (isScamCheckRoute(path)) {
+  const seg = useSelectedLayoutSegment()
+  if (isScamCheckSegment(seg)) {
     return (
       <div className="flex min-h-screen flex-col bg-zinc-950">
         <ScamCheckNav />

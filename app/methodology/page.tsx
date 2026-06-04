@@ -21,7 +21,7 @@ export default function Methodology() {
         <p>ScamCheck is automated and can produce false positives and false negatives. It is decision support, not a guarantee. Always verify through official channels, and never share OTPs, PINs, or passwords. This is not legal or financial advice. Built by A Square Solutions.</p>
         <p className="flex flex-wrap gap-x-4 pt-2 text-sky-400">
           <Link href="/how-it-works" className="hover:underline">How it works →</Link>
-          <Link href="/scamcheck" className="hover:underline">Try the scanner →</Link>
+          <Link href="/" className="hover:underline">Try the scanner →</Link>
           <Link href="/privacy-policy" className="hover:underline">Privacy →</Link>
         </p>
       </div>
