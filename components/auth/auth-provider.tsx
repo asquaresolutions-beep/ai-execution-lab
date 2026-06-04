@@ -6,7 +6,7 @@
 // persisted in localStorage. Degrades gracefully when auth env isn't set.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { authConfigured, signInEmail, signUpEmail, signInWithGoogleIdToken, type AuthUser } from '@/lib/auth/firebase'
+import { authConfigured, signInEmail, signUpEmail, signInWithGoogleIdToken, refreshSession, type AuthUser } from '@/lib/auth/firebase'
 
 interface AuthCtx {
   user: AuthUser | null
@@ -43,6 +43,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(u)
     try { u ? localStorage.setItem(STORAGE_KEY, JSON.stringify(u)) : localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
   }, [])
+
+  // Keep the Firebase ID token fresh. Tokens expire after ~1h; a stale token is
+  // rejected server-side and silently downgrades a logged-in user to the guest
+  // limit (3/day). Refresh on mount if expired, then just before each expiry.
+  useEffect(() => {
+    if (!user?.refreshToken) return
+    let cancelled = false
+    const doRefresh = async (u: AuthUser) => {
+      try { const fresh = await refreshSession(u.refreshToken); if (!cancelled) persist({ ...u, ...fresh }) }
+      catch { if (!cancelled) persist(null) } // refresh token revoked → sign out
+    }
+    const msUntil = (user.expiresAt || 0) - Date.now()
+    if (msUntil <= 0) { void doRefresh(user); return () => { cancelled = true } }
+    const t = setTimeout(() => void doRefresh(user), Math.min(msUntil, 50 * 60_000))
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [user, persist])
 
   const doEmailIn = useCallback(async (email: string, pw: string) => { persist(await signInEmail(email, pw)) }, [persist])
   const doEmailUp = useCallback(async (email: string, pw: string) => { persist(await signUpEmail(email, pw)) }, [persist])

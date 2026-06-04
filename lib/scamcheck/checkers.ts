@@ -19,7 +19,7 @@ export const CHECKERS: Checker[] = [
   {
     slug: 'whatsapp-scam-checker', tab: 'message', h1: 'WhatsApp Scam Checker',
     title: 'WhatsApp Scam Checker — Check if a WhatsApp Message Is a Scam | ScamCheck',
-    description: 'Free WhatsApp scam checker. Paste a suspicious WhatsApp message and instantly detect phishing, fake refunds, KYC fraud, and impersonation. Multilingual (English/Hindi/Hinglish).',
+    description: 'Free WhatsApp scam checker. Paste a suspicious WhatsApp message and instantly detect phishing, fake refunds, KYC fraud, and impersonation. Multilingual interface (English/Hindi/Spanish).',
     intro: 'Paste any suspicious WhatsApp message below. ScamCheck reads it, extracts links/UPI IDs/phone numbers, flags fraud signals, and tells you the risk — instantly and free.',
     faqs: [
       { q: 'How do I check a WhatsApp message for a scam?', a: 'Paste the message text into the checker above. It detects phishing links, fake refund/KYC requests, OTP-sharing traps, and brand impersonation, then shows a risk score.' },

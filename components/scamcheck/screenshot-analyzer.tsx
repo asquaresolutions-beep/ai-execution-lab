@@ -84,7 +84,8 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
     fetch('/api/geo').then((r) => r.json()).then((g) => {
       if (g.countryCode) { const d2 = resolveCountryDetailed({ geoHeader: g.countryCode, locale }); setCountry(d2.config); setGeo({ source: d2.source, locale, headerCode: g.countryCode }) }
     }).catch(() => {})
-    if (/^hi/i.test(locale)) setLang('hinglish')
+    if (/^hi/i.test(locale)) setLang('hi')
+    else if (/^es/i.test(locale)) setLang('es')
   }, [])
 
   const analyze = useCallback(async (file: File) => {

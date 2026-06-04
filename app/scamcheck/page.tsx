@@ -17,7 +17,9 @@ export const metadata: Metadata = buildMeta({
   path: '/',
   title: 'ScamCheck — Free AI Scam Detector | WhatsApp, SMS, UPI & Screenshot Fraud Checker',
   description: 'Free AI scam detector. Scan messages, links, emails, phone numbers, and screenshots for phishing and fraud. WhatsApp, SMS, UPI, banking & investment scam checker — instant, multilingual, mobile-first.',
-  keywords: ['scam detector', 'AI scam checker', 'WhatsApp scam', 'SMS scam', 'UPI fraud', 'phishing checker', 'screenshot scam check'],
+  keywords: ['scam detector', 'AI scam checker', 'WhatsApp scam', 'SMS scam', 'UPI fraud', 'phishing checker', 'screenshot scam check',
+    // Spanish SEO
+    'detector de estafas', 'verificar enlace estafa', 'comprobar mensaje fraude', 'detector de phishing', 'es esto una estafa'],
 })
 
 const CATEGORIES = [
@@ -33,7 +35,7 @@ const FAQ = [
   { q: 'Is ScamCheck free?', a: 'Yes. Guests get free daily scans; signing in gives more. Screenshot (AI vision) scans use more credits than text checks.' },
   { q: 'How do I check if a message is a scam?', a: 'Paste the message, link, email, or phone number into the scanner, or upload a screenshot. ScamCheck extracts links/UPI IDs/phone numbers, flags fraud signals, and shows the risk and why.' },
   { q: 'Do you store my screenshots?', a: 'No. Images are optimized on your device and processed in-request; they are not stored.' },
-  { q: 'Which scams does it detect?', a: 'WhatsApp/SMS/UPI/banking/Telegram/investment/courier scams, phishing links, brand impersonation (look-alike domains), and OTP-theft traps — in English, Hindi, and Hinglish.' },
+  { q: 'Which scams does it detect?', a: 'WhatsApp/SMS/UPI/banking/Telegram/investment/courier scams, phishing links, brand impersonation (look-alike domains), and OTP-theft traps. The interface is available in English, Hindi, and Spanish.' },
 ]
 
 export default function ScamCheckHome() {
@@ -46,16 +48,27 @@ export default function ScamCheckHome() {
       <main className="mx-auto max-w-3xl px-4 py-8">
         {ld.map((j, i) => <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(j) }} />)}
 
-        {/* 1. Hero */}
-        <section className="rounded-2xl border border-zinc-800 bg-gradient-to-b from-sky-500/10 to-transparent p-6 text-center sm:p-10">
-          <div className="mb-3 flex justify-center"><CreditsDashboard /></div>
-          <h1 className="text-3xl font-bold text-zinc-100 sm:text-4xl">Free AI Scam Detector</h1>
-          <p className="mx-auto mt-3 max-w-xl text-zinc-400">Scan messages, links, emails, phone numbers, and screenshots for phishing and fraud — instantly, in English, Hindi & Hinglish.</p>
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-            <a href="#scanner" className="rounded-xl bg-sky-500 px-6 py-3 font-semibold text-white shadow-lg shadow-sky-500/20 hover:bg-sky-400">Start free scan</a>
-            <AuthButton />
+        {/* 1. Hero — premium layered visual (CSS only, no images → CLS-safe) */}
+        <section className="relative overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 p-6 text-center sm:p-12">
+          {/* decorative glow + grid (pointer-events-none, behind content) */}
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            <div className="absolute -top-24 left-1/2 h-72 w-[36rem] -translate-x-1/2 rounded-full bg-sky-500/20 blur-3xl" />
+            <div className="absolute -bottom-32 right-0 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl" />
+            <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] [background-size:32px_32px]" />
           </div>
-          <TrustBadges className="mt-5" />
+          <div className="relative">
+            <div className="mb-4 flex justify-center"><CreditsDashboard /></div>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300">
+              <span aria-hidden>🛡️</span> AI-powered · Privacy-first · Free
+            </span>
+            <h1 className="mt-4 bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-5xl">Free AI Scam Detector</h1>
+            <p className="mx-auto mt-4 max-w-xl text-zinc-400">Scan messages, links, emails, phone numbers, and screenshots for phishing and fraud — instantly, with the interface in English, Hindi &amp; Spanish.</p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <a href="#scanner" className="rounded-xl bg-sky-500 px-7 py-3 font-semibold text-white shadow-lg shadow-sky-500/25 transition hover:bg-sky-400 hover:shadow-sky-500/40">Start free scan</a>
+              <AuthButton />
+            </div>
+            <TrustBadges className="mt-6" />
+          </div>
         </section>
 
         {/* 2. Quick Scanner */}

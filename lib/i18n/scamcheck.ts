@@ -1,13 +1,13 @@
 // ─────────────────────────────────────────────────────────────────
 // lib/i18n/scamcheck.ts
 // Lightweight UI localization for the ScamCheck analyzer (English / Hindi /
-// Hinglish). Dictionary-only — no i18n framework, keeps the bundle small and
+// Spanish). Dictionary-only — no i18n framework, keeps the bundle small and
 // the page static. Falls back to English for any missing key.
 // ─────────────────────────────────────────────────────────────────
 
-export type Lang = 'en' | 'hi' | 'hinglish'
+export type Lang = 'en' | 'hi' | 'es'
 export const LANGS: { code: Lang; label: string }[] = [
-  { code: 'en', label: 'English' }, { code: 'hi', label: 'हिन्दी' }, { code: 'hinglish', label: 'Hinglish' },
+  { code: 'en', label: 'English' }, { code: 'hi', label: 'हिन्दी' }, { code: 'es', label: 'Español' },
 ]
 
 type Dict = Record<string, string>
@@ -48,23 +48,23 @@ const STRINGS: Record<Lang, Dict> = {
     reportLabel: 'रिपोर्ट करें',
     disclaimer: 'स्वचालित जोखिम आकलन, कानूनी या वित्तीय सलाह नहीं।',
   },
-  hinglish: {
-    headline: 'Kya yeh message scam hai?',
-    sub: 'Kisi suspicious SMS, WhatsApp, UPI ya banking message ka screenshot upload karein. Hum text padhte hain, fraud signals pakadte hain, aur known scams se match karte hain.',
-    dropzone: 'Screenshot drag karein, choose karne ke liye tap karein, ya paste karein (Ctrl/Cmd+V)',
-    formats: 'PNG / JPEG / WebP · max 6 MB · device par optimize · secure, store nahi hota',
-    ctaUpload: 'Screenshot upload karein',
-    ctaWhatsApp: 'WhatsApp screenshot check karein',
-    ctaSms: 'Banking SMS screenshot scan karein',
-    compressing: 'Image optimize ho rahi hai…',
-    uploading: 'Upload ho raha hai…',
-    analyzing: 'Screenshot analyze ho raha hai…',
-    whatToDo: 'Kya karein',
-    extracted: 'Extracted',
-    fraudSignals: 'Fraud signals',
-    similar: 'Milte-julte known scams',
-    reportLabel: 'Report karein',
-    disclaimer: 'Automated risk assessment hai, legal/financial advice nahi.',
+  es: {
+    headline: '¿Este mensaje es una estafa?',
+    sub: 'Sube una captura de un SMS, WhatsApp, UPI o mensaje bancario sospechoso. Leemos el texto, detectamos señales de fraude y lo comparamos con campañas de estafa conocidas.',
+    dropzone: 'Arrastra y suelta una captura, toca para elegir, o pega (Ctrl/Cmd+V)',
+    formats: 'PNG / JPEG / WebP · máx 6 MB · optimizado en tu dispositivo · procesado de forma segura, no se almacena',
+    ctaUpload: 'Subir captura',
+    ctaWhatsApp: 'Analizar captura de WhatsApp',
+    ctaSms: 'Escanear captura de SMS bancario',
+    compressing: 'Optimizando imagen…',
+    uploading: 'Subiendo…',
+    analyzing: 'Analizando captura…',
+    whatToDo: 'Qué hacer',
+    extracted: 'Extraído',
+    fraudSignals: 'Señales de fraude',
+    similar: 'Patrones de estafa conocidos similares',
+    reportLabel: 'Repórtalo',
+    disclaimer: 'Evaluación de riesgo automatizada; no es asesoramiento legal ni financiero.',
   },
 }
 

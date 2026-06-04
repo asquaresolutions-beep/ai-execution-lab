@@ -9,7 +9,7 @@ export function TrustStats() {
     { v: `${CHECKERS.length}`, l: 'scan channels' },
     { v: `${INTEL_PAGES.length}+`, l: 'scam types detected' },
     { v: `${SUPPORTED_COUNTRIES.length}`, l: 'countries supported' },
-    { v: '3', l: 'languages (EN/HI/Hinglish)' },
+    { v: '3', l: 'languages (EN/HI/ES)' },
     { v: '0', l: 'images stored' },
     { v: 'Free', l: 'to use' },
   ]

@@ -4,7 +4,7 @@
 // Language switcher for ScamCheck (English / Hindi / Hinglish). Persists the
 // choice to localStorage + a cookie (for future SSR), reflects it on <html lang>,
 // and broadcasts a 'sc-lang' CustomEvent so any client component (e.g. the
-// analyzer, which already ships an en/hi/hinglish dictionary in lib/i18n) can
+// analyzer, which already ships an en/hi/es dictionary in lib/i18n) can
 // react. Architecture is ready for more languages — add to LANGS in
 // lib/i18n/scamcheck.ts (Spanish intentionally excluded for now).
 
@@ -17,7 +17,7 @@ export function getStoredLang(): Lang {
   if (typeof window === 'undefined') return 'en'
   try {
     const v = localStorage.getItem(KEY)
-    if (v === 'en' || v === 'hi' || v === 'hinglish') return v
+    if (v === 'en' || v === 'hi' || v === 'es') return v
   } catch { /* ignore */ }
   return 'en'
 }
@@ -42,7 +42,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
     try {
       localStorage.setItem(KEY, next)
       document.cookie = `${KEY}=${next};path=/;max-age=31536000;samesite=lax`
-      document.documentElement.lang = next === 'en' ? 'en' : next === 'hi' ? 'hi' : 'en-IN'
+      document.documentElement.lang = next
     } catch { /* ignore */ }
     window.dispatchEvent(new CustomEvent<Lang>('sc-lang', { detail: next }))
   }
