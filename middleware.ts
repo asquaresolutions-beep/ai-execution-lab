@@ -33,7 +33,7 @@ const LEGACY_301: Record<string, string> = {
 const ALLOW_PREFIXES = [
   '/scamcheck', '/scam-intelligence', '/scam-database', '/latest-scams', '/es', '/hi',
   '/privacy-policy', '/terms', '/disclaimer', '/contact', '/about', '/how-it-works', '/methodology', // legal + E-E-A-T
-  '/api/scam-intel', '/api/geo', '/api/semantic-search', '/api/credits', '/api/scans', '/api/contact', '/api/newsletter',
+  '/api/scam-intel', '/api/geo', '/api/semantic-search', '/api/credits', '/api/scans', '/api/contact', '/api/newsletter', '/api/lead',
   '/_next', '/sitemap', '/robots', '/manifest', '/icon', '/apple-icon', '/opengraph-image', '/favicon',
 ]
 

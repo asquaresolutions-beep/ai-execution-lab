@@ -75,6 +75,29 @@ export async function notifyContact(d: { name?: string; email?: string; kind?: s
   return { admin: admin.ok, user, error: admin.error }
 }
 
+/** Service lead form: admin notification (with service + message + source) + user autoresponder. */
+export async function notifyLead(d: { name?: string; email: string; service?: string; message?: string; source?: string }): Promise<{ admin: boolean; user: boolean; error?: string }> {
+  const admin = await send({
+    to: ADMIN_EMAIL,
+    subject: `New lead${d.service ? ` — ${d.service}` : ''}${d.name ? ` (${d.name})` : ''}`,
+    replyTo: d.email,
+    html: wrap('New service lead', `
+      <p><b>Name:</b> ${esc(d.name || '—')}</p>
+      <p><b>Email:</b> ${esc(d.email)}</p>
+      <p><b>Service interest:</b> ${esc(d.service || '—')}</p>
+      <p><b>Message:</b></p><p style="white-space:pre-wrap">${esc(d.message || '—')}</p>
+      <p><b>Source page:</b> ${esc(d.source || '—')}</p>`),
+  })
+  const user = await send({
+    to: d.email,
+    subject: 'Thanks — we\'ll be in touch within 24 hours',
+    html: wrap('Thanks for reaching out', `
+      <p>Hi${d.name ? ' ' + esc(d.name) : ''}, thanks for your interest${d.service ? ` in our ${esc(d.service)}` : ''}. A Square Solutions will review your request and reply within 24 hours.</p>
+      <p>In the meantime, explore <a href="https://asquaresolution.com/what-we-do/">what we do</a> or our <a href="https://asquaresolution.com/case-studies/">case studies</a>.</p>`),
+  })
+  return { admin: admin.ok, user: user.ok, error: admin.error || user.error }
+}
+
 /** A Square Solutions newsletter (blog): admin notification + subscriber welcome. Tracks source page. */
 export async function notifyNewsletter(d: { name?: string; email: string; source?: string }): Promise<{ admin: boolean; user: boolean; error?: string }> {
   const admin = await send({
