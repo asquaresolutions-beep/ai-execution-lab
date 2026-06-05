@@ -48,7 +48,11 @@ const shortSource = (s: string) => {
   try { const u = new URL(s); return (u.pathname || '/').replace(/\/$/, '') || '/' } catch { return s.slice(0, 40) }
 }
 function toCSV(rows: Record<string, unknown>[], cols: string[]): string {
-  const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
+  const esc = (v: unknown) => {
+    let s = String(v ?? '')
+    if (/^[=+\-@\t\r]/.test(s)) s = `'${s}` // neutralise CSV/Excel formula injection from public form input
+    return `"${s.replace(/"/g, '""')}"`
+  }
   return [cols.join(','), ...rows.map((r) => cols.map((c) => esc(r[c])).join(','))].join('\r\n')
 }
 function download(name: string, text: string) {
