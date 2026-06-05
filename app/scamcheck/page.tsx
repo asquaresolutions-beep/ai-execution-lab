@@ -7,6 +7,7 @@ import { QuickAnalyzer } from '@/components/scamcheck/quick-analyzer'
 import { ScreenshotAnalyzer } from '@/components/scamcheck/screenshot-analyzer'
 import { TrustStats } from '@/components/scamcheck/trust-stats'
 import { TrustBadges } from '@/components/scamcheck/trust-badges'
+import { TrustSealCrossSell } from '@/components/scamcheck/trustseal-crosssell'
 import { TrendingIsland } from '@/components/scam-intel/trending-island'
 import { AdSlot } from '@/components/ads/ad-slot'
 import { buildMeta } from '@/lib/seo/scamcheck-meta'
@@ -151,6 +152,9 @@ export default function ScamCheckHome() {
           <p className="mt-1 text-sm text-zinc-300">Report it to help protect others — and reach the right authority for your country.</p>
           <Link href="/contact" className="mt-3 inline-block rounded-lg border border-amber-500/40 px-5 py-2 text-sm text-amber-200 hover:bg-amber-500/10">Report a scam</Link>
         </section>
+
+        {/* Cross-sell: TrustSeal */}
+        <TrustSealCrossSell className="mt-8" />
 
         {/* 9. FAQ */}
         <section className="mt-8">

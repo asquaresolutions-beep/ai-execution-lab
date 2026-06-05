@@ -75,6 +75,24 @@ export async function notifyContact(d: { name?: string; email?: string; kind?: s
   return { admin: admin.ok, user, error: admin.error }
 }
 
+/** A Square Solutions newsletter (blog): admin notification + subscriber welcome. Tracks source page. */
+export async function notifyNewsletter(d: { name?: string; email: string; source?: string }): Promise<{ admin: boolean; user: boolean; error?: string }> {
+  const admin = await send({
+    to: ADMIN_EMAIL,
+    subject: `New newsletter signup${d.name ? ` — ${d.name}` : ''}`,
+    replyTo: d.email,
+    html: wrap('New newsletter signup', `<p><b>Name:</b> ${esc(d.name || '—')}</p><p><b>Email:</b> ${esc(d.email)}</p><p><b>Source page:</b> ${esc(d.source || '—')}</p>`),
+  })
+  const user = await send({
+    to: d.email,
+    subject: 'Welcome to the A Square Solutions newsletter',
+    html: wrap('You\'re subscribed', `
+      <p>Hi${d.name ? ' ' + esc(d.name) : ''}, thanks for subscribing. You'll get practical updates on AI, web, and SEO from A Square Solutions.</p>
+      <p>Explore our work at <a href="https://asquaresolution.com">asquaresolution.com</a>, or check a suspicious message free with <a href="https://scamcheck.asquaresolution.com">ScamCheck</a>.</p>`),
+  })
+  return { admin: admin.ok, user: user.ok, error: admin.error || user.error }
+}
+
 /** AI Execution Lab Weekly newsletter: admin notification + subscriber welcome. */
 export async function notifyLabSignup(d: { name?: string; email: string }): Promise<{ admin: boolean; user: boolean; error?: string }> {
   const admin = await send({

@@ -11,6 +11,7 @@ import { TrustSignals } from '@/components/scamcheck/trust-signals'
 import { CHECKER_CONTENT } from '@/lib/scamcheck/checker-content'
 import { ES_CHECKERS } from '@/lib/scamcheck/es-pages'
 import { AdSlot } from '@/components/ads/ad-slot'
+import { TrustSealCrossSell } from '@/components/scamcheck/trustseal-crosssell'
 
 type Props = { params: Promise<{ checker: string }> }
 
@@ -62,6 +63,7 @@ export default async function CheckerPage({ params }: Props) {
           </a>
         )}
 
+        <TrustSealCrossSell className="mt-6" />
         <AdSlot id={`checker-${c.slug}`} format="horizontal" />
 
         {(() => { const ct = CHECKER_CONTENT[c.tab]; return (

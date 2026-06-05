@@ -1,11 +1,13 @@
 // ScamCheck product footer (server component).
 import Link from 'next/link'
 import { AdSlot } from '@/components/ads/ad-slot'
+import { TrustSealCrossSell } from '@/components/scamcheck/trustseal-crosssell'
 
 export function ScamCheckFooter() {
   return (
     <footer className="mt-12 border-t border-zinc-800 bg-zinc-950">
       <div className="mx-auto max-w-5xl px-4 pt-6">
+        <TrustSealCrossSell className="mb-6" />
         <AdSlot id="footer-multiplex" format="multiplex" />
       </div>
       <div className="mx-auto max-w-5xl px-4 py-8 text-sm text-zinc-400">
