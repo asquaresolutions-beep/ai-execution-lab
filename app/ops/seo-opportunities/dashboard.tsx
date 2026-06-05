@@ -65,7 +65,11 @@ const pctl = (n: number) => `${(n * 100).toFixed(2)}%`
 const short = (u: string) => { try { const x = new URL(u); return (x.pathname || '/').replace(/\/$/, '') || '/' } catch { return u } }
 
 function toCSV(rows: Record<string, unknown>[], cols: string[]): string {
-  const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
+  const esc = (v: unknown) => {
+    let s = String(v ?? '')
+    if (/^[=+\-@\t\r]/.test(s)) s = `'${s}` // neutralise CSV/Excel formula injection
+    return `"${s.replace(/"/g, '""')}"`
+  }
   return [cols.join(','), ...rows.map((r) => cols.map((c) => esc(r[c])).join(','))].join('\r\n')
 }
 function download(name: string, text: string) {
