@@ -15,19 +15,22 @@
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || ''
 const EMAIL_FROM = process.env.EMAIL_FROM || 'ScamCheck <noreply@asquaresolution.com>'
+// A Square Solutions lead/contact emails are sent under the company brand (same
+// verified sender address, A Square Solutions display name).
+const ASQ_FROM = process.env.LEAD_EMAIL_FROM || 'A Square Solutions <noreply@asquaresolution.com>'
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'contact@asquaresolution.com'
 
 export function emailConfigured(): boolean { return !!RESEND_API_KEY }
 
 const esc = (s: string) => s.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] as string))
 
-async function send(opts: { to: string; subject: string; html: string; replyTo?: string }): Promise<{ ok: boolean; skipped?: boolean; status?: number; error?: string }> {
+async function send(opts: { to: string; subject: string; html: string; replyTo?: string; from?: string }): Promise<{ ok: boolean; skipped?: boolean; status?: number; error?: string }> {
   if (!RESEND_API_KEY) return { ok: false, skipped: true }
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ from: EMAIL_FROM, to: [opts.to], subject: opts.subject, html: opts.html, ...(opts.replyTo ? { reply_to: opts.replyTo } : {}) }),
+      body: JSON.stringify({ from: opts.from || EMAIL_FROM, to: [opts.to], subject: opts.subject, html: opts.html, ...(opts.replyTo ? { reply_to: opts.replyTo } : {}) }),
     })
     if (r.ok) return { ok: true, status: r.status }
     let error = ''
@@ -43,6 +46,14 @@ const wrap = (title: string, body: string) =>
      <h2 style="color:#0ea5e9;margin:0 0 12px">${esc(title)}</h2>${body}
      <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0"/>
      <p style="font-size:12px;color:#71717a">ScamCheck · A Square Solutions · <a href="https://scamcheck.asquaresolution.com">scamcheck.asquaresolution.com</a></p>
+   </div>`
+
+// A Square Solutions-branded wrapper for company lead/contact emails.
+const wrapAsq = (title: string, body: string) =>
+  `<div style="font-family:system-ui,Arial,sans-serif;max-width:560px;margin:auto;color:#18181b">
+     <h2 style="color:#6366f1;margin:0 0 12px">${esc(title)}</h2>${body}
+     <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0"/>
+     <p style="font-size:12px;color:#71717a">A Square Solutions · <a href="https://asquaresolution.com">asquaresolution.com</a></p>
    </div>`
 
 /** Admin notification + user autoresponder for a contact / scam-report submission. */
@@ -79,9 +90,10 @@ export async function notifyContact(d: { name?: string; email?: string; kind?: s
 export async function notifyLead(d: { name?: string; email: string; service?: string; message?: string; source?: string }): Promise<{ admin: boolean; user: boolean; error?: string }> {
   const admin = await send({
     to: ADMIN_EMAIL,
+    from: ASQ_FROM,
     subject: `New lead${d.service ? ` — ${d.service}` : ''}${d.name ? ` (${d.name})` : ''}`,
     replyTo: d.email,
-    html: wrap('New service lead', `
+    html: wrapAsq('New service lead', `
       <p><b>Name:</b> ${esc(d.name || '—')}</p>
       <p><b>Email:</b> ${esc(d.email)}</p>
       <p><b>Service interest:</b> ${esc(d.service || '—')}</p>
@@ -90,10 +102,11 @@ export async function notifyLead(d: { name?: string; email: string; service?: st
   })
   const user = await send({
     to: d.email,
+    from: ASQ_FROM,
     subject: 'Thanks — we\'ll be in touch within 24 hours',
-    html: wrap('Thanks for reaching out', `
+    html: wrapAsq('Thanks for reaching out', `
       <p>Hi${d.name ? ' ' + esc(d.name) : ''}, thanks for your interest${d.service ? ` in our ${esc(d.service)}` : ''}. A Square Solutions will review your request and reply within 24 hours.</p>
-      <p>In the meantime, explore <a href="https://asquaresolution.com/what-we-do/">what we do</a> or our <a href="https://asquaresolution.com/case-studies/">case studies</a>.</p>`),
+      <p>In the meantime, explore <a href="https://asquaresolution.com/services/">our services</a> or our <a href="https://asquaresolution.com/case-studies/">case studies</a>.</p>`),
   })
   return { admin: admin.ok, user: user.ok, error: admin.error || user.error }
 }
