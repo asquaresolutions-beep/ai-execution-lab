@@ -67,8 +67,13 @@ export const POST = jsonRoute('scam-intel/screenshot', async (req) => {
 
   // Server-authoritative credit enforcement (screenshot scans cost 3).
   const sid = await resolveSubject(req)
-  const credit = await consumeCredits(sid.subject, 'screenshot', sid.loggedIn)
+  // H2: fail CLOSED — the Vertex/OCR analysis below must never run on an
+  // unmetered scan. A credit-store failure returns `transient` → retryable 503.
+  const credit = await consumeCredits(sid.subject, 'screenshot', sid.loggedIn, { failOpenOnError: false })
   if (!credit.ok) {
+    if (credit.transient) {
+      return NextResponse.json({ error: 'temporarily_unavailable', detail: 'Scan service is busy — please try again in a moment.' }, { status: 503, headers: { 'Retry-After': '5' } })
+    }
     return NextResponse.json({ error: 'out_of_credits', detail: `Daily limit reached (${credit.quota} credits; screenshots use 3). ${sid.loggedIn ? '' : 'Sign in for 50/day.'}`, ...credit }, { status: 402 })
   }
 

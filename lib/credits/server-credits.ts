@@ -32,7 +32,7 @@ export async function getCreditState(subject: string, loggedIn: boolean): Promis
  * new total exceeds the quota (standard atomic-counter pattern) so concurrent
  * requests can't over-spend.
  */
-export async function consumeCredits(subject: string, type: ScanType, loggedIn: boolean): Promise<{ ok: boolean } & CreditState> {
+export async function consumeCredits(subject: string, type: ScanType, loggedIn: boolean, opts: { failOpenOnError?: boolean } = {}): Promise<{ ok: boolean; transient?: boolean } & CreditState> {
   const quota = quotaFor(loggedIn)
   const cost = SCAN_COST[type]
   const id = docId(subject, dayKey())
@@ -41,8 +41,14 @@ export async function consumeCredits(subject: string, type: ScanType, loggedIn: 
   try {
     newUsed = await store.increment(COLLECTION, id, 'used', cost)
   } catch {
-    // Store unavailable: fail OPEN for availability (never hard-block a scan on
-    // infra error), but report best-effort state.
+    // H2: expensive/AI callers opt into fail-CLOSED — never run an unmetered
+    // paid scan when the credit write fails. `transient:true` lets the route
+    // return a retryable 503 (not a hard "out of credits").
+    if (opts.failOpenOnError === false) {
+      return { ok: false, transient: true, used: 0, remaining: 0, quota, resetsAt: nextResetISO(), loggedIn }
+    }
+    // Default (free, deterministic text scans): fail OPEN for availability —
+    // never hard-block a zero-cost scan on infra error; report best-effort state.
     return { ok: true, used: cost, remaining: Math.max(0, quota - cost), quota, resetsAt: nextResetISO(), loggedIn }
   }
   if (newUsed > quota) {
