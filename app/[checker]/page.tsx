@@ -2,12 +2,13 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { allCheckerSlugs, getChecker } from '@/lib/scamcheck/checkers'
-import { CHECKERS } from '@/lib/scamcheck/checkers'
 import { buildMeta, SCAMCHECK_BASE as BASE } from '@/lib/seo/scamcheck-meta'
 import { AuthProvider } from '@/components/auth/auth-provider'
 import { QuickAnalyzer } from '@/components/scamcheck/quick-analyzer'
 import { ScreenshotAnalyzer } from '@/components/scamcheck/screenshot-analyzer'
 import { TrustSignals } from '@/components/scamcheck/trust-signals'
+import { TrustBand } from '@/components/scamcheck/trust-band'
+import { ScanCTA } from '@/components/scamcheck/scan-cta'
 import { CHECKER_CONTENT } from '@/lib/scamcheck/checker-content'
 import { ES_CHECKERS } from '@/lib/scamcheck/es-pages'
 import { AdSlot } from '@/components/ads/ad-slot'
@@ -40,7 +41,6 @@ export default async function CheckerPage({ params }: Props) {
     { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: c.faqs.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'ScamCheck', item: `${BASE}/scamcheck` }, { '@type': 'ListItem', position: 2, name: c.h1, item: url }] },
   ]
-  const others = CHECKERS.filter((x) => x.slug !== c.slug)
 
   return (
     <AuthProvider>
@@ -50,9 +50,12 @@ export default async function CheckerPage({ params }: Props) {
         <h1 className="mt-2 text-2xl font-bold text-zinc-100">{c.h1}</h1>
         <p className="mt-2 text-sm text-zinc-400">{c.intro}</p>
 
-        <div className="mt-5">
+        <div id="scanner" className="mt-5 scroll-mt-20">
           {c.tab === 'screenshot' ? <ScreenshotAnalyzer /> : <QuickAnalyzer initialTab={c.tab} />}
         </div>
+
+        {/* asq-trustband-v1 */}
+        <TrustBand className="mt-5" />
 
         <TrustSignals />
 
@@ -92,13 +95,8 @@ export default async function CheckerPage({ params }: Props) {
           <div className="mt-2 space-y-3">{c.faqs.map((f, i) => (<div key={i}><p className="font-medium text-zinc-100">{f.q}</p><p className="text-zinc-400">{f.a}</p></div>))}</div>
         </section>
 
-        <section className="mt-8 text-sm">
-          <h2 className="text-base font-semibold text-zinc-200">More scam checkers</h2>
-          <ul className="mt-2 grid gap-1 sm:grid-cols-2">
-            {others.map((o) => <li key={o.slug}><Link href={`/${o.slug}`} className="text-sky-400 hover:underline">{o.h1}</Link></li>)}
-            <li><Link href="/scam-intelligence" className="text-sky-400 hover:underline">Trending scam campaigns →</Link></li>
-          </ul>
-        </section>
+        {/* asq-scancta-v1 — contextual conversion CTA + relevant checker suggestions (replaces plain link list) */}
+        <ScanCTA currentSlug={c.slug} className="mt-8" />
       </main>
     </AuthProvider>
   )

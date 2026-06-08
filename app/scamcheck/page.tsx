@@ -7,6 +7,7 @@ import { QuickAnalyzer } from '@/components/scamcheck/quick-analyzer'
 import { ScreenshotAnalyzer } from '@/components/scamcheck/screenshot-analyzer'
 import { TrustStats } from '@/components/scamcheck/trust-stats'
 import { TrustBadges } from '@/components/scamcheck/trust-badges'
+import { TrustBand } from '@/components/scamcheck/trust-band'
 import { TrustSealCrossSell } from '@/components/scamcheck/trustseal-crosssell'
 import { TrendingIsland } from '@/components/scam-intel/trending-island'
 import { AdSlot } from '@/components/ads/ad-slot'
@@ -62,9 +63,8 @@ export default function ScamCheckHome() {
           </div>
           <div className="relative">
             <div className="mb-4 flex justify-center"><CreditsDashboard /></div>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300">
-              <span aria-hidden>🛡️</span> AI-powered · Privacy-first · Free
-            </span>
+            {/* asq-trustband-v1 — upgraded generic pill → spec'd trust band (adds Google Gemini credibility) */}
+            <TrustBand />
             <h1 className="mt-4 bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-5xl">Free AI Scam Detector</h1>
             <p className="mx-auto mt-4 max-w-xl text-zinc-400">Scan messages, links, emails, phone numbers, and screenshots for phishing and fraud — instantly, with the interface in English, Hindi &amp; Spanish.</p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
