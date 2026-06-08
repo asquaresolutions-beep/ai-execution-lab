@@ -84,6 +84,10 @@ export const POST = jsonRoute('scam-intel/screenshot', async (req) => {
   const effectiveForceDeep = forceDeep && sid.loggedIn
   const result = await analyzeScreenshot(base64, mime, { forceDeep: effectiveForceDeep })
   if (sid.loggedIn && sid.uid) void recordScan(sid.uid, { ts: Date.now(), type: 'screenshot', verdict: result.verdict, risk: result.riskScore, label: result.campaignLabel })
-  return NextResponse.json({ ...result, credits: { remaining: credit.remaining, quota: credit.quota, resetsAt: credit.resetsAt } }, { headers: { 'Cache-Control': 'no-store' } })
+  // Budget circuit breaker tripped → deep vision was skipped; surface a soft notice.
+  const notice = result.deepSkippedReason === 'budget'
+    ? 'Deep visual analysis is temporarily at capacity — this result uses our standard checks. Please try again later for a full visual review.'
+    : undefined
+  return NextResponse.json({ ...result, ...(notice ? { notice } : {}), credits: { remaining: credit.remaining, quota: credit.quota, resetsAt: credit.resetsAt } }, { headers: { 'Cache-Control': 'no-store' } })
 })
 
