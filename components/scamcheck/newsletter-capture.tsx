@@ -20,6 +20,17 @@ function variant(verdict?: string) {
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/
 const SUB_KEY = 'scm_nl_sub'
 
+// Coarse device bucket for analytics (mobile | tablet | desktop).
+function deviceType(): 'mobile' | 'tablet' | 'desktop' {
+  if (typeof navigator !== 'undefined') {
+    const ua = navigator.userAgent || ''
+    if (/iPad|Tablet|PlayBook|Silk|(Android(?!.*Mobile))/i.test(ua)) return 'tablet'
+    if (/Mobi|iPhone|Android|IEMobile|Opera Mini/i.test(ua)) return 'mobile'
+  }
+  const w = typeof window !== 'undefined' ? window.innerWidth : 1280
+  return w < 640 ? 'mobile' : w < 1024 ? 'tablet' : 'desktop'
+}
+
 export function NewsletterCapture({ verdict, source = 'scan-result', className = '' }: { verdict?: string; source?: string; className?: string }) {
   const [email, setEmail] = useState('')
   const [hp, setHp] = useState('')
@@ -40,7 +51,9 @@ export function NewsletterCapture({ verdict, source = 'scan-result', className =
   if (status === 'ok') {
     return (
       <div className={`rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4 text-sm text-emerald-200 ${className}`}>
-        ✓ You’re in — check your inbox to confirm. We’ll send the week’s scams to watch for.
+        {msg === 'already'
+          ? '✓ You’re already subscribed — you’re all set. We’ll keep the scam alerts coming.'
+          : '✓ You’re in — check your inbox to confirm. We’ll send the week’s scams to watch for.'}
       </div>
     )
   }
@@ -52,9 +65,14 @@ export function NewsletterCapture({ verdict, source = 'scan-result', className =
     try {
       const r = await fetch('/api/newsletter', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, consent: true, source: `${source}|verdict:${verdict ?? 'na'}`, hp }),
+        body: JSON.stringify({ email, consent: true, source, verdict: verdict ?? 'na', device: deviceType(), hp }),
       })
-      if (r.ok) { setStatus('ok'); try { localStorage.setItem(SUB_KEY, '1') } catch { /* noop */ } track('newsletter_submit_success') }
+      if (r.ok) {
+        const data = await r.json().catch(() => ({})) as { duplicate?: boolean }
+        setStatus('ok'); try { localStorage.setItem(SUB_KEY, '1') } catch { /* noop */ }
+        if (data.duplicate) { setMsg('already'); track('newsletter_already_subscribed') }
+        else track('newsletter_submit_success')
+      }
       else if (r.status === 429) { setStatus('err'); setMsg('Too many tries — please wait a minute.'); track('newsletter_submit_error', { reason: 'rate_limited' }) }
       else { setStatus('err'); setMsg('Couldn’t sign you up — try again.'); track('newsletter_submit_error', { reason: r.status }) }
     } catch { setStatus('err'); setMsg('Network error — please try again.'); track('newsletter_submit_error', { reason: 'network' }) }
