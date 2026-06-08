@@ -7,6 +7,7 @@ import { getStore } from '@/lib/store/adapter'
 import { enforceRateLimit, RateLimitError } from '@/lib/ai/rate-limit'
 import { clientIp } from '@/lib/admin-auth'
 import { notifyNewsletter, emailConfigured } from '@/lib/email/notify'
+import { normalizeEmail, isValidEmail, subscriberDocId, normalizeVerdict, normalizeDevice } from '@/lib/newsletter/subscribers'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,19 +26,34 @@ export async function POST(req: Request) {
   try { await enforceRateLimit({ key: `newsletter:${clientIp(req)}`, limit: 6, windowMs: 3_600_000 }) }
   catch (e) { if (e instanceof RateLimitError) return NextResponse.json({ ok: false, error: 'rate_limited' }, { status: 429, headers: H }) }
 
-  const b = await req.json().catch(() => ({})) as { name?: string; email?: string; source?: string; consent?: boolean; hp?: string }
+  const b = await req.json().catch(() => ({})) as { name?: string; email?: string; source?: string; verdict?: string; device?: string; consent?: boolean; hp?: string }
   if ((b.hp || '').trim()) return NextResponse.json({ ok: true, emailed: false }, { headers: H }) // honeypot
-  const email = (b.email || '').trim().toLowerCase()
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return NextResponse.json({ ok: false, error: 'invalid_email' }, { status: 400, headers: H })
+  const email = normalizeEmail(b.email)
+  if (!isValidEmail(email)) return NextResponse.json({ ok: false, error: 'invalid_email' }, { status: 400, headers: H })
   if (!b.consent) return NextResponse.json({ ok: false, error: 'consent_required' }, { status: 400, headers: H })
   const name = (b.name || '').slice(0, 120)
   const source = (b.source || '').slice(0, 300)
+  const verdict = normalizeVerdict(b.verdict)         // scam | safe | suspicious | unknown
+  const device = normalizeDevice(b.device)            // mobile | tablet | desktop
+  const now = new Date().toISOString()
+  const store = getStore()
+  const id = subscriberDocId(email)                   // deterministic → one record per email
+
+  // ── Idempotency: same email never creates a duplicate record, never re-emails.
+  let existing = null
+  try { existing = await store.get('newsletter', id) } catch { /* treat as not-found, fail open to subscribe */ }
+  if (existing) {
+    // Best-effort touch for analytics; never blocks the response.
+    try { await store.update('newsletter', id, { lastSeenAt: now, lastSource: source, lastVerdict: verdict, lastDevice: device }) } catch { /* noop */ }
+    return NextResponse.json({ ok: true, duplicate: true, message: 'You’re already subscribed — thanks!' }, { headers: H })
+  }
 
   try {
-    await getStore().set('newsletter', `nl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, {
-      name, email, source, list: 'asquare-newsletter', consent: true, ip: clientIp(req), createdAt: new Date().toISOString(),
+    await store.set('newsletter', id, {
+      name, email, source, verdict, device,
+      list: 'asquare-newsletter', consent: true, ip: clientIp(req), createdAt: now,
     })
-  } catch { /* best-effort */ }
+  } catch { /* best-effort persistence */ }
 
   let emailed = { admin: false, user: false }; let emailError: string | undefined
   try { const r = await notifyNewsletter({ name, email, source }); emailed = { admin: r.admin, user: r.user }; emailError = r.error } catch (e) { emailError = (e as Error).message }
