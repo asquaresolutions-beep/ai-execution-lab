@@ -9,6 +9,7 @@ import { ScreenshotAnalyzer } from '@/components/scamcheck/screenshot-analyzer'
 import { TrustSignals } from '@/components/scamcheck/trust-signals'
 import { TrustBand } from '@/components/scamcheck/trust-band'
 import { ScanCTA } from '@/components/scamcheck/scan-cta'
+import { ScamResources } from '@/components/scamcheck/scam-resources'
 import { CHECKER_CONTENT } from '@/lib/scamcheck/checker-content'
 import { ES_CHECKERS } from '@/lib/scamcheck/es-pages'
 import { AdSlot } from '@/components/ads/ad-slot'
@@ -94,6 +95,9 @@ export default async function CheckerPage({ params }: Props) {
           <h2 className="text-base font-semibold text-zinc-200">FAQ</h2>
           <div className="mt-2 space-y-3">{c.faqs.map((f, i) => (<div key={i}><p className="font-medium text-zinc-100">{f.q}</p><p className="text-zinc-400">{f.a}</p></div>))}</div>
         </section>
+
+        {/* asq-growth-links-v1 — ScamCheck → blog authority cluster (internal links + ItemList JSON-LD) */}
+        <ScamResources currentSlug={c.slug} className="mt-8" />
 
         {/* asq-scancta-v1 — contextual conversion CTA + relevant checker suggestions (replaces plain link list) */}
         <ScanCTA currentSlug={c.slug} className="mt-8" />
