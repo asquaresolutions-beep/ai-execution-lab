@@ -25,6 +25,7 @@ import { vertexConfigured } from '@/lib/ai/provider'
 import { getAccessToken, getProjectId } from '@/lib/ai/vertex-auth'
 import { confidenceBand } from '@/lib/intelligence/snippets'
 import { getCached, setCached } from '@/lib/ai/cache'
+import { assertWithinBudget, BudgetExceededError } from '@/lib/ai/budget'
 import { log } from '@/lib/observability/logger'
 
 const LOCATION = process.env.VERTEX_LOCATION || 'us-central1'
@@ -63,6 +64,7 @@ export interface MultimodalVerdict {
   similar: SimilarHit[]
   deepAnalysisUsed: boolean
   deepAnalysis?: string
+  deepSkippedReason?: 'budget'   // deep vision degraded (daily AI budget reached)
   timings: Timings
   estCostUsd: number
   cached?: boolean
@@ -192,12 +194,26 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
   const ambiguous = rawRisk >= 25 && rawRisk <= 70
   let deepAnalysisUsed = false
   let deepAnalysis: string | undefined
+  let deepSkippedReason: 'budget' | undefined
   let deepTokens = 0
   if ((opts.forceDeep || ambiguous) && vertexConfigured()) {
-    const s = Date.now()
-    const deep = await deepVisionVerdict(clean, mime, text, similar).catch((e) => { log.warn({ event: 'multimodal.deep_failed', detail: String(e).slice(0, 120) }); return null })
-    timings.deepMs = Date.now() - s
-    if (deep) { deepAnalysisUsed = true; deepAnalysis = deep.rationale; deepTokens = deep.tokens; rawRisk = Math.round((rawRisk + deep.riskScore) / 2) }
+    // Circuit breaker (shared assertWithinBudget): once the day's AI spend is
+    // exhausted, skip the expensive Gemini-vision call and degrade gracefully
+    // to the deterministic verdict — the scan still returns a result.
+    let budgetOk = true
+    try { await assertWithinBudget() }
+    catch (e) {
+      if (e instanceof BudgetExceededError) { budgetOk = false; deepSkippedReason = 'budget'; log.warn({ event: 'multimodal.deep_skipped_budget' }) }
+      // Budget meter unreadable (e.g. transient store error) → proceed rather
+      // than break the scan; cost is still bounded by credits + rate limits.
+      else log.warn({ event: 'multimodal.budget_check_failed', detail: String(e).slice(0, 120) })
+    }
+    if (budgetOk) {
+      const s = Date.now()
+      const deep = await deepVisionVerdict(clean, mime, text, similar).catch((e) => { log.warn({ event: 'multimodal.deep_failed', detail: String(e).slice(0, 120) }); return null })
+      timings.deepMs = Date.now() - s
+      if (deep) { deepAnalysisUsed = true; deepAnalysis = deep.rationale; deepTokens = deep.tokens; rawRisk = Math.round((rawRisk + deep.riskScore) / 2) }
+    }
   }
 
   // 5. Calibrate (anti over-confidence, evidence + source weighting). (goal 3)
@@ -250,13 +266,16 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
     similar,
     deepAnalysisUsed,
     deepAnalysis,
+    deepSkippedReason,
     timings,
     estCostUsd,
   }
 
   // Observability (goal 12) + cache + BigQuery telemetry (never blocks/throws).
   log.info({ event: 'multimodal.analyzed', verdict, riskScore, confidence: cal.confidence, ...timings, estCostUsd, ocrEngine: ocr.engine, deepUsed: deepAnalysisUsed })
-  await setCached(verdictKey, 'screenshot', result, CACHE_TTL).catch(() => {})
+  // Cache normal results as before. Skip caching a budget-degraded verdict so an
+  // identical image is re-analyzed (with deep vision) once budget is available.
+  if (!deepSkippedReason) await setCached(verdictKey, 'screenshot', result, CACHE_TTL).catch(() => {})
   void logImageAnalysis({
     id: imgHash, verdict, risk_score: riskScore, scam_probability: result.scamProbability, trust_score: trustScore,
     category: enrichment.scam.category, ocr_chars: text.length, ocr_engine: ocr.engine, lang: ocr.lang,

@@ -15,10 +15,19 @@ export function requireAdmin(req: Request): { ok: true; adminId: string } | { ok
   return { ok: false }
 }
 
+// Trusted client IP behind Vercel's edge proxy.
+// Vercel OVERWRITES `x-real-ip` with the real TCP peer and APPENDS the real
+// client IP as the LAST `x-forwarded-for` hop. A client-supplied X-Forwarded-For
+// lands to the LEFT, so we must NEVER read `x-forwarded-for[0]` — that is
+// attacker-controllable and was the source of the rate-limit/credit bypass (C1).
+// NOTE: correct because this app runs behind Vercel. If self-hosted behind a
+// different proxy, set the trusted hop index for that proxy.
 export function clientIp(req: Request): string {
-  return (
-    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-    req.headers.get('x-real-ip') ||
-    'unknown'
-  )
+  const realIp = req.headers.get('x-real-ip')?.trim()
+  if (realIp) return realIp
+  const vff = req.headers.get('x-vercel-forwarded-for')
+  if (vff) return vff.split(',').pop()!.trim()
+  const xff = req.headers.get('x-forwarded-for')
+  if (xff) return xff.split(',').pop()!.trim() // LAST hop = appended by the trusted proxy
+  return 'unknown'
 }
