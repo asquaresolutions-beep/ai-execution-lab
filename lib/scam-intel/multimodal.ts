@@ -204,7 +204,9 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
     try { await assertWithinBudget() }
     catch (e) {
       if (e instanceof BudgetExceededError) { budgetOk = false; deepSkippedReason = 'budget'; log.warn({ event: 'multimodal.deep_skipped_budget' }) }
-      else throw e
+      // Budget meter unreadable (e.g. transient store error) → proceed rather
+      // than break the scan; cost is still bounded by credits + rate limits.
+      else log.warn({ event: 'multimodal.budget_check_failed', detail: String(e).slice(0, 120) })
     }
     if (budgetOk) {
       const s = Date.now()
