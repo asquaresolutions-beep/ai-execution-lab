@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { LANGS, t, type Lang } from '@/lib/i18n/scamcheck'
 import { getCountry, resolveCountryDetailed, type CountryConfig, type GeoSource } from '@/lib/scam-intel/countries'
+import { NewsletterCapture } from '@/components/scamcheck/newsletter-capture'
 import { useCredits, authHeaders } from '@/hooks/use-credits'
 import { useAuth } from '@/components/auth/auth-provider'
 
@@ -232,6 +233,9 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
           )}
         </div>
       )}
+
+      {/* asq-newsletter-v1 — capture at peak intent (after a verdict) */}
+      {result && <NewsletterCapture verdict={result.verdict} source="scan-result-screenshot" className="mt-4" />}
 
       {result && result.similar?.length > 0 && (
         <div className="mt-6">

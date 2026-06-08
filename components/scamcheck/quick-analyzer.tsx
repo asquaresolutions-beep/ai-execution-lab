@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useCredits, authHeaders } from '@/hooks/use-credits'
 import { useAuth } from '@/components/auth/auth-provider'
 import { ShareResult } from '@/components/scamcheck/share-result'
+import { NewsletterCapture } from '@/components/scamcheck/newsletter-capture'
 import { SCAMCHECK_BASE as SITE } from '@/lib/seo/scamcheck-meta'
 
 type Tab = 'message' | 'link' | 'email' | 'phone' | 'screenshot'
@@ -111,6 +112,8 @@ export function QuickAnalyzer({ initialTab = 'message' as Tab }: { initialTab?: 
             <ul className="list-inside list-disc space-y-1 text-sm text-zinc-300">{result.advice.map((a, i) => <li key={i}>{a}</li>)}</ul>
           )}
           <ShareResult summary={`ScamCheck result: ${result.verdict.replace(/_/g, ' ')} (risk ${result.riskScore}/100) — ${result.category.replace(/_/g, ' ')}. Checked free at ${SITE}/scamcheck`} />
+          {/* asq-newsletter-v1 — capture at peak intent (after a verdict) */}
+          <NewsletterCapture verdict={result.verdict} source="scan-result-quick" />
         </div>
       )}
     </section>
