@@ -72,7 +72,12 @@ export const POST = jsonRoute('scam-intel/screenshot', async (req) => {
     return NextResponse.json({ error: 'out_of_credits', detail: `Daily limit reached (${credit.quota} credits; screenshots use 3). ${sid.loggedIn ? '' : 'Sign in for 50/day.'}`, ...credit }, { status: 402 })
   }
 
-  const result = await analyzeScreenshot(base64, mime, { forceDeep })
+  // C2: only authenticated users may force the expensive deep Gemini-vision
+  // path. For guests, `forceDeep` is ignored — deep analysis still runs
+  // automatically when signals are ambiguous (server-decided), so detection
+  // quality is unchanged while the on-demand cost lever is removed.
+  const effectiveForceDeep = forceDeep && sid.loggedIn
+  const result = await analyzeScreenshot(base64, mime, { forceDeep: effectiveForceDeep })
   if (sid.loggedIn && sid.uid) void recordScan(sid.uid, { ts: Date.now(), type: 'screenshot', verdict: result.verdict, risk: result.riskScore, label: result.campaignLabel })
   return NextResponse.json({ ...result, credits: { remaining: credit.remaining, quota: credit.quota, resetsAt: credit.resetsAt } }, { headers: { 'Cache-Control': 'no-store' } })
 })
