@@ -32,7 +32,10 @@
   function styleOnce() {
     if (document.getElementById('asq-sca-style')) return
     var css =
-      '.asq-sca{border:1px solid rgba(14,165,233,.3);background:rgba(14,165,233,.06);border-radius:12px;padding:16px;margin:20px 0;font-family:system-ui,Segoe UI,Arial,sans-serif;color:#18181b}' +
+      // CLS guard: reserve height before/at mount so filling the card never shifts surrounding content.
+      '[data-scamcheck-alert]{min-height:188px;box-sizing:border-box}' +
+      '.asq-sca{border:1px solid rgba(14,165,233,.3);background:rgba(14,165,233,.06);border-radius:12px;padding:16px;margin:20px 0;font-family:system-ui,Segoe UI,Arial,sans-serif;color:#18181b;min-height:188px;box-sizing:border-box}' +
+      '@media(max-width:520px){[data-scamcheck-alert],.asq-sca{min-height:224px}}' +
       '.asq-sca h4{margin:0 0 4px;font-size:16px;font-weight:700;color:#0c4a6e}' +
       '.asq-sca p{margin:0 0 10px;font-size:13px;color:#3f3f46}' +
       '.asq-sca form{display:flex;gap:8px;flex-wrap:wrap}' +

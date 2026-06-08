@@ -54,7 +54,7 @@ function blockHtml(plan) {
     `<aside class="asq-related"><p><strong>Check it yourself — free:</strong></p><ul>${linkList}</ul></aside>`,
     `<!-- /${MARK_LINKS} -->`,
     `<!-- ${MARK_NL} -->`,
-    `<div data-scamcheck-alert data-source="blog:${plan.postSlug}"></div>`,
+    `<div data-scamcheck-alert data-source="blog:${plan.postSlug}" style="min-height:188px"></div>`,
     `<script src="${EMBED_SRC}" defer></script>`,
     `<!-- /${MARK_NL} -->`,
   ].join('\n')
