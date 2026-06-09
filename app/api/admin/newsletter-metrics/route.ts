@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server'
 import { getStore } from '@/lib/store/adapter'
 import { requireAdmin } from '@/lib/admin-auth'
-import { summarizeSubscribers, type SubscriberRow } from '@/lib/newsletter/subscribers'
+import { summarizeSubscribers, subscriberTrends, type SubscriberRow } from '@/lib/newsletter/subscribers'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,10 +31,11 @@ export async function GET(req: Request) {
   })
 
   const summary = summarizeSubscribers(rows)
+  const trends = subscriberTrends(rows)            // asq-newsletter-dash-v1: daily/weekly/cumulative/topSources
   const recent = [...rows]
     .sort((a, b) => ((b.createdAt || '') > (a.createdAt || '') ? 1 : -1))
     .slice(0, 50)
     .map((r) => ({ email: r.email, verdict: r.verdict ?? 'unknown', source: r.source ?? '', device: r.device ?? 'desktop', createdAt: r.createdAt }))
 
-  return NextResponse.json({ ...summary, recent }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ ...summary, trends, recent }, { headers: { 'Cache-Control': 'no-store' } })
 }

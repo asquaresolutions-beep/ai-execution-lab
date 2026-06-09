@@ -108,3 +108,70 @@ export function summarizeSubscribers(rows: SubscriberRow[]): NewsletterSummary {
     generatedAt: new Date().toISOString(),
   }
 }
+
+// ── Time-series + ranking helpers (dashboard) ──────────────────────
+/** YYYY-MM-DD day key (UTC) from an ISO timestamp. */
+export function dayKey(iso?: string): string { return (iso || '').slice(0, 10) }
+
+/** ISO-8601 week key, e.g. "2026-W23" (UTC). */
+export function isoWeekKey(iso?: string): string {
+  if (!iso) return ''
+  const d = new Date(iso); if (isNaN(+d)) return ''
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+  const day = (t.getUTCDay() + 6) % 7; t.setUTCDate(t.getUTCDate() - day + 3)
+  const first = new Date(Date.UTC(t.getUTCFullYear(), 0, 4))
+  const week = 1 + Math.round(((+t - +first) / 86400000 - 3 + ((first.getUTCDay() + 6) % 7)) / 7)
+  return `${t.getUTCFullYear()}-W${String(week).padStart(2, '0')}`
+}
+
+export interface TrendPoint { key: string; count: number }
+export interface RankPoint { key: string; count: number }
+export interface SubscriberTrends {
+  /** Per-day signups for the last `days` (zero-filled, chronological). */
+  daily: TrendPoint[]
+  /** Per-ISO-week signups for the last `weeks` (zero-filled, chronological). */
+  weekly: TrendPoint[]
+  /** Cumulative subscriber total across the daily window (subscribers over time). */
+  cumulative: TrendPoint[]
+  /** Acquisition sources ranked by signups (top N). */
+  topSources: RankPoint[]
+  windowDays: number
+}
+
+/**
+ * Build dashboard time-series from raw rows. Pure + deterministic given `now`
+ * (injected for tests). Reuses the same rows as summarizeSubscribers — no extra
+ * reads, no new collection.
+ */
+export function subscriberTrends(rows: SubscriberRow[], now: number = Date.now(), days = 30, weeks = 12): SubscriberTrends {
+  const dayCounts = new Map<string, number>()
+  const weekCounts = new Map<string, number>()
+  const srcCounts = new Map<string, number>()
+  for (const r of rows) {
+    const d = dayKey(r.createdAt); if (d) dayCounts.set(d, (dayCounts.get(d) || 0) + 1)
+    const w = isoWeekKey(r.createdAt); if (w) weekCounts.set(w, (weekCounts.get(w) || 0) + 1)
+    const s = normalizeSource(r.source); srcCounts.set(s, (srcCounts.get(s) || 0) + 1)
+  }
+
+  // last `days` zero-filled, chronological
+  const daily: TrendPoint[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const k = new Date(now - i * 86400000).toISOString().slice(0, 10)
+    daily.push({ key: k, count: dayCounts.get(k) || 0 })
+  }
+  // cumulative: start from subscribers acquired before the window
+  const firstDay = daily[0]?.key || dayKey(new Date(now).toISOString())
+  let run = rows.reduce((n, r) => (dayKey(r.createdAt) && dayKey(r.createdAt) < firstDay ? n + 1 : n), 0)
+  const cumulative: TrendPoint[] = daily.map((p) => { run += p.count; return { key: p.key, count: run } })
+
+  // last `weeks` distinct ISO weeks, zero-filled, chronological
+  const wk: string[] = []
+  for (let i = 0; i < weeks; i++) { const k = isoWeekKey(new Date(now - i * 7 * 86400000).toISOString()); if (k && !wk.includes(k)) wk.push(k) }
+  const weekly: TrendPoint[] = wk.reverse().map((k) => ({ key: k, count: weekCounts.get(k) || 0 }))
+
+  const topSources: RankPoint[] = [...srcCounts.entries()]
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key))
+
+  return { daily, weekly, cumulative, topSources, windowDays: days }
+}
