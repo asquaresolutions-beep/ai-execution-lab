@@ -41,7 +41,7 @@ const r = read('app/api/newsletter/unsubscribe/route.ts')
 ok('route has GET + POST', /export async function GET/.test(r) && /export async function POST/.test(r))
 ok('POST returns 200 on success (one-click)', /status: ok \? 200 : 400/.test(r))
 ok('non-destructive (sets unsubscribed flag, no delete)', /unsubscribed: true/.test(r) && !/\.delete\(/.test(r))
-ok('only updates existing docs (no stray creates)', /const doc = await store\.get\(c, id\)/.test(r) && /if \(doc\)/.test(r))
+ok('only updates existing docs (no stray creates)', /const doc = await store\.get(<[^>]*>)?\(c, id\)/.test(r) && /if \(doc\)/.test(r))
 
 console.log(`\nemail-deliverability: ${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)
