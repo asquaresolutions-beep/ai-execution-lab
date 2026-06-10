@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation'
 import { allIntelSlugs, getIntelPage } from '@/lib/scam-intel/intel-pages'
 import { getCountry } from '@/lib/scam-intel/countries'
 import { AdSlot } from '@/components/ads/ad-slot'
+import { NewsletterCapture } from '@/components/scamcheck/newsletter-capture'
+import { FAKE_UPI_MAGNET } from '@/lib/newsletter/lead-magnets'
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 
@@ -102,6 +104,10 @@ export default async function IntelPage({ params }: Props) {
         <p className="mt-1 text-zinc-400">{country.bankingGuidance}</p>
         <p className="mt-1 text-zinc-300">{country.agency}: <span className="text-zinc-100">{country.helpline}</span></p>
         <a href={country.reportUrl} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">{country.reportUrl.replace(/^https?:\/\//, '')}</a>
+      </section>
+
+      <section className="mt-10">
+        <NewsletterCapture source={`intel:${p.slug}`} magnet={FAKE_UPI_MAGNET} />
       </section>
 
       <p className="mt-6 text-xs text-zinc-500">This is general safety information, not legal or financial advice. If you have lost money or shared sensitive details, contact your bank and your national fraud agency immediately.</p>

@@ -31,7 +31,7 @@ function deviceType(): 'mobile' | 'tablet' | 'desktop' {
   return w < 640 ? 'mobile' : w < 1024 ? 'tablet' : 'desktop'
 }
 
-export function NewsletterCapture({ verdict, source = 'scan-result', className = '' }: { verdict?: string; source?: string; className?: string }) {
+export function NewsletterCapture({ verdict, source = 'scan-result', className = '', magnet }: { verdict?: string; source?: string; className?: string; magnet?: { href: string; title: string } }) {
   const [email, setEmail] = useState('')
   const [hp, setHp] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle')
@@ -51,9 +51,18 @@ export function NewsletterCapture({ verdict, source = 'scan-result', className =
   if (status === 'ok') {
     return (
       <div className={`rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4 text-sm text-emerald-200 ${className}`}>
-        {msg === 'already'
+        <p>{msg === 'already'
           ? '✓ You’re already subscribed — you’re all set. We’ll keep the scam alerts coming.'
-          : '✓ You’re in — check your inbox to confirm. We’ll send the week’s scams to watch for.'}
+          : '✓ You’re in — the week’s scams to watch for are on their way.'}</p>
+        {magnet && (
+          <a
+            href={magnet.href} download
+            onClick={() => track('lead_magnet_download', { magnet: magnet.title })}
+            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-400"
+          >
+            ⬇ Download your free {magnet.title}
+          </a>
+        )}
       </div>
     )
   }
@@ -82,6 +91,7 @@ export function NewsletterCapture({ verdict, source = 'scan-result', className =
     <form onSubmit={submit} className={`rounded-xl border border-sky-500/30 bg-sky-500/[0.06] p-4 ${className}`}>
       <p className="text-sm font-semibold text-zinc-100">{v.h}</p>
       <p className="mt-1 text-xs text-zinc-400">{v.p}</p>
+      {magnet && <p className="mt-2 text-xs font-medium text-emerald-300">📄 Plus: instant free download — {magnet.title}.</p>}
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input
           type="email" required value={email} onChange={(e) => setEmail(e.target.value)}

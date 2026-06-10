@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { INTEL_PAGES } from '@/lib/scam-intel/intel-pages'
 import { TrendingIsland } from '@/components/scam-intel/trending-island'
 import { AdSlot } from '@/components/ads/ad-slot'
+import { NewsletterCapture } from '@/components/scamcheck/newsletter-capture'
+import { FAKE_UPI_MAGNET } from '@/lib/newsletter/lead-magnets'
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
 
@@ -52,6 +54,10 @@ export default function ScamIntelligenceIndex() {
           <li><Link href="/docs/multimodal-scamcheck" className="text-sky-400 hover:underline">How multimodal ScamCheck works</Link></li>
           <li><Link href="/docs/gcp-ai-infrastructure" className="text-sky-400 hover:underline">The AI infrastructure behind ScamCheck</Link></li>
         </ul>
+      </section>
+
+      <section className="mt-10">
+        <NewsletterCapture source="research:scam-intelligence" magnet={FAKE_UPI_MAGNET} />
       </section>
     </main>
   )
