@@ -11,7 +11,13 @@
 //   ADMIN_EMAIL     — where admin notifications go (default contact@asquaresolution.com)
 // DNS to activate (on asquaresolution.com, via Resend domain verification):
 //   SPF (include resend), DKIM (resend._domainkey CNAMEs), optional DMARC already set.
+//
+// Deliverability (asq-deliverability-p1): list emails carry RFC 8058 one-click
+// List-Unsubscribe headers + an in-body unsubscribe link + postal address, and
+// every email ships a text/plain alternative alongside the HTML.
 // ─────────────────────────────────────────────────────────────────
+import { subscriberDocId } from '@/lib/newsletter/subscribers'
+import { htmlToText } from './text'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || ''
 const EMAIL_FROM = process.env.EMAIL_FROM || 'ScamCheck <noreply@asquaresolution.com>'
@@ -19,18 +25,27 @@ const EMAIL_FROM = process.env.EMAIL_FROM || 'ScamCheck <noreply@asquaresolution
 // verified sender address, A Square Solutions display name).
 const ASQ_FROM = process.env.LEAD_EMAIL_FROM || 'A Square Solutions <noreply@asquaresolution.com>'
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'contact@asquaresolution.com'
+// Deliverability config (override in env). PUBLIC_APP_URL hosts the unsubscribe
+// endpoint; MAIL_PHYSICAL_ADDRESS must be set to the real registered postal
+// address (CAN-SPAM/CASL); UNSUB_MAILTO is the legacy List-Unsubscribe fallback.
+const PUBLIC_APP_URL = (process.env.PUBLIC_APP_URL || 'https://scamcheck.asquaresolution.com').replace(/\/$/, '')
+const UNSUB_MAILTO = process.env.UNSUB_MAILTO || 'unsubscribe@asquaresolution.com'
+const MAIL_PHYSICAL_ADDRESS = process.env.MAIL_PHYSICAL_ADDRESS || 'A Square Solutions, Mumbai, Maharashtra, India'
 
 export function emailConfigured(): boolean { return !!RESEND_API_KEY }
 
 const esc = (s: string) => s.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] as string))
 
-async function send(opts: { to: string; subject: string; html: string; replyTo?: string; from?: string }): Promise<{ ok: boolean; skipped?: boolean; status?: number; error?: string }> {
+async function send(opts: { to: string; subject: string; html: string; text?: string; replyTo?: string; from?: string; headers?: Record<string, string> }): Promise<{ ok: boolean; skipped?: boolean; status?: number; error?: string }> {
   if (!RESEND_API_KEY) return { ok: false, skipped: true }
+  // Always ship a text/plain alternative (derived from the HTML if not given) to
+  // avoid the MIME_HTML_ONLY spam heuristic. Functionality/branding unchanged.
+  const text = opts.text || htmlToText(opts.html)
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ from: opts.from || EMAIL_FROM, to: [opts.to], subject: opts.subject, html: opts.html, ...(opts.replyTo ? { reply_to: opts.replyTo } : {}) }),
+      body: JSON.stringify({ from: opts.from || EMAIL_FROM, to: [opts.to], subject: opts.subject, html: opts.html, text, ...(opts.replyTo ? { reply_to: opts.replyTo } : {}), ...(opts.headers ? { headers: opts.headers } : {}) }),
     })
     if (r.ok) return { ok: true, status: r.status }
     let error = ''
@@ -55,6 +70,28 @@ const wrapAsq = (title: string, body: string) =>
      <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0"/>
      <p style="font-size:12px;color:#71717a">A Square Solutions · <a href="https://asquaresolution.com">asquaresolution.com</a></p>
    </div>`
+
+// ── List-mail deliverability helpers (asq-deliverability-p1) ────────
+/** Per-recipient unsubscribe URL (one-click target). id = deterministic doc key. */
+export function unsubscribeUrl(email: string): string {
+  return `${PUBLIC_APP_URL}/api/newsletter/unsubscribe?id=${subscriberDocId(email)}`
+}
+
+/** RFC 8058 one-click List-Unsubscribe headers for bulk/list emails. */
+function listHeaders(email: string): Record<string, string> {
+  return {
+    'List-Unsubscribe': `<${unsubscribeUrl(email)}>, <mailto:${UNSUB_MAILTO}?subject=unsubscribe>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  }
+}
+
+/** In-body unsubscribe link + physical postal address (CAN-SPAM/CASL). Append to list-email bodies. */
+function unsubFooter(email: string): string {
+  return `<p style="font-size:12px;color:#a1a1aa;margin-top:16px;line-height:1.5">
+     You're receiving this because you subscribed at asquaresolution.com.
+     <a href="${unsubscribeUrl(email)}" style="color:#a1a1aa;text-decoration:underline">Unsubscribe</a>.<br/>
+     ${esc(MAIL_PHYSICAL_ADDRESS)}</p>`
+}
 
 /** Admin notification + user autoresponder for a contact / scam-report submission. */
 export async function notifyContact(d: { name?: string; email?: string; kind?: string; message: string }): Promise<{ admin: boolean; user: boolean; error?: string }> {
@@ -122,9 +159,10 @@ export async function notifyNewsletter(d: { name?: string; email: string; source
   const user = await send({
     to: d.email,
     subject: 'Welcome to the A Square Solutions newsletter',
+    headers: listHeaders(d.email),
     html: wrap('You\'re subscribed', `
       <p>Hi${d.name ? ' ' + esc(d.name) : ''}, thanks for subscribing. You'll get practical updates on AI, web, and SEO from A Square Solutions.</p>
-      <p>Explore our work at <a href="https://asquaresolution.com">asquaresolution.com</a>, or check a suspicious message free with <a href="https://scamcheck.asquaresolution.com">ScamCheck</a>.</p>`),
+      <p>Explore our work at <a href="https://asquaresolution.com">asquaresolution.com</a>, or check a suspicious message free with <a href="https://scamcheck.asquaresolution.com">ScamCheck</a>.</p>` + unsubFooter(d.email)),
   })
   return { admin: admin.ok, user: user.ok, error: admin.error || user.error }
 }
@@ -140,9 +178,10 @@ export async function notifyLabSignup(d: { name?: string; email: string }): Prom
   const user = await send({
     to: d.email,
     subject: 'Welcome to AI Execution Lab Weekly',
+    headers: listHeaders(d.email),
     html: wrap('You\'re subscribed to AI Execution Lab Weekly', `
       <p>Hi${d.name ? ' ' + esc(d.name) : ''}, thanks for subscribing. Each week you'll get the latest production AI engineering notes, systems, and failure post-mortems from the AI Execution Lab.</p>
-      <p>Read the latest at <a href="https://lab.asquaresolution.com">lab.asquaresolution.com</a>.</p>`),
+      <p>Read the latest at <a href="https://lab.asquaresolution.com">lab.asquaresolution.com</a>.</p>` + unsubFooter(d.email)),
   })
   return { admin: admin.ok, user: user.ok, error: admin.error || user.error }
 }
@@ -152,9 +191,10 @@ export async function notifySubscribe(email: string): Promise<{ ok: boolean; err
   const res = await send({
     to: email,
     subject: 'You\'re subscribed to ScamCheck alerts',
+    headers: listHeaders(email),
     html: wrap('Subscription confirmed', `
       <p>Thanks for subscribing to ScamCheck scam alerts. You'll get notified about new and trending scam campaigns relevant to your region.</p>
-      <p>Check a suspicious message any time at <a href="https://scamcheck.asquaresolution.com">scamcheck.asquaresolution.com</a>.</p>`),
+      <p>Check a suspicious message any time at <a href="https://scamcheck.asquaresolution.com">scamcheck.asquaresolution.com</a>.</p>` + unsubFooter(email)),
   })
   return { ok: res.ok, error: res.error }
 }
