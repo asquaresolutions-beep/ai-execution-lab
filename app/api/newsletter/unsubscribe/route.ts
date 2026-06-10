@@ -7,6 +7,7 @@
 // (sha1 of the email) already used as the doc key, so no email appears in the URL.
 import { NextResponse } from 'next/server'
 import { getStore } from '@/lib/store/adapter'
+import { recordEmailEvent } from '@/lib/email/events'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,8 +21,12 @@ async function suppress(id: string | null): Promise<boolean> {
   let any = false
   for (const c of COLLECTIONS) {
     try {
-      const doc = await store.get(c, id)        // only touch a doc that exists (no stray creates)
-      if (doc) { await store.update(c, id, { unsubscribed: true, unsubscribedAt: now }); any = true }
+      const doc = await store.get<{ email?: string }>(c, id)  // only touch a doc that exists (no stray creates)
+      if (doc) {
+        await store.update(c, id, { unsubscribed: true, unsubscribedAt: now }); any = true
+        // Track the unsubscribe as an engagement event (append-only, best-effort).
+        if (doc.data?.email) await recordEmailEvent({ type: 'unsubscribed', email: String(doc.data.email).toLowerCase(), ts: Date.now(), meta: { collection: c } })
+      }
     } catch { /* ignore per-collection failure */ }
   }
   return any
