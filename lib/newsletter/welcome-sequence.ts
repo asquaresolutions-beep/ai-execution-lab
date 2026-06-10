@@ -29,12 +29,19 @@ export async function processWelcomeSequence(now: number = Date.now(), maxBatch 
   base.enabled = true
 
   const store = getStore()
+  // Launch cutoff (fail-safe): only subscribers created at/after WELCOME_SEQUENCE_SINCE
+  // are eligible. If the cutoff is unset/invalid, sinceMs = Infinity → NO ONE is
+  // enrolled, so enabling the sequence without a cutoff can never retro-blast
+  // pre-launch subscribers. Set WELCOME_SEQUENCE_SINCE (ISO date) to activate.
+  const sinceRaw = process.env.WELCOME_SEQUENCE_SINCE
+  const sinceMs = sinceRaw && !Number.isNaN(Date.parse(sinceRaw)) ? Date.parse(sinceRaw) : Infinity
+
   const subs = await store.query<SubDoc>('newsletter', { limit: maxBatch })
   base.scanned = subs.length
 
   for (const doc of subs) {
     const sub = doc.data || {}
-    const step = dueWelcomeStep(sub, now)
+    const step = dueWelcomeStep(sub, now, sinceMs)
     if (!step || !sub.email) continue
     base.due++
     const mail = welcomeEmail(step, sub.name)
