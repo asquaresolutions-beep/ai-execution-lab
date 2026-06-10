@@ -71,10 +71,16 @@ export function welcomeEmail(step: number, name?: string): { subject: string; ti
   }
 }
 
-/** Which drip step (1..3) is due now for a subscriber, or null if none. Pure. */
+/**
+ * Which drip step (1..3) is due now for a subscriber, or null if none. Pure.
+ * `sinceMs` is the launch-cutoff (WELCOME_SEQUENCE_SINCE as epoch ms): subscribers
+ * created BEFORE it are never enrolled (prevents retro-enrolling pre-launch
+ * subscribers). Default 0 = no cutoff (backward compatible).
+ */
 export function dueWelcomeStep(
   sub: { createdAt?: string; welcomeStep?: number; unsubscribed?: boolean },
   now: number,
+  sinceMs = 0,
 ): number | null {
   if (sub.unsubscribed) return null
   const next = (sub.welcomeStep ?? 0) + 1
@@ -83,6 +89,8 @@ export function dueWelcomeStep(
   if (!def) return null
   const created = sub.createdAt ? Date.parse(sub.createdAt) : NaN
   if (isNaN(created)) return null
+  // Launch cutoff: only subscribers created at/after the cutoff are eligible.
+  if (sinceMs && created < sinceMs) return null
   const ageDays = (now - created) / DAY_MS
   return ageDays >= def.offsetDays ? next : null
 }

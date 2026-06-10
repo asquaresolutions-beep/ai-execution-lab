@@ -40,9 +40,20 @@ ok('unsubscribed → null', dueWelcomeStep({ createdAt: ago(9), welcomeStep: 0, 
 ok('missing/invalid createdAt → null', dueWelcomeStep({ welcomeStep: 0 }, NOW) === null)
 ok('welcomeStep defaults to 0', dueWelcomeStep({ createdAt: ago(3) }, NOW) === 1)
 
+// ── launch cutoff (WELCOME_SEQUENCE_SINCE) ──
+const CUTOFF = Date.parse('2026-06-05T00:00:00Z')   // NOW is 2026-06-10
+ok('created BEFORE cutoff → never enrolled', dueWelcomeStep({ createdAt: ago(9), welcomeStep: 0 }, NOW, CUTOFF) === null) // ago(9)=06-01 < cutoff
+ok('created AFTER cutoff → eligible', dueWelcomeStep({ createdAt: ago(2), welcomeStep: 0 }, NOW, CUTOFF) === 1)            // ago(2)=06-08 ≥ cutoff, age 2
+ok('cutoff blocks even a long-overdue pre-launch sub', dueWelcomeStep({ createdAt: ago(30), welcomeStep: 2 }, NOW, CUTOFF) === null)
+ok('Infinity cutoff (env unset fail-safe) → enrolls NO ONE', dueWelcomeStep({ createdAt: ago(2), welcomeStep: 0 }, NOW, Infinity) === null)
+ok('cutoff=0 (default) → no cutoff, back-compat', dueWelcomeStep({ createdAt: ago(9), welcomeStep: 2 }, NOW, 0) === 3)
+
 // ── orchestration safety + cron wiring (static) ──
 const seq = read('lib/newsletter/welcome-sequence.ts')
 ok('disabled unless WELCOME_SEQUENCE_ENABLED===true', /WELCOME_SEQUENCE_ENABLED !== 'true'/.test(seq))
+ok('reads WELCOME_SEQUENCE_SINCE cutoff', /WELCOME_SEQUENCE_SINCE/.test(seq))
+ok('fail-safe: Infinity when cutoff unset/invalid', /:\s*Infinity/.test(seq))
+ok('passes cutoff to dueWelcomeStep', /dueWelcomeStep\(sub, now, sinceMs\)/.test(seq))
 ok('uses existing newsletter collection', /query<[^>]*>\('newsletter'/.test(seq) || /'newsletter'/.test(seq))
 ok('advances welcomeStep only on confirmed send', /if \(r\.ok\)[\s\S]*welcomeStep: step/.test(seq))
 ok('no delete of subscriber data', !/\.delete\(/.test(seq))
