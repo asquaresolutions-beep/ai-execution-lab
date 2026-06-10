@@ -34,6 +34,7 @@ const ALLOW_PREFIXES = [
   '/scamcheck', '/scam-intelligence', '/scam-database', '/latest-scams', '/es', '/hi',
   '/privacy-policy', '/terms', '/disclaimer', '/contact', '/about', '/how-it-works', '/methodology', // legal + E-E-A-T
   '/api/scam-intel', '/api/geo', '/api/semantic-search', '/api/credits', '/api/scans', '/api/contact', '/api/newsletter', '/api/lead',
+  '/guides', // static lead-magnet assets (e.g. /guides/fake-upi-scam-detection-guide.html)
   '/_next', '/sitemap', '/robots', '/manifest', '/icon', '/apple-icon', '/opengraph-image', '/favicon',
 ]
 

@@ -4,6 +4,8 @@ import { buildMeta, SCAMCHECK_BASE as BASE } from '@/lib/seo/scamcheck-meta'
 import { ScamSearch } from '@/components/scamcheck/scam-search'
 import { AdSlot } from '@/components/ads/ad-slot'
 import { INTEL_PAGES } from '@/lib/scam-intel/intel-pages'
+import { NewsletterCapture } from '@/components/scamcheck/newsletter-capture'
+import { FAKE_UPI_MAGNET } from '@/lib/newsletter/lead-magnets'
 
 export const metadata: Metadata = buildMeta({
   path: '/scam-database',
@@ -32,6 +34,10 @@ export default function ScamDatabase() {
           <Link href="/latest-scams" className="hover:text-zinc-300">Latest scams →</Link>
           <Link href="/scam-intelligence" className="hover:text-zinc-300">Trending campaigns →</Link>
         </p>
+      </section>
+
+      <section className="mt-10">
+        <NewsletterCapture source="research:scam-database" magnet={FAKE_UPI_MAGNET} />
       </section>
     </main>
   )

@@ -4,6 +4,8 @@ import { buildMeta, SCAMCHECK_BASE as BASE } from '@/lib/seo/scamcheck-meta'
 import { TrendingIsland } from '@/components/scam-intel/trending-island'
 import { AdSlot } from '@/components/ads/ad-slot'
 import { INTEL_PAGES } from '@/lib/scam-intel/intel-pages'
+import { NewsletterCapture } from '@/components/scamcheck/newsletter-capture'
+import { FAKE_UPI_MAGNET } from '@/lib/newsletter/lead-magnets'
 
 export const metadata: Metadata = buildMeta({
   path: '/latest-scams',
@@ -46,6 +48,10 @@ export default function LatestScams() {
         <Link href="/" className="hover:text-zinc-300">Check a message →</Link>
         <Link href="/contact" className="hover:text-zinc-300">Report a scam →</Link>
       </p>
+
+      <section className="mt-10">
+        <NewsletterCapture source="research:latest-scams" magnet={FAKE_UPI_MAGNET} />
+      </section>
     </main>
   )
 }
