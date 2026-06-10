@@ -9,6 +9,7 @@ import { drainQueue } from '@/lib/distribution/queue'
 import { hasQueueWork } from '@/lib/distribution/throttle'
 import { recomputeTrending } from '@/lib/scam-intel/feed'
 import { cleanExpiredCache, cleanExpiredRateLimits } from '@/lib/ai/cache'
+import { composeWeeklyScamcheckDraft, processCampaignSends } from '@/lib/newsletter/campaigns'
 import { isAuthorizedCron } from '@/lib/cron-auth'
 import { log } from '@/lib/observability/logger'
 import { reportError } from '@/lib/observability/errors'
@@ -54,6 +55,23 @@ export async function GET(req: Request) {
   } catch (err) {
     await reportError('cron.clean_cache', err, { severity: 'warning' })
     out.cleaned = { error: (err as Error).message }
+  }
+
+  // 3) Weekly ScamCheck digest. composeWeeklyScamcheckDraft only ever creates a
+  //    DRAFT (idempotent per week) — it never sends. processCampaignSends drains
+  //    recipients ONLY for campaigns an admin explicitly approved + enqueued, and
+  //    is additionally gated by WEEKLY_DIGEST_ENABLED. Both isolated.
+  try {
+    out.digestDraft = await composeWeeklyScamcheckDraft()
+  } catch (err) {
+    await reportError('cron.digest_compose', err, { severity: 'warning' })
+    out.digestDraft = { error: (err as Error).message }
+  }
+  try {
+    out.digestSend = await processCampaignSends()
+  } catch (err) {
+    await reportError('cron.digest_send', err, { severity: 'warning' })
+    out.digestSend = { error: (err as Error).message }
   }
 
   log.info({ event: 'cron.daily_maintenance', ms: Date.now() - started, ...out })
