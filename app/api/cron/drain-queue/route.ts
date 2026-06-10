@@ -10,6 +10,7 @@ import { hasQueueWork } from '@/lib/distribution/throttle'
 import { recomputeTrending } from '@/lib/scam-intel/feed'
 import { cleanExpiredCache, cleanExpiredRateLimits } from '@/lib/ai/cache'
 import { composeWeeklyScamcheckDraft, processCampaignSends } from '@/lib/newsletter/campaigns'
+import { processWelcomeSequence } from '@/lib/newsletter/welcome-sequence'
 import { isAuthorizedCron } from '@/lib/cron-auth'
 import { log } from '@/lib/observability/logger'
 import { reportError } from '@/lib/observability/errors'
@@ -57,7 +58,17 @@ export async function GET(req: Request) {
     out.cleaned = { error: (err as Error).message }
   }
 
-  // 3) Weekly ScamCheck digest. composeWeeklyScamcheckDraft only ever creates a
+  // 3) Welcome onboarding drip — sends the one due step (Day 2/5/9) to each
+  //    subscriber. No-ops unless WELCOME_SEQUENCE_ENABLED==='true'. Isolated so a
+  //    failure never fails the cron; advances welcomeStep only on confirmed send.
+  try {
+    out.welcome = await processWelcomeSequence()
+  } catch (err) {
+    await reportError('cron.welcome_sequence', err, { severity: 'warning' })
+    out.welcome = { error: (err as Error).message }
+  }
+
+  // 4) Weekly ScamCheck digest. composeWeeklyScamcheckDraft only ever creates a
   //    DRAFT (idempotent per week) — it never sends. processCampaignSends drains
   //    recipients ONLY for campaigns an admin explicitly approved + enqueued, and
   //    is additionally gated by WEEKLY_DIGEST_ENABLED. Both isolated.
