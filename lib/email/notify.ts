@@ -93,6 +93,22 @@ function unsubFooter(email: string): string {
      ${esc(MAIL_PHYSICAL_ADDRESS)}</p>`
 }
 
+/**
+ * Send a list/newsletter email with full deliverability treatment: brand wrapper,
+ * one-click List-Unsubscribe headers, in-body unsubscribe + postal address, and the
+ * auto text/plain part. Shared primitive for the welcome drip + weekly digests.
+ * (Also added by the welcome-sequence PR — keep a single copy when both merge.)
+ */
+export async function sendListEmail(d: { to: string; subject: string; title: string; bodyHtml: string }): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+  const r = await send({
+    to: d.to,
+    subject: d.subject,
+    headers: listHeaders(d.to),
+    html: wrap(d.title, d.bodyHtml + unsubFooter(d.to)),
+  })
+  return { ok: r.ok, skipped: r.skipped, error: r.error }
+}
+
 /** Admin notification + user autoresponder for a contact / scam-report submission. */
 export async function notifyContact(d: { name?: string; email?: string; kind?: string; message: string }): Promise<{ admin: boolean; user: boolean; error?: string }> {
   const kind = d.kind || 'general'
