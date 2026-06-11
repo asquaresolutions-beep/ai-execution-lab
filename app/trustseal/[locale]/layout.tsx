@@ -20,6 +20,7 @@ import { notFound } from 'next/navigation'
 import { LOCALES, isLocale, dirFor } from '@/lib/trustseal/locales'
 import { LocaleSwitcher } from '@/components/trustseal/locale-switcher'
 import { t } from '@/lib/trustseal/messages'
+import { localeFontClass, localeFontFamily } from '@/lib/trustseal/fonts'
 
 export const dynamicParams = false
 
@@ -42,8 +43,12 @@ export default async function TrustSealLocaleLayout({
       lang={locale}
       dir={dirFor(locale)}
       data-trustseal
-      className="ts-shell min-h-screen"
-      style={{ background: 'rgb(var(--ts-bg))', color: 'rgb(var(--ts-text-1))' }}
+      className={`ts-shell min-h-screen ${localeFontClass(locale)}`.trim()}
+      style={{
+        background: 'rgb(var(--ts-bg))',
+        color: 'rgb(var(--ts-text-1))',
+        fontFamily: localeFontFamily(locale),
+      }}
     >
       <header className="border-b" style={{ borderColor: 'rgb(var(--ts-border))' }}>
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
