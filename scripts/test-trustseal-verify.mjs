@@ -7,6 +7,7 @@ import fs from 'node:fs'
 import { scoreVerification, CATEGORY_WEIGHTS } from '../lib/trustseal/verify/score.ts'
 import { normalizeDomain, verifyDocId } from '../lib/trustseal/verify/normalize.ts'
 import { isPublicIp, allResolvedPublic } from '../lib/trustseal/verify/ssrf.ts'
+import { verifyBusiness, InvalidDomainError } from '../lib/trustseal/verify/verify.ts'
 
 let pass = 0, fail = 0
 const ok = (l, c) => { if (c) pass++; else { fail++; console.error(`✗ ${l}`) } }
@@ -22,6 +23,16 @@ ok('plain subdomain → apex', normalizeDomain('login.acme.com').canonical === '
 ok('reject IP literal', normalizeDomain('127.0.0.1') === null && normalizeDomain('8.8.8.8') === null)
 ok('reject no-dot / empty', normalizeDomain('localhost') === null && normalizeDomain('') === null)
 ok('verifyDocId deterministic vs_ prefix', /^vs_[a-f0-9]{32}$/.test(verifyDocId('acme.com')) && verifyDocId('acme.com') === verifyDocId('acme.com'))
+// ── normalize: IDN/punycode + trailing dots ──
+ok('IDN → punycode (münchen.de)', normalizeDomain('https://münchen.de/page').canonical === 'xn--mnchen-3ya.de')
+ok('IDN subdomain → punycode apex', normalizeDomain('shop.münchen.de').canonical === 'xn--mnchen-3ya.de')
+ok('multiple trailing dots stripped', normalizeDomain('acme.com...').canonical === 'acme.com')
+// ── normalize: REAL PSL (private + ICANN suffixes, not a hardcoded list) ──
+ok('PSL private suffix github.io → keeps one label', normalizeDomain('foo.github.io').canonical === 'foo.github.io')
+ok('PSL private suffix deep subdomain', normalizeDomain('a.b.foo.github.io').canonical === 'foo.github.io')
+ok('PSL bare public suffix (github.io) → null', normalizeDomain('github.io') === null)
+ok('PSL bare ICANN suffix (co.uk) → null', normalizeDomain('co.uk') === null)
+ok('PSL com.au multi-part', normalizeDomain('shop.example.com.au').canonical === 'example.com.au')
 
 // ── ssrf ──
 ok('public IPs allowed', isPublicIp('8.8.8.8') && isPublicIp('1.1.1.1'))
@@ -77,6 +88,52 @@ ok('high score but no whois/legitimacy anchor → not verified', noAnchor.band !
 // ── freshness decays confidence ──
 const stale = scoreVerification({ signals: cleanSignals, ageSeconds: 86400, ttlSeconds: 86400 })
 ok('stale (age=ttl) → freshness floor lowers confidence', stale.confidence < clean.confidence)
+
+// ── RUNTIME orchestration tests (verifyBusiness with injected fake collectors) ──
+const mk = (id, collect, timeoutMs = 1000) => ({ id, tier: 'mvp', timeoutMs, collect })
+const okSig = (category, status, score, extra = {}) => ({ id: `${category}.x`, category, status, score, source: 't', observedAt: Date.now(), ...extra })
+
+// invalid domain rejects with the typed error (before any collector runs)
+let threw = null
+try { await verifyBusiness('not a domain', { collectors: [mk('dns', async () => ({ signals: [], ms: 0 }))] }) } catch (e) { threw = e }
+ok('invalid domain → InvalidDomainError', threw instanceof InvalidDomainError)
+
+// collector THROW → isolated, becomes transparency error signal, never crashes verify
+const rThrow = await verifyBusiness('acme.com', { collectors: [mk('dns', async () => { throw new Error('boom') })] })
+ok('collector throw does not crash verify', rThrow && rThrow.partial === true)
+ok('throw → transparency error signal (dns.unavailable)', rThrow.signals.some((s) => s.id === 'dns.unavailable' && s.status === 'error'))
+
+// collector TIMEOUT → AbortController fires, collector rejects on abort, handled as unavailable
+const hang = mk('tls', (ctx) => new Promise((_, rej) => ctx.signal.addEventListener('abort', () => rej(new Error('aborted')))), 25)
+const rTimeout = await verifyBusiness('acme.com', { collectors: [hang] })
+ok('collector timeout handled (not hung, partial)', rTimeout.partial === true && rTimeout.signals.some((s) => s.id === 'tls.unavailable'))
+
+// TRANSPARENCY penalty: two hard-category collectors fail → opacity + ≤45 cap
+const rOpaque = await verifyBusiness('acme.com', { collectors: [mk('dns', async () => { throw new Error('x') }), mk('tls', async () => { throw new Error('y') })] })
+ok('two hard collectors fail → opacity', rOpaque.opacity === true)
+ok('opacity caps score ≤45 through orchestration', rOpaque.score <= 45)
+
+// FRAUD CAP fires end-to-end through verifyBusiness
+const rCap = await verifyBusiness('acme.com', { collectors: [mk('blocklist', async () => ({ signals: [okSig('reputation', 'ok', 0, { cap: 'blocklist', value: true })], ms: 1 }))] })
+ok('fraud cap fires through orchestration (≤15)', rCap.score <= 15 && rCap.caps.some((c) => c.rule === 'blocklist'))
+
+// Array.isArray GUARD: a collector returning non-array signals is treated as unavailable
+const rBad = await verifyBusiness('acme.com', { collectors: [mk('reputation', async () => ({ signals: null, ms: 1 }))] })
+ok('non-array signals → unavailable, no crash', rBad.partial === true && rBad.signals.some((s) => s.id === 'reputation.unavailable'))
+
+// SINGLE-FLIGHT dedupe: concurrent identical verifies share one run; collector runs once
+let calls = 0
+const slow = mk('reputation', async () => { calls++; await new Promise((r) => setTimeout(r, 30)); return { signals: [okSig('reputation', 'ok', 90)], ms: 30 } })
+const [r1, r2] = await Promise.all([verifyBusiness('acme.com', { collectors: [slow] }), verifyBusiness('www.acme.com/login', { collectors: [slow] })])
+ok('single-flight: concurrent identical share one result object', r1 === r2)
+ok('single-flight: collector ran exactly once', calls === 1)
+// after settle the key is released (no stale leak) → re-runs
+const r3 = await verifyBusiness('acme.com', { collectors: [slow] })
+ok('single-flight: key released after settle (re-runs)', calls === 2 && r3 !== r1)
+// DIFFERENT domains never share a run
+calls = 0
+const [a, b] = await Promise.all([verifyBusiness('acme.com', { collectors: [slow] }), verifyBusiness('other.com', { collectors: [slow] })])
+ok('single-flight: different domains do not leak', a !== b && a.domain === 'acme.com' && b.domain === 'other.com' && calls === 2)
 
 // ── static: orchestrator + collectors ──
 const v = read('lib/trustseal/verify/verify.ts')

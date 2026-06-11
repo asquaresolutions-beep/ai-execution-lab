@@ -6,9 +6,13 @@ import { connect, type PeerCertificate } from 'node:tls'
 import { resolve4 } from 'node:dns/promises'
 import { allResolvedPublic } from '../ssrf'
 
-function getCert(host: string, ms: number): Promise<PeerCertificate> {
+// Connect to the ALREADY-VALIDATED public IP (not the hostname) to close the
+// DNS-rebinding / TOCTOU window — node would otherwise re-resolve `host` here,
+// possibly landing on a different (private) IP than the one we SSRF-checked.
+// `servername` preserves SNI so the server still returns the correct cert.
+function getCert(ip: string, servername: string, ms: number): Promise<PeerCertificate> {
   return new Promise((resolve, reject) => {
-    const socket = connect({ host, port: 443, servername: host, timeout: ms, rejectUnauthorized: false }, () => {
+    const socket = connect({ host: ip, port: 443, servername, timeout: ms, rejectUnauthorized: false }, () => {
       const cert = socket.getPeerCertificate()
       const authorized = socket.authorized
       socket.end()
@@ -32,7 +36,8 @@ export const tlsCollector: Collector = {
       if (!allResolvedPublic(addrs)) {
         return { signals: [{ id: 'ssl.cert', category: 'ssl', status: 'blocked', score: 0, value: 'non-public-ip', source: 'tls', observedAt: at }], ms: Date.now() - start, error: 'ssrf_blocked' }
       }
-      const cert = (await getCert(ctx.domain, this.timeoutMs - 500)) as PeerCertificate & { _authorized?: boolean }
+      // Connect to the validated IP (every addr already confirmed public), SNI = domain.
+      const cert = (await getCert(addrs[0], ctx.domain, this.timeoutMs - 500)) as PeerCertificate & { _authorized?: boolean }
       if (!cert || !cert.valid_to) {
         return { signals: [{ id: 'ssl.cert', category: 'ssl', status: 'missing', score: 0, value: false, source: 'tls', observedAt: at }], ms: Date.now() - start }
       }
