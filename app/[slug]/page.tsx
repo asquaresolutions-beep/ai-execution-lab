@@ -14,28 +14,59 @@ import { CHECKER_CONTENT } from '@/lib/scamcheck/checker-content'
 import { ES_CHECKERS } from '@/lib/scamcheck/es-pages'
 import { AdSlot } from '@/components/ads/ad-slot'
 import { TrustSealCrossSell } from '@/components/scamcheck/trustseal-crosssell'
+import { TRUST_PAGE_BY_SLUG, trustPageSlugs } from '@/lib/seo/trust-pages'
 
-type Props = { params: Promise<{ checker: string }> }
+// Single root-level dynamic segment. ScamCheck checker pages (`*-scam-checker`)
+// and the trust/about pages both live at the site root with disjoint slug sets,
+// so they share one `[slug]` route here. Having two differently-named root
+// segments (`[checker]` + a `(trust)/[slug]` route group) is illegal in Next.js
+// and crashes the router at init, so this file dispatches between the two.
+type Props = { params: Promise<{ slug: string }> }
 
 export const dynamicParams = false
-export function generateStaticParams(): { checker: string }[] {
-  return allCheckerSlugs().map((checker) => ({ checker }))
+
+export function generateStaticParams(): { slug: string }[] {
+  return [...allCheckerSlugs(), ...trustPageSlugs()].map((slug) => ({ slug }))
 }
+
+const TRUST_BASE = (process.env.NEXT_PUBLIC_SCAM_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://scamcheck.asquaresolution.com').replace(/\/$/, '')
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const c = getChecker((await params).checker)
-  if (!c) return { title: 'ScamCheck' }
-  // Reciprocal hreflang when localized equivalents exist (es + hi share slugs).
-  const es = ES_CHECKERS.find((x) => x.enSlug === c.slug)
-  return buildMeta({
-    path: `/${c.slug}`, title: c.title, description: c.description,
-    ...(es ? { languages: { en: `/${c.slug}`, es: `/es/${es.slug}`, hi: `/hi/${es.slug}`, 'x-default': `/${c.slug}` } } : {}),
-  })
+  const { slug } = await params
+
+  const c = getChecker(slug)
+  if (c) {
+    // Reciprocal hreflang when localized equivalents exist (es + hi share slugs).
+    const es = ES_CHECKERS.find((x) => x.enSlug === c.slug)
+    return buildMeta({
+      path: `/${c.slug}`, title: c.title, description: c.description,
+      ...(es ? { languages: { en: `/${c.slug}`, es: `/es/${es.slug}`, hi: `/hi/${es.slug}`, 'x-default': `/${c.slug}` } } : {}),
+    })
+  }
+
+  const page = TRUST_PAGE_BY_SLUG.get(slug)
+  if (!page) return { title: 'ScamCheck' }
+  return {
+    title: { absolute: `${page.title} | ScamCheck` },
+    description: page.description,
+    alternates: { canonical: `${TRUST_BASE}/${page.slug}` },
+    robots: { index: true, follow: true },
+  }
 }
 
-export default async function CheckerPage({ params }: Props) {
-  const c = getChecker((await params).checker)
-  if (!c) notFound()
+export default async function RootSlugPage({ params }: Props) {
+  const { slug } = await params
+
+  const c = getChecker(slug)
+  if (c) return <CheckerView c={c} />
+
+  const page = TRUST_PAGE_BY_SLUG.get(slug)
+  if (page) return <TrustView page={page} />
+
+  notFound()
+}
+
+function CheckerView({ c }: { c: NonNullable<ReturnType<typeof getChecker>> }) {
   const url = `${BASE}/${c.slug}`
   const ld = [
     { '@context': 'https://schema.org', '@type': 'WebApplication', name: c.h1, applicationCategory: 'SecurityApplication', operatingSystem: 'Web', offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' }, url, publisher: { '@type': 'Organization', name: 'A Square Solutions' } },
@@ -103,5 +134,36 @@ export default async function CheckerPage({ params }: Props) {
         <ScanCTA currentSlug={c.slug} className="mt-8" />
       </main>
     </AuthProvider>
+  )
+}
+
+function TrustView({ page }: { page: NonNullable<ReturnType<typeof TRUST_PAGE_BY_SLUG.get>> }) {
+  const schema = {
+    '@context': 'https://schema.org', '@type': 'AboutPage',
+    name: page.title, description: page.description,
+    url: `${TRUST_BASE}/${page.slug}`,
+    dateModified: new Date(page.updated).toISOString(),
+    publisher: { '@type': 'Organization', name: 'A Square Solutions', url: 'https://asquaresolution.com' },
+  }
+
+  return (
+    <main className="mx-auto max-w-2xl px-4 py-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      <nav className="mb-4 text-xs text-neutral-500"><Link href="/scams" className="hover:text-neutral-300">ScamCheck</Link> / {page.title}</nav>
+      <h1 className="text-2xl font-semibold text-white sm:text-3xl">{page.title}</h1>
+      <p className="mt-2 text-xs text-neutral-500">Last updated: {page.updated}</p>
+      <p className="mt-3 text-sm text-neutral-300">{page.description}</p>
+      {page.sections.map((s) => (
+        <section key={s.heading} className="mt-6">
+          <h2 className="mb-2 text-lg font-semibold text-white">{s.heading}</h2>
+          {s.body.map((p, i) => <p key={i} className="mb-2 text-sm leading-relaxed text-neutral-300">{p}</p>)}
+        </section>
+      ))}
+      <footer className="mt-10 flex flex-wrap gap-2 border-t border-neutral-800 pt-5 text-xs">
+        {trustPageSlugs().filter((s) => s !== page.slug).map((s) => (
+          <Link key={s} href={`/${s}`} className="rounded-full border border-neutral-700 px-3 py-1 text-neutral-400 hover:text-white">{s.replace(/-/g, ' ')}</Link>
+        ))}
+      </footer>
+    </main>
   )
 }
