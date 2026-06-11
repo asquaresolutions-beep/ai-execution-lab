@@ -30,6 +30,42 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
+   TrustSeal scoped design tokens — Phase A0 (asq-trustseal-a0)
+   ─────────────────────────────────────────────────────────────
+   Indigo brand system for the TrustSeal product, SCOPED to the
+   [data-trustseal] subtree only. ScamCheck/Lab use the orange
+   --brand / --bg tokens above and never see these — nothing outside
+   a [data-trustseal] wrapper can resolve a --ts-* variable, so this
+   block cannot recolour or affect any existing surface. Isolation is
+   structural (descendant scope), not naming-by-convention.
+   Convention: space-separated RGB channels, consumed as
+   rgb(var(--ts-*))  /  rgb(var(--ts-*) / <alpha>).
+   ───────────────────────────────────────────────────────────── */
+[data-trustseal] {
+  /* Surfaces */
+  --ts-bg:           9  11  20;   /* #090b14 — deep base */
+  --ts-surface-1:   15  18  32;   /* panels */
+  --ts-surface-2:   21  25  44;   /* cards */
+  --ts-surface-3:   29  34  58;   /* hover / inputs */
+
+  /* Text */
+  --ts-text-1:     228 232 244;   /* primary */
+  --ts-text-2:     158 166 190;   /* secondary */
+  --ts-text-3:     104 112 140;   /* muted */
+
+  /* Brand — indigo (continuity with TrustSeal email branding #6366f1) */
+  --ts-accent:      99 102 241;   /* #6366f1 */
+  --ts-accent-strong: 79 70 229;  /* #4f46e5 — hover/active */
+  --ts-accent-soft:124 127 247;   /* tints / focus rings */
+
+  /* Lines + status (status colours reserved for trust data only) */
+  --ts-border:      34  40  66;
+  --ts-good:        34 197  94;   /* high trust */
+  --ts-warn:       234 179   8;   /* caution */
+  --ts-bad:        239  68  68;   /* low trust */
+}
+
+/* ─────────────────────────────────────────────────────────────
    Base layer
    ───────────────────────────────────────────────────────────── */
 
