@@ -14,6 +14,10 @@ const nextConfig = {
   // serverless function bundle (since the path is computed at runtime via process.cwd()).
   outputFileTracingIncludes: {
     '/api/search': ['./content/**/*'],
+    // The TrustSeal verify/report functions pull in normalize.ts, which loads the
+    // vendored Public Suffix List via `new URL('./public_suffix_list.dat', import.meta.url)`.
+    // Ensure that data file ships in the serverless bundle.
+    '/api/trustseal/**': ['./lib/trustseal/verify/public_suffix_list.dat'],
   },
 
   // Image optimization
