@@ -1,9 +1,14 @@
-// app/trustseal/[locale]/product/page.tsx  (asq-trustseal-a1)
-// Phase-A placeholder. English only, no animation, noindex until real content (Phase C).
+// app/trustseal/[locale]/product/page.tsx  (asq-trustseal-a1; locale-aware meta a4)
+// Phase-A placeholder. English only, no animation. buildTrustMeta keeps it noindex
+// (index defaults to false) with full hreflang until real content lands (Phase C).
 import type { Metadata } from 'next'
 import { TrustSealPlaceholder } from '@/components/trustseal/placeholder'
+import { buildTrustMeta } from '@/lib/trustseal/seo'
 
-export const metadata: Metadata = { title: 'TrustSeal — Product', robots: { index: false, follow: false } }
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params
+  return buildTrustMeta({ locale, subpath: '/product', title: 'TrustSeal — Product', description: 'How TrustSeal verifies businesses: the engine, signals and methodology.' })
+}
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
