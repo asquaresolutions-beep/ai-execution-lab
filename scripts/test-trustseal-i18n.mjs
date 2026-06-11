@@ -25,14 +25,14 @@ const iDefault = idx(det, /return DEFAULT_LOCALE/)
 ok('cascade order: cookie → path → accept-language → geo → default', iCookie > 0 && iCookie < iPath && iPath < iLang && iLang < iGeo && iGeo < iDefault)
 ok('geo map: IN→hi, ES→es, SA→ar', /IN:\s*'hi'/.test(det) && /ES:\s*'es'/.test(det) && /SA:\s*'ar'/.test(det))
 ok('Accept-Language sorts by q descending', /sort\(\(a, b\) => b\.q - a\.q\)/.test(det))
-ok('localeFromPath matches /trustseal/{locale}', /\\\/trustseal\\\/\(\[a-z\]\{2\}\)/.test(det))
+ok('localeFromPath matches clean /{locale} first segment', det.includes('match(/^\\/([a-z]{2})'))
 ok('detect.ts is pure — no redirect/middleware/NextResponse', !/redirect|NextResponse|middleware/i.test(code(det)))
 ok('resolveLocale returns a locale, never navigates', /export function resolveLocale/.test(det) && !/router|navigate|window\.location/.test(code(det)))
 
 // ── A2: navigation.ts — pure href helpers ──
 const nav = read('lib/trustseal/navigation.ts')
-ok('localizePath swaps the locale segment', /export function localizePath/.test(nav) && /\$\{m\[1\]\}\/\$\{target\}\$\{m\[2\] \?\? ''\}/.test(nav))
-ok('withLocale builds /trustseal/{locale}', /\$\{PREFIX\}\/\$\{locale\}/.test(nav))
+ok('localizePath swaps the locale segment (clean)', /export function localizePath/.test(nav) && nav.includes('/${target}${p.rest}'))
+ok('withLocale builds clean /{locale} public path', nav.includes('/${locale}${tail}') && /export function withLocale/.test(nav))
 ok('navigation has no programmatic nav', !/router\.(push|replace)|window\.location/.test(nav))
 
 // ── A2: cookie.ts ──

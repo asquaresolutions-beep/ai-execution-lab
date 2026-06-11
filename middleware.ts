@@ -11,6 +11,8 @@
 
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { resolveLocale } from '@/lib/trustseal/detect'
+import { isLocale } from '@/lib/trustseal/locales'
 
 const LEGACY_301: Record<string, string> = {
   // Canonical homepage is the root "/". The product page lives at /scamcheck and
@@ -41,6 +43,11 @@ const ALLOW_PREFIXES = [
 function isScamCheckHost(host: string): boolean {
   return host.startsWith('scamcheck.') || host.startsWith('scamcheck-')
 }
+function isTrustSealHost(host: string): boolean {
+  return host.startsWith('trustseal.') || host.startsWith('trustseal-')
+}
+// Paths served as-is on the trustseal host (never locale-rewritten).
+const TS_PASSTHROUGH = ['/_next', '/api', '/guides', '/sitemap', '/robots', '/favicon', '/icon', '/apple-icon', '/opengraph-image', '/manifest']
 function isAllowed(path: string): boolean {
   if (path === '/') return true
   if (/\.[a-z0-9]+$/i.test(path)) return true        // static assets (.png/.xml/.ico…)
@@ -50,6 +57,39 @@ function isAllowed(path: string): boolean {
 
 export function middleware(req: NextRequest) {
   const host = (req.headers.get('host') || '').toLowerCase()
+
+  // ── TrustSeal host: clean public /{locale}/… over the internal
+  //    /trustseal/[locale] routes. Host-gated + placed first so scamcheck/lab
+  //    logic below is byte-unchanged. Locale logic reuses A2's resolveLocale.
+  if (isTrustSealHost(host)) {
+    const { pathname } = req.nextUrl
+    // assets + framework + api: serve as-is, never locale-rewrite.
+    if (/\.[a-z0-9]+$/i.test(pathname) || TS_PASSTHROUGH.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
+      return NextResponse.next()
+    }
+    // Hide the internal prefix: /trustseal/… → 301 to the clean public URL.
+    if (pathname === '/trustseal' || pathname.startsWith('/trustseal/')) {
+      const url = req.nextUrl.clone(); url.pathname = pathname.replace(/^\/trustseal/, '') || '/'
+      return NextResponse.redirect(url, 301)
+    }
+    // Root → detect locale → 307 (user-dependent) to the locale home.
+    if (pathname === '/') {
+      const locale = resolveLocale({
+        cookie: req.cookies.get('NEXT_LOCALE')?.value,
+        acceptLanguage: req.headers.get('accept-language'),
+        country: req.headers.get('x-vercel-ip-country'),
+      })
+      const url = req.nextUrl.clone(); url.pathname = `/${locale}`
+      return NextResponse.redirect(url, 307)
+    }
+    // /{locale}/… → rewrite onto the internal route. Unknown first segment → 404.
+    if (isLocale(pathname.split('/')[1])) {
+      const url = req.nextUrl.clone(); url.pathname = `/trustseal${pathname}`
+      return NextResponse.rewrite(url)
+    }
+    return new NextResponse('Not Found', { status: 404, headers: { 'content-type': 'text/plain' } })
+  }
+
   if (!isScamCheckHost(host)) return NextResponse.next() // lab/other hosts untouched
 
   const { pathname } = req.nextUrl

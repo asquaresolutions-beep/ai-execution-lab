@@ -10,10 +10,10 @@
 // ─────────────────────────────────────────────────────────────────
 import { LOCALES, DEFAULT_LOCALE, isLocale, type Locale } from './locales'
 
-/** Extract the locale from a /trustseal/{locale}/… pathname, or null. */
+/** Extract the locale from a clean /{locale}/… public pathname, or null. */
 export function localeFromPath(pathname: string | null | undefined): Locale | null {
   if (!pathname) return null
-  const m = pathname.match(/^\/trustseal\/([a-z]{2})(?:\/|$)/i)
+  const m = pathname.match(/^\/([a-z]{2})(?:\/|$)/i)
   return m && isLocale(m[1].toLowerCase()) ? (m[1].toLowerCase() as Locale) : null
 }
 
