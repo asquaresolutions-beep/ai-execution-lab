@@ -11,8 +11,8 @@
 // No persistence/cache here (that's C1C) — pure compute over injected collectors.
 // ─────────────────────────────────────────────────────────────────
 import type { Collector, CollectorContext, Signal, VerifyResult, VerifyTier } from './types'
-import { normalizeDomain, verifyDocId } from './normalize'
-import { scoreVerification, SIGNAL_SCHEMA_VERSION, WEIGHTS_VERSION } from './score'
+import { normalizeDomain, verifyDocId } from './normalize.ts'
+import { scoreVerification, SIGNAL_SCHEMA_VERSION, WEIGHTS_VERSION } from './score.ts'
 
 export interface VerifyOptions {
   name?: string
@@ -31,6 +31,13 @@ export async function verifyBusiness(rawDomain: string, deps: VerifyDeps, opts: 
   const norm = normalizeDomain(rawDomain)
   if (!norm) throw new InvalidDomainError('invalid_domain')
   const tier = opts.tier ?? 'mvp'
+  // Single-flight key = (canonical domain, tier, country). `name` is intentionally
+  // EXCLUDED: no collector consumes it (all key off the canonical domain), so it does
+  // not affect any signal, the score, or the cache identity — it is echoed back as a
+  // response label only. Including it would needlessly split otherwise-identical runs
+  // and duplicate outbound API calls. The echoed `inputName` reflects the first caller
+  // to start an in-flight run for the domain; callers that need their own name should
+  // overlay it on the returned result rather than rely on the shared run.
   const key = `${norm.canonical}|${tier}|${opts.country ?? ''}`
   const existing = inflight.get(key)
   if (existing) return existing                                   // single-flight
@@ -46,8 +53,20 @@ export async function verifyBusiness(rawDomain: string, deps: VerifyDeps, opts: 
     const signals: Signal[] = []
     let partial = false
     results.forEach((r, i) => {
-      if (r.status === 'fulfilled') { signals.push(...r.value.signals); if (r.value.error) partial = true }
-      else { partial = true; signals.push(failSignal(collectors[i], now)) }
+      const out = r.status === 'fulfilled' ? r.value : null
+      if (out && Array.isArray(out.signals) && out.signals.length > 0) {
+        // collector produced evidence (an `error` alongside it means partial coverage)
+        signals.push(...out.signals)
+        if (out.error) partial = true
+      } else if (out && Array.isArray(out.signals) && out.signals.length === 0 && !out.error) {
+        // legitimately produced nothing and did not fail → contribute nothing (no penalty)
+      } else {
+        // rejected, non-array signals, OR empty-with-error (threw / timed out / aborted):
+        // synthesize a transparency error signal so the hard-category opacity penalty
+        // applies — a silently-failing collector must not read as neutral.
+        partial = true
+        signals.push(failSignal(collectors[i], now))
+      }
     })
 
     const s = scoreVerification({ signals, ageSeconds: 0, ttlSeconds })
