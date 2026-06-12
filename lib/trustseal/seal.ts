@@ -1,0 +1,72 @@
+// ─────────────────────────────────────────────────────────────────
+// lib/trustseal/seal.ts  (asq-trustseal-pr4)
+// Public, read-only data layer for the seal page (/{locale}/trust/{domain}).
+// SSRF-FREE BY CONSTRUCTION: it imports NO outbound-capable module (no node:dns,
+// no verify engine, no fetch) — only Firestore doc-id reads via the store adapter:
+//   • ts_claims        (clm_<sha1>)  — public verified-ownership gate
+//   • ts_verifications (vs_<sha1>)   — the trust verdict, if one exists
+// No auth: exposes only the public projection (domain, method, dates, verdict);
+// never the claim's accountId/token.
+// ─────────────────────────────────────────────────────────────────
+import { getStore } from '@/lib/store/adapter'
+import { normalizeDomain, verifyDocId } from '@/lib/trustseal/verify/normalize'
+import { claimDocId } from '@/lib/trustseal/claim-policy'
+import { readEnvelope } from '@/lib/trustseal/verify/persistence'
+import { publicReport, type PublicReport } from '@/lib/trustseal/verify/policy'
+
+// Mirrors claim.ts CLAIMS — declared locally so this module does NOT import
+// claim.ts (which pulls in node:dns), keeping the seal page provably SSRF-free.
+const CLAIMS = 'ts_claims'
+
+interface StoredClaim {
+  domain: string
+  accountId: string
+  method: string
+  status: 'pending' | 'verified' | 'failed' | 'revoked'
+  createdAt: number
+  verifiedAt?: number
+  lastCheckedAt?: number
+}
+
+export interface SealData {
+  domain: string // canonical eTLD+1
+  verified: true
+  method: string
+  verifiedAt: number
+  createdAt: number
+  lastCheckedAt: number | null
+  /** The trust verdict (band/score/badges/signals), if a verification exists yet. */
+  report: PublicReport | null
+}
+
+/** Public verified-ownership record for a domain (account/token NOT exposed). */
+async function getPublicVerifiedClaim(canonical: string): Promise<StoredClaim | null> {
+  const doc = await getStore().get<StoredClaim>(CLAIMS, claimDocId(canonical))
+  if (!doc || doc.data.status !== 'verified') return null
+  return doc.data
+}
+
+/**
+ * Assemble the public seal data for a domain, or null when the domain has no
+ * verified ownership claim (→ the page 404s). Pure Firestore reads by doc id.
+ */
+export async function getSealData(rawDomain: string): Promise<SealData | null> {
+  const n = normalizeDomain(rawDomain)
+  if (!n) return null
+
+  const claim = await getPublicVerifiedClaim(n.canonical)
+  if (!claim || claim.verifiedAt == null) return null
+
+  const env = await readEnvelope(verifyDocId(n.canonical))
+  const report = env ? publicReport(env.result) : null
+
+  return {
+    domain: n.canonical,
+    verified: true,
+    method: claim.method,
+    verifiedAt: claim.verifiedAt,
+    createdAt: claim.createdAt,
+    lastCheckedAt: report?.checkedAt ?? claim.lastCheckedAt ?? null,
+    report,
+  }
+}
