@@ -21,6 +21,10 @@ export type AuditAction =
   | 'moderation.decision'
   | 'moderation.flag'
   | 'admin.action'
+  | 'claim.start'
+  | 'claim.verified'
+  | 'claim.failed'
+  | 'claim.revoked'
 
 export interface AuditEntry {
   id?: string
