@@ -8,6 +8,8 @@
 import { useEffect, useState } from 'react'
 import { AuthProvider, useAuth } from '@/components/auth/auth-provider'
 import { AuthButton } from '@/components/auth/auth-button'
+import { ClaimWizard } from '@/components/trustseal/claim-wizard'
+import { ClaimsList } from '@/components/trustseal/claims-list'
 
 interface AccountInfo {
   uid: string
@@ -26,6 +28,7 @@ function DashboardInner() {
   const { user, loading, configured } = useAuth()
   const [account, setAccount] = useState<AccountInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [claimsRefresh, setClaimsRefresh] = useState(0)
 
   useEffect(() => {
     if (!user?.idToken) { setAccount(null); return }
@@ -86,12 +89,8 @@ function DashboardInner() {
         <p className="text-sm" style={{ color: '#f87171' }}>Could not load account: {error}</p>
       )}
 
-      <section className="rounded-xl border p-6" style={card}>
-        <h2 className="text-lg font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>Overview</h2>
-        <p className="mt-2 text-sm" style={{ color: 'rgb(var(--ts-text-2))' }}>
-          Your domains, badge and billing will appear here.
-        </p>
-      </section>
+      <ClaimWizard onVerified={() => setClaimsRefresh((n) => n + 1)} />
+      <ClaimsList refreshKey={claimsRefresh} />
     </div>
   )
 }
