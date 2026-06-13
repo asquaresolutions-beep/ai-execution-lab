@@ -27,9 +27,9 @@ ok('privacy: does not expose accountId/token in SealData', !/accountId:/.test(se
 const pagePath = 'app/trustseal/[locale]/trust/[domain]/page.tsx'
 ok('route: correct location app/trustseal/[locale]/trust/[domain]/page.tsx', fs.existsSync(new URL('../' + pagePath, import.meta.url)))
 const page = read(pagePath)
-ok('route: ISR cache (revalidate=7200)', /revalidate\s*=\s*7200/.test(page))
+ok('route: fully dynamic (force-dynamic — never ISR-caches a notFound)', /dynamic\s*=\s*'force-dynamic'/.test(page))
+ok('route: no ISR revalidate (removed — was the stale-404 cause)', !/revalidate\s*=\s*\d/.test(page))
 ok('route: on-demand dynamic params (dynamicParams=true)', /dynamicParams\s*=\s*true/.test(page))
-ok('route: prerenders none (generateStaticParams returns [])', /export function generateStaticParams/.test(page) && /return \[\]/.test(page))
 ok('route: 404s unverified domains (notFound)', /notFound\(\)/.test(page) && /if \(!data\) notFound/.test(page))
 ok('route: index:true ONLY when verified; noindex otherwise', /index: true/.test(page) && /index: false/.test(page))
 ok('route: canonical+hreflang via buildTrustMeta on /trust/<domain>', /buildTrustMeta/.test(page) && /subpath: `\/trust\/\$\{data\.domain\}`/.test(page))
