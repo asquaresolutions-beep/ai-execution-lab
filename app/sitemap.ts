@@ -9,16 +9,46 @@ import { SECTION_META } from '@/lib/utils'
 import { buildTagIndex } from '@/lib/tags'
 import { TRACKS } from '@/lib/tracks'
 import { allAuthorSlugs } from '@/lib/authors'
+import { getStore } from '@/lib/store/adapter'
 
 const SCAM = 'https://scamcheck.asquaresolution.com'
 const LAB = 'https://lab.asquaresolution.com'
+const TRUST = 'https://trustseal.asquaresolution.com'
 
-// One deployment serves two hosts. Emit the correct sitemap per host so each
-// site lists only its own reachable URLs (lab content was previously missing
-// from any sitemap because the file served ScamCheck URLs on both hosts).
+// One deployment serves three hosts. Emit the correct sitemap per host so each
+// site lists only its own reachable URLs (a host without its own branch served
+// ScamCheck URLs — that left lab content, then trustseal seal pages, out of any
+// sitemap). ScamCheck stays the default; lab + trustseal branch explicitly.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const host = ((await headers()).get('host') || '').toLowerCase()
-  return host.startsWith('lab.') ? labSitemap() : scamcheckSitemap()
+  if (host.startsWith('lab.')) return labSitemap()
+  if (host.startsWith('trustseal.')) return trustSealSitemap()
+  return scamcheckSitemap()
+}
+
+// TrustSeal: the public seal pages are the indexable acquisition surface. List
+// one entry per VERIFIED domain (matching the seal page's index:true gate —
+// unverified domains are noindex/soft-404 and must NOT appear). Read-only,
+// equality-only Firestore query (auto single-field index; no composite index).
+// Never 500 the sitemap if the store is unavailable — degrade to empty.
+async function trustSealSitemap(): Promise<MetadataRoute.Sitemap> {
+  const now = new Date()
+  let domains: string[] = []
+  try {
+    const rows = await getStore().query<{ domain: string; status: string }>('ts_claims', {
+      where: [{ field: 'status', op: '==', value: 'verified' }],
+      limit: 5000,
+    })
+    domains = rows.map((r) => r.data.domain).filter(Boolean)
+  } catch {
+    /* store unavailable → empty (valid) sitemap rather than a 500 */
+  }
+  return domains.map((d) => ({
+    url: `${TRUST}/en/trust/${d}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
+  }))
 }
 
 function scamcheckSitemap(): MetadataRoute.Sitemap {
