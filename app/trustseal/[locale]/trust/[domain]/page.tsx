@@ -2,23 +2,21 @@
 // Public seal/trust page: /{locale}/trust/{domain} (host-rewritten from the
 // trustseal public host). Renders ONLY for domains with a verified ownership
 // claim; everything else 404s (and stays noindex). No auth, no SSRF — getSealData
-// does read-only Firestore lookups by doc id. ISR-cached (revalidate) per the
-// approved caching strategy; the [domain] param is on-demand so nothing is
-// mass-prerendered (the static page count is unchanged).
+// does read-only Firestore lookups by doc id. Rendered fully dynamic (no ISR) so a
+// newly-verified domain reflects immediately and a not-found is never cached.
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getSealData } from '@/lib/trustseal/seal'
 import { SealView } from '@/components/trustseal/seal-view'
 import { buildTrustMeta } from '@/lib/trustseal/seo'
 
-// On-demand dynamic params (domains are an open set) + ISR cache (2h, matching
-// the clean-verdict TTL). dynamicParams=true overrides the parent [locale] layout
-// (which only restricts the locale segment).
+// Fully dynamic: render per request so verification status is ALWAYS fresh and a
+// not-found (unverified) result is NEVER ISR-cached — this removes the stale-404
+// failure mode where a domain verified after a cache render stayed 404. Reads are
+// cheap doc-id lookups; the high-traffic badge path uses the CDN-cached status API.
+// dynamicParams=true keeps the open [domain] set on demand.
+export const dynamic = 'force-dynamic'
 export const dynamicParams = true
-export const revalidate = 7200
-export function generateStaticParams(): { domain: string }[] {
-  return [] // prerender none — every domain renders on demand and is ISR-cached
-}
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string; domain: string }> }): Promise<Metadata> {
   const { locale, domain } = await params
