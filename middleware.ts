@@ -48,6 +48,11 @@ function isTrustSealHost(host: string): boolean {
 }
 // Paths served as-is on the trustseal host (never locale-rewritten).
 const TS_PASSTHROUGH = ['/_next', '/api', '/guides', '/sitemap', '/robots', '/favicon', '/icon', '/apple-icon', '/opengraph-image', '/manifest']
+// Real web-asset extensions ONLY. A generic /\.[a-z0-9]+$/ would treat domain TLDs
+// (e.g. /en/trust/acme.com → ".com") as files and skip the locale rewrite → 404.
+// This allowlist lets /{locale}/trust/{domain} reach the seal route while genuine
+// assets still pass through. Scoped to the trustseal host branch only.
+const TS_ASSET_EXT = /\.(?:js|mjs|css|map|png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|eot|otf|txt|xml|webmanifest|json|wasm)$/i
 function isAllowed(path: string): boolean {
   if (path === '/') return true
   if (/\.[a-z0-9]+$/i.test(path)) return true        // static assets (.png/.xml/.ico…)
@@ -63,8 +68,10 @@ export function middleware(req: NextRequest) {
   //    logic below is byte-unchanged. Locale logic reuses A2's resolveLocale.
   if (isTrustSealHost(host)) {
     const { pathname } = req.nextUrl
-    // assets + framework + api: serve as-is, never locale-rewrite.
-    if (/\.[a-z0-9]+$/i.test(pathname) || TS_PASSTHROUGH.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
+    // assets + framework + api: serve as-is, never locale-rewrite. Use a real
+    // asset-extension allowlist so domain TLDs in /{locale}/trust/{domain} are NOT
+    // mistaken for files (that bug 404'd every seal page).
+    if (TS_ASSET_EXT.test(pathname) || TS_PASSTHROUGH.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
       return NextResponse.next()
     }
     // Hide the internal prefix: /trustseal/… → 301 to the clean public URL.
