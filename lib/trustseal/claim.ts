@@ -118,6 +118,27 @@ export async function verifyClaim(rawDomain: string, accountId: string, now = Da
   }
 }
 
+/**
+ * Hard-delete a NON-verified claim owned by the caller. Owner-only and
+ * verified-protected: verified ownership can NEVER be deleted here (→ 409), and a
+ * missing or not-owned claim is indistinguishable (→ 404, no existence leak). Hard
+ * delete (not soft) is consistent with the deterministic doc id — removing a stale
+ * pending/failed record lets the same domain be claimed fresh later.
+ */
+export async function removeClaim(rawDomain: string, accountId: string): Promise<{ domain: string; removed: true }> {
+  const domain = canon(rawDomain)
+  const id = claimDocId(domain)
+  const store = getStore()
+  const existing = (await store.get<Claim>(CLAIMS, id))?.data ?? null
+
+  if (!existing || existing.accountId !== accountId) throw new ClaimError('no_claim', 404)
+  if (existing.status === 'verified') throw new ClaimError('cannot_delete_verified', 409)
+
+  await store.delete(CLAIMS, id)
+  await audit({ action: 'claim.removed', actor: `uid:${accountId}`, subject: domain, ok: true })
+  return { domain, removed: true }
+}
+
 /** The caller's own claim for a domain (null if none / owned by another). */
 export async function getClaim(rawDomain: string, accountId: string): Promise<Claim | null> {
   const n = normalizeDomain(rawDomain)

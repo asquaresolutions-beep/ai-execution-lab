@@ -25,6 +25,7 @@ export type AuditAction =
   | 'claim.verified'
   | 'claim.failed'
   | 'claim.revoked'
+  | 'claim.removed'
   | 'billing.activate'
   | 'billing.renew'
   | 'billing.past_due'
