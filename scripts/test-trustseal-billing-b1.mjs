@@ -110,10 +110,10 @@ ok('index: ts_billing_events (subscriptionId, receivedAt)', hasIndex('ts_billing
 ok('index: ts_invoices (accountId, issuedAt)', hasIndex('ts_invoices', ['accountId', 'issuedAt']))
 ok('index: ts_subscriptions (status, currentEnd)', hasIndex('ts_subscriptions', ['status', 'currentEnd']))
 
-// ── scope guard: B1 ships NO Razorpay / webhook / UI ──────────────
-// Doc comments may reference Razorpay (future phases); assert no actual
-// integration exists yet — no client module, no SDK import, no key usage.
-ok('scope: no razorpay integration in lib/billing', !fs.existsSync(new URL('../lib/billing/razorpay.ts', import.meta.url)) && !/from ['"]razorpay['"]|require\(['"]razorpay['"]\)|RAZORPAY_/.test(model + ent))
+// ── scope guard: B1's own files stay integration-free ─────────────
+// Durable: B1's model + entitlement never touch Razorpay, even after later phases
+// add a Razorpay client elsewhere in lib/billing.
+ok('scope: B1 model+entitlement have no Razorpay integration', !/from ['"]razorpay['"]|require\(['"]razorpay['"]\)|RAZORPAY_/.test(model + ent))
 // Durable purity guard (later phases legitimately add the webhook route): the B1
 // lib itself must never contain Next/route code.
 ok('scope: B1 lib has no Next/route code', !/next\/server|NextResponse/.test(model + ent))

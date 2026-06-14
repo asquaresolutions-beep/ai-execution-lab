@@ -143,9 +143,10 @@ for (const a of ['billing.activate', 'billing.renew', 'billing.past_due', 'billi
   ok(`audit union: ${a}`, auditTs.includes(`'${a}'`))
 }
 
-// ── scope guard: B2.2 ships NO cron / API client / checkout / UI ──
-ok('scope: no reconcile cron', !fs.existsSync(new URL('../app/api/cron/billing-reconcile', import.meta.url)))
-ok('scope: no razorpay API client', !fs.existsSync(new URL('../lib/billing/razorpay.ts', import.meta.url)))
+// ── scope guard: B2.2's deliverable stays focused ─────────────────
+// Durable: the webhook route ingests events only — it never schedules/reconciles
+// or calls the Razorpay API (those land in B2.3's cron + client elsewhere).
+ok('scope: webhook route does not reconcile / schedule / call Razorpay', !/reconcile|isAuthorizedCron|fetchSubscriptionSnapshot|from ['"]razorpay['"]/.test(route))
 
 console.log(`\nBilling B2.2 ingestion tests: ${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

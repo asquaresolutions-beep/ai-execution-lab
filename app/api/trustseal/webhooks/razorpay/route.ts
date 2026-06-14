@@ -38,12 +38,25 @@ export async function POST(req: Request) {
   let body: unknown
   try { body = JSON.parse(rawBody) } catch { return NextResponse.json({ error: 'bad_json' }, { status: 400 }) }
 
+  // Reject events with no idempotency key — an empty id would collide all events
+  // onto one doc and silently drop every event after the first (audit finding F1).
   const eventId = req.headers.get('x-razorpay-event-id') || ''
+  if (!eventId) return NextResponse.json({ error: 'missing_event_id' }, { status: 400 })
+
   const event = parseRazorpayEvent(body, eventId)
   if (!event) return NextResponse.json({ ok: true, ignored: true }) // unsupported → ACK, no mutation
 
   const store = getStore()
   try {
+    // Surface unmapped events (no notes.uid) — they cannot be applied and would
+    // otherwise no-op silently (audit finding F2). Still persisted for the trail.
+    if (!event.uid) {
+      await reportError('webhook.razorpay.unmapped', new Error('subscription event missing notes.uid'), {
+        severity: 'warning',
+        meta: { eventId: event.eventId, type: event.type, subscriptionId: event.subscriptionId },
+      })
+    }
+
     const digest = createHash('sha256').update(rawBody, 'utf8').digest('hex')
     const { firstSeen } = await persistEventOnce(store, event, digest)
     if (!firstSeen) return NextResponse.json({ ok: true, duplicate: true }) // replay → no-op
