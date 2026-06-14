@@ -13,7 +13,7 @@
 // byte-identical.
 // ─────────────────────────────────────────────────────────────────
 import { createHmac, timingSafeEqual } from 'node:crypto'
-import type { Subscription, SubscriptionStatus } from '@/lib/billing/model'
+import type { Subscription, SubscriptionStatus, BillingInterval } from '@/lib/billing/model'
 
 // Audit action emitted for a status transition (consumed by the route's audit log).
 export type BillingAuditAction =
@@ -129,6 +129,25 @@ export function parseRazorpayEvent(body: unknown, eventId: string): NormalizedSu
     invoiceId: inv ? str(inv.id) : null,
     amount: pay && typeof pay.amount === 'number' ? pay.amount : null,
     currency: pay ? str(pay.currency) : null,
+  }
+}
+
+// ── Builders ──────────────────────────────────────────────────────
+// PURE: a fresh 'created' subscription record stamped at /subscribe time, before
+// any webhook. Status is 'created' (NOT entitled) — Pro is granted only when the
+// activation/charge webhook lands. The id == uid (one subscription per account).
+export function pendingSubscription(
+  uid: string,
+  opts: { interval: BillingInterval; razorpaySubscriptionId: string; razorpayPlanId: string; razorpayCustomerId?: string | null },
+  now: number,
+): Subscription {
+  return {
+    id: uid, accountId: uid, plan: 'pro', interval: opts.interval, status: 'created',
+    razorpayCustomerId: opts.razorpayCustomerId ?? null,
+    razorpaySubscriptionId: opts.razorpaySubscriptionId,
+    razorpayPlanId: opts.razorpayPlanId,
+    currentStart: null, currentEnd: null, cancelAtCycleEnd: false,
+    scheduledChange: null, lastEventId: null, lastEventAt: null, updatedAt: now,
   }
 }
 

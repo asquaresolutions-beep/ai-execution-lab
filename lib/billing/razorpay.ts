@@ -48,3 +48,73 @@ export async function fetchSubscriptionSnapshot(subscriptionId: string): Promise
     currentEnd: numToMs(j.current_end),
   }
 }
+
+function authHeader(): string | null {
+  const keyId = process.env.RAZORPAY_KEY_ID
+  const keySecret = process.env.RAZORPAY_KEY_SECRET
+  if (!keyId || !keySecret) return null
+  return 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64')
+}
+
+export interface CreatedSubscription {
+  id: string
+  status: string
+  shortUrl: string | null   // Razorpay hosted-checkout URL
+  planId: string | null
+  customerId: string | null
+}
+
+/**
+ * POST /subscriptions — create a Razorpay subscription, stamping notes.uid so the
+ * webhook + reconcile paths can map every future event back to the account.
+ * Returns null on missing config / non-OK / error (caller maps to 5xx). Does NOT
+ * grant entitlement — that happens only when the activation webhook lands.
+ */
+export async function createSubscription(opts: { planId: string; uid: string; totalCount: number }): Promise<CreatedSubscription | null> {
+  const auth = authHeader()
+  if (!auth || !opts.planId || !opts.uid) return null
+  const body = JSON.stringify({
+    plan_id: opts.planId,
+    total_count: opts.totalCount,
+    customer_notify: 1,
+    notes: { uid: opts.uid },
+  })
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/subscriptions`, {
+      method: 'POST',
+      headers: { Authorization: auth, 'Content-Type': 'application/json' },
+      body,
+      cache: 'no-store',
+    })
+  } catch {
+    return null
+  }
+  if (!res.ok) return null
+  let j: Record<string, unknown>
+  try { j = (await res.json()) as Record<string, unknown> } catch { return null }
+  const id = str(j.id)
+  if (!id) return null
+  return { id, status: str(j.status) ?? '', shortUrl: str(j.short_url), planId: str(j.plan_id), customerId: str(j.customer_id) }
+}
+
+/**
+ * POST /subscriptions/:id/cancel — request cancellation (default: at cycle end).
+ * Server-authoritative: the local state changes only when the resulting
+ * subscription.cancelled webhook is processed. Returns false on any failure.
+ */
+export async function cancelSubscription(subscriptionId: string, atCycleEnd = true): Promise<boolean> {
+  const auth = authHeader()
+  if (!auth || !subscriptionId) return false
+  try {
+    const res = await fetch(`${API_BASE}/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`, {
+      method: 'POST',
+      headers: { Authorization: auth, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cancel_at_cycle_end: atCycleEnd ? 1 : 0 }),
+      cache: 'no-store',
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}

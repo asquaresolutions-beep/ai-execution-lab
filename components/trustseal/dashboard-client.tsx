@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from '@/components/auth/auth-provider'
 import { AuthButton } from '@/components/auth/auth-button'
 import { ClaimWizard } from '@/components/trustseal/claim-wizard'
 import { ClaimsList } from '@/components/trustseal/claims-list'
+import { BillingSection } from '@/components/trustseal/billing/billing-section'
 
 interface AccountInfo {
   uid: string
@@ -91,6 +92,7 @@ function DashboardInner() {
 
       <ClaimWizard onVerified={() => setClaimsRefresh((n) => n + 1)} />
       <ClaimsList refreshKey={claimsRefresh} />
+      <BillingSection />
     </div>
   )
 }

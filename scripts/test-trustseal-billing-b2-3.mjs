@@ -151,7 +151,7 @@ ok('cron: calls reconcileDue with the real snapshot fetcher', /reconcileDue\(get
 ok('cron: audits healed accounts (billing.reconcile)', /action: 'billing\.reconcile'/.test(cron) && /if \(o\.healed\)/.test(cron))
 ok('cron: fail-closed → 500 + reportError', /status: 500/.test(cron) && /reportError\('cron\.billing_reconcile'/.test(cron))
 const client = read('lib/billing/razorpay.ts')
-ok('client: READ-ONLY snapshot fetch (no subscription creation)', /fetchSubscriptionSnapshot/.test(client) && !/method: ['"]POST['"]/.test(client))
+ok('client: exposes snapshot fetch for reconcile', /export async function fetchSubscriptionSnapshot/.test(client))
 ok('client: fail-closed (returns null on missing config / error)', /if \(!keyId \|\| !keySecret/.test(client) && /return null/.test(client))
 
 // audit union extended
@@ -163,8 +163,11 @@ const vercel = JSON.parse(read('vercel.json'))
 ok('vercel: billing-reconcile cron scheduled', vercel.crons.some((c) => c.path === '/api/cron/billing-reconcile'))
 
 // ── scope guard: NO checkout / subscription-creation / UI ────────
-ok('scope: no checkout/subscribe route', !fs.existsSync(new URL('../app/api/trustseal/billing', import.meta.url)))
-ok('scope: razorpay client does not create subscriptions', !/subscriptions['"]\s*,\s*\{[\s\S]*method/.test(client) && !/createSubscription/.test(client))
+// Durable: the reconcile path is READ-ONLY — the service + cron never create or
+// cancel subscriptions (B3 owns those writes, elsewhere).
+const reconcileSrc = read('lib/billing/reconcile.ts')
+ok('scope: reconcile service never creates/cancels subscriptions', !/createSubscription|cancelSubscription/.test(reconcileSrc))
+ok('scope: reconcile cron never creates/cancels subscriptions', !/createSubscription|cancelSubscription/.test(cron))
 
 console.log(`\nBilling B2.3 reconciliation tests: ${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)
