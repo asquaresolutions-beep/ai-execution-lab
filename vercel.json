@@ -3,7 +3,7 @@
   "crons": [
     { "path": "/api/cron/autopilot", "schedule": "0 6 * * *" },
     { "path": "/api/cron/drain-queue", "schedule": "0 7 * * *" },
-    { "path": "/api/cron/billing-reconcile", "schedule": "0 * * * *" }
+    { "path": "/api/cron/billing-reconcile", "schedule": "0 5 * * *" }
   ],
   "functions": {
     "app/api/distribution/generate/route.ts": { "maxDuration": 60 },
