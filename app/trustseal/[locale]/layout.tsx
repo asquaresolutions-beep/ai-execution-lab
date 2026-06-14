@@ -18,7 +18,7 @@
 import type { ReactNode } from 'react'
 import { notFound } from 'next/navigation'
 import { LOCALES, isLocale, dirFor } from '@/lib/trustseal/locales'
-import { LocaleSwitcher } from '@/components/trustseal/locale-switcher'
+import { TrustSealLocaleHeader } from '@/components/trustseal/locale-header'
 import { t } from '@/lib/trustseal/messages'
 import { localeFontClass, localeFontFamily } from '@/lib/trustseal/fonts'
 
@@ -50,14 +50,7 @@ export default async function TrustSealLocaleLayout({
         fontFamily: localeFontFamily(locale),
       }}
     >
-      <header className="border-b" style={{ borderColor: 'rgb(var(--ts-border))' }}>
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <span className="text-sm font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>
-            {t(locale, 'common.product')}
-          </span>
-          <LocaleSwitcher current={locale} />
-        </div>
-      </header>
+      <TrustSealLocaleHeader locale={locale} product={t(locale, 'common.product')} />
       {children}
     </div>
   )
