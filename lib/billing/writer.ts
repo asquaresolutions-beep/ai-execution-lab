@@ -91,6 +91,16 @@ export async function applyAndUpsert(store: DocumentStore, event: NormalizedSubE
   return { applied: true, previousStatus: current?.status ?? 'none', nextStatus: next.status }
 }
 
+/**
+ * Persist the scheduled-cancel flag immediately after a confirmed Razorpay
+ * cancel-at-cycle-end request (Razorpay returned 200, so this is authoritative,
+ * not client-trusted). Status stays 'active' until the cycle-end webhook; the
+ * webhook + reconcile keep this flag in sync thereafter. No-op if no doc exists.
+ */
+export async function setCancelScheduled(store: DocumentStore, uid: string, value: boolean): Promise<void> {
+  await store.update<Subscription>(SUBSCRIPTIONS, uid, { cancelAtCycleEnd: value, updatedAt: Date.now() })
+}
+
 /** Mark a billing event fully processed (idempotency anchor for future replays). */
 export async function markProcessed(store: DocumentStore, eventId: string, result: string): Promise<void> {
   await store.update<BillingEvent>(BILLING_EVENTS, eventId, { processed: true, result })

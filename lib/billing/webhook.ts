@@ -87,11 +87,14 @@ export interface NormalizedSubEvent {
   invoiceId: string | null
   amount: number | null       // minor units (paise), from the payment entity
   currency: string | null
+  cancelAtCycleEnd: boolean | null // Razorpay sub `cancel_at_cycle_end` (null if absent)
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null
 const str = (v: unknown): string | null => (typeof v === 'string' ? v : null)
 const secToMs = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v * 1000) : null)
+// Razorpay sends booleans as true/false or 1/0; null when the field is absent.
+const bool = (v: unknown): boolean | null => (typeof v === 'boolean' ? v : v === 1 ? true : v === 0 ? false : null)
 
 /**
  * Normalize a Razorpay webhook body into our subscription event, or null for
@@ -129,6 +132,7 @@ export function parseRazorpayEvent(body: unknown, eventId: string): NormalizedSu
     invoiceId: inv ? str(inv.id) : null,
     amount: pay && typeof pay.amount === 'number' ? pay.amount : null,
     currency: pay ? str(pay.currency) : null,
+    cancelAtCycleEnd: bool(sub.cancel_at_cycle_end),
   }
 }
 
@@ -193,14 +197,21 @@ export function applyTransition(current: Subscription | null, event: NormalizedS
     case 'subscription.charged':
       if (event.currentStart != null) next.currentStart = event.currentStart
       if (event.currentEnd != null) next.currentEnd = event.currentEnd
-      next.cancelAtCycleEnd = false
+      // A fresh charge clears any scheduled cancel unless Razorpay still flags it.
+      next.cancelAtCycleEnd = event.cancelAtCycleEnd === true
+      break
+    case 'subscription.updated':
+      // Cancel-at-cycle-end keeps status 'active' and arrives as `updated`; sync the
+      // scheduled-cancel flag (and any period change) so the dashboard reflects it.
+      if (event.currentEnd != null) next.currentEnd = event.currentEnd
+      if (event.cancelAtCycleEnd != null) next.cancelAtCycleEnd = event.cancelAtCycleEnd
       break
     case 'subscription.cancelled':
       if (event.currentEnd != null) next.currentEnd = event.currentEnd
       // Cycle-end cancel keeps Pro until currentEnd; immediate cancel ends now.
       next.cancelAtCycleEnd = event.currentEnd != null && event.currentEnd > event.createdAt
       break
-    // authenticated / pending / halted / completed / updated: keep currentEnd as-is.
+    // authenticated / pending / halted / completed: keep currentEnd as-is.
     default:
       break
   }
@@ -226,6 +237,7 @@ export interface RazorpaySnapshot {
   planId: string | null
   currentStart: number | null // ms
   currentEnd: number | null   // ms
+  cancelAtCycleEnd: boolean | null
 }
 
 // Razorpay subscription status → our SubscriptionStatus. Unknown → null (skip,
@@ -272,7 +284,10 @@ export function reconcileSubscription(local: Subscription | null, snap: Razorpay
   if (snap.planId) next.razorpayPlanId = snap.planId
   if (snap.currentStart != null) next.currentStart = snap.currentStart
   if (snap.currentEnd != null) next.currentEnd = snap.currentEnd
-  next.cancelAtCycleEnd = mapped === 'cancelled' && snap.currentEnd != null && snap.currentEnd > now
+  // Honor Razorpay's scheduled-cancel flag (covers cancels done directly in the
+  // Razorpay dashboard); fall back to the cancelled-with-future-end inference.
+  next.cancelAtCycleEnd = snap.cancelAtCycleEnd === true
+    || (mapped === 'cancelled' && snap.currentEnd != null && snap.currentEnd > now)
   next.updatedAt = now
 
   const changed = !local
@@ -280,6 +295,7 @@ export function reconcileSubscription(local: Subscription | null, snap: Razorpay
     || local.currentEnd !== next.currentEnd
     || local.currentStart !== next.currentStart
     || local.razorpayPlanId !== next.razorpayPlanId
+    || local.cancelAtCycleEnd !== next.cancelAtCycleEnd
   if (!changed) return { changed: false, next: local, from: local.status, to: local.status }
 
   return { changed: true, next, from: local?.status ?? 'none', to: next.status }

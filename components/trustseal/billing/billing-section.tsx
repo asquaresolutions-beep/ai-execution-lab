@@ -75,9 +75,25 @@ export function BillingSection() {
     }
   }, [user?.idToken, busy, load])
 
+  const reactivate = useCallback(async () => {
+    if (!user?.idToken || busy) return
+    setBusy(true)
+    try {
+      const r = await fetch('/api/trustseal/billing/reactivate', { method: 'POST', headers: { Authorization: `Bearer ${user.idToken}` } })
+      const data = (await r.json()) as { shortUrl?: string; error?: string }
+      if (data.shortUrl) { window.location.href = data.shortUrl; return } // re-checkout
+      setError(data.error || 'reactivate failed')
+    } catch {
+      setError('reactivate failed')
+    } finally {
+      setBusy(false)
+    }
+  }, [user?.idToken, busy])
+
   if (!user) return null
 
   const isPro = status?.active ?? false
+  const isCancelScheduled = isPro && (status?.cancelAtCycleEnd ?? false)
 
   return (
     <section data-billing-section className="rounded-xl border p-5" style={card}>
@@ -91,11 +107,18 @@ export function BillingSection() {
 
       {error && <p className="mt-2 text-sm" style={{ color: '#f87171' }}>Could not load billing: {error}</p>}
 
+      {/* Cancelled-but-still-entitled banner — removes the active/cancelled ambiguity */}
+      {isCancelScheduled && (
+        <p className="mt-3 rounded-lg border px-3 py-2 text-sm" style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-1))', background: 'rgba(251,191,36,0.08)' }}>
+          Subscription cancelled — access remains until {fmtDate(status?.currentEnd ?? null)}
+        </p>
+      )}
+
       {/* current plan / status / renewal */}
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>Plan</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{isPro ? `Pro · ${status?.interval ?? ''}` : 'Free'}</dd></div>
-        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>Status</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{status?.status ?? '—'}{status?.inGrace ? ' (grace)' : ''}</dd></div>
-        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>Renews / ends</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{fmtDate(status?.currentEnd ?? null)}{status?.cancelAtCycleEnd ? ' (cancels)' : ''}</dd></div>
+        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>Status</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{isCancelScheduled ? 'cancelled (active until period end)' : `${status?.status ?? '—'}${status?.inGrace ? ' (grace)' : ''}`}</dd></div>
+        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>{isCancelScheduled ? 'Access until' : 'Renews / ends'}</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{fmtDate(status?.currentEnd ?? null)}</dd></div>
         <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>Billing history</dt><dd style={{ color: 'rgb(var(--ts-text-3))' }}>Invoices coming soon</dd></div>
       </dl>
 
@@ -110,11 +133,15 @@ export function BillingSection() {
               className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-60"
               style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-1))' }}>Upgrade · Yearly (₹4,990)</button>
           </>
+        ) : isCancelScheduled ? (
+          <button type="button" disabled={busy} onClick={() => void reactivate()}
+            className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
+            style={{ background: 'rgb(var(--ts-accent))', color: '#06121e' }}>Reactivate Subscription</button>
         ) : (
-          <button type="button" disabled={busy || status?.cancelAtCycleEnd} onClick={() => void cancel()}
+          <button type="button" disabled={busy} onClick={() => void cancel()}
             className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-60"
             style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-2))' }}>
-            {status?.cancelAtCycleEnd ? 'Cancellation scheduled' : 'Cancel subscription'}
+            Cancel subscription
           </button>
         )}
       </div>

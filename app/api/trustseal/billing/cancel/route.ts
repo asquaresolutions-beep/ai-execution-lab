@@ -7,7 +7,9 @@
 // ─────────────────────────────────────────────────────────────────
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/trustseal/account'
+import { getStore } from '@/lib/store/adapter'
 import { getSubscription } from '@/lib/billing/entitlement'
+import { setCancelScheduled } from '@/lib/billing/writer'
 import { cancelSubscription } from '@/lib/billing/razorpay'
 import { isTestModeKey } from '@/lib/billing/plans'
 
@@ -26,6 +28,10 @@ export async function POST(req: Request) {
   const ok = await cancelSubscription(sub.razorpaySubscriptionId, true)
   if (!ok) return NextResponse.json({ error: 'razorpay_error' }, { status: 502 })
 
-  // State flips to 'cancelled' via the webhook; surface the pending intent only.
+  // Persist the scheduled-cancel immediately (Razorpay confirmed it). Status stays
+  // 'active' until the cycle-end webhook; the webhook + reconcile keep it in sync.
+  // Entitlement is unaffected — Pro continues until currentEnd.
+  await setCancelScheduled(getStore(), user.uid, true)
+
   return NextResponse.json({ ok: true, pending: 'cancel_at_cycle_end' }, { headers: { 'cache-control': 'private, no-store' } })
 }
