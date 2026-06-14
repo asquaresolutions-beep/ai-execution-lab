@@ -25,6 +25,12 @@ export type AuditAction =
   | 'claim.verified'
   | 'claim.failed'
   | 'claim.revoked'
+  | 'billing.activate'
+  | 'billing.renew'
+  | 'billing.past_due'
+  | 'billing.halted'
+  | 'billing.cancel'
+  | 'billing.expire'
 
 export interface AuditEntry {
   id?: string

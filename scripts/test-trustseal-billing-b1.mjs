@@ -114,7 +114,9 @@ ok('index: ts_subscriptions (status, currentEnd)', hasIndex('ts_subscriptions', 
 // Doc comments may reference Razorpay (future phases); assert no actual
 // integration exists yet — no client module, no SDK import, no key usage.
 ok('scope: no razorpay integration in lib/billing', !fs.existsSync(new URL('../lib/billing/razorpay.ts', import.meta.url)) && !/from ['"]razorpay['"]|require\(['"]razorpay['"]\)|RAZORPAY_/.test(model + ent))
-ok('scope: no webhook route added', !fs.existsSync(new URL('../app/api/trustseal/webhooks', import.meta.url)))
+// Durable purity guard (later phases legitimately add the webhook route): the B1
+// lib itself must never contain Next/route code.
+ok('scope: B1 lib has no Next/route code', !/next\/server|NextResponse/.test(model + ent))
 
 console.log(`\nBilling B1 foundation tests: ${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

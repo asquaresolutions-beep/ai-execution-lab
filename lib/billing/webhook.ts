@@ -15,6 +15,27 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import type { Subscription, SubscriptionStatus } from '@/lib/billing/model'
 
+// Audit action emitted for a status transition (consumed by the route's audit log).
+export type BillingAuditAction =
+  | 'billing.activate' | 'billing.renew' | 'billing.past_due'
+  | 'billing.halted' | 'billing.cancel' | 'billing.expire'
+
+/**
+ * PURE: map a (previous → next) status change to the audit action to log, or null
+ * when the change is not auditable (e.g. → created, or no real change). A move INTO
+ * active is `activate` from a cold state, else `renew` (recurring charge / recovery).
+ */
+export function auditActionFor(prev: SubscriptionStatus | 'none', next: SubscriptionStatus): BillingAuditAction | null {
+  switch (next) {
+    case 'active': return prev === 'active' || prev === 'past_due' ? 'billing.renew' : 'billing.activate'
+    case 'past_due': return 'billing.past_due'
+    case 'halted': return 'billing.halted'
+    case 'cancelled': return 'billing.cancel'
+    case 'expired': return 'billing.expire'
+    default: return null
+  }
+}
+
 // ── Signature verification ────────────────────────────────────────
 // Razorpay signs webhooks as hex HMAC-SHA256(rawBody, webhookSecret), delivered in
 // the `x-razorpay-signature` header. Verify over the RAW body (before JSON.parse).

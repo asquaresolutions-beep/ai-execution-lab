@@ -120,7 +120,9 @@ ok('webhook: exports the three helpers', /export function verifyRazorpaySignatur
 ok('webhook: applyTransition is pure (no Date.now / no store)', !/Date\.now\(/.test(wh) && !/getStore|@\/lib\/store/.test(wh))
 
 // scope guard: B2.1 ships NO route / cron / API client
-ok('scope: no webhook route', !fs.existsSync(new URL('../app/api/trustseal/webhooks', import.meta.url)))
+// Durable purity guard (B2.2 legitimately adds the route): webhook.ts itself must
+// stay pure — no Next/route/store code, ever.
+ok('scope: webhook.ts stays pure (no Next/route/store)', !/next\/server|NextResponse|getStore|@\/lib\/store/.test(wh))
 ok('scope: no billing cron route', !fs.existsSync(new URL('../app/api/cron/billing-reconcile', import.meta.url)))
 ok('scope: no razorpay API client', !fs.existsSync(new URL('../lib/billing/razorpay.ts', import.meta.url)))
 
