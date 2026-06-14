@@ -45,6 +45,8 @@ export interface Subscription {
 }
 
 // Append-only webhook log; doc id = Razorpay event id (the idempotency key).
+// Carries enough payment/period metadata to (a) generate GST invoices later
+// (B5) without re-fetching Razorpay, and (b) serve as a durable audit trail.
 export interface BillingEvent {
   id: string
   type: string
@@ -54,6 +56,13 @@ export interface BillingEvent {
   receivedAt: number
   processed: boolean
   result?: string
+  // ── invoice / audit metadata (nullable; present on charge events) ──
+  paymentId: string | null
+  invoiceId: string | null
+  amount: number | null        // minor units (paise)
+  currency: string | null
+  currentStart: number | null  // billing period start, ms
+  currentEnd: number | null    // billing period end, ms
 }
 
 // GST tax-invoice record; doc id = sequential invoice number (e.g. TS-2026-0001).

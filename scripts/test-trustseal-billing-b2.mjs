@@ -123,8 +123,9 @@ ok('webhook: applyTransition is pure (no Date.now / no store)', !/Date\.now\(/.t
 // Durable purity guard (B2.2 legitimately adds the route): webhook.ts itself must
 // stay pure — no Next/route/store code, ever.
 ok('scope: webhook.ts stays pure (no Next/route/store)', !/next\/server|NextResponse|getStore|@\/lib\/store/.test(wh))
-ok('scope: no billing cron route', !fs.existsSync(new URL('../app/api/cron/billing-reconcile', import.meta.url)))
-ok('scope: no razorpay API client', !fs.existsSync(new URL('../lib/billing/razorpay.ts', import.meta.url)))
+// Durable: B2.1's deliverable uses no Razorpay SDK / network — it stays the pure
+// state machine even after later phases add a Razorpay client + reconcile cron.
+ok('scope: webhook.ts uses no Razorpay SDK / network', !/from ['"]razorpay['"]|require\(['"]razorpay['"]\)|fetch\(/.test(wh))
 
 console.log(`\nBilling B2.1 webhook tests: ${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

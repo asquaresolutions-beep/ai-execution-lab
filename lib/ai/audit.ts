@@ -31,6 +31,8 @@ export type AuditAction =
   | 'billing.halted'
   | 'billing.cancel'
   | 'billing.expire'
+  | 'billing.reconcile'
+  | 'billing.unmapped'
 
 export interface AuditEntry {
   id?: string

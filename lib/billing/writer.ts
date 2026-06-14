@@ -40,6 +40,13 @@ export async function persistEventOnce(
     payloadDigest,
     receivedAt: Date.now(),
     processed: false,
+    // Persist invoice/audit metadata now so B5 (GST invoices) needs no re-fetch.
+    paymentId: event.paymentId,
+    invoiceId: event.invoiceId,
+    amount: event.amount,
+    currency: event.currency,
+    currentStart: event.currentStart,
+    currentEnd: event.currentEnd,
   }
   await store.set<BillingEvent>(BILLING_EVENTS, event.eventId, record)
   return { firstSeen: true }

@@ -85,6 +85,8 @@ export interface NormalizedSubEvent {
   currentEnd: number | null   // ms
   paymentId: string | null
   invoiceId: string | null
+  amount: number | null       // minor units (paise), from the payment entity
+  currency: string | null
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null
@@ -125,6 +127,8 @@ export function parseRazorpayEvent(body: unknown, eventId: string): NormalizedSu
     currentEnd: secToMs(sub.current_end),
     paymentId: pay ? str(pay.id) : null,
     invoiceId: inv ? str(inv.id) : null,
+    amount: pay && typeof pay.amount === 'number' ? pay.amount : null,
+    currency: pay ? str(pay.currency) : null,
   }
 }
 
@@ -186,4 +190,78 @@ export function applyTransition(current: Subscription | null, event: NormalizedS
   next.lastEventAt = event.createdAt
   next.updatedAt = event.createdAt
   return next
+}
+
+// ── Reconciliation (snapshot-based healing) ───────────────────────
+// When webhooks are missed/delayed/dropped, the reconcile path reads Razorpay's
+// CURRENT subscription snapshot (the source of truth) and heals local state to
+// match. Unlike applyTransition this is NOT event-ordered — the snapshot is
+// authoritative now — but it deliberately leaves lastEventId/lastEventAt untouched
+// so the webhook ordering guard still protects against post-reconcile stale events.
+
+// A normalized Razorpay subscription snapshot (from GET /subscriptions/:id).
+export interface RazorpaySnapshot {
+  subscriptionId: string
+  status: string            // Razorpay's own status string
+  uid: string | null        // notes.uid
+  planId: string | null
+  currentStart: number | null // ms
+  currentEnd: number | null   // ms
+}
+
+// Razorpay subscription status → our SubscriptionStatus. Unknown → null (skip,
+// never guess — fail-closed: do not mutate state from an unrecognized status).
+const RZ_STATUS_MAP: Record<string, SubscriptionStatus> = {
+  created: 'created',
+  authenticated: 'created',
+  active: 'active',
+  pending: 'past_due',
+  halted: 'halted',
+  paused: 'past_due',
+  cancelled: 'cancelled',
+  completed: 'expired',
+  expired: 'expired',
+}
+export function mapRazorpayStatus(status: string): SubscriptionStatus | null {
+  return RZ_STATUS_MAP[status] ?? null
+}
+
+export interface ReconcileResult {
+  changed: boolean
+  next: Subscription | null
+  from: SubscriptionStatus | 'none'
+  to: SubscriptionStatus | 'none'
+}
+
+/**
+ * PURE: heal a local subscription against a Razorpay snapshot. Returns changed=false
+ * (no write) when there is no drift, no account can be resolved, or the snapshot
+ * status is unrecognized (fail-closed — never downgrade on an unknown status).
+ */
+export function reconcileSubscription(local: Subscription | null, snap: RazorpaySnapshot, now: number): ReconcileResult {
+  const uid = local?.accountId ?? snap.uid
+  if (!uid) return { changed: false, next: null, from: local?.status ?? 'none', to: 'none' }
+
+  const mapped = mapRazorpayStatus(snap.status)
+  if (!mapped) return { changed: false, next: local, from: local?.status ?? 'none', to: local?.status ?? 'none' }
+
+  const base = local ?? skeleton(uid, snap.subscriptionId)
+  const next: Subscription = { ...base }
+  next.plan = 'pro'
+  next.status = mapped
+  next.razorpaySubscriptionId = snap.subscriptionId
+  if (snap.planId) next.razorpayPlanId = snap.planId
+  if (snap.currentStart != null) next.currentStart = snap.currentStart
+  if (snap.currentEnd != null) next.currentEnd = snap.currentEnd
+  next.cancelAtCycleEnd = mapped === 'cancelled' && snap.currentEnd != null && snap.currentEnd > now
+  next.updatedAt = now
+
+  const changed = !local
+    || local.status !== next.status
+    || local.currentEnd !== next.currentEnd
+    || local.currentStart !== next.currentStart
+    || local.razorpayPlanId !== next.razorpayPlanId
+  if (!changed) return { changed: false, next: local, from: local.status, to: local.status }
+
+  return { changed: true, next, from: local?.status ?? 'none', to: next.status }
 }

@@ -2,13 +2,15 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     { "path": "/api/cron/autopilot", "schedule": "0 6 * * *" },
-    { "path": "/api/cron/drain-queue", "schedule": "0 7 * * *" }
+    { "path": "/api/cron/drain-queue", "schedule": "0 7 * * *" },
+    { "path": "/api/cron/billing-reconcile", "schedule": "0 * * * *" }
   ],
   "functions": {
     "app/api/distribution/generate/route.ts": { "maxDuration": 60 },
     "app/api/cron/autopilot/route.ts": { "maxDuration": 60 },
     "app/api/cron/drain-queue/route.ts": { "maxDuration": 60 },
     "app/api/cron/update-trending/route.ts": { "maxDuration": 60 },
-    "app/api/cron/clean-cache/route.ts": { "maxDuration": 60 }
+    "app/api/cron/clean-cache/route.ts": { "maxDuration": 60 },
+    "app/api/cron/billing-reconcile/route.ts": { "maxDuration": 60 }
   }
 }
