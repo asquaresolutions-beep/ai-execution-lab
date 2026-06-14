@@ -31,21 +31,24 @@ export function IntelTerminal() {
           <span className="h-2 w-2 rounded-full" style={{ background: '#fbbf24' }} />
           <span className="h-2 w-2 rounded-full" style={{ background: '#34d399' }} />
         </span>
-        <span className="font-mono text-[10px] tracking-[0.2em]" style={{ color: C.cyan }}>INTEL://verification.stream</span>
-        <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-[9px] tracking-wider" style={{ color: C.good }}>
+        <span className="min-w-0 truncate font-mono text-[10px] tracking-[0.2em]" style={{ color: C.cyan }}>INTEL://verification.stream</span>
+        <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 font-mono text-[9px] tracking-wider" style={{ color: C.good }}>
           <motion.span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: C.good, boxShadow: `0 0 6px ${C.good}` }}
             animate={reduce ? undefined : { opacity: [1, 0.2, 1] }} transition={{ duration: 1.4, repeat: Infinity }} />
           STREAMING
         </span>
       </header>
-      <div className="relative flex-1 space-y-0.5 overflow-hidden px-3 py-2 font-mono text-[11px] leading-relaxed">
+      <div className="relative flex-1 space-y-1 overflow-hidden px-3 py-2 font-mono text-[11px] leading-relaxed">
+        {/* Rows wrap instead of clipping: time/tag/code/domain flow inline and the
+            message falls to a second line on narrow viewports, so every row stays
+            fully readable on mobile with no horizontal overflow. */}
         {ROWS.map((r, i) => (
-          <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.07 }} className="flex items-center gap-2 whitespace-nowrap">
+          <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.07 }} className="flex flex-wrap items-baseline gap-x-2">
             <span style={{ color: C.dim }}>{r.t}</span>
             <span className="rounded px-1" style={{ color: r.tone, background: `${r.tone}14` }}>{r.tag.trim()}</span>
             <span style={{ color: r.tone }}>{r.code}</span>
-            <span style={{ color: '#cdd8ec' }}>{r.d}</span>
-            <span className="truncate" style={{ color: C.dim }}>{r.msg}</span>
+            <span className="break-all" style={{ color: '#cdd8ec' }}>{r.d}</span>
+            <span className="min-w-0 break-words" style={{ color: C.dim }}>{r.msg}</span>
           </motion.div>
         ))}
         <div className="flex items-center gap-1.5 pt-0.5" style={{ color: C.cyan }}>

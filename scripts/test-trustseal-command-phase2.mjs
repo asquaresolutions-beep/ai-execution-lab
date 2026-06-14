@@ -43,7 +43,7 @@ ok('route: noindex (buildTrustMeta default, no index:true)', /buildTrustMeta/.te
 
 // ── Phase-2 hero requirements ──
 const hero = read('components/trustseal/command/hero-network.tsx')
-ok('hero: holographic Trust Score core (score readout)', /TRUST SCORE/.test(hero) && /score/.test(hero))
+ok('hero: holographic Trust Score core (seal hexagon + score readout)', /hex\(CORE\)/.test(hero) && /\{score\}/.test(hero))
 ok('hero: HUD tick ring', /TICKS/.test(hero))
 ok('hero: travelling intelligence particles on edges', /motion\.circle/.test(hero))
 ok('hero: ambient field particles', /FIELD/.test(hero))
@@ -65,5 +65,23 @@ for (const part of ['TrustScoreCards', 'RiskPanel', 'VerificationTimeline']) {
 ok('left nav + top intelligence bar present', /<nav/.test(cc) && /<header/.test(cc))
 ok('stronger TrustSeal identity (seal/hex mark)', /polygon/.test(cc) || /nav-seal/.test(cc))
 
-console.log(`\nCommand Center Phase-2 tests: ${pass} passed, ${fail} failed`)
+// ── Phase-2.1 immersive refinement ──
+// 1+2. Dedicated immersive layout: both global chrome layers gate off /command.
+const chrome = read('components/layout/site-chrome.tsx')
+ok('immersive: SiteChrome suppresses lab chrome on /command', /usePathname/.test(chrome) && /command/.test(chrome))
+const lhead = read('components/trustseal/locale-header.tsx')
+ok('immersive: TrustSeal locale header gated off /command', /usePathname/.test(lhead) && /return null/.test(lhead))
+const tslayout = read('app/trustseal/[locale]/layout.tsx')
+ok('immersive: layout uses the gated header (no inline marketing header)', /TrustSealLocaleHeader/.test(tslayout) && !/<header/.test(tslayout))
+// 3. Mobile: terminal rows wrap rather than clip; no whitespace-nowrap overflow.
+ok('mobile: terminal rows wrap (no whitespace-nowrap clipping)', !/whitespace-nowrap/.test(term) && /flex-wrap/.test(term))
+// 4. Stacked: terminal forced height only at xl, content-driven below.
+// Terminal wrapper carries the xl-only class; it must NOT carry an unconditional
+// inline minHeight (the hero panel legitimately keeps one for its absolute SVG).
+ok('stacked: terminal min-height applied only at xl', /xl:col-span-4 xl:min-h-\[460px\]/.test(cc) && !/xl:col-span-4["'] style=\{\{ minHeight: 460/.test(cc))
+// 5. Identity: seal hexagon + verified check integrated into the holographic core.
+ok('identity: seal hexagon frame in core', /points=\{hex\(CORE\)\}/.test(hero) && /hn-seal/.test(hero))
+ok('identity: verified seal check in core', /stroke="url\(#hn-seal\)"/.test(hero) && /<path d=\{`M/.test(hero))
+
+console.log(`\nCommand Center Phase-2.1 tests: ${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

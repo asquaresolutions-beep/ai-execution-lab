@@ -12,6 +12,8 @@ const BC: Record<Band, string> = { verified: '#34d399', established: '#22d3ee', 
 
 const W = 760, H = 480, CX = 380, CY = 230, CORE = 78
 const polar = (deg: number, dist: number) => ({ x: CX + Math.cos((deg * Math.PI) / 180) * dist, y: CY + Math.sin((deg * Math.PI) / 180) * dist })
+// Pointy-top hexagon points at radius R about the core — the TrustSeal seal motif.
+const hex = (R: number) => Array.from({ length: 6 }, (_, i) => { const a = ((-90 + 60 * i) * Math.PI) / 180; return `${(CX + R * Math.cos(a)).toFixed(1)},${(CY + R * Math.sin(a)).toFixed(1)}` }).join(' ')
 
 const NODES = [
   { id: 'fastly.dev', deg: -64, dist: 188, r: 11, band: 'verified' as Band },
@@ -29,13 +31,15 @@ const FIELD = Array.from({ length: 26 }, (_, i) => ({ x: (i * 89) % W, y: (i * 1
 
 export function HeroNetwork({ score = 94, band = 'VERIFIED' }: { score?: number; band?: string }) {
   const reduce = useReducedMotion()
-  const arc = 2 * Math.PI * (CORE - 10)
+  const arc = 2 * Math.PI * (CORE - 16) // meter radius nests inside the seal hexagon (inradius ≈ 0.866·CORE)
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="h-full w-full" role="img" aria-label={`Trust network: holographic trust score ${score} of 100 at the centre, surrounded by domains coloured by trust band`}>
       <defs>
         <radialGradient id="hn-core" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="rgba(34,211,238,0.22)" /><stop offset="70%" stopColor="rgba(34,211,238,0.04)" /><stop offset="100%" stopColor="rgba(34,211,238,0)" /></radialGradient>
         <radialGradient id="hn-field" cx="50%" cy="45%" r="60%"><stop offset="0%" stopColor="rgba(56,189,248,0.10)" /><stop offset="100%" stopColor="rgba(56,189,248,0)" /></radialGradient>
+        <linearGradient id="hn-seal" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#22d3ee" /><stop offset="100%" stopColor="#a78bfa" /></linearGradient>
         <filter id="hn-blur"><feGaussianBlur stdDeviation="3.5" /></filter>
+        <filter id="hn-glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2.6" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
       </defs>
       <rect width={W} height={H} fill="url(#hn-field)" />
 
@@ -97,22 +101,25 @@ export function HeroNetwork({ score = 94, band = 'VERIFIED' }: { score?: number;
           <circle cx={CX} cy={CY - CORE - 6} r="2.5" fill="#22d3ee" />
         </motion.g>
       )}
-      {/* score track + progress arc */}
-      <circle cx={CX} cy={CY} r={CORE - 10} fill="none" stroke="rgba(120,160,255,0.16)" strokeWidth="6" />
-      <motion.circle cx={CX} cy={CY} r={CORE - 10} fill="none" stroke="#22d3ee" strokeWidth="6" strokeLinecap="round"
-        strokeDasharray={arc} transform={`rotate(-90 ${CX} ${CY})`} initial={{ strokeDashoffset: arc }} animate={{ strokeDashoffset: arc * (1 - score / 100) }} transition={{ duration: 1.6, ease: 'easeOut' }}
-        style={{ filter: 'drop-shadow(0 0 6px rgba(34,211,238,0.7))' }} />
-      {/* inner rotating ring */}
+      {/* ── TrustSeal seal medallion: the hexagon IS the identity ── */}
+      {/* hex backdrop + gradient seal frame */}
+      <polygon points={hex(CORE)} fill="#0a0e1a" opacity="0.55" stroke="url(#hn-seal)" strokeWidth="2.4" strokeLinejoin="round" filter="url(#hn-glow)" />
+      {/* counter-rotating inner seal hex (motion) */}
       {!reduce && (
-        <motion.circle cx={CX} cy={CY} r={CORE - 22} fill="none" stroke="rgba(167,139,250,0.4)" strokeWidth="1" strokeDasharray="3 6"
-          style={{ transformOrigin: `${CX}px ${CY}px` }} animate={{ rotate: -360 }} transition={{ duration: 16, repeat: Infinity, ease: 'linear' }} />
+        <motion.polygon points={hex(CORE - 26)} fill="none" stroke="rgba(167,139,250,0.45)" strokeWidth="1" strokeDasharray="3 6" strokeLinejoin="round"
+          style={{ transformOrigin: `${CX}px ${CY}px` }} animate={{ rotate: -360 }} transition={{ duration: 20, repeat: Infinity, ease: 'linear' }} />
       )}
-      <circle cx={CX} cy={CY} r={CORE - 28} fill="#0a0e1a" opacity="0.7" />
+      {/* score meter — track + animated progress arc, nested inside the seal */}
+      <circle cx={CX} cy={CY} r={CORE - 16} fill="none" stroke="rgba(120,160,255,0.16)" strokeWidth="5" />
+      <motion.circle cx={CX} cy={CY} r={CORE - 16} fill="none" stroke="url(#hn-seal)" strokeWidth="5" strokeLinecap="round"
+        strokeDasharray={arc} transform={`rotate(-90 ${CX} ${CY})`} initial={{ strokeDashoffset: arc }} animate={{ strokeDashoffset: arc * (1 - score / 100) }} transition={{ duration: 1.6, ease: 'easeOut' }}
+        style={{ filter: 'drop-shadow(0 0 5px rgba(34,211,238,0.6))' }} />
+      {/* verified seal check — echoes the nav seal mark */}
+      <path d={`M${CX - 9} ${CY - 34} l5 5 l11 -12`} fill="none" stroke="url(#hn-seal)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" filter="url(#hn-glow)" />
       {/* core readout */}
-      <text x={CX} y={CY - 8} textAnchor="middle" fontSize="46" fontWeight="700" fill="#e9f3ff" style={{ letterSpacing: '-1px' }}>{score}</text>
-      <text x={CX} y={CY + 12} textAnchor="middle" fontSize="11" fill="#6b7a98" fontFamily="ui-monospace, monospace">/ 100</text>
-      <text x={CX} y={CY + 30} textAnchor="middle" fontSize="9" fill="#34d399" fontFamily="ui-monospace, monospace" style={{ letterSpacing: '3px' }}>{band}</text>
-      <text x={CX} y={CY - 30} textAnchor="middle" fontSize="8" fill="#5d6a86" fontFamily="ui-monospace, monospace" style={{ letterSpacing: '3px' }}>TRUST SCORE</text>
+      <text x={CX} y={CY + 8} textAnchor="middle" fontSize="44" fontWeight="700" fill="#e9f3ff" style={{ letterSpacing: '-1px' }}>{score}</text>
+      <text x={CX} y={CY + 26} textAnchor="middle" fontSize="10" fill="#6b7a98" fontFamily="ui-monospace, monospace">/ 100</text>
+      <text x={CX} y={CY + 42} textAnchor="middle" fontSize="9" fill="#34d399" fontFamily="ui-monospace, monospace" style={{ letterSpacing: '3px' }}>{band}</text>
     </svg>
   )
 }

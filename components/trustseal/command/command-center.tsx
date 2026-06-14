@@ -144,8 +144,10 @@ export function CommandCenter({ locale = 'en' }: { locale?: string }) {
                 </div>
               </div>
 
-              {/* 6. intelligence terminal beside the hero */}
-              <div className="xl:col-span-4" style={{ minHeight: 460 }}>
+              {/* 6. intelligence terminal beside the hero. Forced height only at
+                  xl (where it matches the hero's height); below xl it stacks and
+                  sizes to its content — no empty terminal void. */}
+              <div className="xl:col-span-4 xl:min-h-[460px]">
                 <IntelTerminal />
               </div>
             </section>

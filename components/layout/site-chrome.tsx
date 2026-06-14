@@ -12,7 +12,7 @@
 // payload entirely, while the lab site still renders them. Pages stay static.
 import type { ReactNode } from 'react'
 import dynamic from 'next/dynamic'
-import { useSelectedLayoutSegment } from 'next/navigation'
+import { useSelectedLayoutSegment, usePathname } from 'next/navigation'
 import { ScamCheckNav } from '@/components/scamcheck/scamcheck-nav'
 import { ScamCheckFooter } from '@/components/scamcheck/scamcheck-footer'
 
@@ -37,6 +37,16 @@ function isScamCheckSegment(seg: string | null): boolean {
 
 export function SiteChrome({ children }: { children: ReactNode }) {
   const seg = useSelectedLayoutSegment()
+  const pathname = usePathname()
+  // The TrustSeal Command Center is a dedicated immersive surface — it owns the
+  // whole viewport and provides its own single navigation. Suppress ALL global
+  // chrome (lab Sidebar/TopBar/Footer + the TrustSeal locale header gate) on it.
+  // usePathname() is resolved during SSR for client components, so the static
+  // HTML is correct and there is no hydration flash. Matches /{locale}/command
+  // under both the internal /trustseal/* path and the host-rewritten public URL.
+  if (/(?:^|\/)command\/?$/.test(pathname || '')) {
+    return <>{children}</>
+  }
   if (isScamCheckSegment(seg)) {
     return (
       <div className="flex min-h-screen flex-col bg-zinc-950">
