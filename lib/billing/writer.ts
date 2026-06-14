@@ -13,11 +13,27 @@
 //   • applyTransition is itself idempotent + order-safe, so re-processing never
 //     double-applies or downgrades.
 // ─────────────────────────────────────────────────────────────────
-import { applyTransition } from './webhook.ts'
+import { applyTransition, pendingSubscription } from './webhook.ts'
 import type { NormalizedSubEvent } from './webhook.ts'
 import { SUBSCRIPTIONS, BILLING_EVENTS } from './model.ts'
-import type { Subscription, BillingEvent, SubscriptionStatus } from './model.ts'
+import type { Subscription, BillingEvent, SubscriptionStatus, BillingInterval } from './model.ts'
 import type { DocumentStore } from '@/lib/store/adapter'
+
+/**
+ * Persist the 'created' subscription reference at /subscribe time (before any
+ * webhook). Status is 'created' (not entitled); the activation webhook flips it to
+ * active. Safe to overwrite a prior non-entitled record (new checkout attempt) —
+ * the route guards against overwriting a currently-entitled subscription.
+ */
+export async function createPendingSubscription(
+  store: DocumentStore,
+  opts: { uid: string; interval: BillingInterval; razorpaySubscriptionId: string; razorpayPlanId: string; razorpayCustomerId?: string | null },
+  now: number = Date.now(),
+): Promise<Subscription> {
+  const sub = pendingSubscription(opts.uid, opts, now)
+  await store.set<Subscription>(SUBSCRIPTIONS, sub.id, sub)
+  return sub
+}
 
 /**
  * Record the event under its id, returning firstSeen=false ONLY for a replay of an

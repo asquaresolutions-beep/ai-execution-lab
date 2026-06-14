@@ -1,0 +1,123 @@
+'use client'
+// components/trustseal/billing/billing-section.tsx  (asq-trustseal-billing-b3)
+// Billing section for the TrustSeal dashboard. Reads the server-authoritative
+// status projection (Bearer ID token) and renders current plan, subscription
+// status, renewal date, a billing-history placeholder, and upgrade/manage
+// controls. This is DISPLAY + control wiring only — it performs NO entitlement
+// enforcement (B4) and shows NO invoices yet (B5). Subscribe redirects to the
+// Razorpay hosted checkout (short_url); state is granted only by the webhook.
+import { useCallback, useEffect, useState } from 'react'
+import { useAuth } from '@/components/auth/auth-provider'
+
+interface BillingStatus {
+  plan: 'free' | 'pro'
+  status: string
+  active: boolean
+  inGrace: boolean
+  currentEnd: number | null
+  interval: 'monthly' | 'yearly' | null
+  cancelAtCycleEnd: boolean
+}
+
+const card = { borderColor: 'rgb(var(--ts-border))', backgroundColor: 'rgb(var(--ts-surface-2))' } as const
+const fmtDate = (ms: number | null) => (ms ? new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—')
+
+export function BillingSection() {
+  const { user } = useAuth()
+  const [status, setStatus] = useState<BillingStatus | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(async () => {
+    if (!user?.idToken) return
+    try {
+      const r = await fetch('/api/trustseal/billing/status', { headers: { Authorization: `Bearer ${user.idToken}` }, cache: 'no-store' })
+      if (!r.ok) throw new Error(`status ${r.status}`)
+      setStatus((await r.json()) as BillingStatus)
+      setError(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'billing error')
+    }
+  }, [user?.idToken])
+
+  useEffect(() => { void load() }, [load])
+
+  const subscribe = useCallback(async (interval: 'monthly' | 'yearly') => {
+    if (!user?.idToken || busy) return
+    setBusy(true)
+    try {
+      const r = await fetch('/api/trustseal/billing/subscribe', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.idToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interval }),
+      })
+      const data = (await r.json()) as { shortUrl?: string; error?: string }
+      if (data.shortUrl) { window.location.href = data.shortUrl; return } // Razorpay hosted checkout
+      setError(data.error || 'subscribe failed')
+    } catch {
+      setError('subscribe failed')
+    } finally {
+      setBusy(false)
+    }
+  }, [user?.idToken, busy])
+
+  const cancel = useCallback(async () => {
+    if (!user?.idToken || busy) return
+    setBusy(true)
+    try {
+      const r = await fetch('/api/trustseal/billing/cancel', { method: 'POST', headers: { Authorization: `Bearer ${user.idToken}` } })
+      if (!r.ok) { const d = (await r.json()) as { error?: string }; setError(d.error || 'cancel failed'); return }
+      await load() // status flips via webhook; refresh to reflect pending intent
+    } catch {
+      setError('cancel failed')
+    } finally {
+      setBusy(false)
+    }
+  }, [user?.idToken, busy, load])
+
+  if (!user) return null
+
+  const isPro = status?.active ?? false
+
+  return (
+    <section data-billing-section className="rounded-xl border p-5" style={card}>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>Billing</h2>
+        <span className="rounded-full px-2 py-0.5 text-xs font-semibold"
+          style={{ color: isPro ? 'rgb(var(--ts-accent))' : 'rgb(var(--ts-text-2))', border: '1px solid rgb(var(--ts-border))' }}>
+          {isPro ? 'PRO' : 'FREE'}
+        </span>
+      </div>
+
+      {error && <p className="mt-2 text-sm" style={{ color: '#f87171' }}>Could not load billing: {error}</p>}
+
+      {/* current plan / status / renewal */}
+      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>Plan</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{isPro ? `Pro · ${status?.interval ?? ''}` : 'Free'}</dd></div>
+        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>Status</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{status?.status ?? '—'}{status?.inGrace ? ' (grace)' : ''}</dd></div>
+        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>Renews / ends</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{fmtDate(status?.currentEnd ?? null)}{status?.cancelAtCycleEnd ? ' (cancels)' : ''}</dd></div>
+        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>Billing history</dt><dd style={{ color: 'rgb(var(--ts-text-3))' }}>Invoices coming soon</dd></div>
+      </dl>
+
+      {/* upgrade / manage controls */}
+      <div className="mt-5 flex flex-wrap gap-3">
+        {!isPro ? (
+          <>
+            <button type="button" disabled={busy} onClick={() => void subscribe('monthly')}
+              className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
+              style={{ background: 'rgb(var(--ts-accent))', color: '#06121e' }}>Upgrade · Monthly (₹499)</button>
+            <button type="button" disabled={busy} onClick={() => void subscribe('yearly')}
+              className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-60"
+              style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-1))' }}>Upgrade · Yearly (₹4,990)</button>
+          </>
+        ) : (
+          <button type="button" disabled={busy || status?.cancelAtCycleEnd} onClick={() => void cancel()}
+            className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-60"
+            style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-2))' }}>
+            {status?.cancelAtCycleEnd ? 'Cancellation scheduled' : 'Cancel subscription'}
+          </button>
+        )}
+      </div>
+    </section>
+  )
+}
