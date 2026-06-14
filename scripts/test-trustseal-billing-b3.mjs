@@ -116,9 +116,11 @@ ok('dashboard: NO entitlement enforcement (display only)', !/getEntitlement|requ
 const dash = read('components/trustseal/dashboard-client.tsx')
 ok('dashboard: BillingSection mounted in the dashboard', /<BillingSection \/>/.test(dash))
 
-// ── scope guards: B4 / B5 NOT started ─────────────────────────────
-ok('scope: no entitlement enforcement wired into badge/claims', !fs.existsSync(new URL('../lib/billing/enforce.ts', import.meta.url)))
-ok('scope: no invoice generation', !fs.existsSync(new URL('../lib/billing/invoice.ts', import.meta.url)) && !/generateInvoice/.test(sub + stat + cancel))
+// ── scope guards ──────────────────────────────────────────────────
+// Durable: B3's checkout/dashboard surfaces don't perform capability enforcement
+// (that's B4's enforce.ts, applied to the badge/command surfaces — not here).
+ok('scope: B3 checkout/dashboard does not import the enforcement gateway', !/@\/lib\/billing\/enforce/.test(sub + stat + cancel + ui))
+ok('scope: no invoice generation (B5)', !fs.existsSync(new URL('../lib/billing/invoice.ts', import.meta.url)) && !/generateInvoice/.test(sub + stat + cancel))
 
 console.log(`\nBilling B3 checkout/dashboard tests: ${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

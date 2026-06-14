@@ -5,7 +5,7 @@
 // real data wiring land in the next phase (this prototype renders mock data so it
 // can be reviewed/screenshotted).
 import type { Metadata } from 'next'
-import { CommandCenter } from '@/components/trustseal/command/command-center'
+import { CommandGate } from '@/components/trustseal/command/command-gate'
 import { buildTrustMeta } from '@/lib/trustseal/seo'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -16,5 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  return <CommandCenter locale={locale} />
+  // B4: Pro-gated. The gate enforces entitlement server-side via the access API and
+  // renders the Command Center only on a 200. Page stays a static shell.
+  return <CommandGate locale={locale} />
 }

@@ -38,7 +38,10 @@ const JS = `(function(){
     return;
   }
   fetch(origin+'/api/trustseal/seal/'+encodeURIComponent(domain)).then(function(r){return r.json()}).then(function(d){
-    if(!d || !d.verified){
+    // Pro-gated: the embeddable verified badge renders only when the owning account
+    // is entitled (d.badgeEntitled, computed server-side). Otherwise — including
+    // verified-but-Free domains — fall back to a plain link to the public seal page.
+    if(!d || !d.verified || !d.badgeEntitled){
       box.innerHTML='<a href="'+origin+'/en/trust/'+encodeURIComponent(domain)+'" target="_blank" rel="noopener" style="color:#6b7280;text-decoration:none">Verify with TrustSeal</a>';
       return;
     }
