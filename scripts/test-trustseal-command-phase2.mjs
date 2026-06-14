@@ -83,5 +83,20 @@ ok('stacked: terminal min-height applied only at xl', /xl:col-span-4 xl:min-h-\[
 ok('identity: seal hexagon frame in core', /points=\{hex\(CORE\)\}/.test(hero) && /hn-seal/.test(hero))
 ok('identity: verified seal check in core', /stroke="url\(#hn-seal\)"/.test(hero) && /<path d=\{`M/.test(hero))
 
-console.log(`\nCommand Center Phase-2.1 tests: ${pass} passed, ${fail} failed`)
+// ── Phase-2.2 polish ──
+const widgets = read('components/trustseal/command/widgets.tsx')
+// 1. Trust Score shown once (hero only) — the ops rail must NOT carry a score card.
+ok('polish: no duplicate Trust Score card in ops rail', !/'Trust Score'/.test(widgets) && /'Monitored'/.test(widgets))
+// 2. Lower section adopts the hero seal/intelligence aesthetic.
+ok('polish: shared HexBadge seal motif in panels', /function HexBadge/.test(widgets) && /<HexBadge/.test(widgets))
+ok('polish: timeline uses hexagon markers', /<polygon points="12,2 20,7/.test(widgets))
+ok('polish: ops cards use mono labels', /font-mono text-\[10px\] uppercase/.test(widgets))
+// 3. Mobile: cleaner top bar (wraps, subline hidden < sm) + zero overflow preserved.
+ok('polish: top bar wraps + subline hidden on mobile', /flex-wrap/.test(cc) && /hidden font-mono text-\[10px\] sm:block/.test(cc))
+// 4. Network readability: labels placed radially outward with a halo.
+ok('polish: node labels placed outward with halo', /n\.y >= CY \? n\.y \+ n\.r \+ 12 : n\.y - n\.r - 7/.test(hero) && /paintOrder="stroke"/.test(hero))
+// 5. Terminal scroll-offset: opaque, raised sticky header so content passes behind.
+ok('polish: sticky header opaque + z-20 (scroll-offset)', /sticky top-0 z-20/.test(cc) && /rgba\(5,8,17,0\.92\)/.test(cc))
+
+console.log(`\nCommand Center Phase-2.2 tests: ${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

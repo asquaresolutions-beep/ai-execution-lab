@@ -80,7 +80,10 @@ export function HeroNetwork({ score = 94, band = 'VERIFIED' }: { score?: number;
           )}
           <circle cx={n.x} cy={n.y} r={n.r} fill="#0a0e1a" stroke={BC[n.band]} strokeWidth="1.6" />
           <circle cx={n.x} cy={n.y} r={Math.max(2, n.r - 5)} fill={BC[n.band]} />
-          <text x={n.x} y={n.y + n.r + 12} textAnchor="middle" fontSize="9" fill="#90a0c0" fontFamily="ui-monospace, monospace">{n.id}</text>
+          {/* label placed radially OUTWARD (above top nodes, below bottom nodes) with
+              a dark halo, so labels clear the dense core and the edge lines. */}
+          <text x={n.x} y={n.y >= CY ? n.y + n.r + 12 : n.y - n.r - 7} textAnchor="middle" fontSize="9" fill="#aab8d4" fontFamily="ui-monospace, monospace"
+            stroke="#070b16" strokeWidth="2.6" paintOrder="stroke" strokeLinejoin="round">{n.id}</text>
         </g>
       ))}
 
@@ -102,8 +105,9 @@ export function HeroNetwork({ score = 94, band = 'VERIFIED' }: { score?: number;
         </motion.g>
       )}
       {/* ── TrustSeal seal medallion: the hexagon IS the identity ── */}
-      {/* hex backdrop + gradient seal frame */}
-      <polygon points={hex(CORE)} fill="#0a0e1a" opacity="0.55" stroke="url(#hn-seal)" strokeWidth="2.4" strokeLinejoin="round" filter="url(#hn-glow)" />
+      {/* hex backdrop + gradient seal frame. Bolder stroke + faint cyan tint so the
+          seal shape stays legible when the whole hero scales down on mobile. */}
+      <polygon points={hex(CORE)} fill="rgba(34,211,238,0.06)" stroke="url(#hn-seal)" strokeWidth="3" strokeLinejoin="round" filter="url(#hn-glow)" />
       {/* counter-rotating inner seal hex (motion) */}
       {!reduce && (
         <motion.polygon points={hex(CORE - 26)} fill="none" stroke="rgba(167,139,250,0.45)" strokeWidth="1" strokeDasharray="3 6" strokeLinejoin="round"

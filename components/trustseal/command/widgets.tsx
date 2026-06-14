@@ -16,6 +16,16 @@ const glass: React.CSSProperties = {
   boxShadow: '0 1px 0 rgba(255,255,255,0.06) inset, 0 20px 50px -30px rgba(0,0,0,0.9)',
 }
 
+// Small pointy-top seal hexagon — the shared TrustSeal motif that ties every
+// lower-dashboard panel to the hero's holographic seal core.
+function HexBadge({ color = C.cyan, size = 12, fill = false }: { color?: string; size?: number; fill?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden className="shrink-0">
+      <polygon points="12,2 20,7 20,17 12,22 4,17 4,7" fill={fill ? `${color}22` : 'none'} stroke={color} strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 export function Panel({ title, badge, children, className = '', style }: { title?: string; badge?: React.ReactNode; children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
     <motion.section
@@ -27,7 +37,9 @@ export function Panel({ title, badge, children, className = '', style }: { title
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(56,189,248,0.5), transparent)' }} />
       {title && (
         <header className="mb-3 flex items-center justify-between">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: C.text2 }}>{title}</h3>
+          <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: C.text2 }}>
+            <HexBadge color={C.cyan} size={11} /> {title}
+          </h3>
           {badge}
         </header>
       )}
@@ -47,10 +59,12 @@ export function LiveDot({ label = 'LIVE' }: { label?: string }) {
   )
 }
 
-// ── 4. Trust score overview cards ────────────────────────────────
+// ── Operational readouts ─────────────────────────────────────────
+// NOTE: the Trust Score is presented ONCE — in the hero holographic seal core.
+// This rail intentionally carries only operational metrics (no competing score).
 const METRICS = [
-  { k: 'Trust Score', v: '94', unit: '/100', delta: '+2.4', color: C.good, spark: [60, 64, 62, 70, 68, 74, 80, 78, 86, 90, 94] },
-  { k: 'Verified Domains', v: '128', unit: '', delta: '+12', color: C.cyan, spark: [90, 96, 100, 104, 108, 112, 118, 120, 124, 126, 128] },
+  { k: 'Monitored', v: '142', unit: 'domains', delta: '+6', color: C.cyan, spark: [120, 124, 126, 128, 132, 134, 136, 138, 139, 141, 142] },
+  { k: 'Verified', v: '128', unit: 'live seals', delta: '+12', color: C.good, spark: [90, 96, 100, 104, 108, 112, 118, 120, 124, 126, 128] },
   { k: 'Active Claims', v: '17', unit: 'pending', delta: '+5', color: C.violet, spark: [8, 10, 9, 12, 14, 13, 15, 14, 16, 15, 17] },
   { k: 'Risk Events', v: '3', unit: '24h', delta: '−1', color: C.warn, spark: [7, 6, 8, 5, 6, 4, 5, 4, 4, 3, 3] },
 ]
@@ -65,20 +79,25 @@ function Spark({ data, color }: { data: number[]; color: string }) {
     </svg>
   )
 }
+// Kept the export name for stable imports; this rail now renders ops readouts in
+// the hero's intelligence aesthetic (mono labels, corner seal hex, colored hairline).
 export function TrustScoreCards() {
   return (
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       {METRICS.map((m, i) => (
         <motion.div key={m.k} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           whileHover={{ y: -4 }} className="relative overflow-hidden rounded-2xl p-4" style={glass}>
-          <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full" style={{ background: `radial-gradient(circle, ${m.color}33, transparent 70%)` }} />
-          <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: C.text3 }}>{m.k}</p>
+          {/* colored top hairline — echoes the panel/terminal headers */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${m.color}99, transparent)` }} />
+          {/* corner seal hex */}
+          <div className="absolute right-3 top-3 opacity-80"><HexBadge color={m.color} size={16} fill /></div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: C.text3 }}>{m.k}</p>
           <div className="mt-1 flex items-end gap-1">
             <span className="text-3xl font-bold tabular-nums" style={{ color: C.text1 }}>{m.v}</span>
-            <span className="mb-1 text-xs" style={{ color: C.text3 }}>{m.unit}</span>
+            <span className="mb-1 font-mono text-[10px]" style={{ color: C.text3 }}>{m.unit}</span>
           </div>
           <div className="mt-2 flex items-center justify-between">
-            <span className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ color: m.color, background: `${m.color}1a` }}>{m.delta}</span>
+            <span className="rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold" style={{ color: m.color, background: `${m.color}1a` }}>{m.delta}</span>
             <Spark data={m.spark} color={m.color} />
           </div>
         </motion.div>
@@ -138,9 +157,9 @@ export function RiskPanel() {
       <RiskGauge value={28} />
       <ul className="mt-3 space-y-2">
         {THREATS.map((t) => (
-          <li key={t.l} className="flex items-center justify-between text-xs">
-            <span style={{ color: C.text2 }}>{t.l}</span>
-            <span className="rounded-md px-1.5 py-0.5 font-semibold tabular-nums" style={{ color: t.tone, background: `${t.tone}1a` }}>{t.n}</span>
+          <li key={t.l} className="flex items-center justify-between">
+            <span className="font-mono text-[11px]" style={{ color: C.text2 }}>{t.l}</span>
+            <span className="rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold tabular-nums" style={{ color: t.tone, background: `${t.tone}1a` }}>{String(t.n).padStart(2, '0')}</span>
           </li>
         ))}
       </ul>
@@ -164,7 +183,9 @@ export function VerificationTimeline() {
         {TIMELINE.map((e, i) => (
           <motion.li key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.07 }}
             className="relative mb-3 pl-5 last:mb-0">
-            <span className="absolute left-0 top-1 h-[11px] w-[11px] rounded-full border-2" style={{ borderColor: e.tone, background: '#0a0e1a', boxShadow: `0 0 8px ${e.tone}66` }} />
+            <span className="absolute left-[-1px] top-0.5" aria-hidden style={{ filter: `drop-shadow(0 0 5px ${e.tone}66)` }}>
+              <svg width="13" height="13" viewBox="0 0 24 24"><polygon points="12,2 20,7 20,17 12,22 4,17 4,7" fill="#0a0e1a" stroke={e.tone} strokeWidth="2.4" strokeLinejoin="round" /></svg>
+            </span>
             <div className="flex items-baseline justify-between">
               <span className="font-mono text-xs" style={{ color: C.text1 }}>{e.d}</span>
               <span className="text-[10px] tabular-nums" style={{ color: C.text3 }}>{e.t}</span>

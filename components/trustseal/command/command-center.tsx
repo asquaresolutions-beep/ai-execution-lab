@@ -93,15 +93,17 @@ export function CommandCenter({ locale = 'en' }: { locale?: string }) {
         </nav>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* ── 3. Top intelligence bar ── */}
-          <header className="sticky top-0 z-10 flex items-center gap-4 border-b px-5 py-3"
-            style={{ borderColor: 'rgba(120,160,255,0.12)', background: 'rgba(5,8,17,0.72)', backdropFilter: 'blur(14px)' }}>
-            <div>
+          {/* ── 3. Top intelligence bar. Opaque + z-20 so scrolled content (incl.
+                  the hero's internal TRUST NETWORK strip at z-10) passes cleanly
+                  behind it. Wraps gracefully on mobile; subline hidden < sm. ── */}
+          <header className="sticky top-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-3 sm:px-5"
+            style={{ borderColor: 'rgba(120,160,255,0.12)', background: 'rgba(5,8,17,0.92)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-sm font-semibold tracking-wide">TrustSeal Intelligence</h1>
-                <span className="rounded-full border px-2 py-0.5 text-[9px] font-semibold tracking-widest" style={{ borderColor: 'rgba(34,211,238,0.4)', color: C.cyan }}>COMMAND CENTER</span>
+                <h1 className="truncate text-sm font-semibold tracking-wide">TrustSeal Intelligence</h1>
+                <span className="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold tracking-widest" style={{ borderColor: 'rgba(34,211,238,0.4)', color: C.cyan }}>COMMAND CENTER</span>
               </div>
-              <p className="font-mono text-[10px]" style={{ color: C.text3 }}>SEC://owner.workspace · {locale.toUpperCase()} · uplink stable</p>
+              <p className="mt-0.5 hidden font-mono text-[10px] sm:block" style={{ color: C.text3 }}>SEC://owner.workspace · {locale.toUpperCase()} · uplink stable</p>
             </div>
             <div className="relative ml-auto hidden max-w-sm flex-1 items-center md:flex">
               <span className="pointer-events-none absolute left-3 text-xs" style={{ color: C.text3 }}>⌕</span>
@@ -109,7 +111,7 @@ export function CommandCenter({ locale = 'en' }: { locale?: string }) {
                 className="w-full rounded-lg border bg-transparent py-2 pl-8 pr-3 text-xs outline-none"
                 style={{ borderColor: 'rgba(120,160,255,0.16)', color: C.text2 }} />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="ml-auto flex shrink-0 items-center gap-3 md:ml-0">
               <LiveDot label="LIVE FEED" />
               <span className="hidden h-5 w-px sm:block" style={{ background: 'rgba(120,160,255,0.18)' }} />
               <div className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold" style={{ background: 'linear-gradient(135deg,#8b5cf6,#22d3ee)', color: '#06121e' }}>A</div>
@@ -152,7 +154,8 @@ export function CommandCenter({ locale = 'en' }: { locale?: string }) {
               </div>
             </section>
 
-            {/* 4. Trust score overview cards (secondary metrics rail) */}
+            {/* Operational readouts — ops metrics rail. The Trust Score is shown
+                ONLY in the hero seal core above (no competing flat score card). */}
             <TrustScoreCards />
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -163,7 +166,7 @@ export function CommandCenter({ locale = 'en' }: { locale?: string }) {
             </div>
 
             <p className="pt-2 text-center font-mono text-[10px]" style={{ color: C.text3 }}>
-              Phase-2 visual prototype · mock data · no real intelligence wired yet
+              Phase-2.2 visual prototype · mock data · no real intelligence wired yet
             </p>
           </main>
         </div>
