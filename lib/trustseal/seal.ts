@@ -47,6 +47,18 @@ async function getPublicVerifiedClaim(canonical: string): Promise<StoredClaim | 
 }
 
 /**
+ * SERVER-ONLY: the owning accountId for a verified domain, or null. Used for badge
+ * entitlement enforcement (domain → account → Pro check). The accountId is NEVER
+ * returned to clients — only the resulting boolean entitlement is exposed.
+ */
+export async function getVerifiedClaimAccountId(rawDomain: string): Promise<string | null> {
+  const n = normalizeDomain(rawDomain)
+  if (!n) return null
+  const claim = await getPublicVerifiedClaim(n.canonical)
+  return claim?.accountId ?? null
+}
+
+/**
  * Assemble the public seal data for a domain, or null when the domain has no
  * verified ownership claim (→ the page 404s). Pure Firestore reads by doc id.
  */
