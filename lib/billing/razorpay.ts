@@ -39,6 +39,7 @@ export async function fetchSubscriptionSnapshot(subscriptionId: string): Promise
   if (!id || !status) return null
   const notes = j.notes && typeof j.notes === 'object' ? (j.notes as Record<string, unknown>) : null
 
+  const cace = j.cancel_at_cycle_end
   return {
     subscriptionId: id,
     status,
@@ -46,6 +47,7 @@ export async function fetchSubscriptionSnapshot(subscriptionId: string): Promise
     planId: str(j.plan_id),
     currentStart: numToMs(j.current_start),
     currentEnd: numToMs(j.current_end),
+    cancelAtCycleEnd: typeof cace === 'boolean' ? cace : cace === 1 ? true : cace === 0 ? false : null,
   }
 }
 
