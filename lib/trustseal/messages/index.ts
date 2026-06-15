@@ -10,11 +10,16 @@
 // ─────────────────────────────────────────────────────────────────
 import { DEFAULT_LOCALE, type Locale } from '../locales'
 import { en, type Messages } from './en'
+import { hi } from './hi'
+import { es } from './es'
+import { ar } from './ar'
 
 export type { Messages }
 
-// Locale → dictionary. Only `en` exists in A5; others resolve via fallback below.
-const DICTIONARIES: Partial<Record<Locale, Messages>> = { en }
+// Locale → dictionary. All four locales are registered; hi/es/ar currently carry
+// English placeholder values (see each file) until professional translations land —
+// swapping those values needs no change here or at any call site.
+const DICTIONARIES: Partial<Record<Locale, Messages>> = { en, hi, es, ar }
 
 /** Full message object for a locale, falling back to English. */
 export function getMessages(locale: Locale): Messages {
