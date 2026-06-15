@@ -1,12 +1,159 @@
 // ─────────────────────────────────────────────────────────────────
-// lib/trustseal/messages/ar.ts  (asq-trustseal-public-launch)
-// Arabic (العربية) catalogue. SCAFFOLD: values are currently English placeholders
-// so every key resolves on the live site. Replace each string value with a
-// professional Arabic translation — the SHAPE must match Messages. Drop-in.
-// RTL layout is handled by the [locale] layout (dir="rtl"); no per-string work.
+// lib/trustseal/messages/ar.ts  (asq-trustseal-harden)
+// Arabic (العربية) catalogue. Machine-translated (best-effort) — recommend a
+// native review of legal/marketing copy. Shape matches Messages (tsc-enforced).
+// RTL layout is applied by the [locale] layout (dir="rtl"); brands/prices as-is.
 // ─────────────────────────────────────────────────────────────────
-import { en } from './en'
 import type { Messages } from './en'
 
-// TODO(i18n): replace English values with professional Arabic translations.
-export const ar: Messages = en
+export const ar: Messages = {
+  common: {
+    product: 'TrustSeal',
+    company: 'A Square Solutions',
+    tagline: 'ثقة الأعمال والسمعة والتحقق',
+    getStarted: 'ابدأ الآن',
+    talkToSales: 'تحدث مع المبيعات',
+    verifyNow: 'تحقق من نطاق',
+    learnMore: 'اعرف المزيد',
+    copyright: '© 2026 A Square Solutions. جميع الحقوق محفوظة.',
+  },
+  nav: {
+    product: 'المنتج',
+    verify: 'تحقق',
+    pricing: 'الأسعار',
+    enterprise: 'الشركات',
+    customers: 'العملاء',
+    security: 'الأمان',
+    docs: 'الوثائق',
+    dashboard: 'لوحة التحكم',
+  },
+  switcher: { label: 'اللغة' },
+  hero: {
+    eyebrow: 'منصة ذكاء الثقة',
+    title: 'تحقق من أي شركة في ثوانٍ',
+    subtitle: 'يحوّل TrustSeal ملكية النطاق وإشارات السمعة إلى درجة ثقة قابلة للتحقق — حتى يثق العملاء والشركاء والمنصات بمن يتعاملون معه.',
+    ctaPrimary: 'تحقق من نطاق',
+    ctaSecondary: 'عرض الأسعار',
+    note: 'لا حاجة لبطاقة للتحقق · يفتح Pro الشارة القابلة للتضمين ومركز القيادة',
+  },
+  metrics: {
+    heading: 'إشارة حقيقية ومباشرة من المنصة',
+    domainsVerified: 'نطاقات تم التحقق منها',
+    verificationsRun: 'عمليات التحقق المنفذة',
+  },
+  how: {
+    heading: 'كيف يعمل التحقق',
+    subheading: 'ثلاث خطوات من مجهول إلى موثّق.',
+    step1Title: 'طالب بنطاقك',
+    step1Body: 'أضف سجل DNS TXT واحدًا لإثبات أنك تتحكم في النطاق. أول حساب يتحقق هو المالك.',
+    step2Title: 'نحسب الثقة',
+    step2Body: 'يقيّم TrustSeal الملكية وTLS والسمعة وإشارات المخاطر في درجة ثقة واحدة قابلة للتفسير.',
+    step3Title: 'اعرض الختم',
+    step3Body: 'انشر شارة حية ومقاومة للتلاعب وصفحة ختم عامة تتحدث مع تغيّر وضعك.',
+  },
+  levels: {
+    heading: 'مستويات الثقة',
+    subheading: 'يُربط كل نطاق بنطاق واحد واضح — مطابق لنظام إشارات مركز القيادة.',
+    verifiedName: 'موثّق',
+    verifiedDesc: 'الملكية مؤكدة والإشارات قوية. ثقة كاملة.',
+    establishedName: 'راسخ',
+    establishedDesc: 'موثّق مع سجل سمعة متين ومتسق.',
+    limitedName: 'محدود',
+    limitedDesc: 'موثّق لكن بإشارات قليلة أو جديدة. تعامل بحذر معتاد.',
+    cautionName: 'تنبيه',
+    cautionDesc: 'تم رصد حالات شاذة. راجع قبل التعامل.',
+    riskName: 'خطر',
+    riskDesc: 'إشارات قوائم حظر أو انتحال. خطر مرتفع — تجنّبه.',
+  },
+  feed: {
+    heading: 'عمليات التحقق الأخيرة',
+    subheading: 'تدفق مستمر من ذكاء الثقة.',
+    streaming: 'مباشر',
+  },
+  network: {
+    heading: 'شبكة الثقة',
+    subheading: 'نطاقات وعمليات تحقق وإشارات مخاطر مترابطة في طوبولوجيا حية — الذكاء نفسه الذي يشغّل مركز القيادة.',
+    cta: 'استكشف مركز القيادة',
+  },
+  pricing: {
+    heading: 'أسعار بسيطة وشفافة',
+    subheading: 'ابدأ مجانًا. ارتقِ عندما تحتاج إلى الشارة والذكاء.',
+    freeName: 'مجاني',
+    freePrice: '₹0',
+    freeTagline: 'للحصول على التوثيق',
+    freeF1: 'نطاق موثّق واحد',
+    freeF2: 'صفحة ختم عامة',
+    freeF3: 'إعادة تحقق قياسية',
+    freeCta: 'ابدأ',
+    proName: 'Pro',
+    proPriceMonthly: '₹499/شهر',
+    proPriceYearly: '₹4,990/سنة',
+    proTagline: 'للشركات التي تُظهر الثقة',
+    proF1: 'حتى 10 نطاقات',
+    proF2: 'شارة موقّعة قابلة للتضمين',
+    proF3: 'مركز قيادة ذكاء الثقة',
+    proF4: 'تحليلات متقدمة وإعادة تحقق ذات أولوية',
+    proCta: 'الترقية إلى Pro',
+    yearlyBadge: 'شهران مجانًا',
+    gstNote: 'الأسعار شاملة ضريبة GST بنسبة 18%.',
+  },
+  faq: {
+    heading: 'الأسئلة الشائعة',
+    q1: 'كيف يتحقق TrustSeal من النطاق؟',
+    a1: 'تضيف سجل DNS TXT نقوم بإنشائه. بمجرد اكتشافه تُؤكَّد الملكية، وأول حساب يتحقق هو المالك.',
+    q2: 'هل الشارة مقاومة للتلاعب؟',
+    a2: 'نعم. تتحقق الشارة القابلة للتضمين من الحالة المباشرة عند كل تحميل وترتبط بالنطاق المُطالَب به، فلا يمكن لنسخة مقلّدة تزييف التحقق.',
+    q3: 'ماذا يشمل Pro والمجاني؟',
+    a3: 'يمنحك المجاني نطاقًا موثّقًا واحدًا وصفحة ختم عامة. يضيف Pro الشارة القابلة للتضمين ومركز القيادة والتحليلات ونطاقات متعددة.',
+    q4: 'هل يمكنني الإلغاء في أي وقت؟',
+    a4: 'نعم. يوقف الإلغاء التجديد؛ ويستمر وصول Pro حتى نهاية الفترة التي دفعت ثمنها بالفعل.',
+    q5: 'هل تدعمون الشركات الدولية؟',
+    a5: 'يتوفر TrustSeal بالإنجليزية والهندية والإسبانية والعربية، مع دعم كامل للكتابة من اليمين إلى اليسار للعربية.',
+  },
+  cta: {
+    heading: 'أظهر للعالم أنه يمكن الوثوق بك',
+    subheading: 'وثّق نطاقك اليوم وانشر إشارة ثقة يعرفها العملاء.',
+    primary: 'تحقق من نطاق',
+    secondary: 'تحدث مع المبيعات',
+  },
+  verify: {
+    title: 'تحقق من شركة',
+    subtitle: 'تحقق من حالة الثقة العامة لأي نطاق، أو طالب بنطاقك ووثّقه.',
+    lookupLabel: 'أدخل نطاقًا للتحقق',
+    lookupPlaceholder: 'example.com',
+    lookupCta: 'تحقق من حالة الثقة',
+    lookupHint: 'يفتح صفحة الختم العامة لذلك النطاق.',
+    ownTitle: 'وثّق نطاقك الخاص',
+    ownBody: 'سجّل الدخول، وأضف سجل DNS TXT واحدًا، وانشر ختمك الموثّق خلال دقائق.',
+    ownCta: 'اذهب إلى لوحة التحكم',
+    invalidDomain: 'أدخل نطاقًا صالحًا، مثل example.com',
+  },
+  pricingPage: {
+    title: 'الأسعار',
+    subtitle: 'ابدأ مجانًا، وارتقِ عندما تحتاج إلى الشارة والذكاء. الأسعار شاملة ضريبة GST بنسبة 18%.',
+    compareHeading: 'قارن الخطط',
+    featureCol: 'الميزة',
+    domainsRow: 'النطاقات الموثّقة',
+    sealPageRow: 'صفحة ختم عامة',
+    badgeRow: 'شارة موقّعة قابلة للتضمين',
+    commandRow: 'مركز القيادة',
+    analyticsRow: 'تحليلات متقدمة',
+    supportRow: 'الدعم',
+    supportFree: 'مجتمعي',
+    supportPro: 'ذو أولوية',
+    yes: 'نعم',
+    no: '—',
+  },
+  footer: {
+    tagline: 'ثقة الأعمال والسمعة والتحقق.',
+    product: 'المنتج',
+    company: 'الشركة',
+    legal: 'قانوني',
+    privacy: 'الخصوصية',
+    terms: 'الشروط',
+    security: 'الأمان',
+    about: 'من نحن',
+    contact: 'اتصل بنا',
+    builtBy: 'TrustSeal من تطوير A Square Solutions.',
+  },
+}

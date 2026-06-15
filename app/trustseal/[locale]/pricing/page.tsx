@@ -1,16 +1,19 @@
-// app/trustseal/[locale]/pricing/page.tsx  (asq-trustseal-a1; locale-aware meta a4)
-// Phase-A placeholder. English only, no animation. buildTrustMeta keeps it noindex
-// (index defaults to false) with full hreflang until real content lands (Phase C).
+// app/trustseal/[locale]/pricing/page.tsx  (asq-trustseal-harden)
+// Real, indexable pricing page (canonical + en/hi/es/ar hreflang via buildTrustMeta).
 import type { Metadata } from 'next'
-import { TrustSealPlaceholder } from '@/components/trustseal/placeholder'
+import { PricingView } from '@/components/trustseal/home/pricing-view'
 import { buildTrustMeta } from '@/lib/trustseal/seo'
+import { isLocale, DEFAULT_LOCALE, type Locale } from '@/lib/trustseal/locales'
+import { t } from '@/lib/trustseal/messages'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
-  return buildTrustMeta({ locale, subpath: '/pricing', title: 'TrustSeal — Pricing', description: 'TrustSeal pricing — Free, Pro and Enterprise plans.' })
+  const lc: Locale = isLocale(locale) ? locale : DEFAULT_LOCALE
+  return buildTrustMeta({ locale: lc, subpath: '/pricing', title: `${t(lc, 'pricingPage.title')} — ${t(lc, 'common.product')}`, description: t(lc, 'pricingPage.subtitle'), index: true })
 }
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  return <TrustSealPlaceholder locale={locale} title="Pricing" subtitle="Free, Pro and Enterprise plans. (Pricing placeholder.)" />
+  const lc: Locale = isLocale(locale) ? locale : DEFAULT_LOCALE
+  return <PricingView locale={lc} />
 }
