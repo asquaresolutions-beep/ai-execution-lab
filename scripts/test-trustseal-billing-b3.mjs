@@ -6,7 +6,7 @@
 // next build is the integration proof. TEST MODE ONLY, no entitlement enforcement.
 // Run: node --experimental-strip-types scripts/test-trustseal-billing-b3.mjs
 import fs from 'node:fs'
-import { planOption, isTestModeKey, PLAN_OPTIONS } from '../lib/billing/plans.ts'
+import { planOption, isTestModeKey, isRazorpayConfigured, PLAN_OPTIONS } from '../lib/billing/plans.ts'
 import { pendingSubscription, parseRazorpayEvent } from '../lib/billing/webhook.ts'
 import { createPendingSubscription, applyAndUpsert } from '../lib/billing/writer.ts'
 import { deriveEntitlement, SUBSCRIPTIONS } from '../lib/billing/model.ts'
@@ -35,6 +35,7 @@ eq('plans: monthly env var', planOption('monthly').envVar, 'RAZORPAY_PLAN_PRO_MO
 eq('plans: yearly env var', planOption('yearly').envVar, 'RAZORPAY_PLAN_PRO_YEARLY')
 ok('plans: unknown interval → null', planOption('weekly') === null && planOption('') === null)
 ok('plans: test-mode key detection', isTestModeKey('rzp_test_abc') && !isTestModeKey('rzp_live_abc') && !isTestModeKey(undefined))
+ok('plans: billing-configured accepts live AND test, rejects unconfigured', isRazorpayConfigured('rzp_live_abc') && isRazorpayConfigured('rzp_test_abc') && !isRazorpayConfigured('') && !isRazorpayConfigured(undefined))
 
 // ── pendingSubscription builder (pure) ────────────────────────────
 const T = 1_750_000_000_000
@@ -85,7 +86,7 @@ ok('pending: id == uid (one per account)', pend.id === 'user_1' && pend.accountI
 // ── /subscribe route (static-assert contract) ─────────────────────
 const sub = read('app/api/trustseal/billing/subscribe/route.ts')
 ok('subscribe: authenticated (requireUser → 401)', /requireUser\(req\)/.test(sub) && /status: 401/.test(sub))
-ok('subscribe: TEST MODE ONLY (refuses live key)', /isTestModeKey\(process\.env\.RAZORPAY_KEY_ID\)/.test(sub) && /live_mode_disabled/.test(sub))
+ok('subscribe: requires configured Razorpay key (live OR test), else 503', /isRazorpayConfigured\(process\.env\.RAZORPAY_KEY_ID\)/.test(sub) && /billing_not_configured/.test(sub))
 ok('subscribe: stamps notes.uid (createSubscription with uid)', /createSubscription\(\{ planId, uid: user\.uid/.test(sub))
 ok('subscribe: stores subscription reference', /createPendingSubscription\(/.test(sub))
 ok('subscribe: server-authoritative (blocks double-subscribe when entitled)', /getEntitlement\(user\.uid\)/.test(sub) && /already_subscribed/.test(sub))
@@ -97,7 +98,7 @@ const stat = read('app/api/trustseal/billing/status/route.ts')
 ok('status: authed display projection via getEntitlement (read-only)', /requireUser/.test(stat) && /getEntitlement\(user\.uid\)/.test(stat) && !/\.set\(|\.update\(/.test(stat))
 ok('status: returns plan/status/currentEnd/interval', /plan: ent\.plan/.test(stat) && /currentEnd: ent\.currentEnd/.test(stat) && /interval: sub\?\.interval/.test(stat))
 const cancel = read('app/api/trustseal/billing/cancel/route.ts')
-ok('cancel: authed + test-mode + server-authoritative (no local mutation)', /requireUser/.test(cancel) && /isTestModeKey/.test(cancel) && /cancelSubscription\(/.test(cancel) && !/\.set\(SUBSCRIPTIONS/.test(cancel))
+ok('cancel: authed + billing-configured + server-authoritative (no local status mutation)', /requireUser/.test(cancel) && /isRazorpayConfigured/.test(cancel) && /cancelSubscription\(/.test(cancel) && !/\.set\(SUBSCRIPTIONS/.test(cancel))
 
 // ── Razorpay client: create + cancel (writes); still no entitlement grant ─
 const client = read('lib/billing/razorpay.ts')

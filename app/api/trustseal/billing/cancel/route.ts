@@ -3,7 +3,7 @@
 // Authenticated cancel request (at cycle end). Server-authoritative: this only
 // asks Razorpay to cancel; the local subscription state changes when the resulting
 // subscription.cancelled webhook is processed (B2.2), and reconcile (B2.3) is the
-// backstop. TEST MODE ONLY. No local state mutation here.
+// backstop. Works in live OR test mode. No local state mutation here.
 // ─────────────────────────────────────────────────────────────────
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/trustseal/account'
@@ -11,15 +11,15 @@ import { getStore } from '@/lib/store/adapter'
 import { getSubscription } from '@/lib/billing/entitlement'
 import { setCancelScheduled } from '@/lib/billing/writer'
 import { cancelSubscription } from '@/lib/billing/razorpay'
-import { isTestModeKey } from '@/lib/billing/plans'
+import { isRazorpayConfigured } from '@/lib/billing/plans'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: Request) {
   const user = await requireUser(req)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  if (!isTestModeKey(process.env.RAZORPAY_KEY_ID)) {
-    return NextResponse.json({ error: 'live_mode_disabled' }, { status: 403 })
+  if (!isRazorpayConfigured(process.env.RAZORPAY_KEY_ID)) {
+    return NextResponse.json({ error: 'billing_not_configured' }, { status: 503 })
   }
 
   const sub = await getSubscription(user.uid)

@@ -3,7 +3,7 @@
 // Reactivate a subscription that is scheduled to cancel at cycle end. Razorpay has
 // NO "un-cancel" API for a cycle-end cancellation, so reactivation = start a fresh
 // subscription (same interval) via the normal hosted checkout. Server-authoritative,
-// TEST MODE ONLY. Allowed ONLY when the current subscription is cancel-scheduled.
+// works in live OR test mode. Allowed ONLY when the current subscription is cancel-scheduled.
 //
 // Non-destructive: we do NOT downgrade the local doc here — current entitlement
 // stays Pro until the existing period ends; the new subscription's activation
@@ -14,15 +14,15 @@ import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/trustseal/account'
 import { getSubscription } from '@/lib/billing/entitlement'
 import { createSubscription } from '@/lib/billing/razorpay'
-import { planOption, isTestModeKey } from '@/lib/billing/plans'
+import { planOption, isRazorpayConfigured } from '@/lib/billing/plans'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: Request) {
   const user = await requireUser(req)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  if (!isTestModeKey(process.env.RAZORPAY_KEY_ID)) {
-    return NextResponse.json({ error: 'live_mode_disabled' }, { status: 403 })
+  if (!isRazorpayConfigured(process.env.RAZORPAY_KEY_ID)) {
+    return NextResponse.json({ error: 'billing_not_configured' }, { status: 503 })
   }
 
   const sub = await getSubscription(user.uid)
