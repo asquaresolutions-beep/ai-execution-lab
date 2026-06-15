@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/components/auth/auth-provider'
 import type { Locale } from '@/lib/trustseal/locales'
 import { t } from '@/lib/trustseal/messages'
+import { formatDate } from '@/lib/trustseal/format'
 
 interface ClaimRow {
   domain: string
@@ -25,10 +26,9 @@ const STATUS_COLOR: Record<string, string> = {
   revoked: '#f87171',
 }
 
-const fmt = (ms: number | null) => (ms ? new Date(ms).toLocaleDateString() : '—')
-
 export function ClaimsList({ refreshKey = 0, locale = 'en' as Locale }: { refreshKey?: number; locale?: Locale }) {
   const x = (k: string) => t(locale, k)
+  const fmt = (ms: number | null) => formatDate(locale, ms)
   const statusLabel = (s: string) => x(`dash.status${s.charAt(0).toUpperCase()}${s.slice(1)}`)
   const { user } = useAuth()
   const [claims, setClaims] = useState<ClaimRow[] | null>(null)

@@ -15,6 +15,7 @@ import dynamic from 'next/dynamic'
 import { useSelectedLayoutSegment } from 'next/navigation'
 import { ScamCheckNav } from '@/components/scamcheck/scamcheck-nav'
 import { ScamCheckFooter } from '@/components/scamcheck/scamcheck-footer'
+import { EcosystemJsonLd } from '@/components/seo/ecosystem-jsonld'
 
 const Sidebar = dynamic(() => import('@/components/layout/sidebar').then((m) => m.Sidebar))
 const TopBar = dynamic(() => import('@/components/layout/top-bar').then((m) => m.TopBar))
@@ -47,6 +48,8 @@ export function SiteChrome({ children }: { children: ReactNode }) {
   if (isScamCheckSegment(seg)) {
     return (
       <div className="flex min-h-screen flex-col bg-zinc-950">
+        {/* Ecosystem entity graph belongs on the Lab/ScamCheck surfaces, not TrustSeal. */}
+        <EcosystemJsonLd />
         <ScamCheckNav />
         <main className="flex-1">{children}</main>
         <ScamCheckFooter />
@@ -55,6 +58,8 @@ export function SiteChrome({ children }: { children: ReactNode }) {
   }
   return (
     <div className="flex min-h-screen">
+      {/* Ecosystem (AI Execution Lab / A Square Solutions) JSON-LD — Lab surface only. */}
+      <EcosystemJsonLd />
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />

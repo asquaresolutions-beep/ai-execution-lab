@@ -135,8 +135,55 @@ for (const comp of ['claim-wizard.tsx','claims-list.tsx','billing/billing-sectio
   const src = read(`components/trustseal/${comp}`)
   ok(`dash: ${comp} accepts locale + uses t()`, /locale\??: Locale/.test(src) && /t\(locale/.test(src))
 }
-ok('dash: auth-button localizable via labels (signOut/greeting)', /labels\?: \{[^}]*signOut/.test(read('components/auth/auth-button.tsx')))
+ok('dash: auth-button localizable via labels (signOut/greeting)', (() => { const ab = read('components/auth/auth-button.tsx'); return /interface AuthLabels/.test(ab) && /signOut\??: string/.test(ab) && /labels\?: AuthLabels/.test(ab) })())
 ok('dash: RTL preserved — layout sets dir from locale', /dir=\{dirFor\(locale\)\}/.test(read('app/trustseal/[locale]/layout.tsx')))
+
+// ── enterprise hardening: SEO entity cleanup (PART 7) ─────────────
+const rootLayout = read('app/layout.tsx')
+ok('seo: root layout no longer hardcodes ecosystem schema in <head>', !/JSON\.stringify\(websiteSchema\)/.test(rootLayout) && !/JSON\.stringify\(organizationSchema\)/.test(rootLayout))
+const tsld = read('lib/trustseal/jsonld.ts')
+ok('seo: TrustSeal JSON-LD has Organization/WebSite/Product/SoftwareApplication/FAQPage', ["'Organization'","'WebSite'","'Product'","'SoftwareApplication'","'FAQPage'"].every((tname) => tsld.includes(tname)))
+const tsldCode = tsld.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+ok('seo: TrustSeal JSON-LD has NO AI Execution Lab / ScamCheck references', !/AI Execution Lab/.test(tsldCode) && !/ScamCheck/.test(tsldCode))
+ok('seo: TrustSeal JSON-LD references parent org A Square Solutions', /parentOrganization/.test(tsld) && /A Square Solutions/.test(tsld))
+ok('seo: [locale] layout emits buildTrustSealJsonLd', /buildTrustSealJsonLd\(lc\)/.test(read('app/trustseal/[locale]/layout.tsx')))
+ok('seo: ecosystem JSON-LD rendered only on Lab/ScamCheck (SiteChrome), not TrustSeal', /<EcosystemJsonLd \/>/.test(chrome) && (() => { const start = chrome.indexOf("if (seg === 'trustseal')"); const end = chrome.indexOf('if (isScamCheckSegment', start); return !chrome.slice(start, end).includes('EcosystemJsonLd') })())
+
+// ── enterprise hardening: legal framework (PARTs 1/2/3/14) ────────
+for (const f of ['LICENSE.md','TRADEMARKS.md','COPYRIGHT.md','SECURITY.md','CODE_OF_CONDUCT.md','NOTICE.md']) {
+  ok(`legal: ${f} present + © A Square Solutions`, exists(f) && /A Square Solutions/.test(read(f)))
+}
+const legalContent = read('lib/trustseal/legal-content.ts')
+for (const slug of ['license','trademark-policy','copyright','security','code-of-conduct','privacy','terms','acceptable-use','dmca']) {
+  ok(`legal: doc '${slug}' defined`, new RegExp(`'?${slug}'?:`).test(legalContent) || legalContent.includes(`'${slug}'`))
+}
+ok('legal: license forbids clone/resell/compete/rebrand', /clone/i.test(legalContent) && /resell|redistribute/i.test(legalContent) && /competing|SaaS/i.test(legalContent))
+ok('legal: contact is contact@asquaresolution.com', /contact@asquaresolution\.com/.test(legalContent))
+ok('legal: /legal/[doc] route exists + indexable + static params', (() => { const r = read('app/trustseal/[locale]/legal/[doc]/page.tsx'); return /generateStaticParams/.test(r) && /index: true/.test(r) })())
+
+// ── enterprise hardening: real Security/Docs/About (PARTs 4/5/6) ──
+for (const [page, file] of [['security','security'],['docs','docs'],['about','about']]) {
+  const route = read(`app/trustseal/[locale]/${page}/page.tsx`)
+  ok(`content: /${page} is real (ContentPageView) + indexable, not placeholder`, /ContentPageView/.test(route) && /index: true/.test(route) && !/Placeholder/.test(route))
+  const content = read(`lib/trustseal/content/${file}.ts`)
+  ok(`content: ${file} content has all 4 locales`, /\ben:\s*\{/.test(content) && /\bhi:\s*\{/.test(content) && /\bes:\s*\{/.test(content) && /\bar:\s*\{/.test(content))
+}
+
+// ── enterprise hardening: date + auth localization (PARTs 11/12) ──
+const fmt = read('lib/trustseal/format.ts')
+ok('i18n: locale-aware formatDate util (Intl.DateTimeFormat)', /export function formatDate/.test(fmt) && /Intl\.DateTimeFormat/.test(fmt))
+for (const comp of ['claims-list.tsx','billing/billing-section.tsx','seal-view.tsx']) {
+  const src = read(`components/trustseal/${comp}`)
+  ok(`i18n: ${comp} uses formatDate (not raw toLocaleDateString)`, /formatDate\(/.test(src) && !/toLocaleDateString/.test(src))
+}
+const ab = read('components/auth/auth-button.tsx')
+ok('i18n: auth-button modal strings localizable (Google/email/password/createAccount)', ['continueGoogle','email','password','createAccount'].every((k) => ab.includes(k)))
+
+// ── enterprise hardening: footer + badge (PARTs 13/8) ─────────────
+const footer = read('components/trustseal/site-footer.tsx')
+ok('footer: legal + contact links (privacy/terms/security/trademark/dmca/contact)', ['legal.privacy','legal.terms','legal.security','legal.trademark','legal.dmca'].every((k) => footer.includes(k)) && /mailto:contact@asquaresolution\.com/.test(footer))
+ok('badge: root /badge.js alias route exists', exists('app/badge.js/route.ts'))
+ok('badge: loader self-locates via /badge.js (works at both paths)', /indexOf\('\/badge\.js'\)/.test(read('app/api/trustseal/badge.js/route.ts')))
 
 console.log(`\nPublic-launch tests: ${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

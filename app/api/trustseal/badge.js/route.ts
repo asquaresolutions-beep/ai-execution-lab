@@ -16,7 +16,7 @@ const JS = `(function(){
   function findScript(){
     if (document.currentScript) return document.currentScript;
     var ss = document.getElementsByTagName('script');
-    for (var i=ss.length-1;i>=0;i--){ if ((ss[i].src||'').indexOf('/api/trustseal/badge.js')>-1) return ss[i]; }
+    for (var i=ss.length-1;i>=0;i--){ if ((ss[i].src||'').indexOf('/badge.js')>-1) return ss[i]; }
     return null;
   }
   var s = findScript(); if(!s) return;
