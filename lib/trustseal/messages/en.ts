@@ -121,6 +121,12 @@ export const en = {
     badgePreview: 'Badge preview',
     embedHint: 'Add this one tag to your site to show your live badge:',
     publicSignals: 'Public signals',
+    scoreBreakdown: 'Score breakdown',
+    reasoning: 'Why this score',
+    confidenceLevel: 'Confidence level',
+    coveredYes: 'Assessed',
+    coveredNo: 'Not assessed',
+    trustLevel: 'Trust level',
   },
 
   auth: {
