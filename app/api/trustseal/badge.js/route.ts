@@ -45,12 +45,22 @@ const JS = `(function(){
       box.innerHTML='<a href="'+origin+'/en/trust/'+encodeURIComponent(domain)+'" target="_blank" rel="noopener" style="color:#6b7280;text-decoration:none">Verify with TrustSeal</a>';
       return;
     }
+    // Badge V2: color + icon + wording reflect the trust band (server-computed).
+    var BANDS={
+      verified:{c:'#16a34a',i:'\\u2713',w:'Verified by'},
+      established:{c:'#0891b2',i:'\\u2605',w:'Established ·'},
+      limited:{c:'#7c3aed',i:'\\u25d0',w:'Listed on'},
+      caution:{c:'#b45309',i:'!',w:'Caution ·'},
+      high_risk:{c:'#dc2626',i:'\\u2715',w:'Flagged by'}
+    };
+    var band=(d.band||d.status||'verified'); var m=BANDS[band]||BANDS.verified;
     var a=document.createElement('a');
     a.href=origin+(d.sealUrl||('/en/trust/'+encodeURIComponent(domain)));
     a.target='_blank'; a.rel='noopener';
     a.setAttribute('style','display:inline-flex;align-items:center;gap:6px;color:#111827;text-decoration:none');
-    a.innerHTML='<span style="display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;border-radius:50%;background:#16a34a;color:#fff;font-size:11px">\\u2713</span>'
-      +'<span>Verified by <strong style="color:#16a34a">TrustSeal</strong></span>'
+    a.setAttribute('data-band',band);
+    a.innerHTML='<span style="display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;border-radius:50%;background:'+m.c+';color:#fff;font-size:11px;font-weight:700">'+m.i+'</span>'
+      +'<span>'+m.w+' <strong style="color:'+m.c+'">TrustSeal</strong></span>'
       +(d.score!=null?'<span style="color:#9ca3af">· '+esc(d.score)+'/100</span>':'');
     box.innerHTML=''; box.appendChild(a);
   }).catch(function(){

@@ -120,6 +120,12 @@ export const ar: Messages = {
     badgePreview: 'معاينة الشارة',
     embedHint: 'أضف هذا الوسم إلى موقعك لعرض شارتك الحيّة:',
     publicSignals: 'إشارات عامة',
+    scoreBreakdown: 'تفصيل الدرجة',
+    reasoning: 'سبب هذه الدرجة',
+    confidenceLevel: 'مستوى الثقة',
+    coveredYes: 'مُقيّم',
+    coveredNo: 'غير مُقيّم',
+    trustLevel: 'مستوى الثقة',
   },
 
   auth: {

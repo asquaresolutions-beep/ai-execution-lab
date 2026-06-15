@@ -120,6 +120,12 @@ export const hi: Messages = {
     badgePreview: 'बैज पूर्वावलोकन',
     embedHint: 'अपनी साइट पर लाइव बैज दिखाने के लिए यह टैग जोड़ें:',
     publicSignals: 'सार्वजनिक संकेत',
+    scoreBreakdown: 'स्कोर विवरण',
+    reasoning: 'यह स्कोर क्यों',
+    confidenceLevel: 'विश्वास स्तर',
+    coveredYes: 'मूल्यांकित',
+    coveredNo: 'मूल्यांकित नहीं',
+    trustLevel: 'ट्रस्ट स्तर',
   },
 
   auth: {

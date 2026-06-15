@@ -120,6 +120,12 @@ export const es: Messages = {
     badgePreview: 'Vista previa de la insignia',
     embedHint: 'Añade esta etiqueta a tu sitio para mostrar tu insignia en vivo:',
     publicSignals: 'Señales públicas',
+    scoreBreakdown: 'Desglose del puntaje',
+    reasoning: 'Por qué este puntaje',
+    confidenceLevel: 'Nivel de confianza',
+    coveredYes: 'Evaluado',
+    coveredNo: 'No evaluado',
+    trustLevel: 'Nivel de confianza',
   },
 
   auth: {
