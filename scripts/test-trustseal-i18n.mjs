@@ -54,13 +54,14 @@ ok('en dict has product + nav strings', /product:\s*'TrustSeal'/.test(en) && /pr
 ok('en exported as typed const', /export const en = \{/.test(en) && /as const/.test(en) && /export type Messages = typeof en/.test(en))
 const mi = read('lib/trustseal/messages/index.ts')
 ok('t() falls back: locale → en → raw key', /lookup\(getMessages\(locale\), key\) \?\? lookup\(en, key\) \?\? key/.test(mi))
-ok('only en registered (A5 = English only)', /DICTIONARIES: Partial<Record<Locale, Messages>> = \{ en \}/.test(mi))
+ok('all four locales registered (en/hi/es/ar)', /DICTIONARIES[^=]*=\s*\{ en, hi, es, ar \}/.test(mi))
 ok('getMessages falls back to en', /DICTIONARIES\[locale\] \?\? DICTIONARIES\[DEFAULT_LOCALE\]/.test(mi))
 ok('next-intl-compatible note documented', /next-intl/i.test(mi))
 
 // ── wiring ──
 const lay = read('app/trustseal/[locale]/layout.tsx')
-ok('layout renders the switcher', /<LocaleSwitcher current=\{locale\}/.test(lay))
+// Switcher moved into the gated TrustSealLocaleHeader (B2.1); layout renders that.
+ok('layout renders the locale header (which holds the switcher)', /<TrustSealLocaleHeader locale=\{locale\}/.test(lay) && /<LocaleSwitcher current=\{locale\}/.test(read('components/trustseal/locale-header.tsx')))
 ok('layout uses t() for a label', /t\(locale, 'common\.product'\)/.test(lay))
 ok('layout still NOT touching <html> (wrapper dir only)', !/<html/.test(code(lay)) && /dir=\{dirFor\(locale\)\}/.test(lay))
 
