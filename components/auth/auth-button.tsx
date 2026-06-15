@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from './auth-provider'
 
-export function AuthButton() {
+export function AuthButton({ labels }: { labels?: { signIn?: string; signOut?: string; greeting?: string } } = {}) {
   const { user, configured, signInEmail, signUpEmail, signInGoogle, signOut } = useAuth()
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<'in' | 'up'>('in')
@@ -12,8 +12,8 @@ export function AuthButton() {
 
   if (user) return (
     <div className="flex items-center gap-2 text-sm">
-      <span className="text-zinc-400">Hi, {user.name}</span>
-      <button onClick={signOut} className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500">Sign out</button>
+      <span className="text-zinc-400">{labels?.greeting ?? 'Hi'}, {user.name}</span>
+      <button onClick={signOut} className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500">{labels?.signOut ?? 'Sign out'}</button>
     </div>
   )
 
@@ -26,7 +26,7 @@ export function AuthButton() {
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen((o) => !o)} className="rounded-md bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 hover:bg-zinc-700">Sign in</button>
+      <button onClick={() => setOpen((o) => !o)} className="rounded-md bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 hover:bg-zinc-700">{labels?.signIn ?? 'Sign in'}</button>
       {open && (
         <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-zinc-800 bg-zinc-900 p-4 shadow-xl">
           {!configured && <p className="mb-2 rounded bg-amber-500/10 p-2 text-xs text-amber-300">Auth not configured yet. Set NEXT_PUBLIC_FIREBASE_API_KEY.</p>}

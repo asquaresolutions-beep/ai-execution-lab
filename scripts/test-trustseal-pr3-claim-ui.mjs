@@ -20,9 +20,10 @@ ok('wizard: calls /claim/verify', /'\/api\/trustseal\/claim\/verify'/.test(w))
 ok('wizard: calls /claim/status', /\/api\/trustseal\/claim\/status\?domain=/.test(w))
 ok('wizard: copy-to-clipboard via navigator.clipboard', /navigator\.clipboard\.writeText/.test(w))
 ok('wizard: copy TXT name AND value', /copy\('name'/.test(w) && /copy\('value'/.test(w))
-ok('wizard: idle renders domain input + Start claim', /placeholder="example\.com"/.test(w) && /Start claim/.test(w))
-ok('wizard: pending shows TXT record name + value rows', /label="Name \/ Host"/.test(w) && /label="Value"/.test(w))
-ok('wizard: verified success state', /verified/.test(w) && /Verify another domain/.test(w))
+// i18n: strings now flow through t(locale, 'dash.*') instead of hardcoded English.
+ok('wizard: idle renders domain input + Start claim', /placeholder=\{x\('dash\.domainPlaceholder'\)\}/.test(w) && /x\('dash\.startClaim'\)/.test(w))
+ok('wizard: pending shows TXT record name + value rows', /label=\{x\('dash\.nameHost'\)\}/.test(w) && /label=\{x\('dash\.value'\)\}/.test(w))
+ok('wizard: verified success state', /dash\.verifiedSuffix/.test(w) && /x\('dash\.verifyAnother'\)/.test(w))
 ok('wizard: error mapping for claim codes', ['invalid_domain', 'already_claimed', 'txt_not_found', 'token_expired', 'rate_limited'].every((c) => w.includes(`'${c}'`)))
 ok('wizard: surfaces fallback _trustseal record', /fallback/.test(w))
 ok('wizard: onVerified callback fired on success', /onVerified\?\.\(\)/.test(w))
@@ -34,7 +35,7 @@ ok('list: loads from /api/trustseal/claims', /'\/api\/trustseal\/claims'/.test(l
 ok('list: Bearer auth + no-store', /Bearer \$\{user\.idToken\}/.test(l) && /cache: 'no-store'/.test(l))
 ok('list: renders domain/status/method/dates', /c\.domain/.test(l) && /c\.status/.test(l) && /c\.method/.test(l) && /c\.createdAt/.test(l) && /c\.verifiedAt/.test(l))
 ok('list: reloads on refreshKey', /refreshKey/.test(l) && /\[load, refreshKey\]/.test(l))
-ok('list: empty + loading states', /No domains yet/.test(l) && /Loading…/.test(l))
+ok('list: empty + loading states', /x\('dash\.domainsEmpty'\)/.test(l) && /x\('dash\.loading'\)/.test(l))
 
 // ── dashboard-client.tsx integration ──────────────────────────────
 const d = read('components/trustseal/dashboard-client.tsx')

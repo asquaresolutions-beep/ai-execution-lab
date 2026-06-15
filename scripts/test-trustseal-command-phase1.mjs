@@ -40,7 +40,10 @@ ok('route: noindex (buildTrustMeta default, no index:true)', /buildTrustMeta/.te
 
 // all 8 required panels referenced
 const cc = read('components/trustseal/command/command-center.tsx')
-for (const part of ['TrustScoreCards', 'ActivityFeed', 'RiskPanel', 'VerificationTimeline', 'TrustNetwork']) {
+// Phase-2.2 refactor: the live-activity + network surfaces were consolidated into
+// the IntelTerminal; the hero seal core renders the trust score. Assert the parts
+// the component actually composes today.
+for (const part of ['TrustScoreCards', 'IntelTerminal', 'RiskPanel', 'VerificationTimeline']) {
   ok(`command center composes: ${part}`, cc.includes(part))
 }
 ok('left nav + top intelligence bar present', /<nav/.test(cc) && /<header/.test(cc))

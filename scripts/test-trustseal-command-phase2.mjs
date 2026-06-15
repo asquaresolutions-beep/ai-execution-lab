@@ -68,11 +68,13 @@ ok('stronger TrustSeal identity (seal/hex mark)', /polygon/.test(cc) || /nav-sea
 // ── Phase-2.1 immersive refinement ──
 // 1+2. Dedicated immersive layout: both global chrome layers gate off /command.
 const chrome = read('components/layout/site-chrome.tsx')
-ok('immersive: SiteChrome suppresses lab chrome on /command', /usePathname/.test(chrome) && /command/.test(chrome))
-const lhead = read('components/trustseal/locale-header.tsx')
-ok('immersive: TrustSeal locale header gated off /command', /usePathname/.test(lhead) && /return null/.test(lhead))
+// Standalone pass: the lab chrome is now suppressed for the ENTIRE trustseal
+// segment (homepage…command), so /command is covered a fortiori.
+ok('immersive: SiteChrome suppresses lab chrome on /command', /seg === 'trustseal'/.test(chrome) && /return <>\{children\}<\/>/.test(chrome))
+const tnav = read('components/trustseal/nav.tsx')
+ok('immersive: TrustSeal nav gated off /command', /usePathname/.test(tnav) && /command/.test(tnav) && /return null/.test(tnav))
 const tslayout = read('app/trustseal/[locale]/layout.tsx')
-ok('immersive: layout uses the gated header (no inline marketing header)', /TrustSealLocaleHeader/.test(tslayout) && !/<header/.test(tslayout))
+ok('immersive: layout uses the standalone nav (no inline marketing header)', /<TrustSealNav locale=\{lc\}/.test(tslayout) && !/<header/.test(tslayout))
 // 3. Mobile: terminal rows wrap rather than clip; no whitespace-nowrap overflow.
 ok('mobile: terminal rows wrap (no whitespace-nowrap clipping)', !/whitespace-nowrap/.test(term) && /flex-wrap/.test(term))
 // 4. Stacked: terminal forced height only at xl, content-driven below.

@@ -38,8 +38,9 @@ const dash = read('components/trustseal/dashboard-client.tsx')
 ok('dash: client component', /^'use client'/.test(dash))
 ok('dash: reuses AuthProvider + useAuth', /AuthProvider/.test(dash) && /useAuth/.test(dash) && /@\/components\/auth\/auth-provider/.test(dash))
 ok('dash: reuses AuthButton', /AuthButton/.test(dash) && /@\/components\/auth\/auth-button/.test(dash))
-ok('dash: signed-out state (sign-in prompt)', /Sign in to your dashboard/.test(dash))
-ok('dash: signed-in shell (Signed in as)', /Signed in as/.test(dash))
+// i18n: dashboard chrome now flows through t(locale, 'dash.*').
+ok('dash: signed-out state (sign-in prompt)', /x\('dash\.signInTitle'\)/.test(dash))
+ok('dash: signed-in shell (Signed in as)', /x\('dash\.signedInAs'\)/.test(dash))
 ok('dash: calls account API with Bearer token', /\/api\/trustseal\/account/.test(dash) && /Authorization: `Bearer \$\{user\.idToken\}`/.test(dash))
 ok('dash: no-store fetch (fresh per-user)', /cache: 'no-store'/.test(dash))
 

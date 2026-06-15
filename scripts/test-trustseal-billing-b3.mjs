@@ -108,14 +108,15 @@ ok('client: cancelSubscription POSTs cancel', /export async function cancelSubsc
 // ── DASHBOARD RENDERING (static-assert) ───────────────────────────
 const ui = read('components/trustseal/billing/billing-section.tsx')
 ok('dashboard: client component', /^'use client'/.test(ui))
-ok('dashboard: shows current plan + status + renewal', /Plan</.test(ui) && /Status</.test(ui) && /Renews/.test(ui))
-ok('dashboard: billing history placeholder', /Invoices coming soon/.test(ui))
-ok('dashboard: upgrade + manage controls', /Upgrade/.test(ui) && /Cancel subscription/.test(ui))
+// i18n: labels now flow through t(locale, 'dash.*') instead of hardcoded English.
+ok('dashboard: shows current plan + status + renewal', /x\('dash\.planLabel'\)/.test(ui) && /x\('dash\.statusLabel'\)/.test(ui) && /x\('dash\.renewsLabel'\)/.test(ui))
+ok('dashboard: billing history placeholder', /x\('dash\.invoicesSoon'\)/.test(ui))
+ok('dashboard: upgrade + manage controls', /x\('dash\.upgradeMonthly'\)/.test(ui) && /x\('dash\.cancelSub'\)/.test(ui))
 ok('dashboard: fetches status with Bearer token (display only)', /\/api\/trustseal\/billing\/status/.test(ui) && /Bearer \$\{user\.idToken\}/.test(ui))
 ok('dashboard: subscribe redirects to hosted checkout', /window\.location\.href = data\.shortUrl/.test(ui))
 ok('dashboard: NO entitlement enforcement (display only)', !/getEntitlement|requirePro/.test(ui))
 const dash = read('components/trustseal/dashboard-client.tsx')
-ok('dashboard: BillingSection mounted in the dashboard', /<BillingSection \/>/.test(dash))
+ok('dashboard: BillingSection mounted in the dashboard', /<BillingSection locale=\{locale\} \/>/.test(dash))
 
 // ── scope guards ──────────────────────────────────────────────────
 // Durable: B3's checkout/dashboard surfaces don't perform capability enforcement
