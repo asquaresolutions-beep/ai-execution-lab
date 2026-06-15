@@ -28,9 +28,26 @@ const idx = read('lib/trustseal/messages/index.ts')
 ok('i18n: registers en + hi + es + ar', /DICTIONARIES[^=]*=\s*\{ en, hi, es, ar \}/.test(idx))
 ok('i18n: imports hi/es/ar dictionaries', /from '\.\/hi'/.test(idx) && /from '\.\/es'/.test(idx) && /from '\.\/ar'/.test(idx))
 ok('i18n: t() with English fallback + raw-key last resort', /export function t/.test(idx) && /lookup\(en, key\) \?\? key/.test(idx))
-for (const lc of ['hi', 'es', 'ar']) {
-  ok(`i18n: ${lc}.ts is a typed Messages scaffold`, /: Messages = en/.test(read(`lib/trustseal/messages/${lc}.ts`)))
-}
+// Real translations now (typed Messages objects with native scripts/strings).
+ok('i18n: hi has real Hindi (Devanagari)', /: Messages = \{/.test(read('lib/trustseal/messages/hi.ts')) && /[ऀ-ॿ]/.test(read('lib/trustseal/messages/hi.ts')))
+ok('i18n: es has real Spanish', /: Messages = \{/.test(read('lib/trustseal/messages/es.ts')) && /Verifica cualquier empresa/.test(read('lib/trustseal/messages/es.ts')))
+ok('i18n: ar has real Arabic', /: Messages = \{/.test(read('lib/trustseal/messages/ar.ts')) && /[؀-ۿ]/.test(read('lib/trustseal/messages/ar.ts')))
+
+// ── hardening: real metrics/feed (no fabrication), real CTA pages ─
+const land2 = read('components/trustseal/home/landing.tsx')
+ok('harden: no fabricated metrics in landing', !/12840|5_900_000|5900000/.test(land2))
+ok('harden: no fabricated feed domains in landing', !/lure-bank\.top|payquik\.net|orbit\.sh/.test(land2))
+ok('harden: metrics+feed come from real props, hidden when empty', /metrics\?: HomeMetrics/.test(land2) && /showMetrics/.test(land2) && /showFeed/.test(land2))
+const hd = read('lib/trustseal/home-data.ts')
+ok('harden: home-data real store queries, fail-safe', /getStore\(\)\.query/.test(hd) && /value: 'verified'/.test(hd) && /catch/.test(hd))
+const hp = read('app/trustseal/[locale]/page.tsx')
+ok('harden: homepage fetches real data + ISR', /getHomeMetrics\(\)/.test(hp) && /getRecentVerifications/.test(hp) && /revalidate = 3600/.test(hp))
+const pr = read('app/trustseal/[locale]/pricing/page.tsx')
+ok('harden: /pricing real + indexable, not placeholder', /PricingView/.test(pr) && /index: true/.test(pr) && !/[Pp]laceholder/.test(pr))
+const vp = read('app/trustseal/[locale]/verify/page.tsx')
+ok('harden: /verify real + indexable, not placeholder', /VerifyView/.test(vp) && /index: true/.test(vp) && !/[Pp]laceholder/.test(vp))
+ok('harden: verify lookup → public seal page', /\/trust\//.test(read('components/trustseal/home/verify-view.tsx')))
+ok('harden: pricing/verify views use t() (i18n)', /t\(locale, k\)/.test(read('components/trustseal/home/pricing-view.tsx')) && /t\(locale, k\)/.test(read('components/trustseal/home/verify-view.tsx')))
 
 // ── en dictionary: all homepage namespaces + trust levels ─────────
 const en = read('lib/trustseal/messages/en.ts')

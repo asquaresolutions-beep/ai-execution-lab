@@ -51,7 +51,7 @@ ok('switcher persists cookie on click', /onClick=\{\(\) => writeLocaleCookie\(lo
 // ── A5: dictionary + accessor ──
 const en = read('lib/trustseal/messages/en.ts')
 ok('en dict has product + nav strings', /product:\s*'TrustSeal'/.test(en) && /pricing:\s*'Pricing'/.test(en))
-ok('en exported as typed const', /export const en = \{/.test(en) && /as const/.test(en) && /export type Messages = typeof en/.test(en))
+ok('en exported as typed const + widened Messages type', /export const en = \{/.test(en) && /as const/.test(en) && /export type Messages = Widen<typeof en>/.test(en))
 const mi = read('lib/trustseal/messages/index.ts')
 ok('t() falls back: locale → en → raw key', /lookup\(getMessages\(locale\), key\) \?\? lookup\(en, key\) \?\? key/.test(mi))
 ok('all four locales registered (en/hi/es/ar)', /DICTIONARIES[^=]*=\s*\{ en, hi, es, ar \}/.test(mi))

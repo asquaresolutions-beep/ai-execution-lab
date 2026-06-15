@@ -1,12 +1,159 @@
 // ─────────────────────────────────────────────────────────────────
-// lib/trustseal/messages/hi.ts  (asq-trustseal-public-launch)
-// Hindi (हिन्दी) catalogue. SCAFFOLD: values are currently English placeholders so
-// every key resolves and nothing is missing on the live site. To localise, replace
-// each string value with a professional Hindi translation — the SHAPE must stay
-// identical to Messages (TypeScript enforces this). Drop-in: no call-site changes.
+// lib/trustseal/messages/hi.ts  (asq-trustseal-harden)
+// Hindi (हिन्दी) catalogue. Machine-translated (best-effort) — recommend a native
+// review of legal/marketing copy. Shape matches Messages (tsc-enforced). Brand
+// names and prices are left as-is.
 // ─────────────────────────────────────────────────────────────────
-import { en } from './en'
 import type { Messages } from './en'
 
-// TODO(i18n): replace English values with professional Hindi translations.
-export const hi: Messages = en
+export const hi: Messages = {
+  common: {
+    product: 'TrustSeal',
+    company: 'A Square Solutions',
+    tagline: 'व्यापार में भरोसा, प्रतिष्ठा और सत्यापन',
+    getStarted: 'शुरू करें',
+    talkToSales: 'सेल्स से बात करें',
+    verifyNow: 'डोमेन सत्यापित करें',
+    learnMore: 'और जानें',
+    copyright: '© 2026 A Square Solutions. सर्वाधिकार सुरक्षित।',
+  },
+  nav: {
+    product: 'उत्पाद',
+    verify: 'सत्यापित करें',
+    pricing: 'मूल्य',
+    enterprise: 'एंटरप्राइज़',
+    customers: 'ग्राहक',
+    security: 'सुरक्षा',
+    docs: 'दस्तावेज़',
+    dashboard: 'डैशबोर्ड',
+  },
+  switcher: { label: 'भाषा' },
+  hero: {
+    eyebrow: 'ट्रस्ट इंटेलिजेंस प्लेटफ़ॉर्म',
+    title: 'किसी भी व्यवसाय को सेकंडों में सत्यापित करें',
+    subtitle: 'TrustSeal डोमेन स्वामित्व और प्रतिष्ठा संकेतों को एक सत्यापन-योग्य ट्रस्ट स्कोर में बदल देता है — ताकि ग्राहक, साझेदार और प्लेटफ़ॉर्म जान सकें कि वे किस पर भरोसा कर रहे हैं।',
+    ctaPrimary: 'डोमेन सत्यापित करें',
+    ctaSecondary: 'मूल्य देखें',
+    note: 'सत्यापन के लिए कार्ड की ज़रूरत नहीं · Pro में एम्बेड बैज और कमांड सेंटर मिलता है',
+  },
+  metrics: {
+    heading: 'प्लेटफ़ॉर्म से वास्तविक, लाइव संकेत',
+    domainsVerified: 'सत्यापित डोमेन',
+    verificationsRun: 'किए गए सत्यापन',
+  },
+  how: {
+    heading: 'सत्यापन कैसे काम करता है',
+    subheading: 'अज्ञात से सत्यापित तक तीन चरण।',
+    step1Title: 'अपना डोमेन दावा करें',
+    step1Body: 'यह साबित करने के लिए एक DNS TXT रिकॉर्ड जोड़ें कि डोमेन आपके नियंत्रण में है। सबसे पहले सत्यापित करने वाला खाता ही मालिक होता है।',
+    step2Title: 'हम ट्रस्ट की गणना करते हैं',
+    step2Body: 'TrustSeal स्वामित्व, TLS, प्रतिष्ठा और जोखिम संकेतों का मूल्यांकन कर एक स्पष्ट ट्रस्ट स्कोर बनाता है।',
+    step3Title: 'सील दिखाएँ',
+    step3Body: 'एक लाइव, छेड़छाड़-रोधी बैज और एक सार्वजनिक सील पेज प्रकाशित करें जो आपकी स्थिति के साथ अपडेट होता है।',
+  },
+  levels: {
+    heading: 'ट्रस्ट स्तर',
+    subheading: 'हर डोमेन एक स्पष्ट बैंड से मेल खाता है — कमांड सेंटर सिग्नल सिस्टम के अनुरूप।',
+    verifiedName: 'सत्यापित',
+    verifiedDesc: 'स्वामित्व पुष्ट और संकेत मजबूत। पूर्ण भरोसा।',
+    establishedName: 'स्थापित',
+    establishedDesc: 'ठोस और सुसंगत प्रतिष्ठा इतिहास के साथ सत्यापित।',
+    limitedName: 'सीमित',
+    limitedDesc: 'सत्यापित, पर कम या नए संकेत। सामान्य सावधानी बरतें।',
+    cautionName: 'सावधानी',
+    cautionDesc: 'विसंगतियाँ पाई गईं। लेन-देन से पहले समीक्षा करें।',
+    riskName: 'जोखिम',
+    riskDesc: 'ब्लॉकलिस्ट या प्रतिरूपण संकेत। उच्च जोखिम — बचें।',
+  },
+  feed: {
+    heading: 'हाल के सत्यापन',
+    subheading: 'ट्रस्ट इंटेलिजेंस की निरंतर धारा।',
+    streaming: 'लाइव',
+  },
+  network: {
+    heading: 'द ट्रस्ट नेटवर्क',
+    subheading: 'डोमेन, सत्यापन और जोखिम संकेत एक जीवंत टोपोलॉजी में जुड़े — वही इंटेलिजेंस जो कमांड सेंटर को शक्ति देती है।',
+    cta: 'कमांड सेंटर देखें',
+  },
+  pricing: {
+    heading: 'सरल, पारदर्शी मूल्य',
+    subheading: 'मुफ़्त शुरू करें। बैज और इंटेलिजेंस की ज़रूरत हो तो अपग्रेड करें।',
+    freeName: 'मुफ़्त',
+    freePrice: '₹0',
+    freeTagline: 'सत्यापित होने के लिए',
+    freeF1: '1 सत्यापित डोमेन',
+    freeF2: 'सार्वजनिक सील पेज',
+    freeF3: 'मानक पुनः-सत्यापन',
+    freeCta: 'शुरू करें',
+    proName: 'Pro',
+    proPriceMonthly: '₹499/माह',
+    proPriceYearly: '₹4,990/वर्ष',
+    proTagline: 'भरोसा दिखाने वाले व्यवसायों के लिए',
+    proF1: '10 डोमेन तक',
+    proF2: 'एम्बेड करने योग्य हस्ताक्षरित बैज',
+    proF3: 'ट्रस्ट इंटेलिजेंस कमांड सेंटर',
+    proF4: 'उन्नत एनालिटिक्स और प्राथमिकता पुनः-सत्यापन',
+    proCta: 'Pro लें',
+    yearlyBadge: '2 महीने मुफ़्त',
+    gstNote: 'मूल्य में 18% GST शामिल है।',
+  },
+  faq: {
+    heading: 'अक्सर पूछे जाने वाले प्रश्न',
+    q1: 'TrustSeal डोमेन को कैसे सत्यापित करता है?',
+    a1: 'आप हमारे द्वारा बनाया गया एक DNS TXT रिकॉर्ड जोड़ते हैं। पता चलते ही स्वामित्व की पुष्टि हो जाती है और पहले सत्यापित करने वाला खाता मालिक बनता है।',
+    q2: 'क्या बैज छेड़छाड़-रोधी है?',
+    a2: 'हाँ। एम्बेड बैज हर लोड पर लाइव स्थिति जाँचता है और दावा किए गए डोमेन से बंधा होता है, इसलिए कॉपी किया गया बैज सत्यापन का दिखावा नहीं कर सकता।',
+    q3: 'Pro और मुफ़्त में क्या-क्या है?',
+    a3: 'मुफ़्त में एक सत्यापित डोमेन और सार्वजनिक सील पेज मिलता है। Pro में एम्बेड बैज, कमांड सेंटर, एनालिटिक्स और कई डोमेन जुड़ते हैं।',
+    q4: 'क्या मैं कभी भी रद्द कर सकता हूँ?',
+    a4: 'हाँ। रद्द करने से नवीनीकरण रुक जाता है; आपकी Pro पहुँच उस अवधि के अंत तक बनी रहती है जिसका भुगतान आपने पहले ही कर दिया है।',
+    q5: 'क्या आप अंतरराष्ट्रीय व्यवसायों का समर्थन करते हैं?',
+    a5: 'TrustSeal अंग्रेज़ी, हिन्दी, स्पेनिश और अरबी में उपलब्ध है, अरबी के लिए पूर्ण दाएँ-से-बाएँ समर्थन के साथ।',
+  },
+  cta: {
+    heading: 'दुनिया को दिखाएँ कि आप पर भरोसा किया जा सकता है',
+    subheading: 'आज ही अपना डोमेन सत्यापित करें और एक ऐसा ट्रस्ट संकेत प्रकाशित करें जिसे ग्राहक पहचानते हैं।',
+    primary: 'डोमेन सत्यापित करें',
+    secondary: 'सेल्स से बात करें',
+  },
+  verify: {
+    title: 'किसी व्यवसाय को सत्यापित करें',
+    subtitle: 'किसी भी डोमेन की सार्वजनिक ट्रस्ट स्थिति जाँचें, या अपना डोमेन दावा कर सत्यापित करें।',
+    lookupLabel: 'जाँचने के लिए डोमेन दर्ज करें',
+    lookupPlaceholder: 'example.com',
+    lookupCta: 'ट्रस्ट स्थिति जाँचें',
+    lookupHint: 'उस डोमेन का सार्वजनिक सील पेज खोलता है।',
+    ownTitle: 'अपना डोमेन सत्यापित करें',
+    ownBody: 'साइन इन करें, एक DNS TXT रिकॉर्ड जोड़ें, और मिनटों में अपनी सत्यापित सील प्रकाशित करें।',
+    ownCta: 'अपने डैशबोर्ड पर जाएँ',
+    invalidDomain: 'मान्य डोमेन दर्ज करें, उदा. example.com',
+  },
+  pricingPage: {
+    title: 'मूल्य',
+    subtitle: 'मुफ़्त शुरू करें, और बैज व इंटेलिजेंस की ज़रूरत हो तो अपग्रेड करें। मूल्य में 18% GST शामिल है।',
+    compareHeading: 'योजनाओं की तुलना करें',
+    featureCol: 'सुविधा',
+    domainsRow: 'सत्यापित डोमेन',
+    sealPageRow: 'सार्वजनिक सील पेज',
+    badgeRow: 'एम्बेड करने योग्य हस्ताक्षरित बैज',
+    commandRow: 'कमांड सेंटर',
+    analyticsRow: 'उन्नत एनालिटिक्स',
+    supportRow: 'सहायता',
+    supportFree: 'समुदाय',
+    supportPro: 'प्राथमिकता',
+    yes: 'हाँ',
+    no: '—',
+  },
+  footer: {
+    tagline: 'व्यापार में भरोसा, प्रतिष्ठा और सत्यापन।',
+    product: 'उत्पाद',
+    company: 'कंपनी',
+    legal: 'कानूनी',
+    privacy: 'गोपनीयता',
+    terms: 'शर्तें',
+    security: 'सुरक्षा',
+    about: 'परिचय',
+    contact: 'संपर्क',
+    builtBy: 'TrustSeal को A Square Solutions ने बनाया है।',
+  },
+}

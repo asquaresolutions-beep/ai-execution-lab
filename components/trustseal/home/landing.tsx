@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import type { Locale } from '@/lib/trustseal/locales'
+import type { HomeMetrics, FeedItem } from '@/lib/trustseal/home-data'
 import { t } from '@/lib/trustseal/messages'
 
 const C = { bg: '#050811', text1: '#e6edf7', text2: '#9aa7c2', text3: '#5d6a86', cyan: '#22d3ee', violet: '#8b5cf6' }
@@ -44,26 +45,28 @@ function Counter({ to, suffix = '' }: { to: number; suffix?: string }) {
 
 const card: React.CSSProperties = { background: 'linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))', border: '1px solid rgba(120,160,255,0.14)', borderRadius: 16 }
 
-export function TrustSealLanding({ locale = 'en' as Locale }: { locale?: Locale }) {
+export function TrustSealLanding({ locale = 'en' as Locale, metrics, feed = [] }: { locale?: Locale; metrics?: HomeMetrics; feed?: FeedItem[] }) {
   const x = (k: string) => t(locale, k)
   const L = (sub: string) => `/${locale}${sub}`
+
+  // REAL data (server-provided). Sections hide when there is nothing genuine to show.
+  const m: HomeMetrics = metrics ?? { domainsVerified: 0, verificationsRun: 0 }
+  const showMetrics = m.domainsVerified > 0 || m.verificationsRun > 0
+  const showFeed = feed.length > 0
+  const rel = (ms: number) => {
+    const diff = Math.max(0, Date.now() - ms)
+    const day = Math.floor(diff / 86_400_000); if (day > 0) return `${day}d`
+    const hr = Math.floor(diff / 3_600_000); if (hr > 0) return `${hr}h`
+    return `${Math.floor(diff / 60_000)}m`
+  }
+  const metricCards = [
+    { label: x('metrics.domainsVerified'), value: m.domainsVerified },
+    { label: x('metrics.verificationsRun'), value: m.verificationsRun },
+  ]
 
   const levels = [
     { key: 'verified', c: BAND.verified }, { key: 'established', c: BAND.established },
     { key: 'limited', c: BAND.limited }, { key: 'caution', c: BAND.caution }, { key: 'risk', c: BAND.risk },
-  ]
-  const feed = [
-    { t: '14:22:07', tag: 'VRFY', d: 'asquaresolution.com', m: 'dns.txt match · score 94', c: BAND.verified },
-    { t: '14:21:48', tag: 'TLS', d: 'payquik.net', m: 'chain anomaly · review', c: BAND.caution },
-    { t: '14:20:11', tag: 'CLAIM', d: 'nova.app', m: 'ownership challenge issued', c: BAND.established },
-    { t: '14:18:55', tag: 'INTEL', d: 'lure-bank.top', m: 'blocklist hit · rejected', c: BAND.risk },
-    { t: '14:16:30', tag: 'SCORE', d: 'orbit.sh', m: 'verdict recomputed · 71', c: BAND.limited },
-  ]
-  const metrics = [
-    { k: 'metrics.domainsVerified', to: 12840, s: '+' },
-    { k: 'metrics.trustChecks', to: 5_900_000, s: '+' },
-    { k: 'metrics.countries', to: 38, s: '' },
-    { k: 'metrics.uptime', to: 99, s: '.98%' },
   ]
   const steps = ['1', '2', '3'].map((n) => ({ title: x(`how.step${n}Title`), body: x(`how.step${n}Body`) }))
   const faqs = ['1', '2', '3', '4', '5'].map((n) => ({ q: x(`faq.q${n}`), a: x(`faq.a${n}`) }))
@@ -85,18 +88,20 @@ export function TrustSealLanding({ locale = 'en' as Locale }: { locale?: Locale 
         <p className="mt-4 font-mono text-[11px]" style={{ color: C.text3 }}>{x('hero.note')}</p>
       </section>
 
-      {/* 2 — METRICS COUNTERS */}
-      <section className="px-6 py-14">
-        <h2 className={`${H} text-sm font-semibold uppercase tracking-[0.2em]`} style={{ color: C.text2 }}>{x('metrics.heading')}</h2>
-        <div className="mx-auto mt-8 grid max-w-4xl grid-cols-2 gap-4 lg:grid-cols-4">
-          {metrics.map((m) => (
-            <div key={m.k} className="p-5 text-center" style={card}>
-              <div className="text-3xl font-bold" style={{ color: C.text1 }}><Counter to={m.to} suffix={m.s} /></div>
-              <div className="mt-1 text-xs" style={{ color: C.text3 }}>{x(m.k)}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* 2 — METRICS COUNTERS (real platform data; hidden when there is none) */}
+      {showMetrics && (
+        <section className="px-6 py-14">
+          <h2 className={`${H} text-sm font-semibold uppercase tracking-[0.2em]`} style={{ color: C.text2 }}>{x('metrics.heading')}</h2>
+          <div className="mx-auto mt-8 grid max-w-xl grid-cols-2 gap-4">
+            {metricCards.map((mc) => (
+              <div key={mc.label} className="p-5 text-center" style={card}>
+                <div className="text-3xl font-bold" style={{ color: C.text1 }}><Counter to={mc.value} /></div>
+                <div className="mt-1 text-xs" style={{ color: C.text3 }}>{mc.label}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 3 — HOW IT WORKS */}
       <section className="px-6 py-14">
@@ -130,29 +135,30 @@ export function TrustSealLanding({ locale = 'en' as Locale }: { locale?: Locale 
         </div>
       </section>
 
-      {/* 5 — LIVE VERIFICATION FEED */}
-      <section className="px-6 py-14">
-        <h2 className={`${H} text-2xl font-bold`}>{x('feed.heading')}</h2>
-        <p className={`${H} mt-2 text-sm`} style={{ color: C.text2 }}>{x('feed.subheading')}</p>
-        <div className="mx-auto mt-8 max-w-2xl overflow-hidden" style={{ ...card, background: 'linear-gradient(160deg, rgba(8,14,26,0.9), rgba(6,10,20,0.7))' }}>
-          <div className="flex items-center gap-2 border-b px-3 py-2" style={{ borderColor: 'rgba(56,189,248,0.16)' }}>
-            <span className="font-mono text-[10px] tracking-[0.2em]" style={{ color: C.cyan }}>INTEL://verification.stream</span>
-            <span className="ms-auto inline-flex items-center gap-1.5 font-mono text-[9px]" style={{ color: BAND.verified }}>
-              <motion.span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: BAND.verified }} animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.4, repeat: Infinity }} />{x('feed.streaming')}
-            </span>
+      {/* 5 — RECENT VERIFICATION FEED (real verified domains; hidden when none) */}
+      {showFeed && (
+        <section className="px-6 py-14">
+          <h2 className={`${H} text-2xl font-bold`}>{x('feed.heading')}</h2>
+          <p className={`${H} mt-2 text-sm`} style={{ color: C.text2 }}>{x('feed.subheading')}</p>
+          <div className="mx-auto mt-8 max-w-2xl overflow-hidden" style={{ ...card, background: 'linear-gradient(160deg, rgba(8,14,26,0.9), rgba(6,10,20,0.7))' }}>
+            <div className="flex items-center gap-2 border-b px-3 py-2" style={{ borderColor: 'rgba(56,189,248,0.16)' }}>
+              <span className="font-mono text-[10px] tracking-[0.2em]" style={{ color: C.cyan }}>INTEL://verification.stream</span>
+              <span className="ms-auto inline-flex items-center gap-1.5 font-mono text-[9px]" style={{ color: BAND.verified }}>
+                <motion.span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: BAND.verified }} animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.4, repeat: Infinity }} />{x('feed.streaming')}
+              </span>
+            </div>
+            <ul className="px-3 py-2 font-mono text-[11px] leading-relaxed">
+              {feed.map((f) => (
+                <li key={f.domain} className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="rounded px-1" style={{ color: BAND.verified, background: `${BAND.verified}14` }}>VRFY</span>
+                  <a className="break-all" href={`${L('/trust')}/${encodeURIComponent(f.domain)}`} style={{ color: '#cdd8ec' }}>{f.domain}</a>
+                  <span style={{ color: C.text3 }}>· {rel(f.verifiedAt)}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul className="px-3 py-2 font-mono text-[11px] leading-relaxed">
-            {feed.map((f, i) => (
-              <li key={i} className="flex flex-wrap items-baseline gap-x-2">
-                <span style={{ color: C.text3 }}>{f.t}</span>
-                <span className="rounded px-1" style={{ color: f.c, background: `${f.c}14` }}>{f.tag}</span>
-                <span className="break-all" style={{ color: '#cdd8ec' }}>{f.d}</span>
-                <span style={{ color: C.text3 }}>{f.m}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 6 — TRUST NETWORK */}
       <section className="px-6 py-14 text-center">
@@ -177,7 +183,7 @@ export function TrustSealLanding({ locale = 'en' as Locale }: { locale?: Locale 
             <a href={L('/dashboard')} className="mt-6 block rounded-lg border px-4 py-2 text-center text-sm font-semibold" style={{ borderColor: 'rgba(120,160,255,0.3)', color: C.text1 }}>{x('pricing.freeCta')}</a>
           </div>
           <div className="relative p-6" style={{ ...card, border: `2px solid ${C.cyan}` }}>
-            <span className="absolute -top-3 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: C.cyan, color: '#06121e' }}>{x('pricing.yearlyBadge')}</span>
+            <span className="absolute -top-3 start-4 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: C.cyan, color: '#06121e' }}>{x('pricing.yearlyBadge')}</span>
             <h3 className="text-lg font-semibold">{x('pricing.proName')}</h3>
             <p className="text-xs" style={{ color: C.text3 }}>{x('pricing.proTagline')}</p>
             <p className="mt-3 text-3xl font-bold">{x('pricing.proPriceMonthly')}</p>

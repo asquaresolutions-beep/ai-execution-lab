@@ -8,6 +8,11 @@ import { TrustSealLanding } from '@/components/trustseal/home/landing'
 import { buildTrustMeta } from '@/lib/trustseal/seo'
 import { isLocale, DEFAULT_LOCALE, type Locale } from '@/lib/trustseal/locales'
 import { t } from '@/lib/trustseal/messages'
+import { getHomeMetrics, getRecentVerifications } from '@/lib/trustseal/home-data'
+
+// ISR: rebuild hourly so the real metrics + verification feed stay current without
+// a full deploy. Data is fail-safe (zeros/empty on error) so the build never breaks.
+export const revalidate = 3600
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
@@ -24,5 +29,6 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
   const lc: Locale = isLocale(locale) ? locale : DEFAULT_LOCALE
-  return <TrustSealLanding locale={lc} />
+  const [metrics, feed] = await Promise.all([getHomeMetrics(), getRecentVerifications(5)])
+  return <TrustSealLanding locale={lc} metrics={metrics} feed={feed} />
 }

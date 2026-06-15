@@ -38,11 +38,9 @@ export const en = {
   },
 
   metrics: {
-    heading: 'Trusted signal, at scale',
+    heading: 'Real signal, live from the platform',
     domainsVerified: 'Domains verified',
-    trustChecks: 'Trust checks run',
-    countries: 'Countries covered',
-    uptime: 'Verification uptime',
+    verificationsRun: 'Verifications run',
   },
 
   how: {
@@ -127,6 +125,36 @@ export const en = {
     secondary: 'Talk to sales',
   },
 
+  verify: {
+    title: 'Verify a business',
+    subtitle: 'Check any domain’s public trust status, or claim and verify your own.',
+    lookupLabel: 'Enter a domain to check',
+    lookupPlaceholder: 'example.com',
+    lookupCta: 'Check trust status',
+    lookupHint: 'Opens the public seal page for that domain.',
+    ownTitle: 'Verify your own domain',
+    ownBody: 'Sign in, add one DNS TXT record, and publish your verified seal in minutes.',
+    ownCta: 'Go to your dashboard',
+    invalidDomain: 'Enter a valid domain, e.g. example.com',
+  },
+
+  pricingPage: {
+    title: 'Pricing',
+    subtitle: 'Start free, upgrade when you need the badge and intelligence. Prices include 18% GST.',
+    compareHeading: 'Compare plans',
+    featureCol: 'Feature',
+    domainsRow: 'Verified domains',
+    sealPageRow: 'Public seal page',
+    badgeRow: 'Embeddable signed badge',
+    commandRow: 'Command Center',
+    analyticsRow: 'Advanced analytics',
+    supportRow: 'Support',
+    supportFree: 'Community',
+    supportPro: 'Priority',
+    yes: 'Yes',
+    no: '—',
+  },
+
   footer: {
     tagline: 'Business trust, reputation & verification.',
     product: 'Product',
@@ -141,4 +169,7 @@ export const en = {
   },
 } as const
 
-export type Messages = typeof en
+// Widen the literal `as const` values to `string` so locale dictionaries can carry
+// translated values (same SHAPE, different strings) while `en` stays the key origin.
+type Widen<T> = { [K in keyof T]: T[K] extends string ? string : Widen<T[K]> }
+export type Messages = Widen<typeof en>

@@ -1,16 +1,20 @@
-// app/trustseal/[locale]/verify/page.tsx  (asq-trustseal-a1; locale-aware meta a4)
-// Phase-A placeholder. English only, no animation. buildTrustMeta keeps it noindex
-// (index defaults to false) with full hreflang until real content lands (Phase C).
+// app/trustseal/[locale]/verify/page.tsx  (asq-trustseal-harden)
+// Real, indexable verify page. Server shell → locale-aware metadata; the lookup
+// form is a client child (VerifyView).
 import type { Metadata } from 'next'
-import { TrustSealPlaceholder } from '@/components/trustseal/placeholder'
+import { VerifyView } from '@/components/trustseal/home/verify-view'
 import { buildTrustMeta } from '@/lib/trustseal/seo'
+import { isLocale, DEFAULT_LOCALE, type Locale } from '@/lib/trustseal/locales'
+import { t } from '@/lib/trustseal/messages'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
-  return buildTrustMeta({ locale, subpath: '/verify', title: 'TrustSeal — Verify', description: 'Run a TrustSeal verification on any business in seconds.' })
+  const lc: Locale = isLocale(locale) ? locale : DEFAULT_LOCALE
+  return buildTrustMeta({ locale: lc, subpath: '/verify', title: `${t(lc, 'verify.title')} — ${t(lc, 'common.product')}`, description: t(lc, 'verify.subtitle'), index: true })
 }
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  return <TrustSealPlaceholder locale={locale} title="Verify a business" subtitle="Run a trust check in seconds. (Verification-flow placeholder.)" />
+  const lc: Locale = isLocale(locale) ? locale : DEFAULT_LOCALE
+  return <VerifyView locale={lc} />
 }
