@@ -24,7 +24,15 @@ export function planOption(interval: string): PlanOption | null {
   return PLAN_OPTIONS.find((p) => p.interval === interval) ?? null
 }
 
-/** True when the configured Razorpay key is a TEST-mode key (B3 is test-only). */
+/** True when the configured Razorpay key is a TEST-mode key. */
 export function isTestModeKey(keyId: string | undefined | null): boolean {
   return !!keyId && keyId.startsWith('rzp_test_')
+}
+
+/**
+ * True when a usable Razorpay key is configured — TEST or LIVE. Billing routes gate
+ * on this (not on test-mode) so live mode works; an unconfigured key is refused.
+ */
+export function isRazorpayConfigured(keyId: string | undefined | null): boolean {
+  return !!keyId && (keyId.startsWith('rzp_test_') || keyId.startsWith('rzp_live_'))
 }

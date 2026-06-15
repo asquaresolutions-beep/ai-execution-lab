@@ -70,7 +70,7 @@ ok('writer: setCancelScheduled updates cancelAtCycleEnd', /export async function
 
 // ── static-assert: /reactivate route ──
 const react = read('app/api/trustseal/billing/reactivate/route.ts')
-ok('reactivate: authed + test-mode only', /requireUser/.test(react) && /isTestModeKey/.test(react))
+ok('reactivate: authed + billing-configured (live OR test)', /requireUser/.test(react) && /isRazorpayConfigured/.test(react))
 ok('reactivate: requires cancel-scheduled state', /sub\.cancelAtCycleEnd/.test(react) && /not_cancel_scheduled/.test(react))
 ok('reactivate: resubscribes via createSubscription, returns shortUrl', /createSubscription\(/.test(react) && /shortUrl: created\.shortUrl/.test(react))
 ok('reactivate: non-destructive (no pending downgrade write)', !/createPendingSubscription|status: 'created'/.test(react))

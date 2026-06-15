@@ -3,7 +3,8 @@
 // Server-authoritative subscription creation. Authenticated (Firebase Bearer).
 // Creates a Razorpay subscription with notes.uid stamped, stores a 'created'
 // reference, and returns the hosted-checkout short_url. Does NOT grant Pro — the
-// activation webhook (B2.2) does that. TEST MODE ONLY: refuses live-mode keys.
+// activation webhook (B2.2) does that. Works in live OR test mode (any configured
+// Razorpay key); refuses only when billing is unconfigured.
 // No entitlement enforcement here (B4); no invoicing (B5).
 // ─────────────────────────────────────────────────────────────────
 import { NextResponse } from 'next/server'
@@ -12,7 +13,7 @@ import { getStore } from '@/lib/store/adapter'
 import { getEntitlement } from '@/lib/billing/entitlement'
 import { createPendingSubscription } from '@/lib/billing/writer'
 import { createSubscription } from '@/lib/billing/razorpay'
-import { planOption, isTestModeKey } from '@/lib/billing/plans'
+import { planOption, isRazorpayConfigured } from '@/lib/billing/plans'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,9 +21,9 @@ export async function POST(req: Request) {
   const user = await requireUser(req)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  // TEST MODE ONLY: refuse unless a test key is configured.
-  if (!isTestModeKey(process.env.RAZORPAY_KEY_ID)) {
-    return NextResponse.json({ error: 'live_mode_disabled' }, { status: 403 })
+  // Require a configured Razorpay key (test OR live); refuse only when unconfigured.
+  if (!isRazorpayConfigured(process.env.RAZORPAY_KEY_ID)) {
+    return NextResponse.json({ error: 'billing_not_configured' }, { status: 503 })
   }
 
   let interval = ''
