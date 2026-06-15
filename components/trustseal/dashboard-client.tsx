@@ -32,7 +32,13 @@ function DashboardInner({ locale }: { locale: Locale }) {
   const [account, setAccount] = useState<AccountInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [claimsRefresh, setClaimsRefresh] = useState(0)
-  const authLabels = { signIn: x('nav.signIn'), signOut: x('nav.signOut'), greeting: x('dash.greeting') }
+  const authLabels = {
+    signIn: x('nav.signIn'), signOut: x('nav.signOut'), greeting: x('dash.greeting'),
+    continueGoogle: x('auth.continueGoogle'), email: x('auth.email'), password: x('auth.password'),
+    createAccount: x('auth.createAccount'), or: x('auth.or'),
+    switchToSignUp: x('auth.switchToSignUp'), switchToSignIn: x('auth.switchToSignIn'),
+    notConfigured: x('auth.notConfigured'), signInFailed: x('auth.signInFailed'), googleFailed: x('auth.googleFailed'),
+  }
 
   useEffect(() => {
     if (!user?.idToken) { setAccount(null); return }

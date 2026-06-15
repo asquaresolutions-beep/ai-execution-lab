@@ -3,18 +3,26 @@
 // verdict content is server-rendered for SEO. Renders only the public projection.
 import Link from 'next/link'
 import type { SealData } from '@/lib/trustseal/seal'
+import { t } from '@/lib/trustseal/messages'
+import { formatDate } from '@/lib/trustseal/format'
+import { isLocale, DEFAULT_LOCALE, type Locale } from '@/lib/trustseal/locales'
 
 const TRUST_BASE = (process.env.TRUSTSEAL_BASE_URL || 'https://trustseal.asquaresolution.com').replace(/\/$/, '')
 
 const card = { borderColor: 'rgb(var(--ts-border))', backgroundColor: 'rgb(var(--ts-surface-2))' } as const
-const fmt = (ms: number | null) => (ms ? new Date(ms).toISOString().slice(0, 10) : '—')
 
-const BAND_LABEL: Record<string, string> = {
-  verified: 'Verified', established: 'Established', limited: 'Limited',
-  caution: 'Caution', high_risk: 'High risk',
+// Band → localized trust-level name (reuses the homepage `levels` namespace).
+const BAND_KEY: Record<string, string> = {
+  verified: 'levels.verifiedName', established: 'levels.establishedName', limited: 'levels.limitedName',
+  caution: 'levels.cautionName', high_risk: 'levels.riskName',
 }
 
 export function SealView({ data, locale }: { data: SealData; locale: string }) {
+  const lc: Locale = isLocale(locale) ? locale : DEFAULT_LOCALE
+  const x = (k: string) => t(lc, k)
+  const fmt = (ms: number | null) => formatDate(lc, ms)
+  const bandLabel = (b: string) => (BAND_KEY[b] ? x(BAND_KEY[b]) : b)
+  const embed = `<script src="${TRUST_BASE}/badge.js" data-domain="${data.domain}"></script>`
   const r = data.report
   // JSON-LD: honest Organization + a verification record (no fabricated ratings).
   const ld = {
@@ -51,45 +59,59 @@ export function SealView({ data, locale }: { data: SealData; locale: string }) {
         <h1 className="text-2xl font-bold sm:text-3xl" style={{ color: 'rgb(var(--ts-text-1))' }}>{data.domain}</h1>
       </div>
       <p className="mt-2 text-sm font-semibold" style={{ color: 'rgb(var(--ts-accent))' }}>
-        Domain ownership verified by TrustSeal
+        {x('seal.ownershipVerified')}
       </p>
 
       {/* Verification facts */}
       <dl className="mt-6 grid grid-cols-1 gap-px overflow-hidden rounded-xl border sm:grid-cols-2" style={{ borderColor: 'rgb(var(--ts-border))' }}>
-        <Fact label="TrustSeal status" value={r ? `${BAND_LABEL[r.band] ?? r.band}` : 'Ownership verified'} accent />
-        <Fact label="Verification method" value={data.method.toUpperCase()} />
-        <Fact label="Verified on" value={fmt(data.verifiedAt)} />
-        <Fact label="Last checked" value={fmt(data.lastCheckedAt)} />
+        <Fact label={x('seal.status')} value={r ? bandLabel(r.band) : x('seal.ownershipVerifiedShort')} accent />
+        <Fact label={x('seal.method')} value={data.method.toUpperCase()} />
+        <Fact label={x('seal.verifiedOn')} value={fmt(data.verifiedAt)} />
+        <Fact label={x('seal.lastChecked')} value={fmt(data.lastCheckedAt)} />
       </dl>
 
       {/* Business / domain summary (if a verdict exists) */}
       {r ? (
         <section className="mt-6 rounded-xl border p-5" style={card}>
-          <h2 className="text-base font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>Trust summary</h2>
+          <h2 className="text-base font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>{x('seal.trustSummary')}</h2>
           <p className="mt-1 text-sm" style={{ color: 'rgb(var(--ts-text-2))' }}>
-            Trust score <strong style={{ color: 'rgb(var(--ts-text-1))' }}>{r.score}/100</strong> · confidence {(r.confidence * 100).toFixed(0)}%
-            {r.partial ? ' · partial coverage' : ''}
+            {x('seal.trustScore')} <strong style={{ color: 'rgb(var(--ts-text-1))' }}>{r.score}/100</strong> · {x('seal.confidence')} {(r.confidence * 100).toFixed(0)}%
+            {r.partial ? ` · ${x('seal.partial')}` : ''}
           </p>
           {r.badges?.length > 0 && (
-            <ul className="mt-3 flex flex-wrap gap-2">
-              {r.badges.map((b) => (
-                <li key={b} className="rounded-full border px-2 py-0.5 text-xs" style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-2))' }}>
-                  {b.replace(/_/g, ' ')}
-                </li>
-              ))}
-            </ul>
+            <>
+              <p className="mt-3 text-xs font-medium uppercase tracking-wide" style={{ color: 'rgb(var(--ts-text-2))' }}>{x('seal.publicSignals')}</p>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {r.badges.map((b) => (
+                  <li key={b} className="rounded-full border px-2 py-0.5 text-xs" style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-2))' }}>
+                    {b.replace(/_/g, ' ')}
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </section>
       ) : (
         <section className="mt-6 rounded-xl border p-5" style={card}>
           <p className="text-sm" style={{ color: 'rgb(var(--ts-text-2))' }}>
-            Ownership is verified. A full trust report for this domain is being prepared.
+            {x('seal.preparing')}
           </p>
         </section>
       )}
 
+      {/* Badge preview / embed — every verified domain can publish its live badge */}
+      <section className="mt-6 rounded-xl border p-5" style={card}>
+        <h2 className="text-base font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>{x('seal.badgePreview')}</h2>
+        <span dir="ltr" className="mt-3 inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm" style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-1))' }}>
+          <span aria-hidden style={{ color: 'rgb(var(--ts-accent))' }}>✓</span>
+          {x('seal.ownershipVerifiedShort')} · <strong>TrustSeal</strong>
+        </span>
+        <p className="mt-3 text-xs" style={{ color: 'rgb(var(--ts-text-2))' }}>{x('seal.embedHint')}</p>
+        <code dir="ltr" className="mt-2 block overflow-x-auto rounded-lg border p-3 text-xs" style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-1))', backgroundColor: 'rgb(var(--ts-bg))' }}>{embed}</code>
+      </section>
+
       <footer className="mt-8 text-xs" style={{ color: 'rgb(var(--ts-text-2))' }}>
-        Verification by <Link href={`/${locale}`} className="hover:underline" style={{ color: 'rgb(var(--ts-accent))' }}>TrustSeal</Link> · public record.
+        {x('seal.verificationBy')} <Link href={`/${locale}`} className="hover:underline" style={{ color: 'rgb(var(--ts-accent))' }}>TrustSeal</Link> · {x('seal.publicRecord')}.
       </footer>
     </main>
   )

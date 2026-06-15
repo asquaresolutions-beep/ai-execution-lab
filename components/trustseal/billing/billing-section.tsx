@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/components/auth/auth-provider'
 import type { Locale } from '@/lib/trustseal/locales'
 import { t } from '@/lib/trustseal/messages'
+import { formatDate } from '@/lib/trustseal/format'
 
 interface BillingStatus {
   plan: 'free' | 'pro'
@@ -22,10 +23,10 @@ interface BillingStatus {
 }
 
 const card = { borderColor: 'rgb(var(--ts-border))', backgroundColor: 'rgb(var(--ts-surface-2))' } as const
-const fmtDate = (ms: number | null) => (ms ? new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—')
 
 export function BillingSection({ locale = 'en' as Locale }: { locale?: Locale }) {
   const x = (k: string) => t(locale, k)
+  const fmtDate = (ms: number | null) => formatDate(locale, ms, { year: 'numeric', month: 'short', day: 'numeric' })
   const { user } = useAuth()
   const [status, setStatus] = useState<BillingStatus | null>(null)
   const [error, setError] = useState<string | null>(null)

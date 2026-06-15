@@ -36,8 +36,8 @@ ok('base URL env-overridable', /process\.env\.TRUSTSEAL_BASE_URL/.test(seo))
 
 // every page uses locale-aware generateMetadata via buildTrustMeta
 const pages = walk('app/trustseal').filter((f) => f.path.endsWith('/page.tsx'))
-// 12 pages: + /pricing and /verify (built in the hardening pass).
-ok('12 TrustSeal pages present', pages.length === 12)
+// 13 page.tsx files: 11 static + trust/[domain] + legal/[doc] (enterprise hardening).
+ok('13 TrustSeal pages present', pages.length === 13)
 // Metadata signature varies (locale vs locale: lc; single- vs multi-line args),
 // so assert the contract: locale-aware generateMetadata that calls buildTrustMeta.
 ok('every page uses generateMetadata + buildTrustMeta', pages.every((p) => /generateMetadata/.test(p.src) && /buildTrustMeta\(/.test(p.src)))

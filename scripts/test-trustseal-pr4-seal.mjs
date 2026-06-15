@@ -39,10 +39,11 @@ ok('route: decodes domain param', /decodeURIComponent\(domain\)/.test(page))
 // ── seal-view (server component, required fields + honest JSON-LD) ─
 const view = read('components/trustseal/seal-view.tsx')
 ok('view: server component (no use client → SEO-rendered)', !/'use client'/.test(view))
-ok('view: shows ownership-verified status', /ownership verified/i.test(view))
+// i18n: seal-view strings now flow through t(locale, 'seal.*') (localized en/hi/es/ar).
+ok('view: shows ownership-verified status', /seal\.ownershipVerified/.test(view))
 ok('view: shows domain name', /data\.domain/.test(view))
-ok('view: shows method / verified date / last checked / TrustSeal status', /Verification method/.test(view) && /Verified on/.test(view) && /Last checked/.test(view) && /TrustSeal status/.test(view))
-ok('view: business/domain summary when verdict available', /Trust summary/.test(view) && /data\.report/.test(view))
+ok('view: shows method / verified date / last checked / TrustSeal status', /seal\.method/.test(view) && /seal\.verifiedOn/.test(view) && /seal\.lastChecked/.test(view) && /seal\.status/.test(view))
+ok('view: business/domain summary when verdict available', /seal\.trustSummary/.test(view) && /data\.report/.test(view))
 ok('view: JSON-LD Organization + BreadcrumbList', /'@type': 'Organization'/.test(view) && /BreadcrumbList/.test(view))
 ok('view: NO fabricated ratings (honest structured data)', !/aggregateRating/i.test(view) && !/"Review"|'Review'/.test(view))
 

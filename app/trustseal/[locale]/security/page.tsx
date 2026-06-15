@@ -1,16 +1,20 @@
-// app/trustseal/[locale]/security/page.tsx  (asq-trustseal-a1; locale-aware meta a4)
-// Phase-A placeholder. English only, no animation. buildTrustMeta keeps it noindex
-// (index defaults to false) with full hreflang until real content lands (Phase C).
+// app/trustseal/[locale]/security/page.tsx  (asq-trustseal-harden)
+// Real, indexable, fully-localized Security Center (replaces the placeholder).
 import type { Metadata } from 'next'
-import { TrustSealPlaceholder } from '@/components/trustseal/placeholder'
+import { ContentPageView } from '@/components/trustseal/content-page'
+import { securityContent } from '@/lib/trustseal/content/security'
 import { buildTrustMeta } from '@/lib/trustseal/seo'
+import { isLocale, DEFAULT_LOCALE, type Locale } from '@/lib/trustseal/locales'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
-  return buildTrustMeta({ locale, subpath: '/security', title: 'TrustSeal — Security', description: 'How TrustSeal protects and processes your data.' })
+  const lc: Locale = isLocale(locale) ? locale : DEFAULT_LOCALE
+  const p = securityContent[lc]
+  return buildTrustMeta({ locale: lc, subpath: '/security', title: `${p.title} — TrustSeal`, description: p.subtitle, index: true })
 }
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  return <TrustSealPlaceholder locale={locale} title="Security & data handling" subtitle="How we protect and process data. (Security placeholder.)" />
+  const lc: Locale = isLocale(locale) ? locale : DEFAULT_LOCALE
+  return <ContentPageView locale={lc} page={securityContent[lc]} toc />
 }

@@ -83,97 +83,16 @@ export const metadata: Metadata = {
   // pages default to the requested URL).
 }
 
-// ─── JSON-LD structured data ─────────────────────────────────
-const websiteSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'WebSite',
-  // @id used as co-reference target in per-article isPartOf fields
-  '@id': `${SITE_URL}/#website`,
-  name: 'AI Execution Lab',
-  url: SITE_URL,
-  description:
-    'A practical AI systems lab by A Square Solutions. Real workflows, real tools, real results — built while shipping production AI systems, SEO engineering pipelines, and GEO strategies.',
-  publisher: {
-    '@type': 'Organization',
-    // Co-reference to the canonical org entity on asquaresolution.com
-    '@id': 'https://asquaresolution.com/#organization',
-    name: 'A Square Solutions',
-    url: 'https://asquaresolution.com',
-    sameAs: [
-      'https://twitter.com/asquaresolution',
-      'https://lab.asquaresolution.com',
-      'https://trustseal.asquaresolution.com',
-      'https://scamcheck.asquaresolution.com',
-    ],
-  },
-  potentialAction: {
-    '@type': 'SearchAction',
-    target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/search?q={search_term_string}` },
-    'query-input': 'required name=search_term_string',
-  },
-}
-
-const organizationSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
-  // Co-reference to the canonical org entity defined on asquaresolution.com
-  '@id': 'https://asquaresolution.com/#organization',
-  name: 'A Square Solutions',
-  url: 'https://asquaresolution.com',
-  description: 'AI execution, GEO/AI-search strategy, and production WordPress engineering.',
-  sameAs: [
-    'https://twitter.com/asquaresolution',
-    'https://lab.asquaresolution.com',
-    'https://trustseal.asquaresolution.com',
-    'https://scamcheck.asquaresolution.com',
-  ],
-  knowsAbout: [
-    'Artificial Intelligence',
-    'Claude Code',
-    'Generative Engine Optimization',
-    'AI Workflows',
-    'SEO Engineering',
-    'WordPress Development',
-    'Production Systems',
-  ],
-  owns: [
-    {
-      '@type': 'WebSite',
-      name: 'AI Execution Lab',
-      url: 'https://lab.asquaresolution.com',
-      description: 'Production AI engineering journal — operational records, failure archive, execution logs.',
-    },
-    {
-      '@type': 'SoftwareApplication',
-      name: 'TrustSeal',
-      url: 'https://trustseal.asquaresolution.com',
-      applicationCategory: 'BusinessApplication',
-      description: 'AI-powered fact-checking for publishers. Verifies claims against real-time sources.',
-    },
-    {
-      '@type': 'SoftwareApplication',
-      name: 'ScamCheck',
-      url: 'https://scamcheck.asquaresolution.com',
-      applicationCategory: 'SecurityApplication',
-      description: 'Free AI scam detection. Analyzes messages, UPI IDs, and links for fraud indicators.',
-    },
-  ],
-}
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`dark ${fontSans.variable} ${fontMono.variable}`}>
       <head>
         {/* Consent Mode v2 defaults — MUST run before AdSense/analytics load. */}
         <script dangerouslySetInnerHTML={{ __html: CONSENT_DEFAULT }} />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
-        />
+        {/* Ecosystem (AI Execution Lab / A Square Solutions) JSON-LD is no longer
+            emitted globally here — it leaked sibling-brand entities onto the
+            standalone TrustSeal pages. It now renders per-surface in SiteChrome
+            (Lab/ScamCheck only); TrustSeal emits its own clean graph. */}
         {/* Google AdSense loader — consent governs personalisation (non-personalised
             ads serve until the visitor accepts). Placement is explicit via <AdSlot>. */}
         {ADSENSE_CLIENT && (

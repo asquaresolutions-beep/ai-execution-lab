@@ -21,6 +21,7 @@ import { LOCALES, isLocale, dirFor, DEFAULT_LOCALE, type Locale } from '@/lib/tr
 import { TrustSealNav } from '@/components/trustseal/nav'
 import { TrustSealFooter } from '@/components/trustseal/site-footer'
 import { localeFontClass, localeFontFamily } from '@/lib/trustseal/fonts'
+import { buildTrustSealJsonLd } from '@/lib/trustseal/jsonld'
 
 export const dynamicParams = false
 
@@ -51,6 +52,9 @@ export default async function TrustSealLocaleLayout({
         fontFamily: localeFontFamily(locale),
       }}
     >
+      {/* Clean, self-contained TrustSeal entity graph (no AI Execution Lab /
+          ScamCheck references) — Organization, WebSite, Product, SoftwareApplication, FAQPage. */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: buildTrustSealJsonLd(lc) }} />
       <TrustSealNav locale={lc} />
       <div className="flex-1">{children}</div>
       <TrustSealFooter locale={lc} />
