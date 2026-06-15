@@ -64,11 +64,12 @@ const land = read('components/trustseal/home/landing.tsx')
 ok('landing: client component', /^'use client'/.test(land))
 ok('landing: all copy via t() (x = t(locale,...))', /const x = \(k: string\) => t\(locale, k\)/.test(land))
 ok('landing: Command Center band colours', /verified: '#34d399'/.test(land) && /established: '#22d3ee'/.test(land) && /limited: '#a78bfa'/.test(land) && /caution: '#fbbf24'/.test(land) && /risk: '#f87171'/.test(land))
-for (const m of ['hero.title', 'metrics.heading', 'how.heading', 'levels.heading', 'feed.heading', 'network.heading', 'pricing.heading', 'faq.heading', 'cta.heading', 'footer.tagline']) {
+// footer.tagline / branding moved to the standalone TrustSealFooter (layout-level).
+for (const m of ['hero.title', 'metrics.heading', 'how.heading', 'levels.heading', 'feed.heading', 'network.heading', 'pricing.heading', 'faq.heading', 'cta.heading']) {
   ok(`landing: renders x('${m}')`, land.includes(`x('${m}')`))
 }
 ok('landing: animated metric counters', /function Counter/.test(land) && /requestAnimationFrame/.test(land))
-ok('landing: branding via keys', land.includes("x('common.copyright')") && land.includes("x('footer.builtBy')"))
+ok('landing: footer removed (now provided globally by layout)', !/footer\.builtBy/.test(land))
 ok('landing: RTL-safe (no directional left/right utilities)', !/\b(ml-|mr-|pl-|pr-|left-|right-)\d/.test(land))
 ok('landing: no obvious hardcoded marketing sentence', !/Verify any business in seconds/.test(land))
 
@@ -88,6 +89,54 @@ ok('license: forbids commercial / redistribution / rehost / SaaS clone', /commer
 ok('license: NOT MIT/Apache/GPL permissive grant', !/Permission is hereby granted, free of charge/.test(lic) && !/Apache License, Version/.test(lic) && !/GNU GENERAL PUBLIC/.test(lic))
 ok('NOTICE present', exists('NOTICE') && /A Square Solutions/.test(read('NOTICE')))
 ok('copyright header guidance present', exists('docs/COPYRIGHT_HEADERS.md'))
+
+// ── standalone polish pass: lab chrome removed, TrustSeal nav/footer ──
+const chrome = read('components/layout/site-chrome.tsx')
+ok('chrome: trustseal segment renders NO lab chrome (standalone)', /seg === 'trustseal'/.test(chrome) && /never render the AI Execution Lab chrome/i.test(chrome))
+ok('chrome: trustseal branch returns children only (no Sidebar/TopBar)', (() => {
+  // Slice the trustseal branch: from its `if` to the next branch (`if (isScamCheckSegment`).
+  const start = chrome.indexOf("if (seg === 'trustseal')")
+  const end = chrome.indexOf('if (isScamCheckSegment', start)
+  if (start < 0 || end < 0) return false
+  const branch = chrome.slice(start, end)
+  return /return <>\{children\}<\/>/.test(branch) && !/Sidebar|TopBar|EcosystemFooter/.test(branch)
+})())
+const navc = read('components/trustseal/nav.tsx')
+ok('nav: standalone TrustSeal nav exists', /export function TrustSealNav/.test(navc))
+ok('nav: product links Verify/Pricing/Security/Docs/About', ["nav.verify","nav.pricing","nav.security","nav.docs","nav.about"].every((k) => navc.includes(`x('${k}')`)))
+ok('nav: auth-aware Sign in / Dashboard', /x\('nav\.signIn'\)/.test(navc) && /x\('nav\.dashboard'\)/.test(navc) && /useAuth/.test(navc))
+ok('nav: responsive mobile menu', /md:hidden/.test(navc) && /aria-expanded=\{open\}/.test(navc))
+ok('nav: no lab nav labels (Start Here/Labs/Playbooks/Failure Archive)', !/Start Here|Failure Archive|Playbooks|Execution Logs/.test(navc))
+ok('nav: hidden on immersive /command', /command/.test(navc) && /return null/.test(navc))
+const foot = read('components/trustseal/site-footer.tsx')
+ok('footer: standalone TrustSeal footer exists', /export function TrustSealFooter/.test(foot))
+ok('footer: primary product links', ["nav.pricing","nav.verify","nav.security","nav.docs","nav.about"].every((k) => foot.includes(`x('${k}')`)))
+ok('footer: secondary "Built by A Square Solutions"', /x\('footer\.builtBy'\)/.test(foot))
+ok('footer: no lab ecosystem as primary nav', !/Start Here|Failure Archive|Playbooks|Tracks|Pathways/.test(foot))
+
+// ── dashboard i18n: every authenticated string via t(locale, 'dash.*') ──
+const dashEn = read('lib/trustseal/messages/en.ts')
+for (const ns of ['nav', 'dash']) ok(`i18n: en namespace '${ns}'`, new RegExp(`\\b${ns}:\\s*\\{`).test(dashEn))
+// The new dash keys must exist in ALL four locales (tsc enforces shape; this
+// guards that translators didn't leave them as English copies for the scripts).
+const dashKeys = ['kicker','title','domainsTitle','verifyTitle','billingTitle','planLabel','statusLabel','historyLabel','reactivate','cancelSub','remove','startClaim']
+for (const f of ['en','hi','es','ar']) {
+  const src = read(`lib/trustseal/messages/${f}.ts`)
+  ok(`i18n: ${f} has dash namespace + all key set`, /\bdash:\s*\{/.test(src) && dashKeys.every((k) => new RegExp(`${k}:`).test(src)))
+}
+// non-English locales must actually translate the key dashboard labels (not echo English)
+ok('i18n: hi dashboard translated (Devanagari in dash labels)', /domainsTitle: '[^']*[ऀ-ॿ]/.test(read('lib/trustseal/messages/hi.ts')))
+ok('i18n: ar dashboard translated (Arabic in dash labels)', /domainsTitle: '[^']*[؀-ۿ]/.test(read('lib/trustseal/messages/ar.ts')))
+ok('i18n: es dashboard translated (Spanish, not English "Your domains")', /domainsTitle: 'Tus dominios'/.test(read('lib/trustseal/messages/es.ts')))
+// dashboard components thread locale + render via t()
+const dc = read('components/trustseal/dashboard-client.tsx')
+ok('dash: client threads Locale to wizard/list/billing', /<ClaimWizard locale=\{locale\}/.test(dc) && /<ClaimsList locale=\{locale\}/.test(dc) && /<BillingSection locale=\{locale\}/.test(dc))
+for (const comp of ['claim-wizard.tsx','claims-list.tsx','billing/billing-section.tsx']) {
+  const src = read(`components/trustseal/${comp}`)
+  ok(`dash: ${comp} accepts locale + uses t()`, /locale\??: Locale/.test(src) && /t\(locale/.test(src))
+}
+ok('dash: auth-button localizable via labels (signOut/greeting)', /labels\?: \{[^}]*signOut/.test(read('components/auth/auth-button.tsx')))
+ok('dash: RTL preserved — layout sets dir from locale', /dir=\{dirFor\(locale\)\}/.test(read('app/trustseal/[locale]/layout.tsx')))
 
 console.log(`\nPublic-launch tests: ${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

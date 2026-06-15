@@ -81,8 +81,9 @@ ok('snapshot: reads cancel_at_cycle_end', /cancel_at_cycle_end/.test(rzp) && /ca
 
 // ── static-assert: dashboard UI (Fix #2) ──
 const ui = read('components/trustseal/billing/billing-section.tsx')
-ok('UI: cancelled-but-active banner', /Subscription cancelled — access remains until/.test(ui))
-ok('UI: Reactivate button replaces Cancel when scheduled', /Reactivate Subscription/.test(ui) && /isCancelScheduled \? \(/.test(ui))
+// i18n: banner + button labels now flow through t(locale, 'dash.*').
+ok('UI: cancelled-but-active banner', /x\('dash\.cancelledBanner'\)/.test(ui) && /\.replace\('\{date\}'/.test(ui))
+ok('UI: Reactivate button replaces Cancel when scheduled', /x\('dash\.reactivate'\)/.test(ui) && /isCancelScheduled \? \(/.test(ui))
 ok('UI: isCancelScheduled = active && cancelAtCycleEnd', /isCancelScheduled = isPro && \(status\?\.cancelAtCycleEnd/.test(ui))
 ok('UI: reactivate calls the endpoint', /\/api\/trustseal\/billing\/reactivate/.test(ui))
 

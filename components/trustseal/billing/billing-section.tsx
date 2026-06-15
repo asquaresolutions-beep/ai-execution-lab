@@ -8,6 +8,8 @@
 // Razorpay hosted checkout (short_url); state is granted only by the webhook.
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/components/auth/auth-provider'
+import type { Locale } from '@/lib/trustseal/locales'
+import { t } from '@/lib/trustseal/messages'
 
 interface BillingStatus {
   plan: 'free' | 'pro'
@@ -22,7 +24,8 @@ interface BillingStatus {
 const card = { borderColor: 'rgb(var(--ts-border))', backgroundColor: 'rgb(var(--ts-surface-2))' } as const
 const fmtDate = (ms: number | null) => (ms ? new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—')
 
-export function BillingSection() {
+export function BillingSection({ locale = 'en' as Locale }: { locale?: Locale }) {
+  const x = (k: string) => t(locale, k)
   const { user } = useAuth()
   const [status, setStatus] = useState<BillingStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -98,28 +101,28 @@ export function BillingSection() {
   return (
     <section data-billing-section className="rounded-xl border p-5" style={card}>
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>Billing</h2>
+        <h2 className="text-lg font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>{x('dash.billingTitle')}</h2>
         <span className="rounded-full px-2 py-0.5 text-xs font-semibold"
           style={{ color: isPro ? 'rgb(var(--ts-accent))' : 'rgb(var(--ts-text-2))', border: '1px solid rgb(var(--ts-border))' }}>
-          {isPro ? 'PRO' : 'FREE'}
+          {isPro ? x('dash.proBadge') : x('dash.freeBadge')}
         </span>
       </div>
 
-      {error && <p className="mt-2 text-sm" style={{ color: '#f87171' }}>Could not load billing: {error}</p>}
+      {error && <p className="mt-2 text-sm" style={{ color: '#f87171' }}>{x('dash.billingError')}: {error}</p>}
 
       {/* Cancelled-but-still-entitled banner — removes the active/cancelled ambiguity */}
       {isCancelScheduled && (
         <p className="mt-3 rounded-lg border px-3 py-2 text-sm" style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-1))', background: 'rgba(251,191,36,0.08)' }}>
-          Subscription cancelled — access remains until {fmtDate(status?.currentEnd ?? null)}
+          {x('dash.cancelledBanner').replace('{date}', fmtDate(status?.currentEnd ?? null))}
         </p>
       )}
 
       {/* current plan / status / renewal */}
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>Plan</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{isPro ? `Pro · ${status?.interval ?? ''}` : 'Free'}</dd></div>
-        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>Status</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{isCancelScheduled ? 'cancelled (active until period end)' : `${status?.status ?? '—'}${status?.inGrace ? ' (grace)' : ''}`}</dd></div>
-        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>{isCancelScheduled ? 'Access until' : 'Renews / ends'}</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{fmtDate(status?.currentEnd ?? null)}</dd></div>
-        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>Billing history</dt><dd style={{ color: 'rgb(var(--ts-text-3))' }}>Invoices coming soon</dd></div>
+        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>{x('dash.planLabel')}</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{isPro ? `${x('pricing.proName')} · ${status?.interval ?? ''}` : x('dash.planFree')}</dd></div>
+        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>{x('dash.statusLabel')}</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{isCancelScheduled ? x('dash.cancelledActive') : `${status?.status ?? '—'}${status?.inGrace ? x('dash.graceSuffix') : ''}`}</dd></div>
+        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>{isCancelScheduled ? x('dash.accessUntilLabel') : x('dash.renewsLabel')}</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{fmtDate(status?.currentEnd ?? null)}</dd></div>
+        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>{x('dash.historyLabel')}</dt><dd style={{ color: 'rgb(var(--ts-text-3))' }}>{x('dash.invoicesSoon')}</dd></div>
       </dl>
 
       {/* upgrade / manage controls */}
@@ -128,20 +131,20 @@ export function BillingSection() {
           <>
             <button type="button" disabled={busy} onClick={() => void subscribe('monthly')}
               className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
-              style={{ background: 'rgb(var(--ts-accent))', color: '#06121e' }}>Upgrade · Monthly (₹499)</button>
+              style={{ background: 'rgb(var(--ts-accent))', color: '#06121e' }}>{x('dash.upgradeMonthly')}</button>
             <button type="button" disabled={busy} onClick={() => void subscribe('yearly')}
               className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-60"
-              style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-1))' }}>Upgrade · Yearly (₹4,990)</button>
+              style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-1))' }}>{x('dash.upgradeYearly')}</button>
           </>
         ) : isCancelScheduled ? (
           <button type="button" disabled={busy} onClick={() => void reactivate()}
             className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
-            style={{ background: 'rgb(var(--ts-accent))', color: '#06121e' }}>Reactivate Subscription</button>
+            style={{ background: 'rgb(var(--ts-accent))', color: '#06121e' }}>{x('dash.reactivate')}</button>
         ) : (
           <button type="button" disabled={busy} onClick={() => void cancel()}
             className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-60"
             style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-2))' }}>
-            Cancel subscription
+            {x('dash.cancelSub')}
           </button>
         )}
       </div>

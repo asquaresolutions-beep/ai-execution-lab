@@ -220,36 +220,7 @@ export function TrustSealLanding({ locale = 'en' as Locale, metrics, feed = [] }
         </div>
       </section>
 
-      {/* 10 — FOOTER */}
-      <footer className="border-t px-6 py-10" style={{ borderColor: 'rgba(120,160,255,0.12)' }}>
-        <div className="mx-auto flex max-w-4xl flex-wrap items-start justify-between gap-6">
-          <div className="max-w-xs">
-            <div className="flex items-center gap-2"><HexSeal size={28} /><span className="font-semibold">{x('common.product')}</span></div>
-            <p className="mt-2 text-sm" style={{ color: C.text2 }}>{x('footer.tagline')}</p>
-          </div>
-          <div className="flex flex-wrap gap-10 text-sm">
-            <div>
-              <p className="font-semibold" style={{ color: C.text2 }}>{x('footer.product')}</p>
-              <ul className="mt-2 space-y-1.5" style={{ color: C.text3 }}>
-                <li><a href={L('/pricing')}>{x('nav.pricing')}</a></li>
-                <li><a href={L('/verify')}>{x('nav.verify')}</a></li>
-                <li><a href={L('/command')}>{x('network.cta')}</a></li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-semibold" style={{ color: C.text2 }}>{x('footer.legal')}</p>
-              <ul className="mt-2 space-y-1.5" style={{ color: C.text3 }}>
-                <li><a href={L('/security')}>{x('footer.security')}</a></li>
-                <li><a href={L('/about')}>{x('footer.about')}</a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <div className="mx-auto mt-8 max-w-4xl border-t pt-6 text-xs" style={{ borderColor: 'rgba(120,160,255,0.12)', color: C.text3 }}>
-          <p>{x('footer.builtBy')}</p>
-          <p className="mt-1">{x('common.copyright')}</p>
-        </div>
-      </footer>
+      {/* Footer is provided globally by the [locale] layout (TrustSealFooter). */}
     </main>
   )
 }

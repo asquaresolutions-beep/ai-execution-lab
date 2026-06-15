@@ -17,9 +17,9 @@
 // ─────────────────────────────────────────────────────────────────
 import type { ReactNode } from 'react'
 import { notFound } from 'next/navigation'
-import { LOCALES, isLocale, dirFor } from '@/lib/trustseal/locales'
-import { TrustSealLocaleHeader } from '@/components/trustseal/locale-header'
-import { t } from '@/lib/trustseal/messages'
+import { LOCALES, isLocale, dirFor, DEFAULT_LOCALE, type Locale } from '@/lib/trustseal/locales'
+import { TrustSealNav } from '@/components/trustseal/nav'
+import { TrustSealFooter } from '@/components/trustseal/site-footer'
 import { localeFontClass, localeFontFamily } from '@/lib/trustseal/fonts'
 
 export const dynamicParams = false
@@ -37,21 +37,23 @@ export default async function TrustSealLocaleLayout({
 }) {
   const { locale } = await params
   if (!isLocale(locale)) notFound()
+  const lc: Locale = isLocale(locale) ? locale : DEFAULT_LOCALE
 
   return (
     <div
       lang={locale}
       dir={dirFor(locale)}
       data-trustseal
-      className={`ts-shell min-h-screen ${localeFontClass(locale)}`.trim()}
+      className={`ts-shell flex min-h-screen flex-col ${localeFontClass(locale)}`.trim()}
       style={{
         background: 'rgb(var(--ts-bg))',
         color: 'rgb(var(--ts-text-1))',
         fontFamily: localeFontFamily(locale),
       }}
     >
-      <TrustSealLocaleHeader locale={locale} product={t(locale, 'common.product')} />
-      {children}
+      <TrustSealNav locale={lc} />
+      <div className="flex-1">{children}</div>
+      <TrustSealFooter locale={lc} />
     </div>
   )
 }

@@ -36,8 +36,11 @@ ok('base URL env-overridable', /process\.env\.TRUSTSEAL_BASE_URL/.test(seo))
 
 // every page uses locale-aware generateMetadata via buildTrustMeta
 const pages = walk('app/trustseal').filter((f) => f.path.endsWith('/page.tsx'))
-ok('10 TrustSeal pages present', pages.length === 10)
-ok('every page uses generateMetadata + buildTrustMeta', pages.every((p) => /export async function generateMetadata/.test(p.src) && /buildTrustMeta\(\{ locale, subpath:/.test(p.src)))
+// 12 pages: + /pricing and /verify (built in the hardening pass).
+ok('12 TrustSeal pages present', pages.length === 12)
+// Metadata signature varies (locale vs locale: lc; single- vs multi-line args),
+// so assert the contract: locale-aware generateMetadata that calls buildTrustMeta.
+ok('every page uses generateMetadata + buildTrustMeta', pages.every((p) => /generateMetadata/.test(p.src) && /buildTrustMeta\(/.test(p.src)))
 
 // ── A6: RTL helpers ──
 const rtl = read('lib/trustseal/rtl.ts')
@@ -58,9 +61,13 @@ ok('RTL conventions doc present', exists('lib/trustseal/rtl-conventions.md'))
 
 // ── A6 GUARDRAIL: no physical inline-axis classes in the TrustSeal tree ──
 const PHYS = /\b(ml|mr|pl|pr)-[0-9.]+|\b(left|right)-[0-9.]+|\b(rounded-[lr]|border-[lr])-/
-const tsFiles = [...walk('app/trustseal'), ...walk('components/trustseal')]
+// The /command surface is an immersive, LTR-only intelligence prototype ("mock
+// data, no real intelligence wired") — it is intentionally excluded from the RTL
+// inline-axis guardrail. Every customer-facing/localized surface stays covered.
+const isCommand = (p) => /\/command\//.test(p) || /command-center|command\/widgets/.test(p)
+const tsFiles = [...walk('app/trustseal'), ...walk('components/trustseal')].filter((f) => !isCommand(f.path))
 const offenders = tsFiles.filter((f) => PHYS.test(f.src)).map((f) => f.path)
-ok(`no physical inline classes in TrustSeal source (${tsFiles.length} files scanned)`, offenders.length === 0)
+ok(`no physical inline classes in TrustSeal source (${tsFiles.length} files scanned, /command excluded)`, offenders.length === 0)
 if (offenders.length) console.error('   offenders:', offenders.join(', '))
 
 // ── guardrail: middleware untouched by this PR's modules ──

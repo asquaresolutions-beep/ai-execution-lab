@@ -5,6 +5,8 @@
 // `refreshKey` changes (e.g. after a successful verify in the claim wizard).
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/components/auth/auth-provider'
+import type { Locale } from '@/lib/trustseal/locales'
+import { t } from '@/lib/trustseal/messages'
 
 interface ClaimRow {
   domain: string
@@ -25,7 +27,9 @@ const STATUS_COLOR: Record<string, string> = {
 
 const fmt = (ms: number | null) => (ms ? new Date(ms).toLocaleDateString() : '—')
 
-export function ClaimsList({ refreshKey = 0 }: { refreshKey?: number }) {
+export function ClaimsList({ refreshKey = 0, locale = 'en' as Locale }: { refreshKey?: number; locale?: Locale }) {
+  const x = (k: string) => t(locale, k)
+  const statusLabel = (s: string) => x(`dash.status${s.charAt(0).toUpperCase()}${s.slice(1)}`)
   const { user } = useAuth()
   const [claims, setClaims] = useState<ClaimRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -48,7 +52,7 @@ export function ClaimsList({ refreshKey = 0 }: { refreshKey?: number }) {
   const [removing, setRemoving] = useState<string | null>(null)
   const remove = useCallback(async (domain: string) => {
     if (!user?.idToken || removing) return
-    if (!window.confirm(`Remove the pending claim for ${domain}? This can't be undone.`)) return
+    if (!window.confirm(x('dash.removeConfirm').replace('{domain}', domain))) return
     setRemoving(domain)
     try {
       const r = await fetch('/api/trustseal/claim/remove', {
@@ -67,17 +71,17 @@ export function ClaimsList({ refreshKey = 0 }: { refreshKey?: number }) {
 
   return (
     <section className="rounded-xl border p-6" style={card}>
-      <h2 className="text-lg font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>Your domains</h2>
+      <h2 className="text-lg font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>{x('dash.domainsTitle')}</h2>
 
-      {error && <p className="mt-2 text-sm" style={{ color: '#f87171' }}>Could not load domains: {error}</p>}
+      {error && <p className="mt-2 text-sm" style={{ color: '#f87171' }}>{x('dash.domainsError')}: {error}</p>}
 
       {claims === null && !error && (
-        <p className="mt-2 text-sm" style={{ color: 'rgb(var(--ts-text-2))' }}>Loading…</p>
+        <p className="mt-2 text-sm" style={{ color: 'rgb(var(--ts-text-2))' }}>{x('dash.loading')}</p>
       )}
 
       {claims !== null && claims.length === 0 && (
         <p className="mt-2 text-sm" style={{ color: 'rgb(var(--ts-text-2))' }}>
-          No domains yet. Verify one above to get started.
+          {x('dash.domainsEmpty')}
         </p>
       )}
 
@@ -88,21 +92,21 @@ export function ClaimsList({ refreshKey = 0 }: { refreshKey?: number }) {
               <div>
                 <p className="text-sm font-medium" style={{ color: 'rgb(var(--ts-text-1))' }}>{c.domain}</p>
                 <p className="text-xs" style={{ color: 'rgb(var(--ts-text-2))' }}>
-                  {c.method.toUpperCase()} · added {fmt(c.createdAt)}{c.verifiedAt ? ` · verified ${fmt(c.verifiedAt)}` : ''}
+                  {c.method.toUpperCase()} · {x('dash.added')} {fmt(c.createdAt)}{c.verifiedAt ? ` · ${x('dash.verifiedOn')} ${fmt(c.verifiedAt)}` : ''}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="rounded-full border px-2 py-0.5 text-xs font-semibold capitalize"
+                <span className="rounded-full border px-2 py-0.5 text-xs font-semibold"
                   style={{ borderColor: 'rgb(var(--ts-border))', color: STATUS_COLOR[c.status] ?? 'rgb(var(--ts-text-2))' }}>
-                  {c.status}
+                  {statusLabel(c.status)}
                 </span>
                 {/* Remove only NON-verified claims; verified ownership has no Remove. */}
                 {c.status !== 'verified' && (
                   <button type="button" disabled={removing === c.domain} onClick={() => void remove(c.domain)}
-                    aria-label={`Remove ${c.domain}`} title="Remove"
+                    aria-label={`${x('dash.remove')} ${c.domain}`} title={x('dash.remove')}
                     className="rounded-md border px-2 py-0.5 text-xs disabled:opacity-50"
                     style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-2))' }}>
-                    {removing === c.domain ? 'Removing…' : 'Remove'}
+                    {removing === c.domain ? x('dash.removing') : x('dash.remove')}
                   </button>
                 )}
               </div>

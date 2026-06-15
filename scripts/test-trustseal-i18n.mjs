@@ -58,11 +58,15 @@ ok('all four locales registered (en/hi/es/ar)', /DICTIONARIES[^=]*=\s*\{ en, hi,
 ok('getMessages falls back to en', /DICTIONARIES\[locale\] \?\? DICTIONARIES\[DEFAULT_LOCALE\]/.test(mi))
 ok('next-intl-compatible note documented', /next-intl/i.test(mi))
 
-// ── wiring ──
+// ── wiring (standalone polish pass) ──
+// The gated TrustSealLocaleHeader was replaced by a standalone TrustSeal nav +
+// footer; the locale switcher now lives inside the nav. Layout renders both and
+// threads the coerced locale (lc) down to them.
 const lay = read('app/trustseal/[locale]/layout.tsx')
-// Switcher moved into the gated TrustSealLocaleHeader (B2.1); layout renders that.
-ok('layout renders the locale header (which holds the switcher)', /<TrustSealLocaleHeader locale=\{locale\}/.test(lay) && /<LocaleSwitcher current=\{locale\}/.test(read('components/trustseal/locale-header.tsx')))
-ok('layout uses t() for a label', /t\(locale, 'common\.product'\)/.test(lay))
+const navc = read('components/trustseal/nav.tsx')
+ok('layout renders standalone TrustSeal nav + footer', /<TrustSealNav locale=\{lc\}/.test(lay) && /<TrustSealFooter locale=\{lc\}/.test(lay))
+ok('nav holds the locale switcher', /<LocaleSwitcher current=\{locale\}/.test(navc))
+ok('nav uses t() for labels (localized)', /t\(locale, 'common\.product'\)/.test(navc) || /x\('common\.product'\)/.test(navc))
 ok('layout still NOT touching <html> (wrapper dir only)', !/<html/.test(code(lay)) && /dir=\{dirFor\(locale\)\}/.test(lay))
 
 // ── guardrail: no middleware touched in this PR ──
