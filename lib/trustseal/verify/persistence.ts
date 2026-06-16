@@ -132,16 +132,20 @@ export interface PublicHistoryRow {
  * trust timeline. Store reads only (no outbound) — safe on the public seal page.
  */
 export async function readVerificationHistory(domain: string): Promise<PublicHistoryRow[]> {
+  // Equality-only query (no orderBy) so it needs NO composite index — sort in
+  // memory. A where+orderBy on different fields would require a (domain, checkedAt)
+  // composite index that isn't provisioned, which would throw on the public page.
   const rows = await getStore().query<HistorySnapshot>(HISTORY, {
     where: [{ field: 'domain', op: '==', value: domain }],
-    orderBy: { field: 'checkedAt', dir: 'asc' },
   })
-  return rows.map((r) => ({
-    checkedAt: r.data.checkedAt,
-    band: r.data.band,
-    score: r.data.score,
-    signals: (r.data.signals || []).map((s) => ({ id: s.id, status: s.status })),
-  }))
+  return rows
+    .map((r) => ({
+      checkedAt: r.data.checkedAt,
+      band: r.data.band,
+      score: r.data.score,
+      signals: (r.data.signals || []).map((s) => ({ id: s.id, status: s.status })),
+    }))
+    .sort((a, b) => a.checkedAt - b.checkedAt) // oldest-first
 }
 
 /**

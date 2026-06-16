@@ -30,7 +30,18 @@ ok('timeline: empty history → single ownership event', buildTimeline(V, []).le
 
 // seal exposes getSealTimeline; page passes it; view renders it
 ok('timeline: getSealTimeline read path (store-only)', /export async function getSealTimeline/.test(read('lib/trustseal/seal.ts')) && /readVerificationHistory/.test(read('lib/trustseal/seal.ts')))
-ok('timeline: persistence exposes public history read', /export async function readVerificationHistory/.test(read('lib/trustseal/verify/persistence.ts')))
+const persistence = read('lib/trustseal/verify/persistence.ts')
+ok('timeline: persistence exposes public history read', /export async function readVerificationHistory/.test(persistence))
+// Regression guard: readVerificationHistory must NOT use where+orderBy (needs a
+// composite index that isn't provisioned → would throw on the public seal page).
+ok('timeline: history read is equality-only (no composite-index orderBy)', (() => {
+  const start = persistence.indexOf('export async function readVerificationHistory')
+  const next = persistence.indexOf('\nexport ', start + 1)
+  const body = persistence.slice(start, next > 0 ? next : undefined)
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '') // strip comments (they mention orderBy)
+  return !/orderBy\s*:/.test(body) && /\.sort\(/.test(body)
+})())
+ok('timeline: getSealTimeline is fail-safe (try/catch → [])', /try \{[\s\S]*readVerificationHistory[\s\S]*\} catch/.test(read('lib/trustseal/seal.ts')))
 const sv = read('components/trustseal/seal-view.tsx')
 ok('timeline: seal page renders timeline section', /timeline\.heading/.test(sv) && /timeline\?: TimelineEvent/.test(sv))
 for (const f of ['en','hi','es','ar']) ok(`timeline: ${f} has timeline namespace`, /\btimeline:\s*\{/.test(read(`lib/trustseal/messages/${f}.ts`)))

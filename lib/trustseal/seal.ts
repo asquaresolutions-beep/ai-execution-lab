@@ -90,10 +90,15 @@ export async function getSealData(rawDomain: string): Promise<SealData | null> {
  * Returns [] when the domain has no verified claim.
  */
 export async function getSealTimeline(rawDomain: string): Promise<TimelineEvent[]> {
-  const n = normalizeDomain(rawDomain)
-  if (!n) return []
-  const claim = await getPublicVerifiedClaim(n.canonical)
-  if (!claim || claim.verifiedAt == null) return []
-  const history = await readVerificationHistory(n.canonical)
-  return buildTimeline(claim.verifiedAt, history)
+  try {
+    const n = normalizeDomain(rawDomain)
+    if (!n) return []
+    const claim = await getPublicVerifiedClaim(n.canonical)
+    if (!claim || claim.verifiedAt == null) return []
+    const history = await readVerificationHistory(n.canonical)
+    return buildTimeline(claim.verifiedAt, history)
+  } catch {
+    // History is a non-critical enhancement — never let it break the public seal page.
+    return []
+  }
 }
