@@ -35,8 +35,10 @@ ok('timeline: persistence exposes public history read', /export async function r
 // Regression guard: readVerificationHistory must NOT use where+orderBy (needs a
 // composite index that isn't provisioned → would throw on the public seal page).
 ok('timeline: history read is equality-only (no composite-index orderBy)', (() => {
-  const m = persistence.match(/export async function readVerificationHistory[\s\S]*?\n}/)
-  return m && !/orderBy/.test(m[0]) && /\.sort\(/.test(m[0])
+  const start = persistence.indexOf('export async function readVerificationHistory')
+  const next = persistence.indexOf('\nexport ', start + 1)
+  const body = persistence.slice(start, next > 0 ? next : undefined)
+  return !/orderBy/.test(body) && /\.sort\(/.test(body)
 })())
 ok('timeline: getSealTimeline is fail-safe (try/catch → [])', /try \{[\s\S]*readVerificationHistory[\s\S]*\} catch/.test(read('lib/trustseal/seal.ts')))
 const sv = read('components/trustseal/seal-view.tsx')
