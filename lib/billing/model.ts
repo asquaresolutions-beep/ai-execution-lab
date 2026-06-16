@@ -92,6 +92,7 @@ export interface PlanFeatures {
   commandCenter: boolean      // /command intelligence surface
   customStyling: boolean      // custom seal styling
   continuousReverify: boolean // priority / continuous re-verification
+  monitoring: boolean         // continuous monitoring + alerts (Business value prop)
 }
 export interface PlanDef {
   plan: BillingPlan
@@ -103,12 +104,12 @@ export const PLANS: Record<BillingPlan, PlanDef> = {
   free: {
     plan: 'free',
     maxDomains: 1,
-    features: { badgeWidget: false, signedBadge: false, analytics: false, commandCenter: false, customStyling: false, continuousReverify: false },
+    features: { badgeWidget: false, signedBadge: false, analytics: false, commandCenter: false, customStyling: false, continuousReverify: false, monitoring: false },
   },
   pro: {
     plan: 'pro',
     maxDomains: 10,
-    features: { badgeWidget: true, signedBadge: true, analytics: true, commandCenter: true, customStyling: true, continuousReverify: true },
+    features: { badgeWidget: true, signedBadge: true, analytics: true, commandCenter: true, customStyling: true, continuousReverify: true, monitoring: true },
   },
 }
 
