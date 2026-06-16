@@ -28,3 +28,5 @@ export async function hasFeature(uid: string, feature: keyof PlanFeatures): Prom
 export const isBadgeEntitled = (accountId: string) => hasFeature(accountId, 'badgeWidget')
 export const isCommandCenterEntitled = (uid: string) => hasFeature(uid, 'commandCenter')
 export const isAnalyticsEntitled = (uid: string) => hasFeature(uid, 'analytics')
+// Continuous monitoring + alerts — the Business-tier value proposition.
+export const isMonitoringEntitled = (uid: string) => hasFeature(uid, 'monitoring')
