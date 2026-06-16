@@ -17,7 +17,7 @@ export const docsContent: LocalizedPage = {
       { heading: 'Billing', paras: ['Free includes one verified domain and a public seal page. Pro adds the embeddable badge, the Command Center, analytics, and multiple domains. Cancelling stops renewal; Pro access continues until the paid period ends.'] },
       { heading: 'FAQ', paras: ['Common questions are answered on the home page FAQ and throughout these docs. For anything else, contact contact@asquaresolution.com.'] },
       { heading: 'Command Center', paras: ['Pro unlocks the Trust Intelligence Command Center — a live operational view of your domains, signals, and verification activity.'] },
-      { heading: 'Public Trust API', paras: ['A public Trust API is live: GET /api/trust/{domain} returns JSON with status, trust level, score, confidence, score breakdown, signals, and the seal URL. It is CORS-enabled for cross-origin use and rate-limited to 60 requests/minute per IP. Programmatic badge management is on the roadmap — contact@asquaresolution.com.'] },
+      { heading: 'Public Trust API', paras: ['A public Trust API is live: GET /api/trust/{domain} returns JSON with status, trust level, score, confidence, score breakdown, signals, and the seal URL. It is CORS-enabled for cross-origin use. Anonymous requests are rate-limited to 60/minute per IP (Free tier); authenticated requests (send your dashboard API key as the x-api-key header, or ?key=) get higher per-plan quotas and monthly usage reporting. Programmatic badge management is on the roadmap — contact@asquaresolution.com.'] },
     ],
   },
   hi: {
@@ -34,7 +34,7 @@ export const docsContent: LocalizedPage = {
       { heading: 'बिलिंग', paras: ['मुफ़्त में एक सत्यापित डोमेन और सार्वजनिक सील पेज मिलता है। Pro में एम्बेड बैज, कमांड सेंटर, एनालिटिक्स और कई डोमेन जुड़ते हैं। रद्द करने पर नवीनीकरण रुकता है; Pro पहुँच भुगतान अवधि तक बनी रहती है।'] },
       { heading: 'सामान्य प्रश्न', paras: ['सामान्य प्रश्न होम पेज के FAQ और इन दस्तावेज़ों में उत्तरित हैं। अन्य किसी बात के लिए contact@asquaresolution.com पर संपर्क करें।'] },
       { heading: 'कमांड सेंटर', paras: ['Pro ट्रस्ट इंटेलिजेंस कमांड सेंटर अनलॉक करता है — आपके डोमेन, संकेतों और सत्यापन गतिविधि का लाइव परिचालन दृश्य।'] },
-      { heading: 'सार्वजनिक ट्रस्ट API', paras: ['एक सार्वजनिक ट्रस्ट API लाइव है: GET /api/trust/{domain} JSON में स्थिति, ट्रस्ट स्तर, स्कोर, विश्वास, स्कोर विवरण, संकेत और सील URL लौटाता है। यह CORS-सक्षम है और प्रति IP 60 अनुरोध/मिनट तक सीमित है। प्रोग्रामेटिक बैज प्रबंधन रोडमैप पर है — contact@asquaresolution.com।'] },
+      { heading: 'सार्वजनिक ट्रस्ट API', paras: ['एक सार्वजनिक ट्रस्ट API लाइव है: GET /api/trust/{domain} JSON में स्थिति, ट्रस्ट स्तर, स्कोर, विश्वास, स्कोर विवरण, संकेत और सील URL लौटाता है। यह CORS-सक्षम है। अनाम अनुरोध प्रति IP 60/मिनट तक सीमित हैं (फ्री टियर); प्रमाणित अनुरोध (अपनी डैशबोर्ड API कुंजी x-api-key हेडर या ?key= के रूप में भेजें) प्रति-योजना उच्च कोटा और मासिक उपयोग रिपोर्टिंग पाते हैं। प्रोग्रामेटिक बैज प्रबंधन रोडमैप पर है — contact@asquaresolution.com।'] },
     ],
   },
   es: {
@@ -51,7 +51,7 @@ export const docsContent: LocalizedPage = {
       { heading: 'Facturación', paras: ['Gratis incluye un dominio verificado y una página de sello pública. Pro añade la insignia integrable, el Centro de Mando, analíticas y varios dominios. Cancelar detiene la renovación; el acceso Pro continúa hasta fin del periodo pagado.'] },
       { heading: 'Preguntas frecuentes', paras: ['Las preguntas comunes se responden en las FAQ de la página de inicio y en esta documentación. Para lo demás, escribe a contact@asquaresolution.com.'] },
       { heading: 'Centro de Mando', paras: ['Pro desbloquea el Centro de Mando de Inteligencia de Confianza — una vista operativa en vivo de tus dominios, señales y actividad de verificación.'] },
-      { heading: 'API pública de confianza', paras: ['Una API pública de confianza está en vivo: GET /api/trust/{domain} devuelve JSON con estado, nivel de confianza, puntaje, confianza, desglose del puntaje, señales y la URL del sello. Tiene CORS habilitado y un límite de 60 solicitudes/minuto por IP. La gestión programática de insignias está en la hoja de ruta — contact@asquaresolution.com.'] },
+      { heading: 'API pública de confianza', paras: ['Una API pública de confianza está en vivo: GET /api/trust/{domain} devuelve JSON con estado, nivel de confianza, puntaje, confianza, desglose del puntaje, señales y la URL del sello. Tiene CORS habilitado. Las solicitudes anónimas están limitadas a 60/minuto por IP (nivel Free); las solicitudes autenticadas (envía tu clave de API del panel como cabecera x-api-key o ?key=) obtienen cuotas por plan más altas e informes de uso mensual. La gestión programática de insignias está en la hoja de ruta — contact@asquaresolution.com.'] },
     ],
   },
   ar: {
@@ -68,7 +68,7 @@ export const docsContent: LocalizedPage = {
       { heading: 'الفوترة', paras: ['المجاني يشمل نطاقًا موثّقًا واحدًا وصفحة ختم عامة. يضيف Pro الشارة القابلة للتضمين ومركز القيادة والتحليلات ونطاقات متعددة. الإلغاء يوقف التجديد؛ ويبقى وصول Pro حتى نهاية المدة المدفوعة.'] },
       { heading: 'الأسئلة الشائعة', paras: ['تُجاب الأسئلة الشائعة في قسم الأسئلة بالصفحة الرئيسية وفي هذه الوثائق. لأي أمر آخر راسل contact@asquaresolution.com.'] },
       { heading: 'مركز القيادة', paras: ['يفتح Pro مركز قيادة ذكاء الثقة — عرض تشغيلي حيّ لنطاقاتك وإشاراتك ونشاط التحقق.'] },
-      { heading: 'واجهة الثقة البرمجية العامة', paras: ['واجهة ثقة برمجية عامة متاحة الآن: GET /api/trust/{domain} تُعيد JSON يتضمّن الحالة ومستوى الثقة والدرجة والثقة وتفصيل الدرجة والإشارات ورابط الختم. تدعم CORS ومحدودة بـ 60 طلبًا/دقيقة لكل IP. إدارة الشارات برمجيًا مدرجة في خارطة الطريق — contact@asquaresolution.com.'] },
+      { heading: 'واجهة الثقة البرمجية العامة', paras: ['واجهة ثقة برمجية عامة متاحة الآن: GET /api/trust/{domain} تُعيد JSON يتضمّن الحالة ومستوى الثقة والدرجة والثقة وتفصيل الدرجة والإشارات ورابط الختم. تدعم CORS. الطلبات المجهولة محدودة بـ 60/دقيقة لكل IP (الطبقة المجانية)؛ أما الطلبات المُوثّقة (أرسل مفتاح API من لوحتك كترويسة x-api-key أو ?key=) فتحصل على حصص أعلى حسب الخطة وتقارير استخدام شهرية. إدارة الشارات برمجيًا مدرجة في خارطة الطريق — contact@asquaresolution.com.'] },
     ],
   },
 }

@@ -102,6 +102,14 @@ export const en = {
     cancelSub: 'Cancel subscription',
     reactivate: 'Reactivate Subscription',
     billingError: 'Could not load billing',
+    apiTitle: 'API access',
+    apiKey: 'Your API key',
+    apiPlan: 'Plan',
+    apiPerMinute: 'Requests / minute',
+    apiMonthly: 'Monthly allowance',
+    apiUsageThisMonth: 'Used this month',
+    apiNotConfigured: 'API keys are not enabled in this environment.',
+    apiHint: 'Send as header x-api-key, or ?key= — see the docs.',
   },
 
   timeline: {

@@ -11,6 +11,10 @@ import { NextResponse } from 'next/server'
 import { getSealData } from '@/lib/trustseal/seal'
 import { bandMeta } from '@/lib/trustseal/band'
 import { rateLimit, clientIp } from '@/lib/trustseal/rate-limit'
+import { apiKeyFromRequest, resolveApiKey } from '@/lib/trustseal/api-key'
+import { quotaFor } from '@/lib/trustseal/quota'
+import { getEntitlement } from '@/lib/billing/entitlement'
+import { recordApiUsage } from '@/lib/trustseal/usage'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,16 +36,31 @@ export async function GET(req: Request, { params }: { params: Promise<{ domain: 
   const { domain } = await params
   const raw = decodeURIComponent(domain || '')
 
-  // ── rate limit (per client IP) ──
-  const rl = rateLimit(`trust-api:${clientIp(req)}`, 60, 60_000)
+  // ── plan-based quota (Part 6) ──
+  // A valid API key resolves to an account whose LIVE plan sets the rate limit and
+  // is metered per month; anonymous callers get the Free tier, limited by IP and
+  // CDN-cached. Keyed responses are not cached (vary per account).
+  const accountId = resolveApiKey(apiKeyFromRequest(req))
+  let plan = 'free'
+  if (accountId) {
+    try { plan = (await getEntitlement(accountId)).plan } catch { plan = 'free' }
+  }
+  const quota = quotaFor(plan)
+  const limitKey = accountId ? `trust-api:acct:${accountId}` : `trust-api:ip:${clientIp(req)}`
+  const rl = rateLimit(limitKey, quota.rpm, 60_000)
   const rlHeaders = {
     'x-ratelimit-limit': String(rl.limit),
     'x-ratelimit-remaining': String(rl.remaining),
     'x-ratelimit-reset': String(Math.ceil(rl.resetAt / 1000)),
+    'x-plan': plan,
   }
+  // Keyed calls are metered + uncacheable; anonymous calls are CDN-cacheable.
+  const cacheHeader = accountId ? 'private, no-store' : CACHE
+  if (accountId) void recordApiUsage(accountId)
+
   if (!rl.ok) {
     return NextResponse.json(
-      { error: 'rate_limited', message: 'Too many requests. Try again shortly.' },
+      { error: 'rate_limited', message: 'Too many requests. Try again shortly.', plan, limit: quota.rpm },
       { status: 429, headers: { ...CORS, ...rlHeaders, 'retry-after': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } },
     )
   }
@@ -50,7 +69,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ domain: 
   if (!data) {
     return NextResponse.json(
       { domain: raw, verified: false, status: 'unverified', trustLevel: null, score: null, sealUrl: null },
-      { status: 200, headers: { ...CORS, ...rlHeaders, 'cache-control': CACHE } },
+      { status: 200, headers: { ...CORS, ...rlHeaders, 'cache-control': cacheHeader } },
     )
   }
 
@@ -71,5 +90,5 @@ export async function GET(req: Request, { params }: { params: Promise<{ domain: 
     breakdown: r?.categories ?? [],
     signals: r?.signals?.map((s) => ({ id: s.id, category: s.category, status: s.status, evidence: s.evidence })) ?? [],
   }
-  return NextResponse.json(body, { status: 200, headers: { ...CORS, ...rlHeaders, 'cache-control': CACHE } })
+  return NextResponse.json(body, { status: 200, headers: { ...CORS, ...rlHeaders, 'cache-control': cacheHeader } })
 }
