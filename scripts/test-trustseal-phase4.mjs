@@ -28,6 +28,16 @@ ok('apikey: mint produces tsk_ key', typeof key === 'string' && key.startsWith('
 ok('apikey: deterministic (same account → same key)', mintApiKey('acct_123') === key)
 ok('apikey: distinct per account', mintApiKey('acct_999') !== key)
 ok('apikey: resolve round-trips to accountId', resolveApiKey(key) === 'acct_123')
+// Round-trip MUST hold for ALL account ids — including realistic 28-char Firebase
+// uids whose base64url payload/sig may contain '-' or '_' (the original separator bug).
+ok('apikey: round-trips for 500 varied account ids (no separator collision)', (() => {
+  for (let i = 0; i < 500; i++) {
+    const id = 'uid' + i + 'Ab9_x-' + (i * 7919).toString(36) + 'ZqWeRtY'
+    const k = mintApiKey(id)
+    if (resolveApiKey(k) !== id) return false
+  }
+  return true
+})())
 ok('apikey: tampered key rejected', resolveApiKey(key.slice(0, -2) + 'xy') === null)
 ok('apikey: garbage rejected', resolveApiKey('tsk_not_valid') === null && resolveApiKey('') === null && resolveApiKey(null) === null)
 ok('apikey: from header x-api-key', apiKeyFromRequest(new Request('https://x/api/trust/a.com', { headers: { 'x-api-key': key } })) === key)
