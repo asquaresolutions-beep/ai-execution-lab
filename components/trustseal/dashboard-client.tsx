@@ -10,6 +10,7 @@ import { AuthButton } from '@/components/auth/auth-button'
 import { ClaimWizard } from '@/components/trustseal/claim-wizard'
 import { ClaimsList } from '@/components/trustseal/claims-list'
 import { BillingSection } from '@/components/trustseal/billing/billing-section'
+import { ApiAccessSection } from '@/components/trustseal/api-access-section'
 import { isLocale, DEFAULT_LOCALE, type Locale } from '@/lib/trustseal/locales'
 import { t } from '@/lib/trustseal/messages'
 
@@ -100,6 +101,7 @@ function DashboardInner({ locale }: { locale: Locale }) {
       <ClaimWizard locale={locale} onVerified={() => setClaimsRefresh((n) => n + 1)} />
       <ClaimsList locale={locale} refreshKey={claimsRefresh} />
       <BillingSection locale={locale} />
+      <ApiAccessSection locale={locale} />
     </div>
   )
 }
