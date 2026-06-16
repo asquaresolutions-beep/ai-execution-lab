@@ -6,7 +6,7 @@
 // newly-verified domain reflects immediately and a not-found is never cached.
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { getSealData } from '@/lib/trustseal/seal'
+import { getSealData, getSealTimeline } from '@/lib/trustseal/seal'
 import { SealView } from '@/components/trustseal/seal-view'
 import { buildTrustMeta } from '@/lib/trustseal/seo'
 
@@ -39,5 +39,6 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
   const { locale, domain } = await params
   const data = await getSealData(decodeURIComponent(domain))
   if (!data) notFound()
-  return <SealView data={data} locale={locale} />
+  const timeline = await getSealTimeline(data.domain)
+  return <SealView data={data} locale={locale} timeline={timeline} />
 }

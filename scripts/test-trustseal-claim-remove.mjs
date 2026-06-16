@@ -29,7 +29,9 @@ ok('route: requires domain', /domain is required/.test(route))
 
 // ── dashboard UI ──────────────────────────────────────────────────
 const ui = read('components/trustseal/claims-list.tsx')
-ok('ui: Remove button ONLY on non-verified claims', /c\.status !== 'verified' &&/.test(ui) && /Remove/.test(ui))
+// Remove gated to non-verified; verified rows instead get a certificate download (Phase 3).
+ok('ui: Remove button ONLY on non-verified claims', /c\.status !== 'verified' &&/.test(ui) && /x\('dash\.remove'\)/.test(ui))
+ok('ui: verified claims show Download Certificate (not Remove)', /c\.status === 'verified' &&/.test(ui) && /cert\.downloadCertificate/.test(ui))
 ok('ui: confirm() guards accidental deletion', /window\.confirm\(/.test(ui))
 ok('ui: calls the remove endpoint with Bearer', /\/api\/trustseal\/claim\/remove/.test(ui) && /Bearer \$\{user\.idToken\}/.test(ui))
 ok('ui: reloads after removal', /await load\(\)/.test(ui))

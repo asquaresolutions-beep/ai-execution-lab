@@ -15,6 +15,7 @@ export function TrustSealFooter({ locale }: { locale: Locale }) {
   const product = [
     { href: L('/pricing'), label: x('nav.pricing') },
     { href: L('/verify'), label: x('nav.verify') },
+    { href: L('/trust-center'), label: x('nav.trustCenter') },
     { href: L('/security'), label: x('nav.security') },
     { href: L('/docs'), label: x('nav.docs') },
     { href: L('/about'), label: x('nav.about') },
