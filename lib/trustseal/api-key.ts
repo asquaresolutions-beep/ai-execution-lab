@@ -19,18 +19,24 @@ const sig = (payload: string) => createHmac('sha256', SECRET).update(`apikey|${p
 
 export function apiKeysConfigured(): boolean { return !!SECRET }
 
-/** Deterministic API key for an account: tsk_<b64(accountId)>_<hmac>. Null if unconfigured. */
+// Separator between payload and signature. MUST be a char outside the base64url
+// alphabet (A-Za-z0-9-_) so it can never collide with payload/sig contents — '.'
+// is safe. (Using '_' was a bug: base64url contains '_', so a sig with '_' split
+// wrong and every real key failed to resolve.)
+const SEP = '.'
+
+/** Deterministic API key for an account: tsk_<b64(accountId)>.<hmac>. Null if unconfigured. */
 export function mintApiKey(accountId: string): string | null {
   if (!SECRET || !accountId) return null
   const payload = b64url(accountId)
-  return `${PREFIX}${payload}_${sig(payload)}`
+  return `${PREFIX}${payload}${SEP}${sig(payload)}`
 }
 
 /** Verify a key and return its accountId, or null if invalid/unconfigured. */
 export function resolveApiKey(key: string | null | undefined): string | null {
   if (!SECRET || !key || !key.startsWith(PREFIX)) return null
   const rest = key.slice(PREFIX.length)
-  const i = rest.lastIndexOf('_')
+  const i = rest.indexOf(SEP) // '.' never appears in base64url payload/sig → unambiguous
   if (i <= 0) return null
   const payload = rest.slice(0, i)
   const provided = rest.slice(i + 1)
