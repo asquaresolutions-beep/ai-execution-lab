@@ -53,6 +53,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ domain: 
     'x-ratelimit-remaining': String(rl.remaining),
     'x-ratelimit-reset': String(Math.ceil(rl.resetAt / 1000)),
     'x-plan': plan,
+    // Cache MUST vary on the API key so a keyed (per-plan, metered, no-store)
+    // request is never served the CDN-cached anonymous Free response, and vice versa.
+    'vary': 'x-api-key',
   }
   // Keyed calls are metered + uncacheable; anonymous calls are CDN-cacheable.
   const cacheHeader = accountId ? 'private, no-store' : CACHE
