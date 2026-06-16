@@ -39,6 +39,9 @@ ok('api: resolves key → live plan → quota', /resolveApiKey/.test(api) && /ge
 ok('api: limits keyed by account (or IP when anon)', /acct:\$\{accountId\}/.test(api) && /ip:\$\{clientIp/.test(api))
 ok('api: meters keyed calls + X-Plan header', /recordApiUsage\(accountId\)/.test(api) && /'x-plan'/.test(api))
 ok('api: keyed responses not CDN-cached (private)', /private, no-store/.test(api))
+// Regression guard: responses MUST vary on x-api-key, else the CDN serves the
+// cached anonymous Free response to keyed callers (wrong quota, no metering).
+ok('api: response varies on x-api-key (CDN correctness)', /'vary':\s*'x-api-key'/.test(api))
 
 // ── authed key endpoint + usage ──
 ok('api: /api/trustseal/api-key endpoint exists (authed)', exists('app/api/trustseal/api-key/route.ts') && /requireUser/.test(read('app/api/trustseal/api-key/route.ts')))
