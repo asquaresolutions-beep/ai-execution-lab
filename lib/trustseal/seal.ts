@@ -11,8 +11,9 @@
 import { getStore } from '@/lib/store/adapter'
 import { normalizeDomain, verifyDocId } from '@/lib/trustseal/verify/normalize'
 import { claimDocId } from '@/lib/trustseal/claim-policy'
-import { readEnvelope } from '@/lib/trustseal/verify/persistence'
+import { readEnvelope, readVerificationHistory } from '@/lib/trustseal/verify/persistence'
 import { publicReport, type PublicReport } from '@/lib/trustseal/verify/policy'
+import { buildTimeline, type TimelineEvent } from '@/lib/trustseal/timeline'
 
 // Mirrors claim.ts CLAIMS — declared locally so this module does NOT import
 // claim.ts (which pulls in node:dns), keeping the seal page provably SSRF-free.
@@ -81,4 +82,18 @@ export async function getSealData(rawDomain: string): Promise<SealData | null> {
     lastCheckedAt: report?.checkedAt ?? claim.lastCheckedAt ?? null,
     report,
   }
+}
+
+/**
+ * Public trust timeline for a verified domain (ownership + reverification /
+ * band / score / SSL / DNS changes), NEWEST-first. Store reads only (SSRF-free).
+ * Returns [] when the domain has no verified claim.
+ */
+export async function getSealTimeline(rawDomain: string): Promise<TimelineEvent[]> {
+  const n = normalizeDomain(rawDomain)
+  if (!n) return []
+  const claim = await getPublicVerifiedClaim(n.canonical)
+  if (!claim || claim.verifiedAt == null) return []
+  const history = await readVerificationHistory(n.canonical)
+  return buildTimeline(claim.verifiedAt, history)
 }

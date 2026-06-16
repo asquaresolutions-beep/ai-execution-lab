@@ -7,6 +7,7 @@ import { t } from '@/lib/trustseal/messages'
 import { formatDate } from '@/lib/trustseal/format'
 import { isLocale, DEFAULT_LOCALE, type Locale } from '@/lib/trustseal/locales'
 import { bandMeta } from '@/lib/trustseal/band'
+import type { TimelineEvent } from '@/lib/trustseal/timeline'
 
 const TRUST_BASE = (process.env.TRUSTSEAL_BASE_URL || 'https://trustseal.asquaresolution.com').replace(/\/$/, '')
 
@@ -14,7 +15,7 @@ const card = { borderColor: 'rgb(var(--ts-border))', backgroundColor: 'rgb(var(-
 
 const humanize = (s: string) => s.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 
-export function SealView({ data, locale }: { data: SealData; locale: string }) {
+export function SealView({ data, locale, timeline = [] }: { data: SealData; locale: string; timeline?: TimelineEvent[] }) {
   const lc: Locale = isLocale(locale) ? locale : DEFAULT_LOCALE
   const x = (k: string) => t(lc, k)
   const fmt = (ms: number | null) => formatDate(lc, ms)
@@ -63,6 +64,12 @@ export function SealView({ data, locale }: { data: SealData; locale: string }) {
       <p className="mt-2 text-sm font-semibold" style={{ color: 'rgb(var(--ts-accent))' }}>
         {x('seal.ownershipVerified')}
       </p>
+
+      <Link href={`/${locale}/certificate/${data.domain}`}
+        className="mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold"
+        style={{ background: 'rgb(var(--ts-accent))', color: '#06121e' }}>
+        ⬇ {x('cert.downloadCertificate')}
+      </Link>
 
       {/* Verification facts */}
       <dl className="mt-6 grid grid-cols-1 gap-px overflow-hidden rounded-xl border sm:grid-cols-2" style={{ borderColor: 'rgb(var(--ts-border))' }}>
@@ -145,6 +152,28 @@ export function SealView({ data, locale }: { data: SealData; locale: string }) {
         </span>
         <p className="mt-3 text-xs" style={{ color: 'rgb(var(--ts-text-2))' }}>{x('seal.embedHint')}</p>
         <code dir="ltr" className="mt-2 block overflow-x-auto rounded-lg border p-3 text-xs" style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-1))', backgroundColor: 'rgb(var(--ts-bg))' }}>{embed}</code>
+      </section>
+
+      {/* Trust history timeline (Part 2) — public verification events, newest-first */}
+      <section className="mt-6 rounded-xl border p-5" style={card}>
+        <h2 className="text-base font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>{x('timeline.heading')}</h2>
+        <ol className="mt-3 space-y-3">
+          {timeline.map((e, i) => {
+            const detail = e.kind === 'band'
+              ? `${e.from ? bandLabel(e.from) : ''} → ${e.to ? bandLabel(e.to) : ''}`
+              : e.from || e.to ? `${e.from ?? ''}${e.from && e.to ? ' → ' : ''}${e.to ?? ''}` : ''
+            return (
+              <li key={i} className="flex items-start gap-3">
+                <span aria-hidden className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: meta.color }} />
+                <div>
+                  <p className="text-sm" style={{ color: 'rgb(var(--ts-text-1))' }}>{x(`timeline.${e.kind}`)}{detail ? <span style={{ color: 'rgb(var(--ts-text-2))' }}> · {detail}</span> : null}</p>
+                  <p className="text-xs" style={{ color: 'rgb(var(--ts-text-3))' }}>{fmt(e.at)}</p>
+                </div>
+              </li>
+            )
+          })}
+          {timeline.length === 0 && <li className="text-sm" style={{ color: 'rgb(var(--ts-text-2))' }}>{x('timeline.empty')}</li>}
+        </ol>
       </section>
 
       <footer className="mt-8 text-xs" style={{ color: 'rgb(var(--ts-text-2))' }}>

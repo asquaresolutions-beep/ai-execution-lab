@@ -119,6 +119,31 @@ export async function pruneHistory(domain: string, now: number): Promise<number>
   return toDelete.length
 }
 
+/** Public history projection for the trust timeline (no caller input, no internals). */
+export interface PublicHistoryRow {
+  checkedAt: number
+  band: VerifyBand
+  score: number
+  signals: { id: string; status: string }[]
+}
+
+/**
+ * Read a domain's verification-history snapshots, OLDEST-first, for the public
+ * trust timeline. Store reads only (no outbound) — safe on the public seal page.
+ */
+export async function readVerificationHistory(domain: string): Promise<PublicHistoryRow[]> {
+  const rows = await getStore().query<HistorySnapshot>(HISTORY, {
+    where: [{ field: 'domain', op: '==', value: domain }],
+    orderBy: { field: 'checkedAt', dir: 'asc' },
+  })
+  return rows.map((r) => ({
+    checkedAt: r.data.checkedAt,
+    band: r.data.band,
+    score: r.data.score,
+    signals: (r.data.signals || []).map((s) => ({ id: s.id, status: s.status })),
+  }))
+}
+
 /**
  * Purge the cached result for a domain (freeze §7 — a negative monitoring event,
  * e.g. a fresh blocklist hit, must invalidate a previously-good cached score).

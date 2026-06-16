@@ -100,7 +100,15 @@ export function ClaimsList({ refreshKey = 0, locale = 'en' as Locale }: { refres
                   style={{ borderColor: 'rgb(var(--ts-border))', color: STATUS_COLOR[c.status] ?? 'rgb(var(--ts-text-2))' }}>
                   {statusLabel(c.status)}
                 </span>
-                {/* Remove only NON-verified claims; verified ownership has no Remove. */}
+                {/* Verified domains can download their certificate; non-verified can be removed. */}
+                {c.status === 'verified' && (
+                  <a href={`/${locale}/certificate/${c.domain}`}
+                    title={x('cert.downloadCertificate')} aria-label={`${x('cert.downloadCertificate')} ${c.domain}`}
+                    className="rounded-md border px-2 py-0.5 text-xs"
+                    style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-accent))' }}>
+                    ⬇ {x('cert.downloadCertificate')}
+                  </a>
+                )}
                 {c.status !== 'verified' && (
                   <button type="button" disabled={removing === c.domain} onClick={() => void remove(c.domain)}
                     aria-label={`${x('dash.remove')} ${c.domain}`} title={x('dash.remove')}

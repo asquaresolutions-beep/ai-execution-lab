@@ -29,6 +29,7 @@ export const en = {
     signIn: 'Sign in',
     signOut: 'Sign out',
     menu: 'Menu',
+    trustCenter: 'Trust Center',
   },
   switcher: { label: 'Language' },
 
@@ -101,6 +102,36 @@ export const en = {
     cancelSub: 'Cancel subscription',
     reactivate: 'Reactivate Subscription',
     billingError: 'Could not load billing',
+  },
+
+  timeline: {
+    heading: 'Trust history',
+    verified: 'Domain ownership verified',
+    reverified: 'Reverified',
+    band: 'Trust level changed',
+    score: 'Trust score changed',
+    ssl: 'SSL status changed',
+    dns: 'DNS records changed',
+    empty: 'No additional history yet.',
+  },
+
+  cert: {
+    title: 'Verification Certificate',
+    subtitle: 'Official proof of domain verification by TrustSeal.',
+    certificateId: 'Certificate ID',
+    domainLabel: 'Domain',
+    trustLevel: 'Trust level',
+    trustScore: 'Trust score',
+    verifiedOn: 'Verification date',
+    reverifyDue: 'Reverification due',
+    verificationUrl: 'Verification URL',
+    fingerprint: 'Certificate fingerprint (SHA-256)',
+    signature: 'Signature',
+    issuedBy: 'Issued by',
+    issuedByBody: 'Issued by TrustSeal, a product of A Square Solutions. Authenticity can be verified at the verification URL or by recomputing the fingerprint over the certificate fields.',
+    scanToVerify: 'Scan to verify',
+    download: 'Download / Print',
+    downloadCertificate: 'Download Certificate',
   },
 
   seal: {
