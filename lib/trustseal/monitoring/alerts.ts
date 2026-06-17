@@ -20,19 +20,20 @@ export interface MonitorAlert {
   from?: string
   to?: string
   createdAt: number
+  read?: boolean // dismissed/seen by the owner (Monitoring UX)
 }
 
-/** Write an alert (idempotent per domain+kind+day so a daily scan won't duplicate). */
+/** Write an alert (idempotent per domain+kind+day so a daily scan won't duplicate). New alerts are unread. */
 export async function writeAlert(a: Omit<MonitorAlert, 'id'>): Promise<void> {
   const day = new Date(a.createdAt).toISOString().slice(0, 10)
   const id = `${a.accountId}__${a.domain}__${a.kind}__${day}`
   try {
-    await getStore().set<MonitorAlert>(ALERTS, id, { ...a, id })
+    await getStore().set<MonitorAlert>(ALERTS, id, { ...a, id, read: false })
   } catch { /* best-effort */ }
 }
 
-/** Recent alerts for an account, NEWEST-first (capped). Equality-only query. */
-export async function readAlerts(accountId: string, limit = 50): Promise<MonitorAlert[]> {
+/** All alerts for an account, NEWEST-first (capped). Equality-only query. */
+export async function readAlerts(accountId: string, limit = 100): Promise<MonitorAlert[]> {
   try {
     const rows = await getStore().query<MonitorAlert>(ALERTS, {
       where: [{ field: 'accountId', op: '==', value: accountId }],
@@ -41,4 +42,20 @@ export async function readAlerts(accountId: string, limit = 50): Promise<Monitor
   } catch {
     return []
   }
+}
+
+/** Mark one alert read (owner-scoped: the id is namespaced by accountId, re-checked). */
+export async function markAlertRead(accountId: string, alertId: string): Promise<boolean> {
+  if (!alertId.startsWith(`${accountId}__`)) return false // ownership guard
+  try { await getStore().update<MonitorAlert>(ALERTS, alertId, { read: true }); return true } catch { return false }
+}
+
+/** Mark every alert for an account read. Returns the count updated. */
+export async function markAllAlertsRead(accountId: string): Promise<number> {
+  try {
+    const rows = await getStore().query<MonitorAlert>(ALERTS, { where: [{ field: 'accountId', op: '==', value: accountId }] })
+    let n = 0
+    for (const r of rows) if (!r.data.read) { await getStore().update<MonitorAlert>(ALERTS, r.id, { read: true }); n++ }
+    return n
+  } catch { return 0 }
 }

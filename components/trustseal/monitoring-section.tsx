@@ -9,8 +9,8 @@ import { useAuth } from '@/components/auth/auth-provider'
 import { type Locale } from '@/lib/trustseal/locales'
 import { formatDate } from '@/lib/trustseal/format'
 
-interface Alert { id: string; domain: string; kind: string; severity: 'info' | 'warning' | 'critical'; detail: string; createdAt: number }
-interface MonInfo { entitled: boolean; alerts: Alert[] }
+interface Alert { id: string; domain: string; kind: string; severity: 'info' | 'warning' | 'critical'; detail: string; createdAt: number; read?: boolean }
+interface MonInfo { entitled: boolean; alerts: Alert[]; unread: number }
 
 const card = { borderColor: 'rgb(var(--ts-border))', backgroundColor: 'rgb(var(--ts-surface-2))' } as const
 const SEV_COLOR: Record<string, string> = { critical: '#f87171', warning: '#fbbf24', info: 'rgb(var(--ts-accent))' }
@@ -18,6 +18,7 @@ const SEV_COLOR: Record<string, string> = { critical: '#f87171', warning: '#fbbf
 type L = {
   title: string; active: string; allClear: string; upsellTitle: string; upsellBody: string
   businessName: string; price: string; features: string[]; cta: string
+  unread: string; markAll: string; dismiss: string; fAll: string; fCritical: string; fWarning: string; fInfo: string
 }
 const LABELS: Record<Locale, L> = {
   en: {
@@ -26,6 +27,7 @@ const LABELS: Record<Locale, L> = {
     businessName: 'Business', price: '₹1,999/mo',
     features: ['Up to 10 domains', 'SSL · DNS · nameserver monitoring', 'Trust-level & score-change alerts', 'Email notifications', 'API access · certificates · trust history'],
     cta: 'Contact sales to upgrade',
+    unread: 'unread', markAll: 'Mark all read', dismiss: 'Dismiss', fAll: 'All', fCritical: 'Critical', fWarning: 'Warning', fInfo: 'Info',
   },
   hi: {
     title: 'मॉनिटरिंग', active: 'सक्रिय', allClear: 'सब ठीक है — कोई अलर्ट नहीं। आपके डोमेन की निरंतर निगरानी हो रही है।',
@@ -33,6 +35,7 @@ const LABELS: Record<Locale, L> = {
     businessName: 'बिज़नेस', price: '₹1,999/माह',
     features: ['10 डोमेन तक', 'SSL · DNS · नेमसर्वर निगरानी', 'ट्रस्ट-स्तर व स्कोर-परिवर्तन अलर्ट', 'ईमेल सूचनाएं', 'API एक्सेस · प्रमाणपत्र · ट्रस्ट इतिहास'],
     cta: 'अपग्रेड के लिए सेल्स से संपर्क करें',
+    unread: 'अपठित', markAll: 'सभी पढ़ा चिह्नित करें', dismiss: 'खारिज करें', fAll: 'सभी', fCritical: 'गंभीर', fWarning: 'चेतावनी', fInfo: 'सूचना',
   },
   es: {
     title: 'Monitoreo', active: 'Activo', allClear: 'Todo en orden — sin alertas. Tus dominios se monitorean continuamente.',
@@ -40,6 +43,7 @@ const LABELS: Record<Locale, L> = {
     businessName: 'Business', price: '₹1,999/mes',
     features: ['Hasta 10 dominios', 'Monitoreo de SSL · DNS · servidores de nombres', 'Alertas de cambios de nivel y puntaje', 'Notificaciones por correo', 'Acceso a API · certificados · historial'],
     cta: 'Contacta a ventas para mejorar',
+    unread: 'sin leer', markAll: 'Marcar todo leído', dismiss: 'Descartar', fAll: 'Todas', fCritical: 'Crítica', fWarning: 'Advertencia', fInfo: 'Info',
   },
   ar: {
     title: 'المراقبة', active: 'مفعّلة', allClear: 'كل شيء على ما يرام — لا تنبيهات. تتم مراقبة نطاقاتك باستمرار.',
@@ -47,6 +51,7 @@ const LABELS: Record<Locale, L> = {
     businessName: 'Business', price: '₹1,999/شهر',
     features: ['حتى 10 نطاقات', 'مراقبة SSL · DNS · خوادم الأسماء', 'تنبيهات تغيّر المستوى والدرجة', 'إشعارات بريدية', 'وصول API · شهادات · سجل الثقة'],
     cta: 'تواصل مع المبيعات للترقية',
+    unread: 'غير مقروء', markAll: 'تحديد الكل كمقروء', dismiss: 'تجاهل', fAll: 'الكل', fCritical: 'حرِج', fWarning: 'تحذير', fInfo: 'معلومة',
   },
 }
 
@@ -54,6 +59,7 @@ export function MonitoringSection({ locale = 'en' as Locale }: { locale?: Locale
   const t = LABELS[locale] ?? LABELS.en
   const { user } = useAuth()
   const [info, setInfo] = useState<MonInfo | null>(null)
+  const [filter, setFilter] = useState<'all' | 'critical' | 'warning' | 'info'>('all')
 
   const load = useCallback(async () => {
     if (!user?.idToken) return
@@ -63,6 +69,14 @@ export function MonitoringSection({ locale = 'en' as Locale }: { locale?: Locale
     } catch { /* non-critical */ }
   }, [user?.idToken])
   useEffect(() => { void load() }, [load])
+
+  const post = useCallback(async (body: Record<string, unknown>) => {
+    if (!user?.idToken) return
+    try {
+      await fetch('/api/trustseal/monitoring', { method: 'POST', headers: { Authorization: `Bearer ${user.idToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      await load()
+    } catch { /* non-critical */ }
+  }, [user?.idToken, load])
 
   if (!user || !info) return null
 
@@ -90,29 +104,58 @@ export function MonitoringSection({ locale = 'en' as Locale }: { locale?: Locale
     )
   }
 
-  // ── Entitled: monitoring status + alerts ──
+  // ── Entitled: monitoring status + alerts (read/dismiss, unread, filter, history) ──
+  const shown = info.alerts.filter((a) => filter === 'all' || a.severity === filter)
+  const FILTERS: { k: typeof filter; label: string }[] = [
+    { k: 'all', label: t.fAll }, { k: 'critical', label: t.fCritical }, { k: 'warning', label: t.fWarning }, { k: 'info', label: t.fInfo },
+  ]
   return (
     <section data-monitoring className="rounded-xl border p-5" style={card}>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>{t.title}</h2>
-        <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399', border: '1px solid #34d399' }}>
-          <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: '#34d399' }} />{t.active}
-        </span>
+        <div className="flex items-center gap-2">
+          {info.unread > 0 && (
+            <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: '#f87171', color: '#fff' }}>{info.unread} {t.unread}</span>
+          )}
+          <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399', border: '1px solid #34d399' }}>
+            <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: '#34d399' }} />{t.active}
+          </span>
+        </div>
       </div>
+
       {info.alerts.length === 0 ? (
         <p className="mt-3 text-sm" style={{ color: 'rgb(var(--ts-text-2))' }}>{t.allClear}</p>
       ) : (
-        <ul className="mt-3 space-y-2">
-          {info.alerts.map((a) => (
-            <li key={a.id} className="flex items-start gap-3">
-              <span aria-hidden className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: SEV_COLOR[a.severity] }} />
-              <div>
-                <p className="text-sm" style={{ color: 'rgb(var(--ts-text-1))' }}><strong>{a.domain}</strong> · {a.detail}</p>
-                <p className="text-xs" style={{ color: 'rgb(var(--ts-text-3))' }}>{formatDate(locale, a.createdAt)}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          {/* filter + mark-all */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {FILTERS.map((f) => (
+              <button key={f.k} type="button" onClick={() => setFilter(f.k)}
+                className="rounded-full border px-2.5 py-0.5 text-xs"
+                style={{ borderColor: 'rgb(var(--ts-border))', color: filter === f.k ? 'rgb(var(--ts-accent))' : 'rgb(var(--ts-text-2))', fontWeight: filter === f.k ? 600 : 400 }}>{f.label}</button>
+            ))}
+            {info.unread > 0 && (
+              <button type="button" onClick={() => void post({ all: true })}
+                className="ms-auto rounded-md border px-2.5 py-0.5 text-xs" style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-2))' }}>{t.markAll}</button>
+            )}
+          </div>
+
+          <ul className="mt-3 space-y-2">
+            {shown.map((a) => (
+              <li key={a.id} className="flex items-start gap-3" style={{ opacity: a.read ? 0.55 : 1 }}>
+                <span aria-hidden className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: SEV_COLOR[a.severity] }} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm" style={{ color: 'rgb(var(--ts-text-1))' }}><strong>{a.domain}</strong> · {a.detail}</p>
+                  <p className="text-xs" style={{ color: 'rgb(var(--ts-text-3))' }}>{formatDate(locale, a.createdAt)}</p>
+                </div>
+                {!a.read && (
+                  <button type="button" onClick={() => void post({ alertId: a.id })} title={t.dismiss} aria-label={t.dismiss}
+                    className="shrink-0 rounded-md border px-2 py-0.5 text-xs" style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-2))' }}>✓</button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </section>
   )
