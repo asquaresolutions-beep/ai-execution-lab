@@ -50,6 +50,7 @@ async function trustSealSitemap(): Promise<MetadataRoute.Sitemap> {
     { sub: '/pricing', priority: 0.9, freq: 'weekly' },
     { sub: '/verify', priority: 0.9, freq: 'weekly' },
     { sub: '/trust-center', priority: 0.8, freq: 'weekly' },
+    { sub: '/customers', priority: 0.7, freq: 'weekly' },
     { sub: '/security', priority: 0.7, freq: 'monthly' },
     { sub: '/docs', priority: 0.7, freq: 'weekly' },
     { sub: '/about', priority: 0.6, freq: 'monthly' },

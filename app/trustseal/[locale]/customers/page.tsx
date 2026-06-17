@@ -1,16 +1,26 @@
-// app/trustseal/[locale]/customers/page.tsx  (asq-trustseal-a1; locale-aware meta a4)
-// Phase-A placeholder. English only, no animation. buildTrustMeta keeps it noindex
-// (index defaults to false) with full hreflang until real content lands (Phase C).
+// app/trustseal/[locale]/customers/page.tsx  (asq-trustseal-conversion)
+// Real Customers page (replaces the placeholder): live verified-domain social proof
+// + use cases + testimonials framework. Indexable; ISR (hourly) so the verified
+// list stays current. Fail-safe: store error → empty list (page still renders).
 import type { Metadata } from 'next'
-import { TrustSealPlaceholder } from '@/components/trustseal/placeholder'
+import { CustomersView } from '@/components/trustseal/home/customers-view'
+import { getRecentVerifications } from '@/lib/trustseal/home-data'
+import { customersContent } from '@/lib/trustseal/content/customers'
 import { buildTrustMeta } from '@/lib/trustseal/seo'
+import { isLocale, DEFAULT_LOCALE, type Locale } from '@/lib/trustseal/locales'
+
+export const revalidate = 3600
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
-  return buildTrustMeta({ locale, subpath: '/customers', title: 'TrustSeal — Customers', description: 'TrustSeal customer stories, case studies and testimonials.' })
+  const lc: Locale = isLocale(locale) ? locale : DEFAULT_LOCALE
+  const c = customersContent[lc]
+  return buildTrustMeta({ locale: lc, subpath: '/customers', title: `${c.title} — TrustSeal`, description: c.subtitle, index: true })
 }
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  return <TrustSealPlaceholder locale={locale} title="Customer stories" subtitle="Case studies and testimonials. (Customers placeholder.)" />
+  const lc: Locale = isLocale(locale) ? locale : DEFAULT_LOCALE
+  const verified = await getRecentVerifications(24)
+  return <CustomersView locale={lc} verified={verified} />
 }

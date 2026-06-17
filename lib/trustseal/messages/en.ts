@@ -101,6 +101,8 @@ export const en = {
     upgradeYearly: 'Upgrade · Yearly (₹4,990)',
     businessBadge: 'BUSINESS',
     upgradeBusiness: 'Go Business · ₹1,999/mo',
+    proToBusinessTitle: 'Need continuous monitoring?',
+    proToBusinessBody: 'Business adds monitoring + alerts, trust history, certificates, and 5× the API quota (3,000 vs 600 req/min).',
     businessContact: 'Business checkout is being enabled — please contact sales to upgrade today.',
     cancelSub: 'Cancel subscription',
     reactivate: 'Reactivate Subscription',
@@ -218,6 +220,9 @@ export const en = {
     heading: 'Real signal, live from the platform',
     domainsVerified: 'Domains verified',
     verificationsRun: 'Verifications run',
+    certificatesIssued: 'Certificates issued',
+    apiRequestsServed: 'API requests served',
+    monitoringChecks: 'Monitoring checks',
   },
 
   how: {
