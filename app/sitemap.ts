@@ -10,6 +10,8 @@ import { buildTagIndex } from '@/lib/tags'
 import { TRACKS } from '@/lib/tracks'
 import { allAuthorSlugs } from '@/lib/authors'
 import { getStore } from '@/lib/store/adapter'
+import { LOCALES, DEFAULT_LOCALE } from '@/lib/trustseal/locales'
+import { LEGAL_SLUGS } from '@/lib/trustseal/legal-content'
 
 const SCAM = 'https://scamcheck.asquaresolution.com'
 const LAB = 'https://lab.asquaresolution.com'
@@ -33,6 +35,37 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 // Never 500 the sitemap if the store is unavailable — degrade to empty.
 async function trustSealSitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
+
+  // Static marketing / authority / legal surfaces — one entry PER LOCALE with full
+  // hreflang alternates (+ x-default → en). These were previously absent from the
+  // sitemap, so the Trust Center / docs / legal content was undiscoverable.
+  const langs = (subpath: string): Record<string, string> => {
+    const m: Record<string, string> = {}
+    for (const l of LOCALES) m[l] = `${TRUST}/${l}${subpath}`
+    m['x-default'] = `${TRUST}/${DEFAULT_LOCALE}${subpath}`
+    return m
+  }
+  const staticPaths: { sub: string; priority: number; freq: 'daily' | 'weekly' | 'monthly' }[] = [
+    { sub: '', priority: 1.0, freq: 'daily' },
+    { sub: '/pricing', priority: 0.9, freq: 'weekly' },
+    { sub: '/verify', priority: 0.9, freq: 'weekly' },
+    { sub: '/trust-center', priority: 0.8, freq: 'weekly' },
+    { sub: '/security', priority: 0.7, freq: 'monthly' },
+    { sub: '/docs', priority: 0.7, freq: 'weekly' },
+    { sub: '/about', priority: 0.6, freq: 'monthly' },
+    ...LEGAL_SLUGS.map((slug) => ({ sub: `/legal/${slug}`, priority: 0.4, freq: 'monthly' as const })),
+  ]
+  const staticEntries: MetadataRoute.Sitemap = staticPaths.flatMap(({ sub, priority, freq }) =>
+    LOCALES.map((l) => ({
+      url: `${TRUST}/${l}${sub}`,
+      lastModified: now,
+      changeFrequency: freq,
+      priority,
+      alternates: { languages: langs(sub) },
+    })),
+  )
+
+  // Public seal pages — one per VERIFIED domain (index:true gate).
   let domains: string[] = []
   try {
     const rows = await getStore().query<{ domain: string; status: string }>('ts_claims', {
@@ -41,14 +74,16 @@ async function trustSealSitemap(): Promise<MetadataRoute.Sitemap> {
     })
     domains = rows.map((r) => r.data.domain).filter(Boolean)
   } catch {
-    /* store unavailable → empty (valid) sitemap rather than a 500 */
+    /* store unavailable → still return the static entries rather than a 500 */
   }
-  return domains.map((d) => ({
+  const sealEntries: MetadataRoute.Sitemap = domains.map((d) => ({
     url: `${TRUST}/en/trust/${d}`,
     lastModified: now,
     changeFrequency: 'weekly' as const,
     priority: 0.7,
   }))
+
+  return [...staticEntries, ...sealEntries]
 }
 
 function scamcheckSitemap(): MetadataRoute.Sitemap {
