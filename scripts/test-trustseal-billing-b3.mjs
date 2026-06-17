@@ -28,7 +28,9 @@ function fakeStore() {
 }
 
 // ── plan catalog ──────────────────────────────────────────────────
-ok('plans: monthly + yearly options', PLAN_OPTIONS.length === 2 && planOption('monthly') && planOption('yearly'))
+// Pro monthly+yearly (default tier) + Business monthly+yearly (Phase: Business billing).
+ok('plans: Pro monthly + yearly options', planOption('monthly') && planOption('yearly') && planOption('monthly').tier === 'pro')
+ok('plans: Business monthly + yearly options', planOption('monthly', 'business') && planOption('yearly', 'business') && planOption('monthly', 'business').tier === 'business')
 eq('plans: monthly price', planOption('monthly').amountPaise, 49900)
 eq('plans: yearly price', planOption('yearly').amountPaise, 499000)
 eq('plans: monthly env var', planOption('monthly').envVar, 'RAZORPAY_PLAN_PRO_MONTHLY')

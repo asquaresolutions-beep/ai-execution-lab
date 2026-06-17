@@ -27,12 +27,20 @@ export async function POST(req: Request) {
   }
 
   let interval = ''
-  try { interval = String(((await req.json()) as { interval?: string })?.interval ?? '') } catch { /* empty */ }
-  const opt = planOption(interval)
+  let plan: 'pro' | 'business' = 'pro'
+  try {
+    const body = (await req.json()) as { interval?: string; plan?: string }
+    interval = String(body?.interval ?? '')
+    if (body?.plan === 'business' || body?.plan === 'pro') plan = body.plan
+  } catch { /* empty */ }
+  const opt = planOption(interval, plan)
   if (!opt) return NextResponse.json({ error: 'invalid_plan' }, { status: 400 })
 
+  // The Razorpay plan id for this tier+interval must be configured (e.g.
+  // RAZORPAY_PLAN_BUSINESS_MONTHLY). Until the Business SKU is set, business
+  // checkout returns plan_not_configured and the UI falls back to contact-sales.
   const planId = process.env[opt.envVar]
-  if (!planId) return NextResponse.json({ error: 'plan_not_configured' }, { status: 503 })
+  if (!planId) return NextResponse.json({ error: 'plan_not_configured', plan, interval }, { status: 503 })
 
   // Server-authoritative guard: a currently-entitled account cannot double-subscribe.
   const ent = await getEntitlement(user.uid)
@@ -47,6 +55,7 @@ export async function POST(req: Request) {
     razorpaySubscriptionId: created.id,
     razorpayPlanId: planId,
     razorpayCustomerId: created.customerId,
+    plan: opt.tier, // 'pro' | 'business' — preserved through all webhook transitions
   })
 
   return NextResponse.json(

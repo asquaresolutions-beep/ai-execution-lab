@@ -84,7 +84,7 @@ const ui = read('components/trustseal/billing/billing-section.tsx')
 // i18n: banner + button labels now flow through t(locale, 'dash.*').
 ok('UI: cancelled-but-active banner', /x\('dash\.cancelledBanner'\)/.test(ui) && /\.replace\('\{date\}'/.test(ui))
 ok('UI: Reactivate button replaces Cancel when scheduled', /x\('dash\.reactivate'\)/.test(ui) && /isCancelScheduled \? \(/.test(ui))
-ok('UI: isCancelScheduled = active && cancelAtCycleEnd', /isCancelScheduled = isPro && \(status\?\.cancelAtCycleEnd/.test(ui))
+ok('UI: isCancelScheduled = active && cancelAtCycleEnd', /isCancelScheduled = isPaid && \(status\?\.cancelAtCycleEnd/.test(ui))
 ok('UI: reactivate calls the endpoint', /\/api\/trustseal\/billing\/reactivate/.test(ui))
 
 console.log(`\nBilling cancellation-lifecycle tests: ${pass} passed, ${fail} failed`)

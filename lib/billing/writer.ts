@@ -16,7 +16,7 @@
 import { applyTransition, pendingSubscription } from './webhook.ts'
 import type { NormalizedSubEvent } from './webhook.ts'
 import { SUBSCRIPTIONS, BILLING_EVENTS } from './model.ts'
-import type { Subscription, BillingEvent, SubscriptionStatus, BillingInterval } from './model.ts'
+import type { Subscription, BillingEvent, SubscriptionStatus, BillingInterval, BillingPlan } from './model.ts'
 import type { DocumentStore } from '@/lib/store/adapter'
 
 /**
@@ -27,7 +27,7 @@ import type { DocumentStore } from '@/lib/store/adapter'
  */
 export async function createPendingSubscription(
   store: DocumentStore,
-  opts: { uid: string; interval: BillingInterval; razorpaySubscriptionId: string; razorpayPlanId: string; razorpayCustomerId?: string | null },
+  opts: { uid: string; interval: BillingInterval; razorpaySubscriptionId: string; razorpayPlanId: string; razorpayCustomerId?: string | null; plan?: BillingPlan },
   now: number = Date.now(),
 ): Promise<Subscription> {
   const sub = pendingSubscription(opts.uid, opts, now)
