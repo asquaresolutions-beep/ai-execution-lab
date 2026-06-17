@@ -13,7 +13,7 @@ import { t } from '@/lib/trustseal/messages'
 import { formatDate } from '@/lib/trustseal/format'
 
 interface BillingStatus {
-  plan: 'free' | 'pro'
+  plan: 'free' | 'pro' | 'business'
   status: string
   active: boolean
   inGrace: boolean
@@ -46,17 +46,19 @@ export function BillingSection({ locale = 'en' as Locale }: { locale?: Locale })
 
   useEffect(() => { void load() }, [load])
 
-  const subscribe = useCallback(async (interval: 'monthly' | 'yearly') => {
+  const subscribe = useCallback(async (interval: 'monthly' | 'yearly', plan: 'pro' | 'business' = 'pro') => {
     if (!user?.idToken || busy) return
     setBusy(true)
     try {
       const r = await fetch('/api/trustseal/billing/subscribe', {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.idToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ interval }),
+        body: JSON.stringify({ interval, plan }),
       })
       const data = (await r.json()) as { shortUrl?: string; error?: string }
       if (data.shortUrl) { window.location.href = data.shortUrl; return } // Razorpay hosted checkout
+      // Business SKU not configured yet → graceful contact-sales message.
+      if (data.error === 'plan_not_configured' && plan === 'business') { setError(x('dash.businessContact')); return }
       setError(data.error || 'subscribe failed')
     } catch {
       setError('subscribe failed')
@@ -96,16 +98,19 @@ export function BillingSection({ locale = 'en' as Locale }: { locale?: Locale })
 
   if (!user) return null
 
-  const isPro = status?.active ?? false
-  const isCancelScheduled = isPro && (status?.cancelAtCycleEnd ?? false)
+  const isPaid = status?.active ?? false
+  const isBusiness = isPaid && status?.plan === 'business'
+  const isPro = isPaid // any active paid tier (kept name for downstream logic)
+  const isCancelScheduled = isPaid && (status?.cancelAtCycleEnd ?? false)
+  const planName = isBusiness ? x('dash.businessBadge') : isPro ? x('pricing.proName') : x('dash.planFree')
 
   return (
     <section data-billing-section className="rounded-xl border p-5" style={card}>
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>{x('dash.billingTitle')}</h2>
         <span className="rounded-full px-2 py-0.5 text-xs font-semibold"
-          style={{ color: isPro ? 'rgb(var(--ts-accent))' : 'rgb(var(--ts-text-2))', border: '1px solid rgb(var(--ts-border))' }}>
-          {isPro ? x('dash.proBadge') : x('dash.freeBadge')}
+          style={{ color: isPaid ? 'rgb(var(--ts-accent))' : 'rgb(var(--ts-text-2))', border: '1px solid rgb(var(--ts-border))' }}>
+          {isBusiness ? x('dash.businessBadge') : isPro ? x('dash.proBadge') : x('dash.freeBadge')}
         </span>
       </div>
 
@@ -120,7 +125,7 @@ export function BillingSection({ locale = 'en' as Locale }: { locale?: Locale })
 
       {/* current plan / status / renewal */}
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>{x('dash.planLabel')}</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{isPro ? `${x('pricing.proName')} · ${status?.interval ?? ''}` : x('dash.planFree')}</dd></div>
+        <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>{x('dash.planLabel')}</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{isPaid ? `${planName} · ${status?.interval ?? ''}` : x('dash.planFree')}</dd></div>
         <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>{x('dash.statusLabel')}</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{isCancelScheduled ? x('dash.cancelledActive') : `${status?.status ?? '—'}${status?.inGrace ? x('dash.graceSuffix') : ''}`}</dd></div>
         <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>{isCancelScheduled ? x('dash.accessUntilLabel') : x('dash.renewsLabel')}</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{fmtDate(status?.currentEnd ?? null)}</dd></div>
         <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>{x('dash.historyLabel')}</dt><dd style={{ color: 'rgb(var(--ts-text-3))' }}>{x('dash.invoicesSoon')}</dd></div>
@@ -136,6 +141,9 @@ export function BillingSection({ locale = 'en' as Locale }: { locale?: Locale })
             <button type="button" disabled={busy} onClick={() => void subscribe('yearly')}
               className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-60"
               style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-1))' }}>{x('dash.upgradeYearly')}</button>
+            <button type="button" disabled={busy} onClick={() => void subscribe('monthly', 'business')}
+              className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
+              style={{ background: '#a78bfa', color: '#06121e' }}>{x('dash.upgradeBusiness')}</button>
           </>
         ) : isCancelScheduled ? (
           <button type="button" disabled={busy} onClick={() => void reactivate()}

@@ -13,7 +13,7 @@
 // byte-identical.
 // ─────────────────────────────────────────────────────────────────
 import { createHmac, timingSafeEqual } from 'node:crypto'
-import type { Subscription, SubscriptionStatus, BillingInterval } from '@/lib/billing/model'
+import type { Subscription, SubscriptionStatus, BillingInterval, BillingPlan } from '@/lib/billing/model'
 
 // Audit action emitted for a status transition (consumed by the route's audit log).
 export type BillingAuditAction =
@@ -142,11 +142,13 @@ export function parseRazorpayEvent(body: unknown, eventId: string): NormalizedSu
 // activation/charge webhook lands. The id == uid (one subscription per account).
 export function pendingSubscription(
   uid: string,
-  opts: { interval: BillingInterval; razorpaySubscriptionId: string; razorpayPlanId: string; razorpayCustomerId?: string | null },
+  opts: { interval: BillingInterval; razorpaySubscriptionId: string; razorpayPlanId: string; razorpayCustomerId?: string | null; plan?: BillingPlan },
   now: number,
 ): Subscription {
   return {
-    id: uid, accountId: uid, plan: 'pro', interval: opts.interval, status: 'created',
+    // Tier is decided by the caller (the /subscribe route knows the PlanOption tier)
+    // and PRESERVED across transitions — keeps this pure module free of value imports.
+    id: uid, accountId: uid, plan: opts.plan ?? 'pro', interval: opts.interval, status: 'created',
     razorpayCustomerId: opts.razorpayCustomerId ?? null,
     razorpaySubscriptionId: opts.razorpaySubscriptionId,
     razorpayPlanId: opts.razorpayPlanId,
@@ -185,7 +187,9 @@ export function applyTransition(current: Subscription | null, event: NormalizedS
   }
 
   const next: Subscription = { ...(current ?? skeleton(uid, event.subscriptionId)) }
-  next.plan = 'pro'
+  // Preserve the tier set at /subscribe time (pro/business); only default to 'pro'
+  // when there's no prior record (e.g. an event seen before the pending write).
+  next.plan = current?.plan ?? 'pro'
   if (event.subscriptionId) next.razorpaySubscriptionId = event.subscriptionId
   if (event.planId) next.razorpayPlanId = event.planId
 

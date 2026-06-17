@@ -18,7 +18,7 @@ export const BILLING_EVENTS = 'ts_billing_events'
 export const INVOICES = 'ts_invoices'
 
 // ── Enumerated string unions (no TS `enum` — keeps type-stripping simple) ──
-export type BillingPlan = 'free' | 'pro'
+export type BillingPlan = 'free' | 'pro' | 'business'
 export type BillingInterval = 'monthly' | 'yearly'
 // Mirrors the Razorpay subscription lifecycle we care about, plus 'none'.
 export type SubscriptionStatus =
@@ -111,6 +111,11 @@ export const PLANS: Record<BillingPlan, PlanDef> = {
     maxDomains: 10,
     features: { badgeWidget: true, signedBadge: true, analytics: true, commandCenter: true, customStyling: true, continuousReverify: true, monitoring: true },
   },
+  business: {
+    plan: 'business',
+    maxDomains: 10,
+    features: { badgeWidget: true, signedBadge: true, analytics: true, commandCenter: true, customStyling: true, continuousReverify: true, monitoring: true },
+  },
 }
 
 // Dunning grace beyond currentEnd for active/past_due — keeps Pro live while
@@ -133,34 +138,40 @@ export function freeEntitlement(status: SubscriptionStatus = 'none'): Entitlemen
   return { plan: 'free', status, active: false, features: { ...p.features }, limits: { maxDomains: p.maxDomains }, currentEnd: null, inGrace: false }
 }
 
-function proEntitlement(status: SubscriptionStatus, currentEnd: number, inGrace: boolean): Entitlement {
-  const p = PLANS.pro
-  return { plan: 'pro', status, active: true, features: { ...p.features }, limits: { maxDomains: p.maxDomains }, currentEnd, inGrace }
+// A paid tier (pro OR business) grants that plan's features/limits. Generalized
+// from the original pro-only helper so Business reuses the exact same lifecycle.
+function paidEntitlement(plan: 'pro' | 'business', status: SubscriptionStatus, currentEnd: number, inGrace: boolean): Entitlement {
+  const p = PLANS[plan]
+  return { plan, status, active: true, features: { ...p.features }, limits: { maxDomains: p.maxDomains }, currentEnd, inGrace }
 }
 
 /**
- * PURE entitlement resolver — the single source of truth for Free vs Pro.
- * Fail-closed: anything missing, malformed, or unrecognized resolves to Free.
+ * PURE entitlement resolver — the single source of truth for Free vs a paid tier
+ * (Pro / Business). Fail-closed: anything missing/malformed/unrecognized → Free.
  *
- *  - active / past_due : Pro through currentEnd, then through currentEnd+GRACE.
- *  - cancelled / halted: Pro only for the remainder of the paid period (no extra
+ *  - active / past_due : paid through currentEnd, then through currentEnd+GRACE.
+ *  - cancelled / halted: paid only for the remainder of the paid period (no extra
  *                        grace) — access ends exactly at currentEnd.
- *  - created / expired / none / non-pro: Free.
+ *  - created / expired / none / free: Free.
+ *
+ * The tier (pro vs business) comes from sub.plan, which the webhook sets from the
+ * Razorpay plan id (see plans.planTierForRazorpayPlanId).
  */
 export function deriveEntitlement(sub: Subscription | null | undefined, now: number): Entitlement {
-  if (!sub || sub.plan !== 'pro') return freeEntitlement(sub?.status ?? 'none')
+  const plan = sub?.plan
+  if (!sub || (plan !== 'pro' && plan !== 'business')) return freeEntitlement(sub?.status ?? 'none')
 
   const end = sub.currentEnd
   if (typeof end !== 'number') return freeEntitlement(sub.status) // fail-closed: no period boundary
 
   const s = sub.status
   if (s === 'active' || s === 'past_due') {
-    if (now <= end) return proEntitlement(s, end, false)
-    if (now <= end + GRACE_MS) return proEntitlement(s, end, true)
+    if (now <= end) return paidEntitlement(plan, s, end, false)
+    if (now <= end + GRACE_MS) return paidEntitlement(plan, s, end, true)
     return freeEntitlement(s)
   }
   if (s === 'cancelled' || s === 'halted') {
-    if (now < end) return proEntitlement(s, end, false) // ride out the paid period only
+    if (now < end) return paidEntitlement(plan, s, end, false) // ride out the paid period only
     return freeEntitlement(s)
   }
   return freeEntitlement(s) // created / expired / none
