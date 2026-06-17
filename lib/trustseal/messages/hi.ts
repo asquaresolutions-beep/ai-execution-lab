@@ -101,6 +101,8 @@ export const hi: Messages = {
     upgradeYearly: 'अपग्रेड · वार्षिक (₹4,990)',
     businessBadge: 'BUSINESS',
     upgradeBusiness: 'बिज़नेस लें · ₹1,999/माह',
+    proToBusinessTitle: 'निरंतर निगरानी चाहिए?',
+    proToBusinessBody: 'बिज़नेस में निगरानी + अलर्ट, ट्रस्ट इतिहास, प्रमाणपत्र और 5× API कोटा (3,000 बनाम 600 अनुरोध/मिनट) मिलता है।',
     businessContact: 'बिज़नेस चेकआउट सक्षम किया जा रहा है — आज अपग्रेड के लिए सेल्स से संपर्क करें।',
     cancelSub: 'सदस्यता रद्द करें',
     reactivate: 'सदस्यता पुनः सक्रिय करें',
@@ -216,6 +218,9 @@ export const hi: Messages = {
     heading: 'प्लेटफ़ॉर्म से वास्तविक, लाइव संकेत',
     domainsVerified: 'सत्यापित डोमेन',
     verificationsRun: 'किए गए सत्यापन',
+    certificatesIssued: 'जारी प्रमाणपत्र',
+    apiRequestsServed: 'API अनुरोध पूर्ण',
+    monitoringChecks: 'निगरानी जाँचें',
   },
   how: {
     heading: 'सत्यापन कैसे काम करता है',

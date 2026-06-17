@@ -101,6 +101,8 @@ export const es: Messages = {
     upgradeYearly: 'Mejorar · Anual (₹4,990)',
     businessBadge: 'BUSINESS',
     upgradeBusiness: 'Pasar a Business · ₹1,999/mes',
+    proToBusinessTitle: '¿Necesitas monitoreo continuo?',
+    proToBusinessBody: 'Business añade monitoreo + alertas, historial de confianza, certificados y 5× la cuota de API (3.000 vs 600 sol/min).',
     businessContact: 'El pago de Business se está habilitando — contacta a ventas para mejorar hoy.',
     cancelSub: 'Cancelar suscripción',
     reactivate: 'Reactivar suscripción',
@@ -216,6 +218,9 @@ export const es: Messages = {
     heading: 'Señal real, en vivo desde la plataforma',
     domainsVerified: 'Dominios verificados',
     verificationsRun: 'Verificaciones realizadas',
+    certificatesIssued: 'Certificados emitidos',
+    apiRequestsServed: 'Solicitudes de API atendidas',
+    monitoringChecks: 'Comprobaciones de monitoreo',
   },
   how: {
     heading: 'Cómo funciona la verificación',

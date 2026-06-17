@@ -45,13 +45,22 @@ function Counter({ to, suffix = '' }: { to: number; suffix?: string }) {
 
 const card: React.CSSProperties = { background: 'linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))', border: '1px solid rgba(120,160,255,0.14)', borderRadius: 16 }
 
+// Conversion-pass copy (API + Certificate homepage sections). Self-contained so the
+// shared message dicts stay lean; en fallback for any unknown locale.
+const CONV: Record<string, { apiH: string; apiS: string; apiCta: string; certH: string; certS: string; certQr: string; certCta: string }> = {
+  en: { apiH: 'A trust API anyone can call', apiS: 'Query any domain’s live trust status as JSON — integrate TrustSeal into your checkout, onboarding, or marketplace.', apiCta: 'Read the API docs', certH: 'Verifiable certificates', certS: 'Every verified domain gets a downloadable certificate with a tamper-evident fingerprint and a QR code.', certQr: 'Scan the QR to confirm the certificate against the live public seal — it can’t be forged.', certCta: 'Verify a domain' },
+  hi: { apiH: 'एक ट्रस्ट API जिसे कोई भी कॉल कर सके', apiS: 'किसी भी डोमेन की लाइव ट्रस्ट स्थिति को JSON के रूप में क्वेरी करें — TrustSeal को अपने चेकआउट, ऑनबोर्डिंग या मार्केटप्लेस में एकीकृत करें।', apiCta: 'API दस्तावेज़ पढ़ें', certH: 'सत्यापन-योग्य प्रमाणपत्र', certS: 'हर सत्यापित डोमेन को छेड़छाड़-रोधी फिंगरप्रिंट और QR कोड वाला डाउनलोड-योग्य प्रमाणपत्र मिलता है।', certQr: 'लाइव सार्वजनिक सील के विरुद्ध प्रमाणपत्र की पुष्टि के लिए QR स्कैन करें — इसे नकली नहीं बनाया जा सकता।', certCta: 'डोमेन सत्यापित करें' },
+  es: { apiH: 'Una API de confianza que cualquiera puede llamar', apiS: 'Consulta el estado de confianza en vivo de cualquier dominio en JSON — integra TrustSeal en tu checkout, onboarding o marketplace.', apiCta: 'Leer la documentación de la API', certH: 'Certificados verificables', certS: 'Cada dominio verificado obtiene un certificado descargable con una huella a prueba de manipulaciones y un código QR.', certQr: 'Escanea el QR para confirmar el certificado contra el sello público en vivo — no se puede falsificar.', certCta: 'Verificar un dominio' },
+  ar: { apiH: 'واجهة ثقة برمجية يمكن لأي أحد استدعاؤها', apiS: 'استعلم عن حالة ثقة أي نطاق مباشرةً بصيغة JSON — ادمج TrustSeal في الدفع أو التهيئة أو السوق لديك.', apiCta: 'اقرأ وثائق الواجهة', certH: 'شهادات قابلة للتحقق', certS: 'يحصل كل نطاق موثّق على شهادة قابلة للتنزيل ببصمة مقاومة للعبث ورمز QR.', certQr: 'امسح رمز QR لتأكيد الشهادة مقابل الختم العام الحيّ — لا يمكن تزويرها.', certCta: 'توثيق نطاق' },
+}
+
 export function TrustSealLanding({ locale = 'en' as Locale, metrics, feed = [] }: { locale?: Locale; metrics?: HomeMetrics; feed?: FeedItem[] }) {
   const x = (k: string) => t(locale, k)
+  const cv = CONV[locale] ?? CONV.en
   const L = (sub: string) => `/${locale}${sub}`
 
   // REAL data (server-provided). Sections hide when there is nothing genuine to show.
-  const m: HomeMetrics = metrics ?? { domainsVerified: 0, verificationsRun: 0 }
-  const showMetrics = m.domainsVerified > 0 || m.verificationsRun > 0
+  const m: HomeMetrics = metrics ?? { domainsVerified: 0, verificationsRun: 0, certificatesIssued: 0, apiRequestsServed: 0, monitoringChecks: 0 }
   const showFeed = feed.length > 0
   const rel = (ms: number) => {
     const diff = Math.max(0, Date.now() - ms)
@@ -59,10 +68,16 @@ export function TrustSealLanding({ locale = 'en' as Locale, metrics, feed = [] }
     const hr = Math.floor(diff / 3_600_000); if (hr > 0) return `${hr}h`
     return `${Math.floor(diff / 60_000)}m`
   }
+  // Social proof: show only stats with a real (>0) value, so a sparse platform
+  // never renders a bare "0".
   const metricCards = [
     { label: x('metrics.domainsVerified'), value: m.domainsVerified },
+    { label: x('metrics.certificatesIssued'), value: m.certificatesIssued },
+    { label: x('metrics.apiRequestsServed'), value: m.apiRequestsServed },
+    { label: x('metrics.monitoringChecks'), value: m.monitoringChecks },
     { label: x('metrics.verificationsRun'), value: m.verificationsRun },
-  ]
+  ].filter((c) => c.value > 0)
+  const showMetrics = metricCards.length > 0
 
   const levels = [
     { key: 'verified', c: BAND.verified }, { key: 'established', c: BAND.established },
@@ -92,7 +107,7 @@ export function TrustSealLanding({ locale = 'en' as Locale, metrics, feed = [] }
       {showMetrics && (
         <section className="px-6 py-14">
           <h2 className={`${H} text-sm font-semibold uppercase tracking-[0.2em]`} style={{ color: C.text2 }}>{x('metrics.heading')}</h2>
-          <div className="mx-auto mt-8 grid max-w-xl grid-cols-2 gap-4">
+          <div className="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-4 sm:grid-cols-3">
             {metricCards.map((mc) => (
               <div key={mc.label} className="p-5 text-center" style={card}>
                 <div className="text-3xl font-bold" style={{ color: C.text1 }}><Counter to={mc.value} /></div>
@@ -133,6 +148,50 @@ export function TrustSealLanding({ locale = 'en' as Locale, metrics, feed = [] }
             </div>
           ))}
         </div>
+      </section>
+
+      {/* 4b — PUBLIC TRUST API (conversion: developer/moat surface) */}
+      <section className="px-6 py-14">
+        <h2 className={`${H} text-2xl font-bold`}>{cv.apiH}</h2>
+        <p className={`${H} mt-2 text-sm`} style={{ color: C.text2 }}>{cv.apiS}</p>
+        <div className="mx-auto mt-8 max-w-2xl overflow-hidden" style={card}>
+          <div className="border-b px-4 py-2 font-mono text-[11px]" style={{ borderColor: 'rgba(56,189,248,0.16)', color: C.cyan }}>GET /api/trust/acme.com</div>
+          <pre dir="ltr" className="overflow-x-auto px-4 py-3 font-mono text-[11px] leading-relaxed" style={{ color: '#cdd8ec' }}>{`{
+  "domain": "acme.com",
+  "verified": true,
+  "trustLevel": "Established",
+  "score": 82,
+  "verificationDate": "2026-05-01T...",
+  "sealUrl": ".../en/trust/acme.com"
+}`}</pre>
+        </div>
+        <div className="mt-6 text-center"><a href={L('/docs')} className="rounded-lg border px-5 py-2.5 text-sm font-semibold" style={{ borderColor: 'rgba(120,160,255,0.3)', color: C.cyan }}>{cv.apiCta}</a></div>
+      </section>
+
+      {/* 4c — VERIFIABLE CERTIFICATES (conversion: trust artifact + QR) */}
+      <section className="px-6 py-14">
+        <h2 className={`${H} text-2xl font-bold`}>{cv.certH}</h2>
+        <p className={`${H} mt-2 text-sm`} style={{ color: C.text2 }}>{cv.certS}</p>
+        <div className="mx-auto mt-8 grid max-w-2xl items-center gap-5 sm:grid-cols-[1fr_auto]" style={{ ...card, padding: 20 }}>
+          <div>
+            <div className="flex items-center gap-2">
+              <span aria-hidden className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-sm font-bold" style={{ background: BAND.established, color: '#06121e' }}>★</span>
+              <span className="text-sm font-semibold">TrustSeal · Verification Certificate</span>
+            </div>
+            <dl className="mt-3 space-y-1 text-xs" style={{ color: C.text2 }}>
+              <div>Domain · <span style={{ color: C.text1 }}>acme.com</span></div>
+              <div>Trust level · <span style={{ color: BAND.established }}>Established</span></div>
+              <div className="break-all">Fingerprint · <span className="font-mono">773c107f…51c450c80</span></div>
+            </dl>
+            <p className="mt-3 text-xs" style={{ color: C.text3 }}>{cv.certQr}</p>
+          </div>
+          <div aria-hidden className="mx-auto grid h-24 w-24 grid-cols-5 grid-rows-5 gap-0.5 rounded-lg p-2" style={{ background: '#fff' }}>
+            {Array.from({ length: 25 }).map((_, i) => (
+              <span key={i} style={{ background: [0,1,2,4,5,6,10,12,14,18,20,21,22,24].includes(i) ? '#0b0f17' : '#fff' }} />
+            ))}
+          </div>
+        </div>
+        <div className="mt-6 text-center"><a href={L('/verify')} className="rounded-lg px-5 py-2.5 text-sm font-semibold" style={{ background: C.cyan, color: '#06121e' }}>{cv.certCta}</a></div>
       </section>
 
       {/* 5 — RECENT VERIFICATION FEED (real verified domains; hidden when none) */}

@@ -123,6 +123,19 @@ export function BillingSection({ locale = 'en' as Locale }: { locale?: Locale })
         </p>
       )}
 
+      {/* Pro → Business upsell (active Pro, not yet Business). Self-serve plan-swap
+          isn't wired, so this routes to sales — but surfaces the upgrade value. */}
+      {isPro && !isBusiness && (
+        <div className="mt-3 rounded-lg border px-3 py-3" style={{ borderColor: '#a78bfa', background: 'rgba(167,139,250,0.08)' }}>
+          <p className="text-sm font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>{x('dash.proToBusinessTitle')}</p>
+          <p className="mt-1 text-xs" style={{ color: 'rgb(var(--ts-text-2))' }}>{x('dash.proToBusinessBody')}</p>
+          <a href="mailto:contact@asquaresolution.com?subject=TrustSeal%20Business%20upgrade"
+            className="mt-2 inline-flex rounded-lg px-3 py-1.5 text-xs font-semibold" style={{ background: '#a78bfa', color: '#06121e' }}>
+            {x('dash.upgradeBusiness')}
+          </a>
+        </div>
+      )}
+
       {/* current plan / status / renewal */}
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <div><dt style={{ color: 'rgb(var(--ts-text-2))' }}>{x('dash.planLabel')}</dt><dd style={{ color: 'rgb(var(--ts-text-1))' }}>{isPaid ? `${planName} · ${status?.interval ?? ''}` : x('dash.planFree')}</dd></div>

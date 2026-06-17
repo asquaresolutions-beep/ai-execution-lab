@@ -101,6 +101,8 @@ export const ar: Messages = {
     upgradeYearly: 'ترقية · سنوي (₹4,990)',
     businessBadge: 'BUSINESS',
     upgradeBusiness: 'الانتقال إلى Business · ₹1,999/شهر',
+    proToBusinessTitle: 'تحتاج إلى مراقبة مستمرة؟',
+    proToBusinessBody: 'تضيف Business المراقبة والتنبيهات وسجل الثقة والشهادات و5 أضعاف حصة الواجهة (3,000 مقابل 600 طلب/دقيقة).',
     businessContact: 'يجري تفعيل دفع Business — تواصل مع المبيعات للترقية اليوم.',
     cancelSub: 'إلغاء الاشتراك',
     reactivate: 'إعادة تفعيل الاشتراك',
@@ -216,6 +218,9 @@ export const ar: Messages = {
     heading: 'إشارة حقيقية ومباشرة من المنصة',
     domainsVerified: 'نطاقات تم التحقق منها',
     verificationsRun: 'عمليات التحقق المنفذة',
+    certificatesIssued: 'الشهادات الصادرة',
+    apiRequestsServed: 'طلبات الواجهة المُخدومة',
+    monitoringChecks: 'فحوصات المراقبة',
   },
   how: {
     heading: 'كيف يعمل التحقق',
