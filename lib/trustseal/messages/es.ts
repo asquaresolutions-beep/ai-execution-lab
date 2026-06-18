@@ -115,6 +115,11 @@ export const es: Messages = {
     apiUsageThisMonth: 'Usado este mes',
     apiNotConfigured: 'Las claves de API no están habilitadas en este entorno.',
     apiHint: 'Envía como cabecera x-api-key o ?key= — consulta la documentación.',
+    apiRotate: 'Regenerar',
+    apiRevoke: 'Revocar',
+    apiRevoked: 'Clave revocada. Regenera para obtener una nueva.',
+    apiRotateConfirm: '¿Regenerar tu clave de API? La clave actual deja de funcionar de inmediato.',
+    apiRevokeConfirm: '¿Revocar tu clave de API? Las integraciones existentes dejarán de funcionar.',
   },
   timeline: {
     heading: 'Historial de confianza',

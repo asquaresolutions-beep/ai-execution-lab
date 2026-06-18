@@ -115,6 +115,11 @@ export const en = {
     apiUsageThisMonth: 'Used this month',
     apiNotConfigured: 'API keys are not enabled in this environment.',
     apiHint: 'Send as header x-api-key, or ?key= — see the docs.',
+    apiRotate: 'Regenerate',
+    apiRevoke: 'Revoke',
+    apiRevoked: 'Key revoked. Regenerate to get a new one.',
+    apiRotateConfirm: 'Regenerate your API key? The current key stops working immediately.',
+    apiRevokeConfirm: 'Revoke your API key? Existing integrations will stop working.',
   },
 
   timeline: {

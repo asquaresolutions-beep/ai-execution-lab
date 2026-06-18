@@ -115,6 +115,11 @@ export const ar: Messages = {
     apiUsageThisMonth: 'المُستخدَم هذا الشهر',
     apiNotConfigured: 'مفاتيح API غير مفعّلة في هذه البيئة.',
     apiHint: 'أرسله كترويسة x-api-key أو ?key= — راجع التوثيق.',
+    apiRotate: 'إعادة التوليد',
+    apiRevoke: 'إلغاء',
+    apiRevoked: 'تم إلغاء المفتاح. أعد التوليد للحصول على واحد جديد.',
+    apiRotateConfirm: 'إعادة توليد مفتاح API؟ سيتوقف المفتاح الحالي فورًا.',
+    apiRevokeConfirm: 'إلغاء مفتاح API؟ ستتوقف عمليات الدمج الحالية.',
   },
   timeline: {
     heading: 'سجل الثقة',

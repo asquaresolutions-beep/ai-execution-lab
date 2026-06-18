@@ -101,6 +101,28 @@ export async function createSubscription(opts: { planId: string; uid: string; to
 }
 
 /**
+ * POST /subscriptions/:id — UPDATE an existing subscription's plan (in-place
+ * upgrade, e.g. Pro → Business) with no cancel/rebuy. schedule_change_at='now'
+ * applies immediately. Server-authoritative: local state changes only after the
+ * caller persists + the subscription.updated webhook reconciles. False on failure.
+ */
+export async function updateSubscriptionPlan(subscriptionId: string, planId: string): Promise<boolean> {
+  const auth = authHeader()
+  if (!auth || !subscriptionId || !planId) return false
+  try {
+    const res = await fetch(`${API_BASE}/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+      method: 'PATCH',
+      headers: { Authorization: auth, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_id: planId, schedule_change_at: 'now', customer_notify: 1 }),
+      cache: 'no-store',
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+/**
  * POST /subscriptions/:id/cancel — request cancellation (default: at cycle end).
  * Server-authoritative: the local state changes only when the resulting
  * subscription.cancelled webhook is processed. Returns false on any failure.
