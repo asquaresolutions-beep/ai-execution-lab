@@ -27,5 +27,32 @@ ok('mon: filter applied to shown alerts', /a\.severity === filter/.test(sec))
 ok('mon: read alerts dimmed (history retained, not hidden)', /a\.read \? 0\.55 : 1/.test(sec))
 for (const f of ['en','hi','es','ar']) ok(`mon: ${f} has UX labels`, /unread:/.test(read('components/trustseal/monitoring-section.tsx')))
 
+// ── Part 1.2: API key store / rotate / revoke ──
+const exists = (p) => fs.existsSync(new URL('../' + p, import.meta.url))
+const ks = read('lib/trustseal/api-key-store.ts')
+ok('apikey: store module (getApiKey/rotate/revoke/resolveAsync)', /export async function getApiKey/.test(ks) && /export async function rotateApiKey/.test(ks) && /export async function revokeApiKey/.test(ks) && /export async function resolveApiKeyAsync/.test(ks))
+ok('apikey: random keys (not deterministic) + legacy fallback (no regression)', /randomBytes/.test(ks) && /resolveLegacyHmacKey/.test(ks))
+ok('apikey: pure api-key.ts unchanged (no @/ value import → tests safe)', !/from '@\/lib\/store/.test(read('lib/trustseal/api-key.ts')))
+const ake = read('app/api/trustseal/api-key/route.ts')
+ok('apikey: endpoint GET stored key + POST rotate/revoke', /getApiKey/.test(ake) && /rotateApiKey/.test(ake) && /revokeApiKey/.test(ake) && /export async function POST/.test(ake))
+ok('apikey: public API resolves via async store-backed resolver', /resolveApiKeyAsync/.test(read('app/api/trust/[domain]/route.ts')))
+const aas = read('components/trustseal/api-access-section.tsx')
+ok('apikey: dashboard Regenerate + Revoke controls (with confirm)', /dash\.apiRotate/.test(aas) && /dash\.apiRevoke/.test(aas) && /window\.confirm/.test(aas))
+
+// ── Part 1.3: store-backed rate limiter ──
+const rls = read('lib/trustseal/rate-limit-store.ts')
+ok('ratelimit: store-backed global limiter (increment, fail-open)', /export async function storeRateLimit/.test(rls) && /increment\(/.test(rls))
+ok('ratelimit: keyed requests use the store-backed limiter', /await storeRateLimit\(`trust-api:acct/.test(read('app/api/trust/[domain]/route.ts')))
+
+// ── Part 2.1: Pro → Business in-place upgrade ──
+ok('upgrade: razorpay updateSubscriptionPlan (PATCH, schedule now)', /export async function updateSubscriptionPlan/.test(read('lib/billing/razorpay.ts')) && /schedule_change_at: 'now'/.test(read('lib/billing/razorpay.ts')))
+const up = read('app/api/trustseal/billing/upgrade/route.ts')
+ok('upgrade: endpoint requires active Pro, no cancel/rebuy', exists('app/api/trustseal/billing/upgrade/route.ts') && /ent\.plan !== 'pro'/.test(up) && /updateSubscriptionPlan/.test(up))
+ok('upgrade: persists plan=business (entitlement transitions safely)', /plan: 'business'/.test(up))
+ok('upgrade: dashboard upgrade button calls /upgrade (not mailto)', /upgradeToBusiness/.test(read('components/trustseal/billing/billing-section.tsx')) && /\/api\/trustseal\/billing\/upgrade/.test(read('components/trustseal/billing/billing-section.tsx')))
+
+// ── Part 2.2: Business yearly (code-ready) ──
+ok('yearly: Business yearly plan option + tier mapping ready', /tier: 'business', interval: 'yearly'/.test(read('lib/billing/plans.ts')) && /RAZORPAY_PLAN_BUSINESS_YEARLY/.test(read('lib/billing/plans.ts')))
+
 console.log(`\nHardening tests: ${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

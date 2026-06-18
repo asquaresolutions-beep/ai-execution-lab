@@ -11,7 +11,9 @@ import { NextResponse } from 'next/server'
 import { getSealData } from '@/lib/trustseal/seal'
 import { bandMeta } from '@/lib/trustseal/band'
 import { rateLimit, clientIp } from '@/lib/trustseal/rate-limit'
-import { apiKeyFromRequest, resolveApiKey } from '@/lib/trustseal/api-key'
+import { storeRateLimit } from '@/lib/trustseal/rate-limit-store'
+import { apiKeyFromRequest } from '@/lib/trustseal/api-key'
+import { resolveApiKeyAsync } from '@/lib/trustseal/api-key-store'
 import { quotaFor } from '@/lib/trustseal/quota'
 import { getEntitlement } from '@/lib/billing/entitlement'
 import { recordApiUsage } from '@/lib/trustseal/usage'
@@ -40,14 +42,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ domain: 
   // A valid API key resolves to an account whose LIVE plan sets the rate limit and
   // is metered per month; anonymous callers get the Free tier, limited by IP and
   // CDN-cached. Keyed responses are not cached (vary per account).
-  const accountId = resolveApiKey(apiKeyFromRequest(req))
+  const accountId = await resolveApiKeyAsync(apiKeyFromRequest(req))
   let plan = 'free'
   if (accountId) {
     try { plan = (await getEntitlement(accountId)).plan } catch { plan = 'free' }
   }
   const quota = quotaFor(plan)
-  const limitKey = accountId ? `trust-api:acct:${accountId}` : `trust-api:ip:${clientIp(req)}`
-  const rl = rateLimit(limitKey, quota.rpm, 60_000)
+  // Keyed (authenticated) requests use the GLOBAL store-backed limiter (holds
+  // across instances); anonymous requests use the in-memory limiter (CDN-cached).
+  const rl = accountId
+    ? await storeRateLimit(`trust-api:acct:${accountId}`, quota.rpm, 60_000)
+    : rateLimit(`trust-api:ip:${clientIp(req)}`, quota.rpm, 60_000)
   const rlHeaders = {
     'x-ratelimit-limit': String(rl.limit),
     'x-ratelimit-remaining': String(rl.remaining),

@@ -81,6 +81,20 @@ export function BillingSection({ locale = 'en' as Locale }: { locale?: Locale })
     }
   }, [user?.idToken, busy, load])
 
+  // In-place Pro → Business upgrade (no cancel/rebuy).
+  const upgradeToBusiness = useCallback(async () => {
+    if (!user?.idToken || busy) return
+    setBusy(true)
+    try {
+      const r = await fetch('/api/trustseal/billing/upgrade', { method: 'POST', headers: { Authorization: `Bearer ${user.idToken}` } })
+      const d = (await r.json()) as { ok?: boolean; error?: string }
+      if (d.ok) { await load(); return }
+      setError(d.error === 'plan_not_configured' ? x('dash.businessContact') : (d.error || 'upgrade failed'))
+    } catch {
+      setError('upgrade failed')
+    } finally { setBusy(false) }
+  }, [user?.idToken, busy, load])
+
   const reactivate = useCallback(async () => {
     if (!user?.idToken || busy) return
     setBusy(true)
@@ -129,10 +143,10 @@ export function BillingSection({ locale = 'en' as Locale }: { locale?: Locale })
         <div className="mt-3 rounded-lg border px-3 py-3" style={{ borderColor: '#a78bfa', background: 'rgba(167,139,250,0.08)' }}>
           <p className="text-sm font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>{x('dash.proToBusinessTitle')}</p>
           <p className="mt-1 text-xs" style={{ color: 'rgb(var(--ts-text-2))' }}>{x('dash.proToBusinessBody')}</p>
-          <a href="mailto:contact@asquaresolution.com?subject=TrustSeal%20Business%20upgrade"
-            className="mt-2 inline-flex rounded-lg px-3 py-1.5 text-xs font-semibold" style={{ background: '#a78bfa', color: '#06121e' }}>
+          <button type="button" disabled={busy} onClick={() => void upgradeToBusiness()}
+            className="mt-2 inline-flex rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-60" style={{ background: '#a78bfa', color: '#06121e' }}>
             {x('dash.upgradeBusiness')}
-          </a>
+          </button>
         </div>
       )}
 

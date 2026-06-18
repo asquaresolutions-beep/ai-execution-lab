@@ -115,6 +115,11 @@ export const hi: Messages = {
     apiUsageThisMonth: 'इस माह उपयोग',
     apiNotConfigured: 'इस वातावरण में API कुंजियाँ सक्षम नहीं हैं।',
     apiHint: 'हेडर x-api-key या ?key= के रूप में भेजें — दस्तावेज़ देखें।',
+    apiRotate: 'पुनः बनाएँ',
+    apiRevoke: 'रद्द करें',
+    apiRevoked: 'कुंजी रद्द। नई पाने के लिए पुनः बनाएँ।',
+    apiRotateConfirm: 'अपनी API कुंजी पुनः बनाएँ? वर्तमान कुंजी तुरंत काम करना बंद कर देगी।',
+    apiRevokeConfirm: 'अपनी API कुंजी रद्द करें? मौजूदा एकीकरण काम करना बंद कर देंगे।',
   },
   timeline: {
     heading: 'ट्रस्ट इतिहास',
