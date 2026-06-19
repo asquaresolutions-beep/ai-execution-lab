@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { useAuth } from '@/components/auth/auth-provider'
 import type { Locale } from '@/lib/trustseal/locales'
 import { t } from '@/lib/trustseal/messages'
+import { trackEvent } from '@/lib/track-event'
 
 type Phase = 'idle' | 'pending' | 'verifying' | 'verified' | 'error'
 interface DnsRecord { name: string; type: string; value: string }
@@ -146,7 +147,7 @@ export function ClaimWizard({ onVerified, locale = 'en' as Locale }: { onVerifie
           )}
 
           <div className="mt-4 flex flex-wrap gap-3">
-            <button onClick={() => void verify()} disabled={busy} className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50" style={{ backgroundColor: okColor, color: '#fff' }}>
+            <button onClick={() => { trackEvent('verify_domain', { domain }); void verify() }} disabled={busy} className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50" style={{ backgroundColor: okColor, color: '#fff' }}>
               {phase === 'verifying' ? x('dash.verifying') : x('dash.verifyOwnership')}
             </button>
             <button onClick={() => void checkStatus()} disabled={busy} className="rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50" style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-1))' }}>

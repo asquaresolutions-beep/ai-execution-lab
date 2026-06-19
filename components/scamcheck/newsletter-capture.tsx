@@ -6,6 +6,7 @@
 // dataLayer analytics. Reuses card/input/button styles → no new design system.
 // Rollback: delete this file + its <NewsletterCapture/> usages (asq-newsletter-v1).
 import { useEffect, useState, type FormEvent } from 'react'
+import { trackEvent } from '@/lib/track-event'
 
 const COPY: Record<string, { h: string; p: string; btn: string }> = {
   scam: { h: '⚠️ Scams like this are spreading fast.', p: 'Get a free weekly heads-up so you spot the next one before it costs you.', btn: 'Send me scam alerts' },
@@ -40,7 +41,8 @@ export function NewsletterCapture({ verdict, source = 'scan-result', className =
   const v = variant(verdict)
 
   const track = (event: string, extra: Record<string, unknown> = {}) => {
-    try { (window as unknown as { dataLayer?: unknown[] }).dataLayer?.push({ event, source, verdict, ...extra }) } catch { /* noop */ }
+    // gtag('event') so it reaches GA4 (no GTM container here); helper also keeps dataLayer + Plausible.
+    trackEvent(event, { source, verdict, ...extra })
   }
   useEffect(() => {
     try { if (localStorage.getItem(SUB_KEY) === '1') { setSubscribed(true); return } } catch { /* noop */ }

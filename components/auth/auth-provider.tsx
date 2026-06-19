@@ -7,6 +7,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { authConfigured, signInEmail, signUpEmail, signInWithGoogleIdToken, refreshSession, type AuthUser } from '@/lib/auth/firebase'
+import { trackEvent } from '@/lib/track-event'
 
 interface AuthCtx {
   user: AuthUser | null
@@ -60,8 +61,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; clearTimeout(t) }
   }, [user, persist])
 
-  const doEmailIn = useCallback(async (email: string, pw: string) => { persist(await signInEmail(email, pw)) }, [persist])
-  const doEmailUp = useCallback(async (email: string, pw: string) => { persist(await signUpEmail(email, pw)) }, [persist])
+  const doEmailIn = useCallback(async (email: string, pw: string) => { persist(await signInEmail(email, pw)); trackEvent('login', { method: 'email' }) }, [persist])
+  const doEmailUp = useCallback(async (email: string, pw: string) => { persist(await signUpEmail(email, pw)); trackEvent('sign_up', { method: 'email' }) }, [persist])
 
   const doGoogle = useCallback(async () => {
     if (!GOOGLE_CLIENT_ID) throw new Error('Google login not configured (NEXT_PUBLIC_GOOGLE_CLIENT_ID missing).')
@@ -71,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       gid.initialize({ client_id: GOOGLE_CLIENT_ID, callback: (resp: { credential?: string }) => resp.credential ? resolve(resp.credential) : reject(new Error('No Google credential')) })
       gid.prompt()
     })
-    persist(await signInWithGoogleIdToken(credential))
+    persist(await signInWithGoogleIdToken(credential)); trackEvent('login', { method: 'google' })
   }, [persist])
 
   const value = useMemo<AuthCtx>(() => ({
