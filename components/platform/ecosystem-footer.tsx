@@ -28,7 +28,7 @@ const ECOSYSTEM_LINKS = [
   {
     label:    'TrustSeal',
     href:     'https://trustseal.asquaresolution.com',
-    desc:     'AI fact-checking for publishers',
+    desc:     'Trust Intelligence — domain & business verification',
     external: true,
     accent:   'text-blue-400',
   },
