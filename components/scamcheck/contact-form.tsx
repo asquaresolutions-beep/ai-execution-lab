@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { trackEvent } from '@/lib/track-event'
 
 export function ContactForm() {
   const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [message, setMessage] = useState(''); const [kind, setKind] = useState('general')
@@ -19,7 +20,7 @@ export function ContactForm() {
       const r = await fetch('/api/contact', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, email, message, kind, hp, elapsedMs: Date.now() - startedAt }) })
       const d = await r.json()
       if (!r.ok) { setState('error'); setMsg(d.detail || d.error || 'Could not send.'); return }
-      setState('done'); setMsg(d.detail || 'Thanks — we received your message.'); setMessage('')
+      setState('done'); setMsg(d.detail || 'Thanks — we received your message.'); setMessage(''); trackEvent('contact_submit', { kind })
     } catch { setState('error'); setMsg('Network error.') }
   }
 
