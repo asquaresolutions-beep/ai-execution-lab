@@ -60,12 +60,15 @@ const nextConfig = {
     // base-uri/form-action self).
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://checkout.razorpay.com https://*.razorpay.com https://*.googletagmanager.com https://*.google-analytics.com https://plausible.io https://va.vercel-scripts.com https://*.vercel-insights.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      // accounts.google.com is REQUIRED for Google Identity Services (the
+      // /gsi/client sign-in script + its One Tap iframe + status calls). Omitting
+      // it (initial CSP) blocked the GIS script → Google sign-in never became ready.
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://www.gstatic.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://checkout.razorpay.com https://*.razorpay.com https://*.googletagmanager.com https://*.google-analytics.com https://plausible.io https://va.vercel-scripts.com https://*.vercel-insights.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://*.razorpay.com https://api.razorpay.com https://*.google-analytics.com https://*.googlesyndication.com https://plausible.io https://*.vercel-insights.com",
-      "frame-src 'self' https://*.firebaseapp.com https://*.razorpay.com https://*.google.com https://googleads.g.doubleclick.net https://*.googlesyndication.com",
+      "connect-src 'self' https://accounts.google.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://*.razorpay.com https://api.razorpay.com https://*.google-analytics.com https://*.googlesyndication.com https://plausible.io https://*.vercel-insights.com",
+      "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://*.razorpay.com https://*.google.com https://googleads.g.doubleclick.net https://*.googlesyndication.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
