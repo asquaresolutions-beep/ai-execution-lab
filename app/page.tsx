@@ -293,7 +293,7 @@ export default function HomePage() {
               name: 'TrustSeal',
               tag: 'Product',
               href: 'https://trustseal.asquaresolution.com',
-              desc: 'AI fact-checking for publishers. Verifies claims against real-time sources. Firebase + Gemini. Built and documented in this Lab.',
+              desc: 'Trust Intelligence Platform for domain & business verification — trust scores, certificates and a Trust API. Built and documented in this Lab.',
               accent: 'text-blue-400',
               borderColor: 'hover:border-blue-500/30',
             },
