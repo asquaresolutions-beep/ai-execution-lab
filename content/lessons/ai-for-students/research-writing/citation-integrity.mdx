@@ -1,0 +1,238 @@
+---
+title: "Maintaining Citation Integrity with AI"
+description: "AI invents references that look perfectly real. Learn to verify a citation exists, check a DOI, confirm a paper actually supports your claim, tell primary from secondary sources, and cite your AI use honestly."
+date: "2026-06-20"
+tags: ["ai-for-students", "citations", "verification", "academic-integrity", "research", "intermediate"]
+status: "published"
+---
+
+<LessonMeta difficulty="intermediate" updated="2026-06-20" />
+
+<LessonObjectives items={[
+  "Understand why AI invents references that look real",
+  "Verify whether a citation actually exists",
+  "Check whether a DOI is valid and resolves to the right paper",
+  "Confirm a source actually supports the claim you're attaching it to",
+  "Distinguish primary from secondary sources and cite the right one",
+  "Detect fabricated authors, journals, years, and DOIs",
+  "Cite your AI use appropriately for your institution's rules",
+  "Avoid the academic-integrity violations that fake citations cause",
+]} />
+
+A fabricated citation is the most damaging thing AI can slip into your work. It looks authoritative, it passes a glance, and it can turn an honest assignment into an integrity case — because you've cited a source that does not exist or does not say what you claimed. This lesson is the one place in the track that **owns citation verification**: a concrete, repeatable process for making every reference in your work real, correct, and honestly used.
+
+> If you haven't yet, read **Spotting Hallucinations & Verifying AI Output** first — this lesson goes deeper on the citation-specific half of that problem.
+
+---
+
+## Why citation integrity matters
+
+Citations are claims: "this specific source supports this specific point." When a citation is fake or misapplied, three things happen at once:
+
+- **Your argument loses its foundation** — the evidence isn't real.
+- **Your credibility collapses** — one fabricated reference makes a marker doubt all of them.
+- **You risk an academic-integrity finding** — citing a non-existent source, or a real one that doesn't support your claim, is treated as a serious breach at most institutions, even when it was the AI's invention and not your intent.
+
+The standard is simple and non-negotiable: **every citation in your work resolves to a real source you have opened, and the source actually says what you claim it says.**
+
+---
+
+## How AI creates fake references
+
+A language model predicts plausible text. A citation has a very predictable *shape* — author, year, title, journal, volume, DOI — so when the model doesn't have a real reference, it generates one that fits the pattern perfectly. The result reads exactly like a genuine citation because it was built from the statistical shape of thousands of real ones.
+
+This is why fabricated references are **more** convincing than other AI errors, not less: the format is flawless even when the content is invented. You cannot detect them by looking — only by checking.
+
+---
+
+## Common citation failures
+
+The fabrications come in five recognisable forms. Learn them so you know what you're checking for:
+
+| Failure type | What it looks like | How you catch it |
+|---|---|---|
+| **Fake author** | A plausible name who never wrote the paper | Author + title don't co-occur in any database |
+| **Fake journal** | An official-sounding journal that doesn't exist | No publisher, no ISSN, no journal homepage |
+| **Wrong year** | Real paper, but the year/volume is off | Metadata doesn't match the real record |
+| **Invented DOI** | A correctly-formatted DOI that resolves to nothing | doi.org returns an error |
+| **Real paper, wrong claim** | A genuine source attached to a point it doesn't make | You open it and the claim isn't there |
+
+The last one is the sneakiest — the citation is *real*, so a DOI check passes, but it's still wrong because it doesn't support your point. That's why verification has two halves: **does it exist** *and* **does it support the claim**.
+
+---
+
+## The citation verification workflow
+
+Run every AI-suggested reference through this sequence. Stop and discard the moment a step fails.
+
+<WorkflowBlock>
+<WorkflowStep number={1} title="Search the exact title">
+Paste the title in quotation marks into Google Scholar or the publisher's site. No exact match → almost certainly fabricated → discard.
+</WorkflowStep>
+<WorkflowStep number={2} title="Resolve the DOI">
+Paste the DOI into doi.org. It must resolve to the same paper (same title and authors). Doesn't resolve, or resolves to something else → discard.
+</WorkflowStep>
+<WorkflowStep number={3} title="Match the metadata">
+Confirm author(s), year, journal, and volume match the real record — not just the title. Any mismatch → fix from the real record or discard.
+</WorkflowStep>
+<WorkflowStep number={4} title="Confirm the journal is real">
+If you don't recognise the journal, check it has a publisher, an ISSN, and a homepage. No footprint → likely a fabricated journal → discard.
+</WorkflowStep>
+<WorkflowStep number={5} title="Open it and find the claim">
+Read the relevant section. The source must actually state what you're attributing to it. Real paper that doesn't support the claim → drop the claim or find a source that does.
+</WorkflowStep>
+<WorkflowStep number={6} title="Cite from the real record">
+Build the final citation from the verified source itself (or your reference manager) — never from the AI's formatted text, which may contain subtle errors.
+</WorkflowStep>
+</WorkflowBlock>
+
+<Callout type="warn" title="The two-part gate">
+A citation must pass **both** tests: **(1) it exists** (steps 1–4) **and (2) it supports your claim** (step 5). A real DOI is necessary, not sufficient.
+</Callout>
+
+---
+
+## Verification checklist
+
+<Checklist items={[
+  "Exact-title search returns the paper",
+  "DOI resolves on doi.org to the same paper",
+  "Author, year, journal and volume match the real record",
+  "The journal has a real publisher / ISSN / homepage",
+  "You opened the source and found the exact claim it's cited for",
+  "The final reference was built from the verified source, not the AI's text",
+]} />
+
+If any box is unchecked, the reference does not go in your work.
+
+---
+
+## Primary vs secondary sources
+
+Verification also means citing the *right* source. AI often hands you a secondary source (a review, a news article, a textbook) summarising a finding — but academic work usually wants the **primary** source where the finding was first reported.
+
+| | Primary source | Secondary source |
+|---|---|---|
+| **What it is** | Where the research/data was first reported | A summary or commentary on primary work |
+| **Examples** | Original study, dataset, court ruling, the actual text | Review article, textbook, news write-up, encyclopedia |
+| **Cite it when** | Making a specific evidential claim | Giving background or an overview |
+| **AI risk** | AI may invent it | AI may cite the summary as if it were the finding |
+
+**Rule:** if you're claiming a specific result, trace it to and cite the **primary** source — don't cite the review that mentioned it. (AI is useful for *finding* the primary source via the secondary one — then you verify and cite the primary.)
+
+---
+
+## Academic integrity and disclosure
+
+- **Rules vary** by institution, course, and assignment — your specific policy is the authority. Check it before you submit.
+- **A fabricated or misapplied citation is a breach even if the AI produced it.** "The AI generated it" is not a defence; you're responsible for what you submit.
+- **Disclose AI use where required.** Many courses now ask for a short statement of how you used AI. Be specific and honest ("used Claude to find search terms and critique my draft; all sources independently verified").
+- **Verified, well-sourced work is defensible.** If every citation resolves and supports its claim, you can stand behind your work in a viva or audit — which is the real test.
+
+See **Writing with AI as a Partner** for the disclosure norms around AI-assisted *writing* (this lesson covers the *citation* side).
+
+---
+
+## How to cite AI use responsibly
+
+If your assignment allows AI use and asks you to cite it, follow your required style guide — the major ones (APA, MLA, Chicago) have published AI-citation guidance, and institutions often have their own variant. General principles that hold across styles:
+
+- **Name the tool and version/date** (e.g., "ChatGPT, [version], [date accessed]").
+- **Treat the AI as the source of its *output*, not of facts** — a model is not a citable authority for a factual claim; cite the real source for the fact.
+- **Keep the prompt if the style/assignment asks for it** — some guidance wants the prompt recorded.
+- **When in doubt, add a methods/disclosure note** describing your AI use in plain language.
+
+<PromptBlock title="Generate a disclosure draft — then edit it yourself" role="user">
+I used AI on this assignment in these ways: [list exactly what you did — e.g., brainstormed search terms, critiqued my draft, suggested counter-arguments]. I independently verified all sources. Draft a 2–3 sentence AI-use disclosure statement in plain, honest language that I can adapt. Do not overstate or understate what I did.
+</PromptBlock>
+
+Always confirm the exact format against your institution's policy and required style guide — citation rules for AI are still evolving and differ between courses.
+
+---
+
+## Real-world examples
+
+**Example A — the invented DOI.** A reference looks perfect: real-sounding authors, a known journal, a formatted DOI. The exact-title search returns nothing, and the DOI fails to resolve on doi.org. Both checks fail → the reference is fabricated and is discarded. Total time: under a minute.
+
+**Example B — real paper, wrong claim.** A student cites a genuine, DOI-resolving paper to support "X causes Y." Opening it, the paper only reports a *correlation* and explicitly says it can't establish causation. The citation exists but doesn't support the claim → the student softens the claim to match what the source actually says.
+
+**Example C — secondary cited as primary.** AI suggests a textbook for a specific statistic. The textbook is real, but it's quoting an original study. The student traces the statistic to that original study, verifies it, and cites the **primary** source instead.
+
+---
+
+## Common mistakes
+
+- **Trusting a citation because it's well-formatted.** Format is exactly what AI gets right; existence is what it gets wrong.
+- **Checking the DOI but not the claim** (or vice-versa). Both halves are required.
+- **Citing the AI as a source for a fact.** Cite the real source; the AI is at most a tool you disclose.
+- **Citing the secondary source for a specific finding** instead of tracing it to the primary.
+- **Pasting the AI's formatted reference** into your bibliography — rebuild it from the verified record.
+- **Assuming "the AI did it" excuses a fabricated citation.** You're accountable for your submission.
+
+---
+
+## Recommended tools
+
+- **Google Scholar** — exact-title search to confirm a paper exists.
+- **[doi.org](https://doi.org)** — resolve DOIs to confirm the paper and its metadata.
+- **Your library / database access** — the authoritative record for verification.
+- **Zotero** (free) — capture verified sources and generate accurate references (so you never hand-copy the AI's version).
+- **Your institution's academic-integrity + required style guide** — the final word on disclosure and AI-citation format.
+
+---
+
+## Summary
+
+AI fabricates references because a citation has a predictable shape it can fill convincingly. You cannot spot fakes by reading — only by checking. Run every reference through the two-part gate: **does it exist** (title + DOI + metadata + journal) **and does it support the claim** (open and read it). Cite the **primary** source for specific findings, disclose your AI use honestly per your institution's rules, and never let the AI's formatted text be your final citation. Verified sourcing is what makes your work both honest and defensible.
+
+---
+
+## Practical exercises
+
+**Exercise 1 — Verify 5 AI-generated citations.**
+Ask an AI for 5 references on a topic in your field, then run each through the verification workflow.
+*Success criteria:* for all 5 you can state "verified — exists and supports the point" or "discarded — failed at step N," with the doi.org / Scholar result that proves it.
+
+**Exercise 2 — Find the fabricated reference.**
+Get a list of 6–8 AI references and assume at least one is fake. Identify the fabricated one(s).
+*Success criteria:* you correctly flag the fabricated reference and show the failed check (no exact-title match or non-resolving DOI) — not a guess.
+
+**Exercise 3 — Does the source support the claim?**
+Take one AI claim with its cited (real, DOI-resolving) source. Open the source and check.
+*Success criteria:* you can quote the passage that supports the claim — or show the source doesn't support it and rewrite the claim to match what it actually says.
+
+---
+
+## Action checklist
+
+<Checklist items={[
+  "Run every AI-suggested reference through the 6-step verification workflow",
+  "Confirm both halves: the source exists AND it supports your claim",
+  "Resolve every DOI on doi.org before trusting the reference",
+  "Trace specific findings to the primary source, not a secondary summary",
+  "Rebuild final citations from the verified record (e.g., Zotero), never from AI text",
+  "Check your course's AI policy and add an honest disclosure statement if required",
+]} />
+
+---
+
+## Further resources
+
+<Resource
+  title="Spotting Hallucinations & Verifying AI Output"
+  description="The broader verification skill — facts, quotes and numbers, not just citations."
+  href="/tracks/ai-for-students/research-writing/verifying-ai-output"
+  type="docs"
+/>
+<Resource
+  title="AI-Assisted Research Workflow for Students"
+  description="Where citation verification fits the full discovery-to-synthesis pipeline."
+  href="/tracks/ai-for-students/research-writing/research-workflow-student"
+  type="docs"
+/>
+<Resource
+  title="Writing with AI as a Partner, Not a Ghost"
+  description="The disclosure and authorship norms for AI-assisted writing."
+  href="/tracks/ai-for-students/research-writing/ai-writing-partner"
+  type="docs"
+/>
