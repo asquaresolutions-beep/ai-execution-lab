@@ -1,0 +1,137 @@
+---
+title: "AI-Assisted Research Workflow for Students"
+description: "A complete, repeatable pipeline for using AI to move from a blank topic to a verified, well-sourced set of notes — faster, without outsourcing your judgement or citing things you never read."
+date: "2026-06-20"
+tags: ["ai-for-students", "research", "perplexity", "claude", "zotero", "intermediate"]
+status: "published"
+---
+
+<LessonMeta difficulty="intermediate" updated="2026-06-20" />
+
+<LessonObjectives items={[
+  "Run a five-stage research pipeline: scope, discover, retrieve, read, synthesise",
+  "Use AI to find directions and frame questions — then go to primary sources yourself",
+  "Capture sources and notes so citations are accurate and traceable",
+  "Synthesise across sources without letting AI invent the synthesis",
+  "Keep a clean separation between what a source says and what AI summarised",
+]} />
+
+AI can cut hours off research — but only at specific stages. Used wrong, it produces a fluent summary of sources you never opened, with citations you can't defend. Used right, it accelerates discovery and synthesis while you keep control of what's actually true and actually cited.
+
+This is the end-to-end workflow.
+
+---
+
+## Core principle: AI for discovery and synthesis, primary sources for truth
+
+Split research into stages and assign each to the right tool:
+
+- **AI is good at:** suggesting directions, framing questions, explaining unfamiliar areas, surfacing search terms, and helping you synthesise notes *you* took.
+- **AI is not a source.** Every fact, quote, and citation in your final work comes from a primary source you opened and read — not from the chatbot's summary.
+
+Hold that line and the rest of the workflow is safe.
+
+---
+
+## The five-stage pipeline
+
+<WorkflowBlock>
+<WorkflowStep number={1} title="Scope — frame the question">
+Use AI to sharpen a vague topic into answerable questions and identify subtopics and key terms. This sets your search vocabulary.
+</WorkflowStep>
+<WorkflowStep number={2} title="Discover — find directions and sources">
+Use AI / Perplexity to surface seminal works, key authors, and search terms. Treat every suggested source as a lead to verify, never as a citation.
+</WorkflowStep>
+<WorkflowStep number={3} title="Retrieve — go to the primary sources">
+Find the actual papers/books via Google Scholar and your library. Save each into a reference manager immediately so the citation is captured correctly.
+</WorkflowStep>
+<WorkflowStep number={4} title="Read — extract in your own words">
+Read the real sources. Take notes yourself. Optionally use AI to explain a dense passage you've already read — but the notes are yours.
+</WorkflowStep>
+<WorkflowStep number={5} title="Synthesise — connect your notes">
+Feed your own notes to AI to find themes, tensions, and gaps. You write the synthesis; AI helps you see the structure.
+</WorkflowStep>
+</WorkflowBlock>
+
+---
+
+## Stage prompts
+
+**Scope:**
+<PromptBlock title="Scope the topic" role="user">
+I'm researching [topic] for a [level] [essay/report] of about [word count]. Help me narrow it into 2–3 focused, answerable research questions. For each, list the key concepts and the search terms I should use to find academic sources. Don't cite sources yet — just help me frame the questions.
+</PromptBlock>
+
+**Discover (then verify everything):**
+<PromptBlock title="Find directions" role="user">
+For the question "[your question]", what are the major schools of thought, the most-cited foundational works, and the key authors I should look for? Present this as leads for me to verify myself — I will find and read the actual sources.
+</PromptBlock>
+
+**Synthesise (from your own notes only):**
+<PromptBlock title="Synthesise my notes" role="user">
+Here are my notes from the sources I've read: [paste your notes, with which source each point came from]. Identify the main themes, where sources agree or disagree, and any gap in the evidence. Do not add facts or sources that aren't in my notes.
+</PromptBlock>
+
+The constraint in that last prompt — "do not add facts or sources that aren't in my notes" — is what stops AI from fabricating into your synthesis.
+
+---
+
+## Real example
+
+A student researching urban heat islands:
+1. **Scope:** AI helps turn "cities and heat" into "How do green roofs affect surface temperature in dense cities?" plus search terms (albedo, evapotranspiration, UHI).
+2. **Discover:** Perplexity surfaces a few frequently-cited authors and review papers — all treated as leads.
+3. **Retrieve:** The student finds those reviews on Google Scholar, confirms they exist, saves them to Zotero.
+4. **Read:** They read the reviews, taking their own notes with page references.
+5. **Synthesise:** They paste *their notes* to AI, which highlights that two sources disagree on cost-effectiveness — a tension the student builds their argument around.
+
+Every citation is real and read; AI accelerated the slow parts without becoming the source.
+
+---
+
+## Common mistakes
+
+- **Citing AI's summary instead of the source.** If you didn't open it, you can't cite it.
+- **Skipping the retrieve step.** Going straight from "AI told me" to "in my essay" is how fake citations get in.
+- **Letting AI synthesise sources you never read.** Synthesis must be built on your own notes.
+- **Not capturing references as you go.** Reconstructing citations later introduces errors — save to a manager at retrieval.
+- **One-and-done searching.** Use AI's suggested terms to run several real searches, not to replace searching.
+
+---
+
+## Recommended tools
+
+- **Perplexity** — discovery with linked sources (still open the sources).
+- **Google Scholar** — find and confirm primary sources; "Cite" gives a starting reference.
+- **Zotero** (free) — capture sources and generate bibliographies; the browser connector saves references in one click.
+- **Claude / ChatGPT** — scoping and synthesising your own notes.
+
+---
+
+## Action checklist
+
+<Checklist items={[
+  "Turn your topic into 2–3 answerable questions with AI (scope stage)",
+  "Collect AI-suggested directions as leads — mark them 'unverified'",
+  "Find and open the real sources; save each to Zotero at the moment you find it",
+  "Read the sources and take your own notes, tagging which source each point came from",
+  "Paste only your notes to AI for synthesis, with 'add nothing not in my notes'",
+  "Confirm every citation in your draft resolves to a source you actually read",
+]} />
+
+---
+
+## Further resources
+
+<Resource
+  title="Spotting Hallucinations & Verifying AI Output"
+  description="The verification skill this workflow depends on — especially for citations."
+  href="/tracks/ai-for-students/research-writing/verifying-ai-output"
+  type="docs"
+/>
+<Resource
+  title="Writing with AI as a Partner, Not a Ghost"
+  description="Turn your verified research into writing that's still yours."
+  href="/tracks/ai-for-students/research-writing/ai-writing-partner"
+  type="docs"
+/>

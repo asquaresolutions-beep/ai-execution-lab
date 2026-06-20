@@ -718,7 +718,8 @@ export const TRACKS: Track[] = [
         title: 'Learning Acceleration Systems',
         description: 'Use AI to genuinely understand material faster — not to skip the understanding.',
         lessons: [
-          { id: 'ai-learning-reality',          title: 'AI for Learning: What It Accelerates and What It Harms', type: 'lesson', duration: '20 min', description: 'Honest assessment of where AI helps learning and where it produces fake understanding.', status: 'coming-soon' },
+          { id: 'ai-learning-reality',          title: 'AI for Learning: What It Accelerates and What It Harms', type: 'lesson', duration: '20 min', description: 'Honest assessment of where AI helps learning and where it produces fake understanding.', status: 'available' },
+          { id: 'ai-prompting-fundamentals',    title: 'Prompting Fundamentals for Students', type: 'lesson',       duration: '25 min', description: 'Write clear, structured prompts that get useful, accurate answers — the skill that makes every other AI use better.', status: 'available' },
           { id: 'personal-learning-stack',      title: 'Building Your Personal AI Learning Stack', type: 'lesson',   duration: '25 min', description: 'The tools and workflows for AI-assisted learning in any discipline.',                status: 'coming-soon' },
           { id: 'concept-mastery-ai',           title: 'Using AI to Test Your Own Understanding', type: 'playbook', duration: '20 min', description: 'The Socratic AI method: use Claude to challenge your understanding of what you just learned.', status: 'coming-soon' },
           { id: 'note-taking-ai',               title: 'AI-Enhanced Note-Taking System',          type: 'playbook', duration: '20 min', description: 'Capture, organize, and synthesize learning with AI at each stage.',                  status: 'coming-soon' },
@@ -729,8 +730,9 @@ export const TRACKS: Track[] = [
         title: 'Research + Writing',
         description: 'Conduct better research and produce better academic work — with AI as a thinking tool.',
         lessons: [
-          { id: 'research-workflow-student',    title: 'AI-Assisted Research Workflow for Students', type: 'playbook', duration: '30 min', description: 'Use Perplexity and Claude to accelerate literature discovery and synthesis.',       status: 'coming-soon' },
-          { id: 'ai-writing-partner',           title: 'Writing with AI as a Partner (Not a Ghost)', type: 'lesson', duration: '25 min', description: 'How to use AI to improve your writing without undermining your authorship.',         status: 'coming-soon' },
+          { id: 'verifying-ai-output',          title: 'Spotting Hallucinations & Verifying AI Output', type: 'lesson', duration: '20 min', description: 'Why AI states false things confidently — and a fast workflow to verify facts, quotes and citations before they reach your work.', status: 'available' },
+          { id: 'research-workflow-student',    title: 'AI-Assisted Research Workflow for Students', type: 'playbook', duration: '30 min', description: 'Use Perplexity and Claude to accelerate literature discovery and synthesis.',       status: 'available' },
+          { id: 'ai-writing-partner',           title: 'Writing with AI as a Partner (Not a Ghost)', type: 'lesson', duration: '25 min', description: 'How to use AI to improve your writing without undermining your authorship.',         status: 'available' },
           { id: 'citation-integrity',           title: 'Maintaining Citation Integrity with AI',   type: 'lesson',   duration: '15 min', description: 'Practical guidance on citing AI use, verifying AI-generated references, and academic honesty.', status: 'coming-soon' },
         ],
       },

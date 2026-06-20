@@ -1,0 +1,144 @@
+---
+title: "Prompting Fundamentals for Students"
+description: "The one skill that makes every other AI use better: how to write clear, structured prompts that get useful, accurate answers — and how to iterate when the first answer is weak."
+date: "2026-06-20"
+tags: ["ai-for-students", "prompting", "learning", "claude", "chatgpt", "beginner"]
+status: "published"
+---
+
+<LessonMeta difficulty="beginner" updated="2026-06-20" />
+
+<LessonObjectives items={[
+  "Write prompts using a repeatable structure: role, context, task, format",
+  "Give the model the context it needs instead of expecting it to guess",
+  "Iterate on a weak answer instead of accepting it or starting over",
+  "Use prompting patterns that fit real study tasks — explaining, quizzing, drafting, checking",
+  "Recognise when a vague prompt is the reason the answer was bad",
+]} />
+
+Most students get mediocre results from AI for one reason: the prompt was vague. "Explain photosynthesis" gets you a generic encyclopedia paragraph. The same model, given a clear prompt, can produce a genuinely useful explanation pitched at your exact level.
+
+Prompting is not a magic phrase. It's a habit of being specific about what you want, why, and in what form. This lesson gives you a structure you can reuse for any subject.
+
+---
+
+## Core concept: a model answers the prompt you gave, not the one you meant
+
+A language model has no memory of who you are, what class you're in, or what you already understand (unless you tell it). It predicts a response based only on the words in front of it. So the more relevant detail you give, the more the answer fits your actual situation.
+
+Two requests, same topic:
+
+- **Vague:** "Explain supply and demand."
+- **Specific:** "I'm a first-year economics student. Explain supply and demand using one real example from the coffee market. Keep it under 200 words and define any term you introduce."
+
+The second gets a focused, usable answer because it supplies a **role** (first-year student), **context** (coffee market example), a **task** (explain), and a **format** (under 200 words, define terms).
+
+---
+
+## The four-part prompt structure
+
+Use this order. You don't need all four every time, but reach for them when an answer disappoints.
+
+1. **Role / level** — who the answer is for. "Explain this to a high-school student" produces very different output than "explain this to a graduate researcher."
+2. **Context** — what you already know, what you're working on, constraints. Paste the actual text, question, or assignment brief.
+3. **Task** — the specific verb: explain, summarise, compare, quiz me, critique, outline.
+4. **Format** — length, structure, and style. "A 5-bullet summary," "a table comparing X and Y," "step by step."
+
+<PromptBlock title="Four-part prompt — worked example" role="user">
+I'm a second-year biology student preparing for an exam.
+
+Here is the concept I'm struggling with: [paste the lecture paragraph or textbook definition].
+
+Task: explain it to me in plain language, then give one concrete example, then ask me two questions to check I understood.
+
+Format: keep the explanation under 150 words. Put the two questions at the end as a numbered list.
+</PromptBlock>
+
+---
+
+## Step-by-step workflow
+
+<WorkflowBlock>
+<WorkflowStep number={1} title="State who the answer is for">
+Open with your level and goal: "I'm a [level] student studying [subject]. I'm trying to [understand / revise / draft]."
+</WorkflowStep>
+<WorkflowStep number={2} title="Paste the real material">
+Don't describe your assignment — paste it. Paste the lecture slide text, the exam question, the paragraph you don't understand. The model can only use what you give it.
+</WorkflowStep>
+<WorkflowStep number={3} title="Give one specific task">
+One verb per prompt. "Explain", or "quiz me", or "critique" — not all three at once. You can chain them in follow-ups.
+</WorkflowStep>
+<WorkflowStep number={4} title="Specify the format">
+Length and structure. "Under 200 words." "As a comparison table." "Step by step, defining each term."
+</WorkflowStep>
+<WorkflowStep number={5} title="Read the answer critically, then iterate">
+If it's too generic, say so: "Too general — use my pasted example and assume I already know [X]." Iterating beats restarting.
+</WorkflowStep>
+</WorkflowBlock>
+
+---
+
+## Patterns for common study tasks
+
+- **Explain at my level:** "Explain [pasted text] to a [level] student. Define every term you use."
+- **Quiz me (active recall):** "Ask me 5 questions on this material one at a time. Wait for my answer, tell me if I'm right, and explain what I missed before the next question."
+- **Compare:** "Make a table comparing [A] and [B] across [criteria]. Add a final row on when each is used."
+- **Critique my work:** "Here is my paragraph: [paste]. Point out unclear sentences and weak arguments. Do not rewrite it for me — tell me what to fix."
+- **Plan:** "I have [time] before [deadline] and need to cover [topics]. Suggest a study schedule with active-recall checkpoints."
+
+---
+
+## Real example: turning a bad answer into a good one
+
+**First prompt:** "Explain the causes of World War I."
+**Result:** a generic five-paragraph summary you could find anywhere — not pitched to you, not tied to your course.
+
+**Iteration:** "Too broad. I'm writing a 1,500-word essay arguing that alliance systems were the main cause. Give me the three strongest pieces of evidence for that argument and the single strongest counter-argument I'll need to address. Bullet points."
+
+The second prompt gets you something you can actually build an essay around — because it added your goal, your argument, and the exact output you needed.
+
+---
+
+## Common mistakes
+
+- **Asking one giant multi-part question.** Split it. One task per prompt, then follow up.
+- **Describing instead of pasting.** "My essay question is about climate policy" is worse than pasting the exact question.
+- **Accepting the first answer.** The first answer is a draft. Push back: "more specific," "wrong level," "use my example."
+- **No format instruction.** Without it you get a wall of text. Always say how long and in what shape.
+- **Trusting facts without checking.** Prompting gets you a *better-shaped* answer, not a *guaranteed-true* one — verification is a separate skill (next lessons).
+
+---
+
+## Recommended tools
+
+- **Claude** or **ChatGPT** or **Gemini** (free tiers) — any works; the structure is identical across them.
+- A **notes app** (Notion, Apple Notes, Google Docs) to save prompts that worked so you can reuse them.
+
+---
+
+## Action checklist
+
+<Checklist items={[
+  "Pick one concept you currently don't understand from a real class",
+  "Write a prompt with all four parts: role/level, pasted context, one task, a format",
+  "Run it, then iterate at least once with a specific correction",
+  "Convert one revision topic into a 'quiz me one question at a time' session",
+  "Save the two prompts that worked best into a notes file you can reuse",
+]} />
+
+---
+
+## Further resources
+
+<Resource
+  title="AI for Learning: What It Accelerates and What It Harms"
+  description="When AI genuinely helps you learn versus when it produces fake understanding — read this next."
+  href="/tracks/ai-for-students/learning-acceleration/ai-learning-reality"
+  type="docs"
+/>
+<Resource
+  title="Spotting Hallucinations & Verifying AI Output"
+  description="Good prompts still produce confident errors. Learn to catch them before they reach your work."
+  href="/tracks/ai-for-students/research-writing/verifying-ai-output"
+  type="docs"
+/>
