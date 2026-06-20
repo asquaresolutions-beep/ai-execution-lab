@@ -16,6 +16,7 @@ import { LessonNav }      from '@/components/tracks/lesson-nav'
 import { CompleteButton } from '@/components/tracks/complete-button'
 import { BookmarkButton } from '@/components/platform/bookmark-button'
 import { RelatedContent } from '@/components/tracks/related-content'
+import { NotifyForm } from '@/components/tracks/notify-form'
 import { ContentRenderer } from '@/components/content-renderer'
 import { ReadingProgress } from '@/components/layout/reading-progress'
 import { cn } from '@/lib/utils'
@@ -163,6 +164,8 @@ export default async function LessonPage({ params }: Props) {
                   This lesson is in the roadmap and will be published as the track is built out.
                   The structure above shows exactly what&apos;s covered.
                 </p>
+                <NotifyForm lessonId={lessonId} />
+
                 <Link
                   href={`/tracks/${track.id}`}
                   className="inline-flex items-center gap-2 mt-6 text-sm text-surface-500 hover:text-surface-300 transition-colors"

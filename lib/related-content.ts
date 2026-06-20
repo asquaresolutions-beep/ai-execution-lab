@@ -206,6 +206,37 @@ export const RELATED_CONTENT: Record<string, RelatedItem[]> = {
     { label: 'Free-Tier Infrastructure Architecture', href: '/tracks/ai-business-zero-budget/zero-budget-stack/free-tier-architecture', type: 'lesson' },
   ],
 
+  // ── AI for Students ──────────────────────────────────────────────
+  'ai-learning-reality': [
+    { label: 'Prompting Fundamentals for Students', href: '/tracks/ai-for-students/learning-acceleration/ai-prompting-fundamentals', type: 'lesson', note: 'Next: how to actually ask for the AI help that accelerates learning' },
+    { label: 'Spotting Hallucinations & Verifying AI Output', href: '/tracks/ai-for-students/research-writing/verifying-ai-output', type: 'lesson', note: 'Fluent answers can still be wrong' },
+    { label: 'Writing with AI as a Partner, Not a Ghost', href: '/tracks/ai-for-students/research-writing/ai-writing-partner', type: 'lesson' },
+  ],
+
+  'ai-prompting-fundamentals': [
+    { label: 'AI for Learning: What It Accelerates and What It Harms', href: '/tracks/ai-for-students/learning-acceleration/ai-learning-reality', type: 'lesson', note: 'When to use these prompts — and when not to' },
+    { label: 'Spotting Hallucinations & Verifying AI Output', href: '/tracks/ai-for-students/research-writing/verifying-ai-output', type: 'lesson', note: 'Good prompts still produce confident errors' },
+    { label: 'AI-Assisted Research Workflow for Students', href: '/tracks/ai-for-students/research-writing/research-workflow-student', type: 'playbook', note: 'Put prompting to work in real research' },
+  ],
+
+  'verifying-ai-output': [
+    { label: 'AI-Assisted Research Workflow for Students', href: '/tracks/ai-for-students/research-writing/research-workflow-student', type: 'playbook', note: 'Where citation verification fits the full pipeline' },
+    { label: 'Writing with AI as a Partner, Not a Ghost', href: '/tracks/ai-for-students/research-writing/ai-writing-partner', type: 'lesson' },
+    { label: 'Prompting Fundamentals for Students', href: '/tracks/ai-for-students/learning-acceleration/ai-prompting-fundamentals', type: 'lesson', note: 'Prompts that make the model flag its own uncertainty' },
+  ],
+
+  'research-workflow-student': [
+    { label: 'Spotting Hallucinations & Verifying AI Output', href: '/tracks/ai-for-students/research-writing/verifying-ai-output', type: 'lesson', note: 'The verification skill this workflow depends on' },
+    { label: 'Writing with AI as a Partner, Not a Ghost', href: '/tracks/ai-for-students/research-writing/ai-writing-partner', type: 'lesson', note: 'Turn verified research into writing that\'s yours' },
+    { label: 'Prompting Fundamentals for Students', href: '/tracks/ai-for-students/learning-acceleration/ai-prompting-fundamentals', type: 'lesson' },
+  ],
+
+  'ai-writing-partner': [
+    { label: 'AI-Assisted Research Workflow for Students', href: '/tracks/ai-for-students/research-writing/research-workflow-student', type: 'playbook', note: 'Get the material before you write' },
+    { label: 'Spotting Hallucinations & Verifying AI Output', href: '/tracks/ai-for-students/research-writing/verifying-ai-output', type: 'lesson', note: 'Verify quotes and citations before they reach your draft' },
+    { label: 'AI for Learning: What It Accelerates and What It Harms', href: '/tracks/ai-for-students/learning-acceleration/ai-learning-reality', type: 'lesson' },
+  ],
+
   'first-organic-traffic-system': [
     { label: 'Google Search Console Setup',     href: '/tracks/ai-business-zero-budget/zero-budget-stack/google-search-console-setup', type: 'playbook', note: 'Measure the traffic system you build' },
     { label: 'Google Analytics + Data Thinking', href: '/tracks/ai-business-zero-budget/zero-budget-stack/google-analytics-data-thinking', type: 'lesson' },
