@@ -20,7 +20,7 @@ import { ContentRenderer } from '@/components/content-renderer'
 import { ReadingProgress } from '@/components/layout/reading-progress'
 import { cn } from '@/lib/utils'
 
-const SITE_URL  = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
+const SITE_URL  = 'https://lab.asquaresolution.com' // pinned to Lab host (see lib/metadata.ts)
 const SITE_NAME = 'AI Execution Lab'
 const TWITTER   = '@asquaresolution'
 

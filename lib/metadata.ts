@@ -6,7 +6,10 @@ import type { ContentItem } from './content'
 // Shared metadata builder for all content article pages
 // ─────────────────────────────────────────────────────────────
 
-const SITE_URL     = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
+// Lab content (docs/systems/failures/etc.) is always served on the Lab host.
+// Pinned to the Lab origin so it can't inherit the shared NEXT_PUBLIC_SITE_URL
+// (the ScamCheck domain), which caused Lab pages to canonicalize to ScamCheck.
+const SITE_URL     = 'https://lab.asquaresolution.com'
 const SITE_NAME    = 'AI Execution Lab'
 const AUTHOR_NAME  = 'A Square Solutions'
 const AUTHOR_URL   = 'https://asquaresolution.com'
@@ -83,7 +86,7 @@ export function buildFailureMetadata(item: ContentItem): Metadata {
  */
 export function buildHowToSchema(item: ContentItem): Record<string, unknown> {
   const fm      = item.frontmatter
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
+  const siteUrl = 'https://lab.asquaresolution.com' // Lab host (pinned; see SITE_URL note above)
 
   const ORG_ID  = `${AUTHOR_URL}/#organization`
   const pageUrl = `${siteUrl}/failures/${item.slug}`
