@@ -802,10 +802,16 @@ export function getLessonNeighbors(
     (x) => x.module.id === moduleId && x.lesson.id === lessonId
   )
 
-  return {
-    prev: idx > 0 ? flat[idx - 1] : null,
-    next: idx < flat.length - 1 ? flat[idx + 1] : null,
-  }
+  // Skip 'coming-soon' lessons so prev/next always land on a readable lesson
+  // (avoids walking students into coming-soon dead-ends). If none remain in a
+  // direction, return null.
+  const isReadable = (x: { lesson: Lesson }) => x.lesson.status !== 'coming-soon'
+  let prev: { module: Module; lesson: Lesson } | null = null
+  for (let i = idx - 1; i >= 0; i--) { if (isReadable(flat[i])) { prev = flat[i]; break } }
+  let next: { module: Module; lesson: Lesson } | null = null
+  for (let i = idx + 1; i < flat.length; i++) { if (isReadable(flat[i])) { next = flat[i]; break } }
+
+  return { prev, next }
 }
 
 /** Lesson position within its module — for "Lesson X of Y" display */
