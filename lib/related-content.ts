@@ -223,18 +223,26 @@ export const RELATED_CONTENT: Record<string, RelatedItem[]> = {
     { label: 'AI-Assisted Research Workflow for Students', href: '/tracks/ai-for-students/research-writing/research-workflow-student', type: 'playbook', note: 'Where citation verification fits the full pipeline' },
     { label: 'Writing with AI as a Partner, Not a Ghost', href: '/tracks/ai-for-students/research-writing/ai-writing-partner', type: 'lesson' },
     { label: 'Prompting Fundamentals for Students', href: '/tracks/ai-for-students/learning-acceleration/ai-prompting-fundamentals', type: 'lesson', note: 'Prompts that make the model flag its own uncertainty' },
+    { label: 'Maintaining Citation Integrity with AI', href: '/tracks/ai-for-students/research-writing/citation-integrity', type: 'lesson', note: 'The citation-specific deep dive' },
   ],
 
   'research-workflow-student': [
     { label: 'Spotting Hallucinations & Verifying AI Output', href: '/tracks/ai-for-students/research-writing/verifying-ai-output', type: 'lesson', note: 'The verification skill this workflow depends on' },
     { label: 'Writing with AI as a Partner, Not a Ghost', href: '/tracks/ai-for-students/research-writing/ai-writing-partner', type: 'lesson', note: 'Turn verified research into writing that\'s yours' },
     { label: 'Prompting Fundamentals for Students', href: '/tracks/ai-for-students/learning-acceleration/ai-prompting-fundamentals', type: 'lesson' },
+    { label: 'Maintaining Citation Integrity with AI', href: '/tracks/ai-for-students/research-writing/citation-integrity', type: 'lesson', note: 'Verify every reference before you cite it' },
   ],
 
   'ai-writing-partner': [
     { label: 'AI-Assisted Research Workflow for Students', href: '/tracks/ai-for-students/research-writing/research-workflow-student', type: 'playbook', note: 'Get the material before you write' },
     { label: 'Spotting Hallucinations & Verifying AI Output', href: '/tracks/ai-for-students/research-writing/verifying-ai-output', type: 'lesson', note: 'Verify quotes and citations before they reach your draft' },
-    { label: 'AI for Learning: What It Accelerates and What It Harms', href: '/tracks/ai-for-students/learning-acceleration/ai-learning-reality', type: 'lesson' },
+    { label: 'Maintaining Citation Integrity with AI', href: '/tracks/ai-for-students/research-writing/citation-integrity', type: 'lesson', note: 'Cite AI use + verify every reference' },
+  ],
+
+  'citation-integrity': [
+    { label: 'Spotting Hallucinations & Verifying AI Output', href: '/tracks/ai-for-students/research-writing/verifying-ai-output', type: 'lesson', note: 'The broader verification skill this builds on' },
+    { label: 'AI-Assisted Research Workflow for Students', href: '/tracks/ai-for-students/research-writing/research-workflow-student', type: 'playbook', note: 'Where citation checks fit the full pipeline' },
+    { label: 'Writing with AI as a Partner, Not a Ghost', href: '/tracks/ai-for-students/research-writing/ai-writing-partner', type: 'lesson', note: 'Disclosure norms for AI-assisted writing' },
   ],
 
   'first-organic-traffic-system': [
