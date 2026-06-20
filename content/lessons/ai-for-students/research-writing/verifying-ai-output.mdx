@@ -1,0 +1,148 @@
+---
+title: "Spotting Hallucinations & Verifying AI Output"
+description: "AI states false things with total confidence — including fake citations. Learn why it happens, the signals that should trigger a check, and a fast workflow to verify anything before it reaches your work."
+date: "2026-06-20"
+tags: ["ai-for-students", "verification", "hallucinations", "research", "academic-integrity", "beginner"]
+status: "published"
+---
+
+<LessonMeta difficulty="beginner" updated="2026-06-20" />
+
+<LessonObjectives items={[
+  "Understand why language models produce confident, fluent falsehoods",
+  "Recognise the high-risk outputs that always need verification (facts, quotes, citations, numbers)",
+  "Run a fast verification workflow before using any AI claim",
+  "Detect fabricated or altered citations specifically",
+  "Build the default habit: treat AI output as a confident draft, not a source",
+]} />
+
+A language model predicts plausible-sounding text. Plausible is not the same as true. It will invent a statistic, misattribute a quote, or cite a paper that does not exist — and do it in the same confident tone it uses for correct answers. For a student, an unverified AI claim in an essay is a real risk: to your grade and to your credibility.
+
+This lesson makes verification a fast, automatic habit.
+
+---
+
+## Core concept: why hallucinations happen
+
+A model generates the next most likely word given everything so far. It has no built-in fact-checker and no concept of "I don't know" unless prompted toward it. When it lacks the real answer, it produces the most *plausible* one — which can be fabricated detail that reads exactly like fact.
+
+Key implications:
+- **Confidence is not a signal of accuracy.** Fluent and certain ≠ correct.
+- **Specific details are higher-risk**, not lower. Exact numbers, dates, quotes, and citations are the most common fabrications because the model fills them in.
+- **It can be right 9 times and wrong the 10th** with no change in tone. You can't tell which is which without checking.
+
+---
+
+## What always needs verification
+
+Treat these as unverified until you confirm them from a primary source:
+
+- **Statistics and numbers** — percentages, counts, dates, study results.
+- **Quotes and attributions** — who said what.
+- **Citations and references** — author, title, year, journal, DOI, URL.
+- **Named facts** — laws, definitions, historical events, scientific claims.
+- **Anything you'll be graded or judged on.**
+
+What's lower-risk: explanations of well-known general concepts, brainstorming, rephrasing your own text, structure and outlining. Even then — if a specific fact rides along, check it.
+
+---
+
+## Step-by-step verification workflow
+
+<WorkflowBlock>
+<WorkflowStep number={1} title="Flag the claims">
+Before using an AI answer, underline every specific fact, number, quote, and citation. Those are your verification targets.
+</WorkflowStep>
+<WorkflowStep number={2} title="Find a primary source">
+Search for each claim independently — Google Scholar, the actual journal, the official site, the original document. The goal is to reach the source, not another AI summary.
+</WorkflowStep>
+<WorkflowStep number={3} title="Verify citations exist and say what's claimed">
+For every reference: confirm the paper exists, the authors/year/title match, and it actually supports the point. A real-looking citation that doesn't say what's claimed is still wrong.
+</WorkflowStep>
+<WorkflowStep number={4} title="Cross-check uncertain facts">
+For contested or surprising claims, confirm with a second independent source before trusting it.
+</WorkflowStep>
+<WorkflowStep number={5} title="If you can't verify it, don't use it">
+An unverifiable claim doesn't go in your work. Either find a real source or drop the point.
+</WorkflowStep>
+</WorkflowBlock>
+
+---
+
+## Detecting fabricated citations
+
+This is the highest-risk failure for students. A model can produce a reference that is perfectly formatted and completely invented, or a real author paired with a title they never wrote.
+
+Checks that catch most fakes:
+- **Search the exact title in quotes** on Google Scholar or the publisher. No exact match → likely fabricated.
+- **Check the DOI** — paste it into [doi.org](https://doi.org). A real DOI resolves to the paper; a fake one doesn't.
+- **Match author + year + journal** to the real record, not just the title.
+- **Open the source and find the actual claim.** If the paper exists but doesn't say what the AI claimed, the citation is still unusable.
+
+Never paste an AI-generated reference list into an essay without resolving every entry to a real, checked source.
+
+---
+
+## Useful prompting habits that reduce (not eliminate) errors
+
+These lower the rate of confident fabrication but **do not replace** verification:
+
+<PromptBlock title="Lower-fabrication prompt" role="user">
+Answer using only what you are confident is accurate. For any claim you are unsure about, say "unverified" instead of guessing. Do not invent citations — if you don't have a real source, say so. List which parts of your answer I should independently verify.
+</PromptBlock>
+
+Even with this, you still verify the facts that matter. The prompt makes the model flag its own uncertainty; it doesn't make it reliable.
+
+---
+
+## Real example
+
+A student asks for sources on a psychology topic and gets five clean, formatted references. Three are real. One pairs a real author with a paper they never wrote. One doesn't exist at all. All five look identical in confidence and formatting. Only checking each title and DOI reveals which two are fabricated. Submitting the list unchecked would mean citing sources that don't exist — a serious integrity problem the student didn't intend.
+
+---
+
+## Common mistakes
+
+- **Trusting tone.** Confident delivery makes false claims feel safe. It isn't a signal.
+- **Verifying with another AI.** Asking a chatbot "is this true?" can produce a second confident error. Go to primary sources.
+- **Checking the easy claims, not the load-bearing ones.** Verify the facts your argument depends on.
+- **Assuming "it had a citation" means it was real.** A citation is a claim too — resolve it.
+- **Using a number because it sounds right.** Surprising-but-convenient statistics are exactly the ones to check.
+
+---
+
+## Recommended tools
+
+- **Google Scholar** — find and confirm academic sources.
+- **[doi.org](https://doi.org)** — resolve DOIs to confirm a paper exists.
+- **Perplexity** — useful because it links sources, but still open and read the source yourself.
+- Your **library / database access** — the authoritative check for citations.
+
+---
+
+## Action checklist
+
+<Checklist items={[
+  "Take one AI answer and underline every fact, number, quote, and citation",
+  "Verify each flagged claim against a primary source — not another AI",
+  "Resolve every AI-suggested citation: exact title search + DOI check + does it support the claim",
+  "Drop any claim you cannot verify",
+  "Add the 'flag unverified / no invented citations' instruction to your default research prompt",
+]} />
+
+---
+
+## Further resources
+
+<Resource
+  title="AI-Assisted Research Workflow for Students"
+  description="Where verification fits in a full literature-discovery-to-synthesis pipeline."
+  href="/tracks/ai-for-students/research-writing/research-workflow-student"
+  type="docs"
+/>
+<Resource
+  title="Maintaining Citation Integrity with AI"
+  description="Citing AI use correctly and keeping your reference list honest."
+  href="/tracks/ai-for-students/research-writing/citation-integrity"
+  type="docs"
+/>
