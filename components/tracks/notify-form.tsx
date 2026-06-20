@@ -7,7 +7,7 @@ import { trackEvent } from '@/lib/track-event'
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/
 
-export function NotifyForm({ lessonId }: { lessonId: string }) {
+export function NotifyForm({ lessonId, heading = 'Notify me when this lesson is released' }: { lessonId: string; heading?: string }) {
   const [email, setEmail] = useState('')
   const [hp, setHp] = useState('') // honeypot
   const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle')
@@ -38,7 +38,7 @@ export function NotifyForm({ lessonId }: { lessonId: string }) {
 
   return (
     <form onSubmit={submit} className="mt-6 mx-auto max-w-sm">
-      <p className="text-sm font-medium text-surface-300 mb-2">Notify me when this lesson is released</p>
+      <p className="text-sm font-medium text-surface-300 mb-2">{heading}</p>
       {/* honeypot — visually hidden, bots fill it */}
       <input
         type="text" value={hp} onChange={(e) => setHp(e.target.value)}

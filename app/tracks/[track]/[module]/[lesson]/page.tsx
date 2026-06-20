@@ -17,6 +17,7 @@ import { CompleteButton } from '@/components/tracks/complete-button'
 import { BookmarkButton } from '@/components/platform/bookmark-button'
 import { RelatedContent } from '@/components/tracks/related-content'
 import { NotifyForm } from '@/components/tracks/notify-form'
+import { MobileProgress } from '@/components/tracks/mobile-progress'
 import { ContentRenderer } from '@/components/content-renderer'
 import { ReadingProgress } from '@/components/layout/reading-progress'
 import { cn } from '@/lib/utils'
@@ -100,6 +101,12 @@ export default async function LessonPage({ params }: Props) {
   const position = getLessonPosition(trackId, moduleId, lessonId)
   const { prev, next } = getLessonNeighbors(trackId, moduleId, lessonId)
 
+  // Available-only lessons (ordered) for the mobile progress block — reuses the
+  // existing curriculum data; status drives availability (no structure change).
+  const availableLessons = track.modules.flatMap((m) =>
+    m.lessons.filter((l) => l.status !== 'coming-soon').map((l) => ({ moduleId: m.id, lessonId: l.id, title: l.title })),
+  )
+
   return (
     <>
       <ReadingProgress />
@@ -153,6 +160,16 @@ export default async function LessonPage({ params }: Props) {
               </p>
             </header>
 
+            {/* Mobile/tablet progress (desktop uses the sidebar) */}
+            <MobileProgress
+              variant="bar"
+              trackId={trackId}
+              currentModuleId={moduleId}
+              currentModuleTitle={mod.title}
+              currentLessonId={lessonId}
+              availableLessons={availableLessons}
+            />
+
             {/* Content or coming-soon */}
             {content ? (
               <ContentRenderer source={content} />
@@ -196,6 +213,18 @@ export default async function LessonPage({ params }: Props) {
                   </span>
                 </div>
               </div>
+            )}
+
+            {/* Mobile/tablet continuity: Continue-Learning / track-complete card */}
+            {content && (
+              <MobileProgress
+                variant="next"
+                trackId={trackId}
+                currentModuleId={moduleId}
+                currentModuleTitle={mod.title}
+                currentLessonId={lessonId}
+                availableLessons={availableLessons}
+              />
             )}
 
             {/* Related content */}
