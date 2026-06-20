@@ -210,7 +210,7 @@ function ArchiveStats({ items }: { items: ContentMeta[] }) {
 // Page
 // ─────────────────────────────────────────────────────────────
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
+const SITE_URL = 'https://lab.asquaresolution.com' // pinned to Lab host (see lib/metadata.ts)
 
 export default function FailuresPage() {
   const items        = getAllMeta('failures')
