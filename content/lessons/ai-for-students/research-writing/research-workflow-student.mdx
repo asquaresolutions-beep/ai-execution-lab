@@ -35,6 +35,16 @@ Hold that line and the rest of the workflow is safe.
 
 ## The five-stage pipeline
 
+At a glance — note that the *source of truth* shifts to you at the Retrieve stage:
+
+| Stage | What AI does | What you do | Output |
+|---|---|---|---|
+| 1. Scope | Sharpens topic into questions + search terms | Choose the questions | Research questions |
+| 2. Discover | Suggests authors, works, search terms (*leads*) | Treat as leads, not citations | A list to verify |
+| 3. Retrieve | — (you take over) | Find & save the real sources | Sources in Zotero |
+| 4. Read | Explains a dense passage *you've read* | Read and take your own notes | Your notes |
+| 5. Synthesise | Finds themes/tensions in *your notes* | Write the synthesis | Your argument |
+
 <WorkflowBlock>
 <WorkflowStep number={1} title="Scope — frame the question">
 Use AI to sharpen a vague topic into answerable questions and identify subtopics and key terms. This sets your search vocabulary.
@@ -73,6 +83,23 @@ Here are my notes from the sources I've read: [paste your notes, with which sour
 </PromptBlock>
 
 The constraint in that last prompt — "do not add facts or sources that aren't in my notes" — is what stops AI from fabricating into your synthesis.
+
+---
+
+## Evaluating a source before you trust it
+
+At the Retrieve stage, not every result deserves a place in your work. Score each source against these signals:
+
+| Signal | ✅ Trustworthy | 🚩 Red flag |
+|---|---|---|
+| Type | Peer-reviewed paper, book, official data | Random blog, content farm, AI summary |
+| Author | Named expert / institution | Anonymous or unverifiable |
+| Recency | Current for your field's pace | Outdated where the field has moved on |
+| Citations | Cites its own primary sources | No sources, or circular references |
+| Existence | Resolves via DOI / library catalogue | Can't be found anywhere but the AI's answer |
+| Bias | Discloses funding / is balanced | Selling something; one-sided |
+
+If a "source" only appears in an AI answer and you can't independently find it, it does not go in your bibliography.
 
 ---
 

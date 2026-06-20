@@ -33,6 +33,12 @@ Two requests, same topic:
 
 The second gets a focused, usable answer because it supplies a **role** (first-year student), **context** (coffee market example), a **task** (explain), and a **format** (under 200 words, define terms).
 
+| Vague prompt | Why it falls flat | Specific version |
+|---|---|---|
+| "Explain photosynthesis." | No level, no focus → generic encyclopedia paragraph | "Explain photosynthesis to a GCSE student in under 150 words; define every term." |
+| "Summarise this article." | No length or angle → unpredictable wall of text | "Summarise this article in 5 bullets focused on the methodology." |
+| "Help with my essay." | No task, no material → it guesses | "Here's my thesis and outline [paste]. What's the weakest argument? Don't rewrite — tell me what to fix." |
+
 ---
 
 ## The four-part prompt structure
@@ -43,6 +49,17 @@ Use this order. You don't need all four every time, but reach for them when an a
 2. **Context** — what you already know, what you're working on, constraints. Paste the actual text, question, or assignment brief.
 3. **Task** — the specific verb: explain, summarise, compare, quiz me, critique, outline.
 4. **Format** — length, structure, and style. "A 5-bullet summary," "a table comparing X and Y," "step by step."
+
+| Part | The question it answers | Example phrase |
+|---|---|---|
+| **Role / level** | *Who is this for?* | "Explain to a first-year student…" |
+| **Context** | *What does the model need to know?* | "Here is the exact question / my notes: [paste]" |
+| **Task** | *What single thing should it do?* | "…compare these two theories…" |
+| **Format** | *What shape should the answer take?* | "…as a table, under 200 words, define terms." |
+
+<Callout type="info" title="The pattern to memorise">
+**Role → Context → Task → Format.** Run through it in order whenever an answer disappoints — a weak answer is almost always a missing part.
+</Callout>
 
 <PromptBlock title="Four-part prompt — worked example" role="user">
 I'm a second-year biology student preparing for an exam.

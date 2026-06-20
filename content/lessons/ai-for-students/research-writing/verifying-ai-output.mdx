@@ -45,6 +45,18 @@ Treat these as unverified until you confirm them from a primary source:
 
 What's lower-risk: explanations of well-known general concepts, brainstorming, rephrasing your own text, structure and outlining. Even then — if a specific fact rides along, check it.
 
+### Decision flow: what to do with each output
+
+| If the AI output contains… | Risk | Do this before using it |
+|---|---|---|
+| A statistic, number, or date | High | Find the primary source that reports it; don't trust the figure alone |
+| A quote or attribution | High | Confirm the person actually said it, in the original |
+| A citation / reference | **Highest** | Resolve it — exact-title search + DOI check + does it support the claim |
+| A named fact (law, definition, event) | Medium | Confirm against an authoritative source |
+| A general explanation / your own text reworded | Low | Use it — but check any specific fact riding along |
+
+The simple gate: **specific claim → verify from a primary source → if it won't verify, drop it.**
+
 ---
 
 ## Step-by-step verification workflow
@@ -78,6 +90,23 @@ Checks that catch most fakes:
 - **Check the DOI** — paste it into [doi.org](https://doi.org). A real DOI resolves to the paper; a fake one doesn't.
 - **Match author + year + journal** to the real record, not just the title.
 - **Open the source and find the actual claim.** If the paper exists but doesn't say what the AI claimed, the citation is still unusable.
+
+Run every AI-suggested reference through this sequence — stop and discard the moment one step fails:
+
+<WorkflowBlock>
+<WorkflowStep number={1} title="Exact-title search">
+Paste the title in quotes into Google Scholar / the publisher. No exact match → almost certainly fabricated → discard.
+</WorkflowStep>
+<WorkflowStep number={2} title="Resolve the DOI">
+Paste the DOI into doi.org. It must resolve to the same paper. Doesn't resolve → discard.
+</WorkflowStep>
+<WorkflowStep number={3} title="Match the metadata">
+Confirm author + year + journal match the real record — not just the title. Mismatch → discard.
+</WorkflowStep>
+<WorkflowStep number={4} title="Confirm it supports your claim">
+Open the source and find the actual passage. Real paper that doesn't say what you claimed → still unusable → fix or drop.
+</WorkflowStep>
+</WorkflowBlock>
 
 Never paste an AI-generated reference list into an essay without resolving every entry to a real, checked source.
 
