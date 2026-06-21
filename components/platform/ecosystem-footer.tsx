@@ -70,6 +70,7 @@ const NAV_SECTIONS = [
     heading: 'Platform',
     links: [
       { label: 'Execution Tracks', href: '/tracks' },
+      { label: 'AI for Students',  href: '/tracks/ai-for-students' },
       { label: 'Start Here',       href: '/start-here' },
       { label: 'Operations',       href: '/ops' },
     ],

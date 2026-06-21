@@ -271,6 +271,19 @@ export default function HomePage() {
       {/* ── Featured failures ────────────────────────────────── */}
       <FeaturedFailures />
 
+      {/* ── Featured beginner track for students ─────────────── */}
+      <Link
+        href="/tracks/ai-for-students"
+        className="group mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-purple-500/25 bg-purple-500/[0.05] px-5 py-4 transition hover:border-purple-500/45"
+      >
+        <div>
+          <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-purple-300/80">New to AI? Start here</p>
+          <p className="mt-1 text-sm font-medium text-surface-100">AI for Students — our most complete beginner track</p>
+          <p className="mt-0.5 text-xs text-surface-500">Learn faster, research smarter, and write honestly with AI — 9 practical lessons.</p>
+        </div>
+        <span className="shrink-0 text-sm font-semibold text-purple-300">Start the track →</span>
+      </Link>
+
       {/* ── Section grid ─────────────────────────────────────── */}
       <SectionTracks sections={sections} />
 
