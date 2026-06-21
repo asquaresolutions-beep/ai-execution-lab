@@ -130,5 +130,13 @@ function labSitemap(): MetadataRoute.Sitemap {
   }))
   const tags: MetadataRoute.Sitemap = buildTagIndex().map(({ tag }) => ({ url: `${LAB}/tags/${tag}`, lastModified: now, changeFrequency: 'weekly', priority: 0.4 }))
   const tracks: MetadataRoute.Sitemap = TRACKS.map((t) => ({ url: `${LAB}/tracks/${t.id}`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 }))
-  return [...fixed, ...items, ...tags, ...tracks]
+  // Published (available) lesson pages — exclude coming-soon so unbuilt lessons aren't indexed.
+  const lessons: MetadataRoute.Sitemap = TRACKS.flatMap((t) =>
+    t.modules.flatMap((m) =>
+      m.lessons
+        .filter((l) => l.status !== 'coming-soon')
+        .map((l) => ({ url: `${LAB}/tracks/${t.id}/${m.id}/${l.id}`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.6 }))
+    )
+  )
+  return [...fixed, ...items, ...tags, ...tracks, ...lessons]
 }
