@@ -9,6 +9,12 @@ const SITE_URL  = 'https://lab.asquaresolution.com' // pinned to Lab host (see l
 const SITE_NAME = 'AI Execution Lab'
 const TWITTER   = '@asquaresolution'
 
+// Contextual "next recommended track" links (only genuinely-relevant adjacencies).
+const RECOMMENDED_NEXT: Record<string, string[]> = {
+  'ai-for-non-developers': ['ai-for-students'],
+  'ai-for-students': ['ai-freelancing', 'ai-business-zero-budget'],
+}
+
 interface Props { params: Promise<{ track: string }> }
 
 export function generateStaticParams() {
@@ -198,6 +204,33 @@ export default async function TrackPage({ params }: Props) {
 
         </aside>
       </div>
+
+      {/* ── Next recommended track ───────────────────────────── */}
+      {(() => {
+        const recs = (RECOMMENDED_NEXT[track.id] ?? [])
+          .map((id) => getTrack(id))
+          .filter((t): t is NonNullable<typeof t> => !!t)
+        if (recs.length === 0) return null
+        return (
+          <div className="mt-12 pt-8 border-t border-white/[0.06]">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-surface-600 mb-4">
+              Recommended next track
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {recs.map((t) => (
+                <Link
+                  key={t.id}
+                  href={`/tracks/${t.id}`}
+                  className="group flex flex-col gap-1 rounded-xl border border-white/[0.06] bg-white/[0.015] px-4 py-3.5 transition hover:border-white/[0.12]"
+                >
+                  <span className="text-sm font-medium text-surface-200 group-hover:text-surface-50">{t.title} →</span>
+                  <span className="text-xs text-surface-500 leading-snug">{t.tagline}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
     </div>
   )
