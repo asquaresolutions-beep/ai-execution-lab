@@ -233,6 +233,13 @@ export const RELATED_CONTENT: Record<string, RelatedItem[]> = {
     { label: 'AI-Enhanced Note-Taking System', href: '/tracks/ai-for-students/learning-acceleration/note-taking-ai', type: 'playbook', note: 'Capture the gaps your recall sessions surface' },
   ],
 
+  'note-taking-ai': [
+    { label: 'Building Your Personal AI Learning Stack', href: '/tracks/ai-for-students/learning-acceleration/personal-learning-stack', type: 'lesson', note: 'The wider study system these notes plug into' },
+    { label: 'Using AI to Test Your Own Understanding', href: '/tracks/ai-for-students/learning-acceleration/concept-mastery-ai', type: 'playbook', note: 'The retrieval techniques your notes should feed' },
+    { label: 'Prompting Fundamentals for Students', href: '/tracks/ai-for-students/learning-acceleration/ai-prompting-fundamentals', type: 'lesson', note: 'Write the cleanup/convert prompts this relies on' },
+    { label: 'AI-Assisted Research Workflow for Students', href: '/tracks/ai-for-students/research-writing/research-workflow-student', type: 'playbook', note: 'Where research sources become notes' },
+  ],
+
   'verifying-ai-output': [
     { label: 'AI-Assisted Research Workflow for Students', href: '/tracks/ai-for-students/research-writing/research-workflow-student', type: 'playbook', note: 'Where citation verification fits the full pipeline' },
     { label: 'Writing with AI as a Partner, Not a Ghost', href: '/tracks/ai-for-students/research-writing/ai-writing-partner', type: 'lesson' },
