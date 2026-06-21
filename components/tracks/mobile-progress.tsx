@@ -4,9 +4,9 @@
 // hidden below xl). Reuses the EXISTING progress system (lib/progress + the
 // 'track:progress' event dispatched by CompleteButton) — no duplicate state, no
 // backend. Two render modes:
-//   variant="bar"  → compact progress block, shown ABOVE lesson content
+//   variant="bar"  → compact progress block, shown ABOVE lesson content (mobile/tablet only)
 //   variant="next" → Continue-Learning card / track-complete card, shown after the
-//                    complete button (continuity; never a dead-end)
+//                    complete button on ALL viewports (continuity; never a dead-end)
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getTrackProgress } from '@/lib/progress'
@@ -73,7 +73,7 @@ export function MobileProgress({
   // ── NEXT: continuity card (after the complete button) ────────────
   if (allDone) {
     return (
-      <div className="xl:hidden mt-8 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] px-5 py-5">
+      <div className="mt-8 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] px-5 py-5">
         <p className="text-sm font-semibold text-emerald-300">You&apos;ve completed all currently available lessons. 🎉</p>
         <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-surface-500">Available now</p>
         <ul className="mt-2 space-y-1.5">
@@ -94,7 +94,7 @@ export function MobileProgress({
     return (
       <Link
         href={`/tracks/${trackId}/${next.moduleId}/${next.lessonId}`}
-        className="xl:hidden mt-8 block rounded-xl border border-purple-500/30 bg-purple-500/[0.07] px-5 py-4 transition hover:border-purple-500/50"
+        className="mt-8 block rounded-xl border border-purple-500/30 bg-purple-500/[0.07] px-5 py-4 transition hover:border-purple-500/50"
       >
         <p className="text-[11px] font-semibold uppercase tracking-wide text-purple-300">Continue learning →</p>
         <p className="mt-1 text-sm font-medium text-surface-100">{next.title}</p>

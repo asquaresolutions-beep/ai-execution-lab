@@ -30,7 +30,8 @@ export function Callout({
   type?: CalloutType
   title?: string
 }) {
-  const s = CALLOUT_STYLES[type]
+  // Fallback to 'info' for unknown types so an invalid MDX `type` never crashes the build.
+  const s = CALLOUT_STYLES[type] ?? CALLOUT_STYLES.info
   return (
     <div className={cn('my-6 rounded-lg border px-5 py-4', s.border, s.bg)}>
       {title && (
