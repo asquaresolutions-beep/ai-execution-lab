@@ -214,9 +214,16 @@ export const RELATED_CONTENT: Record<string, RelatedItem[]> = {
   ],
 
   'ai-prompting-fundamentals': [
+    { label: 'Building Your Personal AI Learning Stack', href: '/tracks/ai-for-students/learning-acceleration/personal-learning-stack', type: 'lesson', note: 'The study system your prompts run inside' },
     { label: 'AI for Learning: What It Accelerates and What It Harms', href: '/tracks/ai-for-students/learning-acceleration/ai-learning-reality', type: 'lesson', note: 'When to use these prompts — and when not to' },
-    { label: 'Spotting Hallucinations & Verifying AI Output', href: '/tracks/ai-for-students/research-writing/verifying-ai-output', type: 'lesson', note: 'Good prompts still produce confident errors' },
     { label: 'AI-Assisted Research Workflow for Students', href: '/tracks/ai-for-students/research-writing/research-workflow-student', type: 'playbook', note: 'Put prompting to work in real research' },
+  ],
+
+  'personal-learning-stack': [
+    { label: 'Prompting Fundamentals for Students', href: '/tracks/ai-for-students/learning-acceleration/ai-prompting-fundamentals', type: 'lesson', note: 'Make every tool in your stack produce better output' },
+    { label: 'AI-Assisted Research Workflow for Students', href: '/tracks/ai-for-students/research-writing/research-workflow-student', type: 'playbook', note: 'The research stage of your stack, in depth' },
+    { label: 'AI-Enhanced Note-Taking System', href: '/tracks/ai-for-students/learning-acceleration/note-taking-ai', type: 'playbook', note: 'The notes stage of your stack' },
+    { label: 'Using AI to Test Your Own Understanding', href: '/tracks/ai-for-students/learning-acceleration/concept-mastery-ai', type: 'playbook', note: 'The understanding stage of your stack' },
   ],
 
   'verifying-ai-output': [
