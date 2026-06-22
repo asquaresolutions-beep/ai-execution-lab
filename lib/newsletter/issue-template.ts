@@ -80,6 +80,8 @@ export function composeNewsletterIssue(issue: NewsletterIssueInput): ComposedIss
   const wa = whatsappShareUrl(issue.shareThisAlert.whatsappText, issue.shareThisAlert.shareUrl)
 
   const bodyHtml = [
+    // Hidden preheader — controls the inbox preview text (not visible in the body).
+    `<span style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;max-height:0;overflow:hidden;mso-hide:all">${esc(issue.preview)}</span>`,
     `<p style="margin:0 0 4px;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:#0ea5e9;font-weight:700">ScamCheck Weekly · Issue #${issue.number}</p>`,
     issue.intro,
     section('🚨', `Scam of the Week: ${issue.scamOfWeek.name}`, issue.scamOfWeek.bodyHtml),
@@ -102,11 +104,11 @@ export function composeNewsletterIssue(issue: NewsletterIssueInput): ComposedIss
 // 3-minute read. Theme matches the article that drove 77% of subscribers.
 export const ISSUE_001: NewsletterIssueInput = {
   number: 1,
-  subject: 'The fake payment screenshot fooling UPI users right now',
-  preview: 'No money actually arrived — here\'s the 10-second check before you act.',
+  subject: 'They "sent" ₹9,000 by mistake. It never arrived. 🚩',
+  preview: 'The refund trap hitting UPI sellers this week — and the 10-second check that stops it.',
   title: 'A screenshot is not proof of payment',
   intro:
-    `<p style="${P}">Welcome to the first ScamCheck Weekly. You're here because you read about fake UPI payment screenshots — which means you already know more than most. Each week: one real scam, how to spot it, and one habit that protects you. Three minutes, no fluff.</p>`,
+    `<p style="${P}">Hi — welcome to the first issue. One real scam, how to spot it, and one habit that protects you. 2-minute read.</p>`,
   scamOfWeek: {
     name: 'The "Wrong Payment" Refund Trap',
     bodyHtml:
@@ -137,18 +139,14 @@ export const ISSUE_001: NewsletterIssueInput = {
   },
   scamCheckCorner: {
     bodyHtml:
-      `<p style="${P}">Got a screenshot, message, or link you're unsure about? That's exactly what ScamCheck is for — paste the text or upload the image and get an instant risk read. Free, no signup.</p>`,
-    ctaLabel: 'Check something on ScamCheck',
-    ctaHref: SCAMCHECK,
+      `<p style="${P}">Got a screenshot you're unsure about? Don't guess — upload it and get an instant risk read in about 30 seconds. Free, no signup.</p>`,
+    ctaLabel: 'Check a screenshot free on ScamCheck →',
+    ctaHref: `${SCAMCHECK}/scamcheck/screenshot`,
   },
   shareThisAlert: {
     whatsappText: 'Useful scam alert — how to spot fake UPI payment screenshots before you lose money:',
     shareUrl: `${SCAMCHECK}/?utm_source=newsletter&utm_medium=share&utm_campaign=issue01`,
     forwardHtml:
-      `<p style="${P}">This newsletter grows by word of mouth — and scams lose power when more people can spot them. If this was useful:</p>` +
-      `<ul style="padding-left:20px;margin:0 0 14px">` +
-      `<li style="${LI}"><b>Forward this email</b> to one person who uses UPI every day.</li>` +
-      `<li style="${LI}"><b>Send it to your family WhatsApp group</b> — the people most likely to be targeted.</li>` +
-      `</ul>`,
+      `<p style="${P}">Know someone who sells online or uses UPI daily? This is the one to forward — one share can stop one fraud.</p>`,
   },
 }

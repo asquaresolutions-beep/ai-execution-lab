@@ -84,14 +84,17 @@ export async function composeIssueOneDraft(now: number = Date.now()): Promise<{ 
   const store = getStore()
   const id = `scamcheck-issue-${ISSUE_001.number}`
   const existing = await store.get<Campaign>(CAMPAIGNS, id)
-  if (existing) return { created: false, id, reason: 'draft-exists' }   // idempotent
+  // Refresh content ONLY while still a draft. Never overwrite an approved/sending/sent
+  // campaign (protects an in-flight send); idempotent for non-draft states.
+  if (existing && existing.data.status !== 'draft') return { created: false, id, reason: `not-draft (${existing.data.status})` }
   const c = composeNewsletterIssue(ISSUE_001)
   const campaign: Campaign = {
     id, brand: 'scamcheck', subject: c.subject, title: c.title, bodyHtml: c.bodyHtml,
-    status: 'draft', source: `manual:issue-${ISSUE_001.number}`, createdAt: new Date(now).toISOString(),
+    status: 'draft', source: `manual:issue-${ISSUE_001.number}`,
+    createdAt: existing ? existing.data.createdAt : new Date(now).toISOString(),
   }
   await store.set<Campaign>(CAMPAIGNS, id, campaign)
-  return { created: true, id }
+  return { created: !existing, id, ...(existing ? { reason: 'draft-refreshed' } : {}) }
 }
 
 export async function getCampaign(id: string): Promise<Campaign | null> {
