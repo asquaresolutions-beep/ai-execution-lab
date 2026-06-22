@@ -8,22 +8,27 @@
 // Framer Motion + SVG/CSS only — NO React Three Fiber, NO new deps, MOCK data.
 // Self-contained dark palette. Honors prefers-reduced-motion. Data wiring + auth
 // gating land in the next phase.
+import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { HeroNetwork } from '@/components/trustseal/command/hero-network'
 import { IntelTerminal } from '@/components/trustseal/command/intel-terminal'
 import { TrustScoreCards, RiskPanel, VerificationTimeline, LiveDot } from '@/components/trustseal/command/widgets'
+import { DomainsSection, VerificationsSection, RiskSection, NetworkSection, TimelineSection, SettingsSection } from '@/components/trustseal/command/command-sections'
 
 const C = { text1: '#e6edf7', text2: '#9aa7c2', text3: '#5d6a86', cyan: '#22d3ee', violet: '#a78bfa', good: '#34d399' }
 
 const NAV = [
-  { icon: '◎', label: 'Overview', active: true },
+  { icon: '◎', label: 'Overview' },
   { icon: '◫', label: 'Domains' },
   { icon: '✓', label: 'Verifications' },
   { icon: '⚠', label: 'Risk' },
   { icon: '⬡', label: 'Network' },
   { icon: '◷', label: 'Timeline' },
   { icon: '⚙', label: 'Settings' },
-]
+] as const
+
+type Section = (typeof NAV)[number]['label']
+const SECTIONS = NAV.map((n) => n.label) as Section[]
 
 // Deterministic floating intelligence-particle field (HTML layer, behind content).
 const PARTICLES = Array.from({ length: 34 }, (_, i) => ({
@@ -65,6 +70,24 @@ function AnimatedBackdrop() {
 }
 
 export function CommandCenter({ locale = 'en' }: { locale?: string }) {
+  // Sidebar navigation: in-page section switch, deep-linkable via the URL hash
+  // (e.g. /en/command#domains). No new routes; design unchanged.
+  const [active, setActive] = useState<Section>('Overview')
+  useEffect(() => {
+    const fromHash = () => {
+      const h = decodeURIComponent(window.location.hash.replace('#', '')).toLowerCase()
+      const match = SECTIONS.find((s) => s.toLowerCase() === h)
+      if (match) setActive(match)
+    }
+    fromHash()
+    window.addEventListener('hashchange', fromHash)
+    return () => window.removeEventListener('hashchange', fromHash)
+  }, [])
+  const go = (label: Section) => {
+    setActive(label)
+    if (typeof window !== 'undefined') window.history.replaceState(null, '', `#${label.toLowerCase()}`)
+  }
+
   return (
     <div data-command-center className="relative min-h-screen w-full" style={{ color: C.text1, fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
       <AnimatedBackdrop />
@@ -81,15 +104,18 @@ export function CommandCenter({ locale = 'en' }: { locale?: string }) {
               <path d="M14 20 l4 4 l8 -9" fill="none" stroke="url(#nav-seal)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          {NAV.map((n) => (
-            <button key={n.label} title={n.label} aria-label={n.label} aria-current={n.active ? 'page' : undefined}
-              className="group relative flex h-11 w-11 flex-col items-center justify-center rounded-xl text-lg transition-colors"
-              style={{ color: n.active ? C.cyan : C.text3, background: n.active ? 'rgba(34,211,238,0.10)' : 'transparent' }}>
-              {n.active && <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full" style={{ background: C.cyan, boxShadow: `0 0 8px ${C.cyan}` }} />}
-              <span aria-hidden>{n.icon}</span>
-              <span className="text-[8px] tracking-wide">{n.label}</span>
-            </button>
-          ))}
+          {NAV.map((n) => {
+            const on = active === n.label
+            return (
+              <button key={n.label} type="button" onClick={() => go(n.label)} title={n.label} aria-label={n.label} aria-current={on ? 'page' : undefined}
+                className="group relative flex h-11 w-11 flex-col items-center justify-center rounded-xl text-lg transition-colors"
+                style={{ color: on ? C.cyan : C.text3, background: on ? 'rgba(34,211,238,0.10)' : 'transparent' }}>
+                {on && <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full" style={{ background: C.cyan, boxShadow: `0 0 8px ${C.cyan}` }} />}
+                <span aria-hidden>{n.icon}</span>
+                <span className="text-[8px] tracking-wide">{n.label}</span>
+              </button>
+            )
+          })}
         </nav>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -118,8 +144,20 @@ export function CommandCenter({ locale = 'en' }: { locale?: string }) {
             </div>
           </header>
 
-          {/* ── main: HERO-centric ── */}
+          {/* ── main: section switch (sidebar nav). Overview keeps the HERO-centric
+                layout unchanged; other sections render their own views/empty states. ── */}
           <main className="flex-1 space-y-4 p-5">
+            {active !== 'Overview' && (
+              <h2 className="text-sm font-semibold tracking-wide" style={{ color: C.text1 }}>{active}</h2>
+            )}
+            {active === 'Domains' && <DomainsSection />}
+            {active === 'Verifications' && <VerificationsSection />}
+            {active === 'Risk' && <RiskSection />}
+            {active === 'Network' && <NetworkSection />}
+            {active === 'Timeline' && <TimelineSection />}
+            {active === 'Settings' && <SettingsSection locale={locale} />}
+
+            {active === 'Overview' && (<>
             {/* 1 + 2 + 7. HERO: Trust Network with holographic Trust Score core */}
             <section className="relative grid grid-cols-1 gap-4 xl:grid-cols-12">
               <div className="relative overflow-hidden rounded-2xl xl:col-span-8"
@@ -168,6 +206,7 @@ export function CommandCenter({ locale = 'en' }: { locale?: string }) {
             <p className="pt-2 text-center font-mono text-[10px]" style={{ color: C.text3 }}>
               Phase-2.2 visual prototype · mock data · no real intelligence wired yet
             </p>
+            </>)}
           </main>
         </div>
       </div>
