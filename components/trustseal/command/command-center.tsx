@@ -137,12 +137,23 @@ export function CommandCenter({ locale = 'en' }: { locale?: string }) {
                 className="w-full rounded-lg border bg-transparent py-2 pl-8 pr-3 text-xs outline-none"
                 style={{ borderColor: 'rgba(120,160,255,0.16)', color: C.text2 }} />
             </div>
-            <div className="ml-auto flex shrink-0 items-center gap-3 md:ml-0">
-              <LiveDot label="LIVE FEED" />
+            <nav className="ml-auto flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 md:ml-0">
+              <a href={`/${locale}`} className="text-xs font-semibold" style={{ color: C.cyan }}>← TrustSeal</a>
+              <a href={`/${locale}/verify`} className="text-xs" style={{ color: C.text2 }}>Verify</a>
+              <a href={`/${locale}/pricing`} className="text-xs" style={{ color: C.text2 }}>Pricing</a>
+              <a href={`/${locale}/docs`} className="text-xs" style={{ color: C.text2 }}>Docs</a>
+              <a href={`/${locale}/enterprise`} className="text-xs" style={{ color: C.text2 }}>Support</a>
               <span className="hidden h-5 w-px sm:block" style={{ background: 'rgba(120,160,255,0.18)' }} />
+              <LiveDot label="SAMPLE" />
               <div className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold" style={{ background: 'linear-gradient(135deg,#8b5cf6,#22d3ee)', color: '#06121e' }}>A</div>
-            </div>
+            </nav>
           </header>
+
+          {/* DEMO/PREVIEW notice — this surface renders sample data only (no real verifications). */}
+          <div className="flex items-center gap-2 border-b px-4 py-2 text-[11px] sm:px-5" style={{ borderColor: 'rgba(251,191,36,0.25)', background: 'rgba(251,191,36,0.08)', color: '#fbbf24' }}>
+            <span aria-hidden>⚠</span>
+            <span><b>Preview · sample data.</b> Figures, feeds and timelines on this screen are illustrative for layout — <b>not real verifications or live activity</b>. Your real data appears once you verify a domain.</span>
+          </div>
 
           {/* ── main: section switch (sidebar nav). Overview keeps the HERO-centric
                 layout unchanged; other sections render their own views/empty states. ── */}
@@ -169,9 +180,9 @@ export function CommandCenter({ locale = 'en' }: { locale?: string }) {
                       <span className="h-1.5 w-1.5 rounded-full" style={{ background: C.cyan, boxShadow: `0 0 8px ${C.cyan}` }} />
                       <h2 className="text-xs font-semibold tracking-[0.22em]" style={{ color: C.text1 }}>TRUST NETWORK</h2>
                     </div>
-                    <p className="mt-0.5 font-mono text-[10px]" style={{ color: C.text3 }}>live topology · 8 monitored · 1 anchored origin</p>
+                    <p className="mt-0.5 font-mono text-[10px]" style={{ color: C.text3 }}>sample topology · illustrative preview</p>
                   </div>
-                  <span className="rounded-md border px-2 py-1 font-mono text-[9px] tracking-widest" style={{ borderColor: 'rgba(52,211,153,0.4)', color: C.good }}>● OPERATIONAL</span>
+                  <span className="rounded-md border px-2 py-1 font-mono text-[9px] tracking-widest" style={{ borderColor: 'rgba(120,160,255,0.3)', color: C.text3 }}>PREVIEW</span>
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center pt-8">
                   <HeroNetwork score={94} band="VERIFIED" />

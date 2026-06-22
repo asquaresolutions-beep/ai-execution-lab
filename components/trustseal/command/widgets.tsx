@@ -48,7 +48,7 @@ export function Panel({ title, badge, children, className = '', style }: { title
   )
 }
 
-export function LiveDot({ label = 'LIVE' }: { label?: string }) {
+export function LiveDot({ label = 'SAMPLE' }: { label?: string }) {
   const reduce = useReducedMotion()
   return (
     <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-wider" style={{ color: C.good }}>
@@ -64,7 +64,7 @@ export function LiveDot({ label = 'LIVE' }: { label?: string }) {
 // This rail intentionally carries only operational metrics (no competing score).
 const METRICS = [
   { k: 'Monitored', v: '142', unit: 'domains', delta: '+6', color: C.cyan, spark: [120, 124, 126, 128, 132, 134, 136, 138, 139, 141, 142] },
-  { k: 'Verified', v: '128', unit: 'live seals', delta: '+12', color: C.good, spark: [90, 96, 100, 104, 108, 112, 118, 120, 124, 126, 128] },
+  { k: 'Verified', v: '128', unit: 'seals', delta: '+12', color: C.good, spark: [90, 96, 100, 104, 108, 112, 118, 120, 124, 126, 128] },
   { k: 'Active Claims', v: '17', unit: 'pending', delta: '+5', color: C.violet, spark: [8, 10, 9, 12, 14, 13, 15, 14, 16, 15, 17] },
   { k: 'Risk Events', v: '3', unit: '24h', delta: '−1', color: C.warn, spark: [7, 6, 8, 5, 6, 4, 5, 4, 4, 3, 3] },
 ]
@@ -107,13 +107,14 @@ export function TrustScoreCards() {
 }
 
 // ── 5. Domain verification activity feed ─────────────────────────
+// SAMPLE feed — illustrative placeholders only, NOT real verification activity.
 const FEED = [
-  { d: 'fastly.dev', a: 'DNS verified', t: '12s', tone: C.good },
-  { d: 'payquik.net', a: 'TLS warning', t: '48s', tone: C.warn },
-  { d: 'nova.app', a: 'Claim started', t: '2m', tone: C.cyan },
-  { d: 'lure-bank.top', a: 'Blocklist hit', t: '5m', tone: C.bad },
-  { d: 'helio.gg', a: 'Re-verified', t: '8m', tone: C.good },
-  { d: 'orbit.sh', a: 'Score updated', t: '11m', tone: C.violet },
+  { d: 'example.com', a: 'DNS verified', t: '12s', tone: C.good },
+  { d: 'shop.example', a: 'TLS warning', t: '48s', tone: C.warn },
+  { d: 'store.example', a: 'Claim started', t: '2m', tone: C.cyan },
+  { d: 'bad-actor.example', a: 'Blocklist hit', t: '5m', tone: C.bad },
+  { d: 'pay.example', a: 'Re-verified', t: '8m', tone: C.good },
+  { d: 'app.example', a: 'Score updated', t: '11m', tone: C.violet },
 ]
 export function ActivityFeed() {
   return (
@@ -168,12 +169,13 @@ export function RiskPanel() {
 }
 
 // ── 8. Recent verification timeline ──────────────────────────────
+// SAMPLE timeline — illustrative placeholders only, NOT real verifications.
 const TIMELINE = [
-  { t: '14:22', d: 'asquaresolution.com', s: 'Verified · score 94', tone: C.good },
-  { t: '13:58', d: 'fastly.dev', s: 'DNS TXT confirmed', tone: C.cyan },
-  { t: '13:30', d: 'payquik.net', s: 'Flagged for review', tone: C.warn },
-  { t: '12:47', d: 'lure-bank.top', s: 'Blocklist — rejected', tone: C.bad },
-  { t: '12:05', d: 'helio.gg', s: 'Ownership claimed', tone: C.violet },
+  { t: '14:22', d: 'example.com', s: 'Verified · sample', tone: C.good },
+  { t: '13:58', d: 'shop.example', s: 'DNS TXT confirmed', tone: C.cyan },
+  { t: '13:30', d: 'store.example', s: 'Flagged for review', tone: C.warn },
+  { t: '12:47', d: 'bad-actor.example', s: 'Blocklist — rejected', tone: C.bad },
+  { t: '12:05', d: 'pay.example', s: 'Ownership claimed', tone: C.violet },
 ]
 export function VerificationTimeline() {
   return (
