@@ -8,7 +8,7 @@
 // Bearer ADMIN_API_TOKEN. Draft-first: no send path exists without explicit approve+send.
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
-import { composeWeeklyScamcheckDraft, listCampaigns, getCampaign, approveCampaign, enqueueCampaign } from '@/lib/newsletter/campaigns'
+import { composeWeeklyScamcheckDraft, composeIssueOneDraft, listCampaigns, getCampaign, approveCampaign, enqueueCampaign } from '@/lib/newsletter/campaigns'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,6 +25,8 @@ export async function POST(req: Request) {
   switch (b.action) {
     case 'compose':
       return NextResponse.json(await composeWeeklyScamcheckDraft())
+    case 'compose-issue':
+      return NextResponse.json(await composeIssueOneDraft())
     case 'approve':
       if (!b.id) return NextResponse.json({ ok: false, error: 'id_required' }, { status: 400 })
       return NextResponse.json(await approveCampaign(b.id))
