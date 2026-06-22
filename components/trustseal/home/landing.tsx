@@ -54,9 +54,24 @@ const CONV: Record<string, { apiH: string; apiS: string; apiCta: string; certH: 
   ar: { apiH: 'واجهة ثقة برمجية يمكن لأي أحد استدعاؤها', apiS: 'استعلم عن حالة ثقة أي نطاق مباشرةً بصيغة JSON — ادمج TrustSeal في الدفع أو التهيئة أو السوق لديك.', apiCta: 'اقرأ وثائق الواجهة', certH: 'شهادات قابلة للتحقق', certS: 'يحصل كل نطاق موثّق على شهادة قابلة للتنزيل ببصمة مقاومة للعبث ورمز QR.', certQr: 'امسح رمز QR لتأكيد الشهادة مقابل الختم العام الحيّ — لا يمكن تزويرها.', certCta: 'توثيق نطاق' },
 }
 
+// Founder Pilot + risk-reversal (self-contained like CONV; en fallback). Honest:
+// no testimonials/logos/case studies/numbers — a real, risk-free early-adopter offer.
+const PILOT: Record<string, { h: string; s: string; b1: string; b2: string; b3: string; b4: string; cta: string }> = {
+  en: {
+    h: 'Founder pilot — we set it up with you',
+    s: 'We’re onboarding our first businesses personally. Join the founder pilot and we’ll verify your business and configure the badge for you — free for 30 days. If it doesn’t earn its place, walk away: no cost, no lock-in. Early businesses keep founder pricing.',
+    b1: 'Free 30-day pilot — no card to start',
+    b2: 'We handle setup and verification for you',
+    b3: 'Cancel anytime — access runs to period end',
+    b4: 'Founder pricing locked for early adopters',
+    cta: 'Join the founder pilot',
+  },
+}
+
 export function TrustSealLanding({ locale = 'en' as Locale, metrics, feed = [] }: { locale?: Locale; metrics?: HomeMetrics; feed?: FeedItem[] }) {
   const x = (k: string) => t(locale, k)
   const cv = CONV[locale] ?? CONV.en
+  const pilot = PILOT[locale] ?? PILOT.en
   const L = (sub: string) => `/${locale}${sub}`
 
   // REAL data (server-provided). Sections hide when there is nothing genuine to show.
@@ -225,6 +240,23 @@ export function TrustSealLanding({ locale = 'en' as Locale, metrics, feed = [] }
         <p className={`${H} mt-2 text-sm`} style={{ color: C.text2 }}>{x('network.subheading')}</p>
         <div className="mx-auto mt-8 grid max-w-md place-items-center"><HexSeal size={120} /></div>
         <div className="mt-6"><a href={L('/command')} className="rounded-lg border px-5 py-2.5 text-sm font-semibold" style={{ borderColor: 'rgba(120,160,255,0.3)', color: C.cyan }}>{x('network.cta')}</a></div>
+      </section>
+
+      {/* 6b — FOUNDER PILOT + RISK REVERSAL (honest early-adopter offer) */}
+      <section className="px-6 py-14">
+        <div className="mx-auto max-w-3xl p-7" style={{ ...card, border: `2px solid ${C.cyan}` }}>
+          <span className="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider" style={{ background: 'rgba(34,211,238,0.12)', color: C.cyan }}>Limited · founder pilot</span>
+          <h2 className="mt-3 text-2xl font-bold">{pilot.h}</h2>
+          <p className="mt-2 text-sm" style={{ color: C.text2 }}>{pilot.s}</p>
+          <ul className="mt-5 grid gap-2.5 sm:grid-cols-2">
+            {[pilot.b1, pilot.b2, pilot.b3, pilot.b4].map((b) => (
+              <li key={b} className="flex items-start gap-2 text-sm" style={{ color: C.text1 }}>
+                <span aria-hidden style={{ color: BAND.verified }}>✓</span><span>{b}</span>
+              </li>
+            ))}
+          </ul>
+          <a href={L('/enterprise')} className="mt-6 inline-block rounded-lg px-5 py-2.5 text-sm font-semibold" style={{ background: C.cyan, color: '#06121e' }}>{pilot.cta}</a>
+        </div>
       </section>
 
       {/* 7 — PRICING */}
