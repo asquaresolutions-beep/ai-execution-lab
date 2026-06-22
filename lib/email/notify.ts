@@ -192,6 +192,12 @@ export async function notifyNewsletter(d: { name?: string; email: string; source
       <p style="line-height:1.6;margin-bottom:0">Stay safe,<br/>Anis<br/><span style="color:#71717a">A Square Solutions · ScamCheck</span></p>
       <p style="line-height:1.6;font-size:13px;color:#71717a">P.S. Just hit reply if you've seen a scam you want us to cover — a real person reads every reply.</p>` + unsubFooter(d.email)),
   })
+  // Delivery visibility (asq-nl-delivery-log-v1): log admin and subscriber-welcome
+  // failures SEPARATELY so a failed welcome is never masked by a successful admin
+  // notification. Skips the no-RESEND-key no-op (skipped) so it only fires on real
+  // failures. Pure logging — no behaviour/return-shape change.
+  if (!admin.ok && !admin.skipped) console.warn(JSON.stringify({ event: 'newsletter.admin_email_failed', email: d.email, status: admin.status, error: admin.error }))
+  if (!user.ok && !user.skipped) console.warn(JSON.stringify({ event: 'newsletter.welcome_email_failed', email: d.email, status: user.status, error: user.error }))
   return { admin: admin.ok, user: user.ok, error: admin.error || user.error }
 }
 
