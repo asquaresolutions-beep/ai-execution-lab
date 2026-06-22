@@ -174,11 +174,23 @@ export async function notifyNewsletter(d: { name?: string; email: string; source
   })
   const user = await send({
     to: d.email,
-    subject: 'Welcome to the A Square Solutions newsletter',
+    subject: 'You\'re in — here\'s how we\'ll help you spot scams',
+    replyTo: ADMIN_EMAIL,   // a real, monitored inbox so "just reply" is true (human, not no-reply)
     headers: listHeaders(d.email),
-    html: wrap('You\'re subscribed', `
-      <p>Hi${d.name ? ' ' + esc(d.name) : ''}, thanks for subscribing. You'll get practical updates on AI, web, and SEO from A Square Solutions.</p>
-      <p>Explore our work at <a href="https://asquaresolution.com">asquaresolution.com</a>, or check a suspicious message free with <a href="https://scamcheck.asquaresolution.com">ScamCheck</a>.</p>` + unsubFooter(d.email)),
+    html: wrap('Welcome — you just got harder to scam', `
+      <p style="line-height:1.6">Hi${d.name ? ' ' + esc(d.name) : ''}, thanks for subscribing — and welcome.</p>
+      <p style="line-height:1.6">Most people who join us came in after reading about <b>fake payment screenshots</b>, so you already get the one rule that stops a lot of fraud: <b>a screenshot is never proof that money arrived.</b> That instinct is exactly what we'll sharpen.</p>
+      <p style="line-height:1.6;margin-bottom:6px"><b>What you'll get from us:</b></p>
+      <ul style="line-height:1.6;margin-top:0">
+        <li><b>Scam of the Week</b> — one real scam doing the rounds in India, broken down simply.</li>
+        <li><b>A 10-second verification tip</b> you can actually use that day.</li>
+        <li>The occasional <b>urgent alert</b> when a scam is spreading fast.</li>
+      </ul>
+      <p style="line-height:1.6">Short, practical, no spam — and no selling. Unsubscribe anytime.</p>
+      <p style="line-height:1.6"><b>One quick favour:</b> add <b>noreply@asquaresolution.com</b> to your contacts (or, if this landed in Promotions/Spam, move it to your inbox and mark it "Not spam"). That way our alerts actually reach you when it matters.</p>
+      <p style="line-height:1.6">Got a suspicious message, link, or screenshot right now? Check it free in 30 seconds with <a href="https://scamcheck.asquaresolution.com">ScamCheck</a>.</p>
+      <p style="line-height:1.6;margin-bottom:0">Stay safe,<br/>Anis<br/><span style="color:#71717a">A Square Solutions · ScamCheck</span></p>
+      <p style="line-height:1.6;font-size:13px;color:#71717a">P.S. Just hit reply if you've seen a scam you want us to cover — a real person reads every reply.</p>` + unsubFooter(d.email)),
   })
   return { admin: admin.ok, user: user.ok, error: admin.error || user.error }
 }

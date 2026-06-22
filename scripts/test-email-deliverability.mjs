@@ -29,7 +29,7 @@ ok('one-click List-Unsubscribe-Post header', /'List-Unsubscribe-Post': 'List-Uns
 ok('unsubscribe URL helper exported', /export function unsubscribeUrl/.test(n))
 ok('in-body unsubscribe link + postal address footer', /function unsubFooter/.test(n) && /MAIL_PHYSICAL_ADDRESS/.test(n))
 // applied to all three LIST emails, and NOT to transactional lead/contact mail
-ok('newsletter welcome has unsub headers+footer', /Welcome to the A Square Solutions newsletter[\s\S]*?headers: listHeaders\(d\.email\)[\s\S]*?unsubFooter\(d\.email\)/.test(n))
+ok('newsletter welcome has unsub headers+footer', /spot scams[\s\S]*?headers: listHeaders\(d\.email\)[\s\S]*?unsubFooter\(d\.email\)/.test(n))
 ok('lab welcome has unsub headers+footer', /Welcome to AI Execution Lab Weekly[\s\S]*?headers: listHeaders\(d\.email\)[\s\S]*?unsubFooter\(d\.email\)/.test(n))
 ok('scam-alert welcome has unsub headers+footer', /subscribed to ScamCheck alerts[\s\S]*?headers: listHeaders\(email\)[\s\S]*?unsubFooter\(email\)/.test(n))
 ok('lead/contact transactional mail NOT given list-unsub (3 list call-sites only)', (n.match(/listHeaders\((d\.email|email)\)/g) || []).length === 3)
