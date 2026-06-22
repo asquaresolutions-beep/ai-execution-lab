@@ -24,6 +24,7 @@ import { sendListEmail } from '@/lib/email/notify'
 import { subscriberDocId } from '@/lib/newsletter/subscribers'
 import { latestTrendingSnapshot } from '@/lib/scam-intel/feed'
 import { composeScamDigest } from './digest-copy'
+import { composeNewsletterIssue, ISSUE_001 } from './issue-template'
 
 export type CampaignBrand = 'scamcheck' | 'lab' | 'asquare' | 'trustseal'
 export type CampaignStatus = 'draft' | 'approved' | 'sending' | 'sent' | 'canceled'
@@ -75,6 +76,22 @@ export async function composeWeeklyScamcheckDraft(now: number = Date.now()): Pro
   }
   await store.set<Campaign>(CAMPAIGNS, weekId, campaign)
   return { created: true, id: weekId }
+}
+
+// ── Manual editorial issue (Issue #1) → DRAFT only (never sends) ────
+/** Create (idempotently) the ScamCheck Issue #1 campaign DRAFT from ISSUE_001. */
+export async function composeIssueOneDraft(now: number = Date.now()): Promise<{ created: boolean; id?: string; reason?: string }> {
+  const store = getStore()
+  const id = `scamcheck-issue-${ISSUE_001.number}`
+  const existing = await store.get<Campaign>(CAMPAIGNS, id)
+  if (existing) return { created: false, id, reason: 'draft-exists' }   // idempotent
+  const c = composeNewsletterIssue(ISSUE_001)
+  const campaign: Campaign = {
+    id, brand: 'scamcheck', subject: c.subject, title: c.title, bodyHtml: c.bodyHtml,
+    status: 'draft', source: `manual:issue-${ISSUE_001.number}`, createdAt: new Date(now).toISOString(),
+  }
+  await store.set<Campaign>(CAMPAIGNS, id, campaign)
+  return { created: true, id }
 }
 
 export async function getCampaign(id: string): Promise<Campaign | null> {
