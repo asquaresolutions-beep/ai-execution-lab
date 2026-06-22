@@ -32,8 +32,50 @@ function errorMessage(locale: Locale, code: string | undefined): string {
   }
 }
 
+// Phase 3 — DNS help. Official provider docs for adding a TXT record.
+const PROVIDERS: [string, string][] = [
+  ['Hostinger', 'https://support.hostinger.com/en/articles/1583227-how-to-set-up-dns-records-at-hostinger'],
+  ['Cloudflare', 'https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/'],
+  ['GoDaddy', 'https://www.godaddy.com/help/add-a-txt-record-19232'],
+  ['Namecheap', 'https://www.namecheap.com/support/knowledgebase/article.aspx/317/2237/how-do-i-add-txtspfdkimdmarc-records-for-my-domain/'],
+]
+
+function DnsHelp() {
+  const border = 'rgb(var(--ts-border))'
+  return (
+    <details className="mt-4 rounded-lg border" style={{ borderColor: border }}>
+      <summary className="cursor-pointer px-3 py-2 text-sm font-medium" style={{ color: 'rgb(var(--ts-text-1))' }}>What is a DNS TXT record?</summary>
+      <div className="space-y-3 border-t px-3 py-3 text-sm" style={{ borderColor: border, color: 'rgb(var(--ts-text-2))' }}>
+        <p>A DNS TXT record is a small piece of text you add to your domain’s settings to prove you own it. You add it once, where you manage your domain (your registrar or hosting provider) — no coding, and it does not affect your website or email.</p>
+        <div>
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide">Example</span>
+            <span className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)' }}>Sample</span>
+          </div>
+          <div className="rounded-lg border p-2 font-mono text-xs" style={{ borderColor: border, backgroundColor: 'rgb(var(--ts-bg))', color: 'rgb(var(--ts-text-1))' }}>
+            <div>Type: <span style={{ color: 'rgb(var(--ts-accent-soft))' }}>TXT</span></div>
+            <div>Host: <span style={{ color: 'rgb(var(--ts-accent-soft))' }}>@</span></div>
+            <div className="break-all">Value: <span style={{ color: 'rgb(var(--ts-accent-soft))' }}>trustseal-verification=example123</span></div>
+          </div>
+          <p className="mt-1 text-xs">Use the exact Host and Value shown above in your own DNS panel — the values here are just an illustration.</p>
+        </div>
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide">How to add it with your provider</p>
+          <div className="flex flex-wrap gap-2">
+            {PROVIDERS.map(([n, u]) => (
+              <a key={n} href={u} target="_blank" rel="noopener noreferrer" className="rounded-lg border px-3 py-1.5 text-xs font-medium" style={{ borderColor: border, color: 'rgb(var(--ts-text-1))' }}>{n} ↗</a>
+            ))}
+          </div>
+        </div>
+        <p className="text-xs">Most domains verify within a few minutes after the record is added (occasionally up to a few hours while DNS updates).</p>
+      </div>
+    </details>
+  )
+}
+
 export function ClaimWizard({ onVerified, locale = 'en' as Locale }: { onVerified?: () => void; locale?: Locale }) {
   const x = (k: string) => t(locale, k)
+  const L = (s: string) => `/${locale}${s}`
   const { user } = useAuth()
   const [phase, setPhase] = useState<Phase>('idle')
   const [domainInput, setDomainInput] = useState('')
@@ -146,6 +188,10 @@ export function ClaimWizard({ onVerified, locale = 'en' as Locale }: { onVerifie
             </p>
           )}
 
+          {/* Phase 3 — DNS help for non-technical owners */}
+          <DnsHelp />
+          <p className="mt-3 text-xs" style={{ color: 'rgb(var(--ts-text-2))' }}>Most domains verify within a few minutes after the record is added.</p>
+
           <div className="mt-4 flex flex-wrap gap-3">
             <button onClick={() => { trackEvent('verify_domain', { domain }); void verify() }} disabled={busy} className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50" style={{ backgroundColor: okColor, color: '#fff' }}>
               {phase === 'verifying' ? x('dash.verifying') : x('dash.verifyOwnership')}
@@ -160,14 +206,31 @@ export function ClaimWizard({ onVerified, locale = 'en' as Locale }: { onVerifie
         </div>
       )}
 
-      {/* ── verified: success ── */}
+      {/* ── verified: success + activation (Phase 4) ── */}
       {phase === 'verified' && (
         <div className="mt-4 rounded-lg border p-4" style={{ borderColor: 'rgb(var(--ts-border))', backgroundColor: 'rgb(var(--ts-bg))' }}>
-          <p className="text-sm font-semibold" style={{ color: okColor }}>✓ {domain} {x('dash.verifiedSuffix')}</p>
+          <p className="text-base font-semibold" style={{ color: okColor }}>✓ {domain} is verified</p>
           <p className="mt-1 text-sm" style={{ color: 'rgb(var(--ts-text-2))' }}>
-            {x('dash.verifiedBody')}
+            Your domain is verified. Now show visitors that your business is trusted.
           </p>
-          <button onClick={reset} className="mt-3 rounded-lg border px-4 py-2 text-sm font-medium" style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-1))' }}>
+
+          {/* Prominent activation actions */}
+          <div className="mt-4 flex flex-wrap gap-3">
+            <a href={L(`/trust/${encodeURIComponent(domain)}`)} target="_blank" rel="noopener noreferrer" className="rounded-lg px-4 py-2 text-sm font-semibold" style={{ backgroundColor: okColor, color: '#fff' }}>View public trust page ↗</a>
+            <a href={L(`/certificate/${encodeURIComponent(domain)}`)} target="_blank" rel="noopener noreferrer" className="rounded-lg border px-4 py-2 text-sm font-semibold" style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-1))' }}>Download certificate ↗</a>
+          </div>
+
+          {/* Get the website badge — honest Pro requirement, not hidden */}
+          <div className="mt-4 rounded-lg border p-3" style={{ borderColor: 'rgb(var(--ts-border))' }}>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>Get the website badge</span>
+              <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ background: 'rgba(34,211,238,0.12)', color: 'rgb(var(--ts-accent))', border: '1px solid rgb(var(--ts-border))' }}>Pro</span>
+            </div>
+            <p className="mt-1 text-sm" style={{ color: 'rgb(var(--ts-text-2))' }}>The embeddable badge that displays your verified status on your website is a Pro feature.</p>
+            <a href={L('/pricing')} className="mt-3 inline-block rounded-lg border px-4 py-2 text-sm font-semibold" style={{ borderColor: 'rgb(var(--ts-accent))', color: 'rgb(var(--ts-accent))' }}>Upgrade to display the TrustSeal badge on your website</a>
+          </div>
+
+          <button onClick={reset} className="mt-4 rounded-lg border px-4 py-2 text-sm font-medium" style={{ borderColor: 'rgb(var(--ts-border))', color: 'rgb(var(--ts-text-1))' }}>
             {x('dash.verifyAnother')}
           </button>
         </div>
