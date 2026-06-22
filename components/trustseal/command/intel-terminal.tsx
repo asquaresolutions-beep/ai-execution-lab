@@ -7,14 +7,15 @@ import { motion, useReducedMotion } from 'framer-motion'
 
 const C = { good: '#34d399', cyan: '#22d3ee', violet: '#a78bfa', warn: '#fbbf24', bad: '#f87171', dim: '#5d6a86' }
 type Row = { t: string; tag: string; code: string; d: string; msg: string; tone: string }
+// SAMPLE rows — illustrative only (example.com placeholders), NOT real verifications.
 const ROWS: Row[] = [
-  { t: '14:22:07', tag: 'VRFY', code: '200', d: 'asquaresolution.com', msg: 'dns.txt match · score 94', tone: C.good },
-  { t: '14:21:48', tag: 'TLS ', code: '298', d: 'payquik.net', msg: 'chain anomaly · review', tone: C.warn },
-  { t: '14:20:11', tag: 'CLAIM', code: '102', d: 'nova.app', msg: 'ownership challenge issued', tone: C.cyan },
-  { t: '14:18:55', tag: 'INTEL', code: '451', d: 'lure-bank.top', msg: 'blocklist hit · rejected', tone: C.bad },
-  { t: '14:16:30', tag: 'VRFY', code: '200', d: 'helio.gg', msg: 're-verification ok', tone: C.good },
-  { t: '14:14:02', tag: 'SCORE', code: '200', d: 'orbit.sh', msg: 'verdict recomputed · 71', tone: C.violet },
-  { t: '14:11:39', tag: 'VRFY', code: '200', d: 'fastly.dev', msg: 'spf+dmarc verified', tone: C.good },
+  { t: '14:22:07', tag: 'VRFY', code: '200', d: 'example.com', msg: 'dns.txt match · sample', tone: C.good },
+  { t: '14:21:48', tag: 'TLS ', code: '298', d: 'shop.example', msg: 'chain anomaly · review', tone: C.warn },
+  { t: '14:20:11', tag: 'CLAIM', code: '102', d: 'store.example', msg: 'ownership challenge issued', tone: C.cyan },
+  { t: '14:18:55', tag: 'INTEL', code: '451', d: 'bad-actor.example', msg: 'blocklist hit · rejected', tone: C.bad },
+  { t: '14:16:30', tag: 'VRFY', code: '200', d: 'pay.example', msg: 're-verification ok', tone: C.good },
+  { t: '14:14:02', tag: 'SCORE', code: '200', d: 'app.example', msg: 'verdict recomputed', tone: C.violet },
+  { t: '14:11:39', tag: 'VRFY', code: '200', d: 'site.example', msg: 'spf+dmarc verified', tone: C.good },
 ]
 
 export function IntelTerminal() {
@@ -31,11 +32,9 @@ export function IntelTerminal() {
           <span className="h-2 w-2 rounded-full" style={{ background: '#fbbf24' }} />
           <span className="h-2 w-2 rounded-full" style={{ background: '#34d399' }} />
         </span>
-        <span className="min-w-0 truncate font-mono text-[10px] tracking-[0.2em]" style={{ color: C.cyan }}>INTEL://verification.stream</span>
-        <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 font-mono text-[9px] tracking-wider" style={{ color: C.good }}>
-          <motion.span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: C.good, boxShadow: `0 0 6px ${C.good}` }}
-            animate={reduce ? undefined : { opacity: [1, 0.2, 1] }} transition={{ duration: 1.4, repeat: Infinity }} />
-          STREAMING
+        <span className="min-w-0 truncate font-mono text-[10px] tracking-[0.2em]" style={{ color: C.cyan }}>INTEL://sample.feed</span>
+        <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 font-mono text-[9px] tracking-wider" style={{ color: C.dim }}>
+          SAMPLE
         </span>
       </header>
       <div className="relative flex-1 space-y-1 overflow-hidden px-3 py-2 font-mono text-[11px] leading-relaxed">
