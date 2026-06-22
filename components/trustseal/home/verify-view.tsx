@@ -58,7 +58,20 @@ export function VerifyView({ locale = 'en' as Locale }: { locale?: Locale }) {
       <h1 className="mx-auto max-w-3xl text-center text-3xl font-bold sm:text-4xl">{x('verify.title')}</h1>
       <p className="mx-auto mt-3 max-w-2xl text-center text-sm" style={{ color: C.text2 }}>{x('verify.subtitle')}</p>
 
-      <form onSubmit={submit} className="mx-auto mt-10 max-w-xl p-6" style={card}>
+      {/* 3-step "how verifying works" strip + estimated setup time */}
+      <div className="mx-auto mt-8 max-w-xl">
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {[['1', 'Add one DNS TXT record'], ['2', 'We verify your domain'], ['3', 'Your badge goes live']].map(([n, label]) => (
+            <div key={n} className="p-3" style={card}>
+              <div className="mx-auto grid h-7 w-7 place-items-center rounded-lg text-xs font-bold" style={{ background: 'rgba(34,211,238,0.12)', color: C.cyan }}>{n}</div>
+              <p className="mt-2 text-[11px] leading-snug" style={{ color: C.text2 }}>{label}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-center text-xs" style={{ color: C.text3 }}>Estimated setup time: <span style={{ color: C.text2 }}>~10 minutes</span></p>
+      </div>
+
+      <form onSubmit={submit} className="mx-auto mt-8 max-w-xl p-6" style={card}>
         <label htmlFor="ts-verify-domain" className="block text-sm font-semibold">{x('verify.lookupLabel')}</label>
         <div className="mt-3 flex flex-wrap gap-3">
           <input id="ts-verify-domain" value={val} onChange={(e) => { setVal(e.target.value); setErr(null); setUnverified(null) }}

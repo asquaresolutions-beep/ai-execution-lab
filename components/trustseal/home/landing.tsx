@@ -45,6 +45,11 @@ function Counter({ to, suffix = '' }: { to: number; suffix?: string }) {
 
 const card: React.CSSProperties = { background: 'linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))', border: '1px solid rgba(120,160,255,0.14)', borderRadius: 16 }
 
+// Honest label for every illustrative preview (SAMPLE / PREVIEW / ILLUSTRATIVE).
+function SampleTag({ label }: { label: string }) {
+  return <span className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)' }}>{label}</span>
+}
+
 // Conversion-pass copy (API + Certificate homepage sections). Self-contained so the
 // shared message dicts stay lean; en fallback for any unknown locale.
 const CONV: Record<string, { apiH: string; apiS: string; apiCta: string; certH: string; certS: string; certQr: string; certCta: string }> = {
@@ -116,6 +121,79 @@ export function TrustSealLanding({ locale = 'en' as Locale, metrics, feed = [] }
           <a href={L('/pricing')} className="rounded-lg border px-5 py-2.5 text-sm font-semibold" style={{ borderColor: 'rgba(120,160,255,0.3)', color: C.text1 }}>{x('hero.ctaSecondary')}</a>
         </div>
         <p className="mt-4 font-mono text-[11px]" style={{ color: C.text3 }}>{x('hero.note')}</p>
+      </section>
+
+      {/* 1b — WHAT YOUR CUSTOMERS WILL SEE (illustrative previews; clearly labeled) */}
+      <section className="px-6 py-14">
+        <h2 className={`${H} text-2xl font-bold`}>What your customers will see</h2>
+        <p className={`${H} mt-2 text-sm`} style={{ color: C.text2 }}>The trust signals visitors can check before they buy — here’s exactly what you publish.</p>
+        <div className="mx-auto mt-8 grid max-w-4xl gap-4 md:grid-cols-3">
+          {/* Verified Badge */}
+          <div className="p-5" style={card}>
+            <div className="flex items-center justify-between"><span className="text-xs font-semibold" style={{ color: C.text2 }}>Verified Badge</span><SampleTag label="Sample" /></div>
+            <div className="mt-4 grid place-items-center rounded-xl py-6" style={{ background: 'rgba(255,255,255,0.03)' }}>
+              <div className="inline-flex items-center gap-2 rounded-lg px-3 py-2" style={{ border: `1px solid ${BAND.verified}`, background: 'rgba(52,211,153,0.08)' }}>
+                <HexSeal size={22} />
+                <span className="text-left"><span className="block text-[11px] font-semibold" style={{ color: C.text1 }}>Verified by TrustSeal</span><span className="block text-[9px]" style={{ color: C.text3 }}>example.com · live status</span></span>
+                <span aria-hidden style={{ color: BAND.verified }}>✓</span>
+              </div>
+            </div>
+            <p className="mt-3 text-xs" style={{ color: C.text3 }}>Embed on your site. Visitors click it to confirm you’re verified.</p>
+          </div>
+          {/* Public Verification Page */}
+          <div className="p-5" style={card}>
+            <div className="flex items-center justify-between"><span className="text-xs font-semibold" style={{ color: C.text2 }}>Public Verification Page</span><SampleTag label="Preview" /></div>
+            <div className="mt-4 overflow-hidden rounded-xl" style={{ border: '1px solid rgba(120,160,255,0.14)' }}>
+              <div className="flex items-center gap-1 px-2 py-1" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: '#f87171' }} /><span className="h-1.5 w-1.5 rounded-full" style={{ background: '#fbbf24' }} /><span className="h-1.5 w-1.5 rounded-full" style={{ background: '#34d399' }} />
+                <span className="ms-2 truncate font-mono text-[8px]" style={{ color: C.text3 }}>trustseal…/trust/example.com</span>
+              </div>
+              <div className="p-3">
+                <div className="text-sm font-semibold" style={{ color: C.text1 }}>example.com</div>
+                <span className="mt-1 inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: `${BAND.established}1a`, color: BAND.established }}>Established</span>
+                <div className="mt-2 h-1.5 w-full rounded-full" style={{ background: 'rgba(120,160,255,0.15)' }}><div className="h-1.5 rounded-full" style={{ width: '82%', background: BAND.established }} /></div>
+                <div className="mt-1 text-[9px]" style={{ color: C.text3 }}>Ownership confirmed · illustrative score</div>
+              </div>
+            </div>
+            <p className="mt-3 text-xs" style={{ color: C.text3 }}>A public page anyone can open to independently verify you.</p>
+          </div>
+          {/* Certificate */}
+          <div className="p-5" style={card}>
+            <div className="flex items-center justify-between"><span className="text-xs font-semibold" style={{ color: C.text2 }}>Certificate</span><SampleTag label="Illustrative" /></div>
+            <div className="mt-4 grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
+              <div>
+                <div className="flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded text-[10px] font-bold" style={{ background: BAND.established, color: '#06121e' }}>★</span><span className="text-[11px] font-semibold" style={{ color: C.text1 }}>Verification Certificate</span></div>
+                <div className="mt-1.5 text-[9px]" style={{ color: C.text3 }}>example.com · Established</div>
+                <div className="break-all font-mono text-[9px]" style={{ color: C.text3 }}>773c107f…51c450</div>
+              </div>
+              <span aria-hidden className="grid h-12 w-12 grid-cols-4 grid-rows-4 gap-px rounded p-1" style={{ background: '#fff' }}>{Array.from({ length: 16 }).map((_, i) => <span key={i} style={{ background: [0, 1, 3, 5, 6, 9, 10, 12, 15].includes(i) ? '#0b0f17' : '#fff' }} />)}</span>
+            </div>
+            <p className="mt-3 text-xs" style={{ color: C.text3 }}>A downloadable, tamper-evident certificate with a QR to confirm it.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 1c — YOUR TRUSTSEAL DASHBOARD (interface preview; sample data) */}
+      <section className="px-6 py-14">
+        <h2 className={`${H} text-2xl font-bold`}>Your TrustSeal dashboard</h2>
+        <p className={`${H} mt-2 text-sm`} style={{ color: C.text2 }}>Verify domains, copy your badge, and track status — all in one place.</p>
+        <div className="mx-auto mt-8 max-w-3xl overflow-hidden" style={card}>
+          <div className="flex items-center justify-between border-b px-4 py-2" style={{ borderColor: 'rgba(120,160,255,0.12)' }}>
+            <span className="text-xs font-semibold" style={{ color: C.text2 }}>Dashboard</span><SampleTag label="Preview · sample data" />
+          </div>
+          <div className="grid gap-3 p-4 sm:grid-cols-2">
+            <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
+              <div className="text-[10px] uppercase tracking-wider" style={{ color: C.text3 }}>Your domains</div>
+              <div className="mt-2 flex items-center justify-between text-xs"><span style={{ color: C.text1 }}>example.com</span><span className="rounded px-1.5 py-0.5 text-[10px]" style={{ background: `${BAND.verified}1a`, color: BAND.verified }}>Verified</span></div>
+              <div className="mt-1 flex items-center justify-between text-xs"><span style={{ color: C.text1 }}>shop.example</span><span className="rounded px-1.5 py-0.5 text-[10px]" style={{ background: `${BAND.caution}1a`, color: BAND.caution }}>Pending DNS</span></div>
+            </div>
+            <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
+              <div className="text-[10px] uppercase tracking-wider" style={{ color: C.text3 }}>Add a domain</div>
+              <p className="mt-2 text-[11px] leading-relaxed" style={{ color: C.text2 }}>1. Enter your domain<br />2. Add the DNS TXT record we show you<br />3. Click verify — your badge goes live</p>
+            </div>
+          </div>
+        </div>
+        <p className={`${H} mt-3 text-xs`} style={{ color: C.text3 }}>Interface preview — your real data appears after you sign in and verify.</p>
       </section>
 
       {/* 2 — METRICS COUNTERS (real platform data; hidden when there is none) */}
