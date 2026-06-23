@@ -9,6 +9,8 @@ import { TrustStats } from '@/components/scamcheck/trust-stats'
 import { TrustBadges } from '@/components/scamcheck/trust-badges'
 import { TrustBand } from '@/components/scamcheck/trust-band'
 import { TrustSealCrossSell } from '@/components/scamcheck/trustseal-crosssell'
+import { NewsletterCapture } from '@/components/scamcheck/newsletter-capture'
+import { ScamResources } from '@/components/scamcheck/scam-resources'
 import { TrendingIsland } from '@/components/scam-intel/trending-island'
 import { AdSlot } from '@/components/ads/ad-slot'
 import { buildMeta } from '@/lib/seo/scamcheck-meta'
@@ -101,6 +103,9 @@ export default function ScamCheckHome() {
         <section id="scanner" className="mt-8 scroll-mt-20"><QuickAnalyzer /></section>
         <section id="screenshot-analyzer" className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 sm:p-6"><ScreenshotAnalyzer /></section>
 
+        {/* asq-newsletter-v1 — homepage capture below the scanner section */}
+        <NewsletterCapture source="home-below-scanner" className="mt-6" />
+
         {/* 3. Trust section */}
         <TrustStats />
         <AdSlot id="home-mid" format="horizontal" />
@@ -134,6 +139,9 @@ export default function ScamCheckHome() {
             <Link href="/scam-intelligence" className="text-sky-400 hover:underline">All trending campaigns →</Link>
           </p>
         </section>
+
+        {/* asq-growth-links-v1 — related blog guides below trending campaigns */}
+        <ScamResources currentSlug="home" className="mt-6" />
 
         {/* 7. Knowledge hub */}
         <section className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
