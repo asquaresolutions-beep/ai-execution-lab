@@ -26,8 +26,10 @@ const PARENT_ORG = {
 
 /**
  * Build the full TrustSeal JSON-LD @graph for a locale: Organization (with
- * parentOrganization), WebSite, Product, SoftwareApplication, and FAQPage.
- * Contains NO references to AI Execution Lab or ScamCheck.
+ * parentOrganization), WebSite, SoftwareApplication, and FAQPage. No Product
+ * node — TrustSeal is SaaS, so a Product would trigger Google merchant-listing
+ * errors (image/availability/shipping/returns). Contains NO references to AI
+ * Execution Lab or ScamCheck.
  */
 export function buildTrustSealJsonLd(locale: Locale): string {
   const lc: Locale = LOCALES.includes(locale) ? locale : DEFAULT_LOCALE
@@ -68,19 +70,11 @@ export function buildTrustSealJsonLd(locale: Locale): string {
     },
   }
 
-  const product = {
-    '@type': 'Product',
-    name: 'TrustSeal Verification Platform',
-    url,
-    brand: { '@id': ORG_ID },
-    description: heroSub,
-    category: 'Business trust & verification software',
-    offers: [
-      { '@type': 'Offer', name: t(lc, 'pricing.freeName'), price: '0', priceCurrency: 'INR', url: `${BASE}/${lc}/pricing` },
-      { '@type': 'Offer', name: t(lc, 'pricing.proName'), price: '499', priceCurrency: 'INR', url: `${BASE}/${lc}/pricing` },
-    ],
-  }
-
+  // TrustSeal is SaaS, not a physical product. We model the offering as a
+  // SoftwareApplication (Google's sanctioned type for software) — NOT a Product,
+  // which would (wrongly) demand image/availability/shippingDetails/
+  // hasMerchantReturnPolicy and a physical-goods brand. The pricing tiers live
+  // here as Offers; `availability: InStock` simply means the plan is sign-up-able.
   const application = {
     '@type': 'SoftwareApplication',
     '@id': APP_ID,
@@ -90,7 +84,10 @@ export function buildTrustSealJsonLd(locale: Locale): string {
     operatingSystem: 'Web',
     description: heroSub,
     publisher: { '@id': ORG_ID },
-    offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR', description: t(lc, 'pricing.freeTagline') },
+    offers: [
+      { '@type': 'Offer', name: t(lc, 'pricing.freeName'), price: '0', priceCurrency: 'INR', url: `${BASE}/${lc}/pricing`, availability: 'https://schema.org/InStock' },
+      { '@type': 'Offer', name: t(lc, 'pricing.proName'), price: '499', priceCurrency: 'INR', url: `${BASE}/${lc}/pricing`, availability: 'https://schema.org/InStock' },
+    ],
   }
 
   const faqPage = {
@@ -105,6 +102,6 @@ export function buildTrustSealJsonLd(locale: Locale): string {
 
   return JSON.stringify({
     '@context': 'https://schema.org',
-    '@graph': [organization, website, product, application, faqPage],
+    '@graph': [organization, website, application, faqPage],
   })
 }
