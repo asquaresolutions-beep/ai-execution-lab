@@ -77,12 +77,18 @@ async function trustSealSitemap(): Promise<MetadataRoute.Sitemap> {
   } catch {
     /* store unavailable → still return the static entries rather than a 500 */
   }
-  const sealEntries: MetadataRoute.Sitemap = domains.map((d) => ({
-    url: `${TRUST}/en/trust/${d}`,
-    lastModified: now,
-    changeFrequency: 'weekly' as const,
-    priority: 0.7,
-  }))
+  // One entry PER (locale, verified domain) with full hreflang alternates (+ x-default
+   // → en), mirroring the static-page treatment. Previously emitted only the /en variant,
+   // leaving the live, indexable /hi /es /ar trust pages out of the sitemap.
+  const sealEntries: MetadataRoute.Sitemap = domains.flatMap((d) =>
+    LOCALES.map((l) => ({
+      url: `${TRUST}/${l}/trust/${d}`,
+      lastModified: now,
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+      alternates: { languages: langs(`/trust/${d}`) },
+    })),
+  )
 
   return [...staticEntries, ...sealEntries]
 }
