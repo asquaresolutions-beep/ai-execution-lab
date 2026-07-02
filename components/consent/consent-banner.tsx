@@ -57,7 +57,7 @@ export function ConsentBanner() {
       <div className="mx-auto max-w-3xl text-sm text-zinc-300">
         <p className="font-medium text-zinc-100">We value your privacy</p>
         <p className="mt-1 text-xs text-zinc-400">
-          We use essential cookies to run ScamCheck, and — with your consent — analytics and advertising
+          We use essential cookies to run this site, and — with your consent — analytics and advertising
           cookies (Google AdSense) to keep the tool free. You can accept all, reject non-essential, or
           choose. See our <a href="/privacy-policy" className="text-sky-400 hover:underline">Privacy Policy</a>.
         </p>
