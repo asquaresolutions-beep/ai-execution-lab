@@ -26,7 +26,10 @@ function HexSeal({ size = 88 }: { size?: number }) {
 
 function Counter({ to, suffix = '' }: { to: number; suffix?: string }) {
   const reduce = useReducedMotion()
-  const [v, setV] = useState(reduce ? to : 0)
+  // SSR and first paint must show the REAL value (crawlers/no-JS readers see the
+  // HTML only — a 0 start makes the platform look dead). Animation kicks in
+  // client-side after hydration.
+  const [v, setV] = useState(to)
   const ref = useRef<HTMLSpanElement>(null)
   useEffect(() => {
     if (reduce) return
