@@ -263,8 +263,8 @@ export const en = {
   },
 
   network: {
-    heading: 'The Trust Network',
-    subheading: 'Domains, verifications and risk signals connected into one live topology — the same intelligence that powers the Command Center.',
+    heading: 'Your Command Center',
+    subheading: 'One working dashboard for everything you verify: each domain, its live trust status, your badge embed code, and monitoring alerts — in one place.',
     cta: 'Explore the Command Center',
   },
 

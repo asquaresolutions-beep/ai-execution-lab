@@ -257,8 +257,8 @@ export const es: Messages = {
     streaming: 'EN VIVO',
   },
   network: {
-    heading: 'La Red de Confianza',
-    subheading: 'Dominios, verificaciones y señales de riesgo conectados en una topología viva: la misma inteligencia que impulsa el Centro de Mando.',
+    heading: 'Tu Centro de Mando',
+    subheading: 'Un solo panel de trabajo para todo lo que verificas: cada dominio, su estado de confianza en vivo, el código de tu badge y las alertas de monitoreo — todo en un lugar.',
     cta: 'Explorar el Centro de Mando',
   },
   pricing: {
