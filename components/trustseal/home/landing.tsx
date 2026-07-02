@@ -91,15 +91,17 @@ export function TrustSealLanding({ locale = 'en' as Locale, metrics, feed = [] }
     const hr = Math.floor(diff / 3_600_000); if (hr > 0) return `${hr}h`
     return `${Math.floor(diff / 60_000)}m`
   }
-  // Social proof: show only stats with a real (>0) value, so a sparse platform
-  // never renders a bare "0".
+  // Social proof: show only stats with a meaningful value. Zero never renders,
+  // and inventory-style counts (domains/certificates) stay hidden until they
+  // reach a minimum — a real but tiny "1" reads as weakness, not proof. Activity
+  // metrics (runs/checks/API) are honest at any positive value.
   const metricCards = [
-    { label: x('metrics.domainsVerified'), value: m.domainsVerified },
-    { label: x('metrics.certificatesIssued'), value: m.certificatesIssued },
-    { label: x('metrics.apiRequestsServed'), value: m.apiRequestsServed },
-    { label: x('metrics.monitoringChecks'), value: m.monitoringChecks },
-    { label: x('metrics.verificationsRun'), value: m.verificationsRun },
-  ].filter((c) => c.value > 0)
+    { label: x('metrics.domainsVerified'), value: m.domainsVerified, min: 3 },
+    { label: x('metrics.certificatesIssued'), value: m.certificatesIssued, min: 3 },
+    { label: x('metrics.apiRequestsServed'), value: m.apiRequestsServed, min: 1 },
+    { label: x('metrics.monitoringChecks'), value: m.monitoringChecks, min: 1 },
+    { label: x('metrics.verificationsRun'), value: m.verificationsRun, min: 1 },
+  ].filter((c) => c.value >= c.min)
   const showMetrics = metricCards.length > 0
 
   const levels = [
