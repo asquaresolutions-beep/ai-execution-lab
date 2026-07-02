@@ -111,6 +111,7 @@ export function QuickAnalyzer({ initialTab = 'message' as Tab }: { initialTab?: 
           {result.advice?.length > 0 && (
             <ul className="list-inside list-disc space-y-1 text-sm text-zinc-300">{result.advice.map((a, i) => <li key={i}>{a}</li>)}</ul>
           )}
+          <p className="text-[11px] text-zinc-500">Automated risk assessment — not legal or financial advice. If money is involved, verify through the official app or website before acting.</p>
           <ShareResult summary={`ScamCheck result: ${result.verdict.replace(/_/g, ' ')} (risk ${result.riskScore}/100) — ${result.category.replace(/_/g, ' ')}. Checked free at ${SITE}/scamcheck`} />
           {/* asq-newsletter-v1 — capture at peak intent (after a verdict) */}
           <NewsletterCapture verdict={result.verdict} source="scan-result-quick" />
