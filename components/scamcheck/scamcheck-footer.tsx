@@ -41,6 +41,9 @@ export function ScamCheckFooter() {
           <Link href="/privacy-policy" className="hover:text-zinc-400">Privacy</Link>
           <Link href="/terms" className="hover:text-zinc-400">Terms</Link>
           <Link href="/disclaimer" className="hover:text-zinc-400">Disclaimer</Link>
+          <Link href="/how-it-works" className="hover:text-zinc-400">How it works</Link>
+          <Link href="/methodology" className="hover:text-zinc-400">Methodology</Link>
+          <Link href="/contact" className="hover:text-zinc-400">Contact &amp; support</Link>
           <span>© {new Date().getFullYear()} A Square Solutions. Automated risk assessment, not legal/financial advice.</span>
         </div>
       </div>

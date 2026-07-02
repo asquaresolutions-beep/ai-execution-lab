@@ -39,7 +39,7 @@ const CATEGORIES = [
   { label: 'Courier scams', href: '/scam-intelligence/fake-courier-customs-scam', emoji: '📦' },
 ]
 const FAQ = [
-  { q: 'Is ScamCheck free?', a: 'Yes. Guests get free daily scans; signing in gives more. Screenshot (AI vision) scans use more credits than text checks.' },
+  { q: 'Is ScamCheck free?', a: 'Yes. Guests get 3 free scans a day with no signup; a free account raises that to 50 scans a day. Screenshot (AI vision) scans use more credits than text checks.' },
   { q: 'How do I check if a message is a scam?', a: 'Paste the message, link, email, or phone number into the scanner, or upload a screenshot. ScamCheck extracts links/UPI IDs/phone numbers, flags fraud signals, and shows the risk and why.' },
   { q: 'Do you store my screenshots?', a: 'No. Images are optimized on your device and processed in-request; they are not stored.' },
   { q: 'Which scams does it detect?', a: 'WhatsApp/SMS/UPI/banking/Telegram/investment/courier scams, phishing links, brand impersonation (look-alike domains), and OTP-theft traps. The interface is available in English, Hindi, and Spanish.' },
@@ -79,7 +79,7 @@ export default function ScamCheckHome() {
             <dl className="mx-auto mt-7 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
               {[
                 { v: `${INTEL_PAGES.length}+`, l: 'Fraud patterns tracked' },
-                { v: `${SUPPORTED_COUNTRIES.length}`, l: 'Countries protected' },
+                { v: `${SUPPORTED_COUNTRIES.length}`, l: 'Countries supported' },
                 { v: `${CHECKERS.length}`, l: 'Scan channels' },
                 { v: '0', l: 'Screenshots stored' },
               ].map((s) => (
