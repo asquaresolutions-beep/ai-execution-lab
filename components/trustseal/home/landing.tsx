@@ -10,6 +10,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import type { Locale } from '@/lib/trustseal/locales'
 import type { HomeMetrics, FeedItem } from '@/lib/trustseal/home-data'
 import { t } from '@/lib/trustseal/messages'
+import { customersContent } from '@/lib/trustseal/content/customers'
 
 const C = { bg: '#050811', text1: '#e6edf7', text2: '#9aa7c2', text3: '#5d6a86', cyan: '#22d3ee', violet: '#8b5cf6' }
 const BAND = { verified: '#34d399', established: '#22d3ee', limited: '#a78bfa', caution: '#fbbf24', risk: '#f87171' }
@@ -76,10 +77,77 @@ const PILOT: Record<string, { h: string; s: string; b1: string; b2: string; b3: 
   },
 }
 
+// "Who it's for" heading (use-case CARDS are reused from content/customers.ts, which
+// is already translated for all four locales). Self-contained heading, en fallback.
+const WHOFOR: Record<string, { h: string; s: string }> = {
+  en: { h: 'Who it’s for', s: 'If your business gets paid, signed up for, or trusted online, a first-time visitor has to decide you’re real before they act. TrustSeal is built for exactly these teams.' },
+  hi: { h: 'यह किसके लिए है', s: 'यदि आपका व्यवसाय ऑनलाइन भुगतान, साइन-अप या भरोसे पर चलता है, तो नया विज़िटर पहले यह तय करता है कि आप असली हैं। TrustSeal ठीक ऐसी ही टीमों के लिए बना है।' },
+  es: { h: 'Para quién es', s: 'Si tu negocio cobra, capta registros o depende de la confianza en línea, un visitante nuevo debe decidir que eres real antes de actuar. TrustSeal está hecho para estos equipos.' },
+  ar: { h: 'لِمَن هذا', s: 'إذا كان نشاطك يتلقى المدفوعات أو التسجيلات أو يعتمد على الثقة عبر الإنترنت، فعلى الزائر الجديد أن يقرر أنك حقيقي قبل أن يتصرف. صُمِّم TrustSeal لهذه الفرق تحديدًا.' },
+}
+
+// "Not just another trust badge" — the differentiation a skeptical western/B2B buyer
+// needs. Honest contrast: static image vs live, verifiable, origin-bound seal.
+const DIFF: Record<string, { h: string; s: string; badge: string; seal: string; rows: [string, string][] }> = {
+  en: {
+    h: 'Not just another trust badge', s: 'Most “trust badges” are static images. Anyone can copy one onto any site — there’s nothing behind it to check. TrustSeal is the opposite.',
+    badge: 'A generic trust badge', seal: 'TrustSeal',
+    rows: [
+      ['A static image anyone can copy onto any site', 'A live badge, origin-bound to your verified domain'],
+      ['Nothing to click, nothing to confirm', 'Links to a public seal page anyone can independently verify'],
+      ['Says “trusted” with no evidence', 'Shows an explainable trust score — you can see the reasons'],
+      ['Never changes, even if the site does', 'Updates automatically as security and signals change'],
+    ],
+  },
+  hi: {
+    h: 'सिर्फ़ एक और ट्रस्ट बैज नहीं', s: 'ज़्यादातर “ट्रस्ट बैज” स्थिर इमेज होते हैं। कोई भी उन्हें किसी भी साइट पर कॉपी कर सकता है — जाँचने के लिए पीछे कुछ नहीं होता। TrustSeal इसके विपरीत है।',
+    badge: 'सामान्य ट्रस्ट बैज', seal: 'TrustSeal',
+    rows: [
+      ['स्थिर इमेज जिसे कोई भी किसी भी साइट पर कॉपी कर ले', 'लाइव बैज, आपके सत्यापित डोमेन से बंधा हुआ'],
+      ['क्लिक करने या पुष्टि करने के लिए कुछ नहीं', 'सार्वजनिक सील पेज से जुड़ा जिसे कोई भी स्वतंत्र रूप से जाँच सके'],
+      ['बिना प्रमाण के “भरोसेमंद” कहता है', 'एक व्याख्या-योग्य ट्रस्ट स्कोर दिखाता है — कारण दिखते हैं'],
+      ['साइट बदलने पर भी कभी नहीं बदलता', 'सुरक्षा और संकेत बदलने पर अपने-आप अपडेट होता है'],
+    ],
+  },
+  es: {
+    h: 'No es una insignia de confianza más', s: 'La mayoría de las “insignias de confianza” son imágenes estáticas. Cualquiera puede copiarlas en cualquier sitio — no hay nada detrás que comprobar. TrustSeal es lo contrario.',
+    badge: 'Una insignia genérica', seal: 'TrustSeal',
+    rows: [
+      ['Una imagen estática que cualquiera copia en cualquier sitio', 'Una insignia en vivo, ligada a tu dominio verificado'],
+      ['Nada que clicar, nada que confirmar', 'Enlaza a un sello público que cualquiera puede verificar'],
+      ['Dice “de confianza” sin pruebas', 'Muestra un puntaje explicable — puedes ver las razones'],
+      ['Nunca cambia, aunque el sitio cambie', 'Se actualiza solo según la seguridad y las señales'],
+    ],
+  },
+  ar: {
+    h: 'ليست مجرد شارة ثقة أخرى', s: 'معظم “شارات الثقة” صور ثابتة. يمكن لأي أحد نسخها إلى أي موقع — لا شيء خلفها للتحقق منه. TrustSeal عكس ذلك.',
+    badge: 'شارة ثقة عامة', seal: 'TrustSeal',
+    rows: [
+      ['صورة ثابتة يمكن لأي أحد نسخها إلى أي موقع', 'شارة حيّة مرتبطة بنطاقك الموثّق'],
+      ['لا شيء للنقر أو التأكيد', 'ترتبط بصفحة ختم عامة يمكن لأي أحد التحقق منها بشكل مستقل'],
+      ['تقول “موثوق” بلا دليل', 'تعرض درجة ثقة قابلة للتفسير — ترى الأسباب'],
+      ['لا تتغيّر أبدًا، حتى لو تغيّر الموقع', 'تتحدّث تلقائيًا مع تغيّر الأمان والإشارات'],
+    ],
+  },
+}
+
+// Approximate western-currency reference for INR pricing (billing stays INR). Honest
+// "roughly" framing so a US/UK/EU buyer can gauge cost. en fallback.
+const PRICE_USD: Record<string, string> = {
+  en: 'Billed in INR. Roughly US$6/mo or US$60/yr — one recovered sale covers the year.',
+  hi: 'INR में बिलिंग। लगभग US$6/माह या US$60/वर्ष — एक वापस पाई गई बिक्री पूरे साल की लागत निकाल देती है।',
+  es: 'Facturado en INR. Aproximadamente US$6/mes o US$60/año — una venta recuperada cubre el año.',
+  ar: 'الفوترة بالروبية الهندية. نحو 6 دولار/شهر أو 60 دولار/سنة — عملية بيع مستردة واحدة تغطي السنة.',
+}
+
 export function TrustSealLanding({ locale = 'en' as Locale, metrics, feed = [] }: { locale?: Locale; metrics?: HomeMetrics; feed?: FeedItem[] }) {
   const x = (k: string) => t(locale, k)
   const cv = CONV[locale] ?? CONV.en
   const pilot = PILOT[locale] ?? PILOT.en
+  const whoFor = WHOFOR[locale] ?? WHOFOR.en
+  const diff = DIFF[locale] ?? DIFF.en
+  const priceUsd = PRICE_USD[locale] ?? PRICE_USD.en
+  const useCases = (customersContent[locale] ?? customersContent.en).useCases
   const L = (sub: string) => `/${locale}${sub}`
 
   // REAL data (server-provided). Sections hide when there is nothing genuine to show.
@@ -231,6 +299,39 @@ export function TrustSealLanding({ locale = 'en' as Locale, metrics, feed = [] }
         </div>
       </section>
 
+      {/* 3b — WHO IT'S FOR (use-case cards reused from content/customers.ts) */}
+      <section className="px-6 py-14">
+        <h2 className={`${H} text-2xl font-bold`}>{whoFor.h}</h2>
+        <p className={`${H} mt-2 text-sm`} style={{ color: C.text2 }}>{whoFor.s}</p>
+        <div className="mx-auto mt-8 grid max-w-4xl gap-4 sm:grid-cols-2">
+          {useCases.map((uc) => (
+            <div key={uc.title} className="p-5" style={card}>
+              <h3 className="font-semibold" style={{ color: C.text1 }}>{uc.title}</h3>
+              <p className="mt-1.5 text-sm" style={{ color: C.text2 }}>{uc.body}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 text-center"><a href={L('/customers')} className="text-sm font-semibold" style={{ color: C.cyan }}>{x('nav.customers')} →</a></div>
+      </section>
+
+      {/* 3c — NOT JUST ANOTHER TRUST BADGE (differentiation for skeptical B2B buyers) */}
+      <section className="px-6 py-14">
+        <h2 className={`${H} text-2xl font-bold`}>{diff.h}</h2>
+        <p className={`${H} mt-2 text-sm`} style={{ color: C.text2 }}>{diff.s}</p>
+        <div className="mx-auto mt-8 max-w-3xl overflow-hidden" style={card}>
+          <div className="grid grid-cols-2 border-b text-xs font-semibold" style={{ borderColor: 'rgba(120,160,255,0.14)' }}>
+            <div className="px-4 py-2.5" style={{ color: C.text3 }}>{diff.badge}</div>
+            <div className="px-4 py-2.5" style={{ color: C.cyan, background: 'rgba(34,211,238,0.06)' }}>{diff.seal}</div>
+          </div>
+          {diff.rows.map(([bad, good], i) => (
+            <div key={i} className="grid grid-cols-2 border-b text-sm" style={{ borderColor: 'rgba(120,160,255,0.08)' }}>
+              <div className="flex items-start gap-2 px-4 py-3" style={{ color: C.text3 }}><span aria-hidden style={{ color: BAND.risk }}>✕</span><span>{bad}</span></div>
+              <div className="flex items-start gap-2 px-4 py-3" style={{ color: C.text1, background: 'rgba(34,211,238,0.04)' }}><span aria-hidden style={{ color: BAND.verified }}>✓</span><span>{good}</span></div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* 4 — TRUST LEVELS */}
       <section className="px-6 py-14">
         <h2 className={`${H} text-2xl font-bold`}>{x('levels.heading')}</h2>
@@ -346,6 +447,7 @@ export function TrustSealLanding({ locale = 'en' as Locale, metrics, feed = [] }
       <section className="px-6 py-14">
         <h2 className={`${H} text-2xl font-bold`}>{x('pricing.heading')}</h2>
         <p className={`${H} mt-2 text-sm`} style={{ color: C.text2 }}>{x('pricing.subheading')}</p>
+        <p className={`${H} mt-2 text-xs`} style={{ color: C.text3 }}>{priceUsd}</p>
         <div className="mx-auto mt-8 grid max-w-3xl gap-4 md:grid-cols-2">
           <div className="p-6" style={card}>
             <h3 className="text-lg font-semibold">{x('pricing.freeName')}</h3>
