@@ -50,6 +50,21 @@ export const BLOG_RESOURCES: BlogResource[] = [
   R('fake-upi-payment-screenshot-scam', 'Fake UPI Payment Screenshot Scam',
     'How sellers are fooled by forged “payment successful” screenshots.',
     ['screenshot-scam-checker', 'upi-scam-checker']),
+  R('fake-venmo-payment-screenshot', 'Fake Venmo Payment Screenshot Scam',
+    'How buyers fake a Venmo “payment sent” to take goods without paying.',
+    ['screenshot-scam-checker']),
+  R('fake-cash-app-payment-screenshot', 'Fake Cash App Payment Screenshot Scam',
+    'Forged “payment complete” screens used to trick Cash App sellers.',
+    ['screenshot-scam-checker']),
+  R('fake-zelle-payment-screenshot', 'Fake Zelle Payment Screenshot Scam',
+    'Fake Zelle confirmations and the “upgrade to business to receive” trick.',
+    ['screenshot-scam-checker']),
+  R('fake-faster-payments-screenshot-scam', 'Fake Faster Payments Screenshot Scam (UK)',
+    'Forged UK bank-transfer “payment sent” proofs and how to verify one.',
+    ['screenshot-scam-checker']),
+  R('fake-proof-of-bank-transfer-scam', 'Fake Proof of Bank Transfer Scam',
+    'Why a “transfer receipt” image is never proof the money actually arrived.',
+    ['screenshot-scam-checker']),
 ]
 
 const BY_SLUG: Record<string, BlogResource> = Object.fromEntries(BLOG_RESOURCES.map((r) => [r.slug, r]))

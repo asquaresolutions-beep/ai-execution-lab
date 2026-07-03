@@ -88,11 +88,12 @@ export const CHECKERS: Checker[] = [
   },
   {
     slug: 'screenshot-scam-checker', tab: 'screenshot', h1: 'Screenshot Scam Checker',
-    title: 'Screenshot Scam Checker — Upload a Screenshot to Detect Scams (AI OCR) | ScamCheck',
-    description: 'Free AI screenshot scam checker. Upload a WhatsApp, SMS, UPI, or banking screenshot — OCR + AI vision extract the text and flag fraud signals and known scam campaigns.',
-    intro: 'Upload a screenshot of any suspicious message, payment, or DM. AI OCR + vision read it and flag fraud signals — even in Hindi/Hinglish.',
-    guide: { url: G + 'fake-upi-payment-screenshot-scam/', title: 'Fake UPI Payment Screenshot Scams' },
+    title: 'Fake Payment Screenshot Checker — Venmo, Cash App, Zelle, PayPal & UPI (AI OCR) | ScamCheck',
+    description: 'Free AI screenshot scam checker. Upload a fake payment screenshot — Venmo, Cash App, Zelle, PayPal, a bank transfer, or a UPI screen. OCR + AI vision read the text and flag forged "payment sent" confirmations, spoofed screens, and known scam campaigns.',
+    intro: 'Selling something online? Upload the screenshot a buyer sent — a fake Venmo, Cash App, Zelle, PayPal, or bank-transfer "payment sent", a spoofed UPI screen, or a phishing DM. AI OCR + vision read it and flag the signs of a forged confirmation before you hand over goods.',
+    guide: { url: G + 'fake-payment-screenshot/', title: 'Fake Payment Screenshot Scams: Every Platform & Country' },
     faqs: [
+      { q: 'Does it work for Venmo, Cash App, Zelle and PayPal screenshots?', a: 'Yes. Forged "payment sent" screenshots on Venmo, Cash App, Zelle, PayPal, and bank transfers are among the most common marketplace scams. Upload the image and ScamCheck flags the tell-tale signs of a fake confirmation.' },
       { q: 'Can I check a scam by screenshot?', a: 'Yes. Upload or paste a screenshot; AI OCR extracts the text and ScamCheck flags fraud signals and similar known scams.' },
       { q: 'Is my screenshot stored?', a: 'No. Images are optimized on your device and processed in-request; they are not stored.' },
     ],

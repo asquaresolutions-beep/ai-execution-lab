@@ -128,7 +128,7 @@ function CheckerView({ c }: { c: NonNullable<ReturnType<typeof getChecker>> }) {
         </section>
 
         {/* asq-growth-links-v1 — ScamCheck → blog authority cluster (internal links + ItemList JSON-LD) */}
-        <ScamResources currentSlug={c.slug} className="mt-8" />
+        <ScamResources currentSlug={c.slug} limit={c.tab === 'screenshot' ? 6 : 3} className="mt-8" />
 
         {/* asq-scancta-v1 — contextual conversion CTA + relevant checker suggestions (replaces plain link list) */}
         <ScanCTA currentSlug={c.slug} className="mt-8" />

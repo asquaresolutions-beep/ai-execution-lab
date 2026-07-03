@@ -60,12 +60,12 @@ export const CHECKER_CONTENT: Record<CheckerTab, CheckerContent> = {
   },
   screenshot: {
     howItWorks: [
-      'You receive a screenshot or image — a fake payment "success", a spoofed bank/UPI screen, or a chat — designed to look legitimate.',
+      'A buyer or contact sends a screenshot — a fake Venmo/Cash App/Zelle/PayPal "payment sent", a forged bank-transfer receipt, a spoofed UPI screen, or a chat — designed to look legitimate.',
       'ScamCheck runs OCR (and AI vision) to read the text, then applies the same fraud detection as for messages.',
-      'It flags fake payment confirmations, spoofed UI, OTP requests, and brand impersonation.',
+      'It flags forged payment confirmations, spoofed UI, OTP requests, and brand impersonation.',
     ],
-    redFlags: ['"Payment successful" screens you didn’t initiate', 'Spoofed bank/UPI logos or mismatched fonts', 'QR / "collect request" to "receive" money', 'OTP-sharing requests in the image'],
-    examples: ['A fake "₹4,999 received — scan QR to credit" screen', 'A spoofed bank app KYC-suspension screen', 'A WhatsApp "support" chat asking for an OTP'],
+    redFlags: ['A "payment sent" screenshot for a marketplace sale (Venmo/Cash App/Zelle/PayPal) instead of money actually in your account', '"Payment successful" screens you didn’t initiate', 'Spoofed bank/app logos or mismatched fonts', 'QR / "collect request" to "receive" money', 'OTP-sharing requests in the image'],
+    examples: ['A fake Venmo/Cash App "Payment sent ✓" screen for something you\'re selling', 'A forged PayPal "You\'ve received a payment" email screenshot', 'A fake "₹4,999 received — scan QR to credit" UPI screen', 'A spoofed bank app KYC-suspension screen'],
     protect: ['A real credit never needs you to scan a QR or share a PIN/OTP to "receive".', ...SHARED_PROTECT.slice(0, 3)],
   },
 }
