@@ -299,7 +299,7 @@ export default function HomePage() {
         <div>
           <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-purple-300/80">New to AI? Start here</p>
           <p className="mt-1 text-sm font-medium text-surface-100">AI for Students — our most complete beginner track</p>
-          <p className="mt-0.5 text-xs text-surface-500">Learn faster, research smarter, and write honestly with AI — 9 practical lessons.</p>
+          <p className="mt-0.5 text-xs text-surface-500">Learn faster, research smarter, and write honestly with AI — 12 practical lessons.</p>
         </div>
         <span className="shrink-0 text-sm font-semibold text-purple-300">Start the track →</span>
       </Link>

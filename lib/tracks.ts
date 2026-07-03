@@ -741,9 +741,9 @@ export const TRACKS: Track[] = [
         title: 'Career Building',
         description: 'Use AI capability as career capital — not just a productivity hack.',
         lessons: [
-          { id: 'career-positioning-ai',        title: 'Career Positioning in an AI World',       type: 'lesson',   duration: '25 min', description: 'Which careers benefit from AI skills and how to demonstrate those skills credibly.',  status: 'coming-soon' },
-          { id: 'portfolio-with-ai',            title: 'Building a Portfolio That Shows AI Capability', type: 'playbook', duration: '30 min', description: 'What to build, document, and publish to demonstrate real AI-native skills.',   status: 'coming-soon' },
-          { id: 'student-final-project',        title: 'Final Project: AI-Integrated Study System', type: 'project', duration: '90 min', description: 'Design and implement a complete AI learning and research workflow for your field.', status: 'coming-soon' },
+          { id: 'career-positioning-ai',        title: 'Career Positioning in an AI World',       type: 'lesson',   duration: '25 min', description: 'Which careers benefit from AI skills and how to demonstrate those skills credibly.',  status: 'available' },
+          { id: 'portfolio-with-ai',            title: 'Building a Portfolio That Shows AI Capability', type: 'playbook', duration: '30 min', description: 'What to build, document, and publish to demonstrate real AI-native skills.',   status: 'available' },
+          { id: 'student-final-project',        title: 'Final Project: AI-Integrated Study System', type: 'project', duration: '90 min', description: 'Design and implement a complete AI learning and research workflow for your field.', status: 'available' },
         ],
       },
     ],

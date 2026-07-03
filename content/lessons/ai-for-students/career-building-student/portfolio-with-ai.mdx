@@ -1,0 +1,148 @@
+---
+title: "Building a Portfolio That Shows AI Capability"
+description: "A step-by-step playbook for building a small, credible portfolio that demonstrates real AI-assisted capability — process, verification and judgement — instead of fake polish."
+date: "2026-07-03"
+tags: ["ai-for-students", "career", "portfolio", "proof-of-work", "playbook"]
+status: "published"
+---
+
+<LessonMeta difficulty="intermediate" updated="2026-07-03" />
+
+<LessonObjectives items={[
+  "Understand why a portfolio that shows process beats one that shows only polished outputs",
+  "Choose portfolio-worthy artifacts a student can realistically produce",
+  "Write a project page that documents problem, workflow, AI's role, verification, and failures",
+  "Decide how many projects are enough to start and where to publish them",
+  "Avoid the portfolio patterns that make AI work look fake or thin",
+]} />
+
+Anyone can now generate a slick-looking output. That means a portfolio of slick outputs proves nothing — a reviewer can't tell your polished result from one the AI produced while you watched. What they *can't* fake, and what actually convinces, is a documented account of how you worked: the decisions, the verification, and the things that went wrong. This lesson is the playbook for building that.
+
+---
+
+## The core idea: show the system, not the surface
+
+The previous lesson made the case that judgement and verification are what appreciate when AI is cheap. A portfolio is where you make those visible. The shift is simple but most people miss it:
+
+> A portfolio of **outputs** says "look what got made." A portfolio of **process** says "look how I think." Only the second one survives the obvious question: *did the AI do this, or did you?*
+
+This mirrors the Lab's own ethos — show the work, show the system, show the failures, show what was actually learned. A project page that admits "here's the bug the AI introduced and how I caught it" is more credible than one that pretends the path was clean, because real work is never clean and reviewers know it.
+
+---
+
+## What a good student AI portfolio contains
+
+You are not building a professional agency showcase. You're assembling **3–5 small artifacts that each demonstrate a real capability**. Strong candidates, all achievable as a student:
+
+| Artifact | What it proves | Realistic scope |
+|---|---|---|
+| Research synthesis | Verification, source discipline, judgement | One question, ~6 real sources, your synthesis |
+| Automation experiment | You can make AI *do* something, not just answer | A script/workflow that saves you a recurring task |
+| Prompt system | Repeatable, engineered AI use | A documented set of prompts for one job, with why they work |
+| Study system | Applied learning design (the whole track, in fact) | Your personal AI learning workflow, written up |
+| Mini-tool | End-to-end building capability | A tiny web tool that solves one real problem |
+| Case-study write-up | Communication + reflection | A before/after account of a workflow you improved |
+
+You don't need all six. Pick the ones that fit your field and that you can honestly document. A history student's research synthesis is as valid as a CS student's mini-tool — the *documentation quality* is what's being assessed, not the domain.
+
+---
+
+## The project page template
+
+Every artifact gets a short write-up with the same five sections. This structure is what turns "a thing I made" into evidence of capability. Keep each project page to roughly 300–600 words.
+
+<WorkflowBlock>
+<WorkflowStep number={1} title="Problem — what and for whom">
+One paragraph: the real problem you were solving and why it mattered. A concrete, personal problem ("I kept losing track of sources across three modules") beats a generic one.
+</WorkflowStep>
+<WorkflowStep number={2} title="Workflow — how you actually worked">
+The steps you took, in order. This is where process becomes visible. Name the tools, but focus on the sequence of decisions.
+</WorkflowStep>
+<WorkflowStep number={3} title="AI's role — honestly scoped">
+Exactly what the AI did and what you did. Be specific: "AI drafted the regex; I tested it against 20 real cases and fixed two." This is the section that separates operators from users.
+</WorkflowStep>
+<WorkflowStep number={4} title="Verification — what you checked and how">
+How you confirmed the output was correct. Sources checked, tests run, edge cases considered. This is your credibility, made explicit.
+</WorkflowStep>
+<WorkflowStep number={5} title="Failures & iteration — what went wrong and improved">
+What broke, what the AI got wrong, what you changed. Counter-intuitively, this is the most persuasive section — it proves the work is real and that you can recover from failure.
+</WorkflowStep>
+</WorkflowBlock>
+
+You can generate a first pass of this write-up with AI — but only *after* you've done the project, and using your own notes. Prompt it like this:
+
+<PromptBlock title="Draft a project page from my notes" role="user">
+Here are my raw notes from a project I built: [paste notes — the problem, the steps I took, what the AI did, what I checked, what went wrong]. Draft a project write-up with five sections: Problem, Workflow, AI's role, Verification, Failures & iteration. Use only what's in my notes — do not invent steps, results, or tools I didn't mention. Keep it under 500 words and plain.
+</PromptBlock>
+
+The "do not invent" constraint matters here as much as in research: a project page with a fabricated detail collapses the moment someone asks about it.
+
+---
+
+## A worked example
+
+**Weak entry (output only):**
+> *"AI Study Assistant — a prompt system for summarising lectures. Built with Claude."* Plus a screenshot.
+
+A reviewer learns nothing about you from this. It could be a tutorial clone.
+
+**Strong entry (process):**
+> *Problem:* I was re-reading full lecture transcripts before exams and running out of time.
+> *Workflow:* Built a three-prompt system — extract key claims, generate self-test questions, flag anything I marked as "unsure."
+> *AI's role:* Claude generates the questions; I answer them from memory before checking.
+> *Verification:* I spot-checked 15 generated questions against the source slides — 2 misrepresented the material, so I added a "quote the slide" step to the prompt.
+> *Failures & iteration:* First version summarised *for* me, which defeated the point (I retained nothing). I rebuilt it to quiz me instead. That single change is what made it work.
+
+Same project. The second version proves judgement, verification, and iteration — none of which AI can supply on your behalf.
+
+---
+
+## How many, and where to put them
+
+- **How many:** 3 is a real portfolio; 5 is strong. One deeply-documented project beats five thin ones. Quality of documentation over quantity of artifacts, every time.
+- **Where to host:** the friction should be near zero for a reviewer to open.
+  - A simple site (a free Vercel or GitHub Pages page), or even a well-structured Notion / Google Doc, is fine to start.
+  - Code artifacts: a public GitHub repo with a real README that *is* the project page.
+  - Written artifacts: a personal blog, a PDF, or a shared doc — as long as it's a link.
+- **How to present:** one index page listing the projects, each linking to its write-up. Lead with the strongest. Make sure every link actually opens for a stranger (test in a private browser window).
+
+---
+
+## Bad portfolio patterns to avoid
+
+- **All polish, no process.** Beautiful outputs with no explanation of how you worked. Assumed to be AI-generated; proves nothing.
+- **Fabricated results.** Inflated metrics or invented outcomes. One probing question and it collapses — and takes your credibility with it.
+- **Tutorial clones presented as original.** Reviewers recognise these instantly. If you followed a tutorial, say so and document what you changed or added.
+- **No failures anywhere.** A portfolio where everything went perfectly reads as either fake or shallow. Real work has friction; showing it is a strength.
+- **Tool-name soup.** "Built with Claude, GPT-4, Perplexity, Cursor, Vercel…" Listing tools is not evidence. What you *did* with them is.
+- **Broken links / private repos.** If a reviewer can't open it, it doesn't exist. Test every link.
+
+---
+
+## Action checklist
+
+<Checklist items={[
+  "Pick your first artifact from the table — the one you can most honestly document right now",
+  "Keep a running notes file while you build it: decisions, what the AI did, what you checked, what broke",
+  "Write the project page using the five-section template, from your own notes",
+  "Include at least one real failure and how you handled it",
+  "Publish it at a link and open that link in a private browser window to confirm a stranger can see it",
+  "Repeat until you have 3 documented projects, then build a simple index page linking them",
+]} />
+
+---
+
+## Further resources
+
+<Resource
+  title="Final Project: AI-Integrated Study System"
+  description="Your capstone — and a portfolio-worthy artifact in its own right. Build the system, then document it using this lesson's template."
+  href="/tracks/ai-for-students/career-building-student/student-final-project"
+  type="docs"
+/>
+<Resource
+  title="Career Positioning in an AI World"
+  description="Why process-based proof beats polished output — the strategy this portfolio executes."
+  href="/tracks/ai-for-students/career-building-student/career-positioning-ai"
+  type="docs"
+/>
