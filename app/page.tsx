@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { getAllMeta, getRecentItems } from '@/lib/content'
@@ -21,6 +22,12 @@ const SectionTracks = dynamic(
   () => import('@/components/homepage/section-tracks').then(m => m.SectionTracks),
   { loading: () => <div className="mb-12 grid grid-cols-1 sm:grid-cols-2 gap-3">{Array.from({length:6}).map((_,i) => <div key={i} className="h-28 rounded-xl border border-white/[0.05] bg-white/[0.01] animate-pulse" />)}</div> }
 )
+
+// Page-level canonical: the root layout deliberately sets none (a global one
+// previously leaked across product domains), so the Lab homepage self-canonicalizes.
+export const metadata: Metadata = {
+  alternates: { canonical: '/', types: { 'application/rss+xml': 'https://lab.asquaresolution.com/feed.xml' } },
+}
 
 // ─────────────────────────────────────────────────────────────
 // Environment badge
@@ -112,6 +119,19 @@ export default function HomePage() {
           <span>·</span>
           <span>Built before documented</span>
         </div>
+
+        <p className="mt-2 text-xs text-surface-500">
+          Written and maintained by{' '}
+          <a
+            href="https://asquaresolution.com/about-us/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-surface-400 underline decoration-surface-700 underline-offset-2 hover:text-brand-400 transition-colors"
+          >
+            Anis Ansari
+          </a>
+          , founder of A Square Solutions.
+        </p>
 
         <div className="mt-6 flex flex-wrap gap-2">
           <Link
@@ -335,6 +355,21 @@ export default function HomePage() {
           ))}
         </div>
       </div>
+
+      {/* ── Work with us (closes the evaluation loop) ────────── */}
+      <a
+        href="https://asquaresolution.com/contact/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-brand-500/25 bg-brand-500/[0.05] px-5 py-4 transition hover:border-brand-500/45"
+      >
+        <div>
+          <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-brand-300/80">Evaluating us for a project?</p>
+          <p className="mt-1 text-sm font-medium text-surface-100">This Lab is how we actually work — failures included.</p>
+          <p className="mt-0.5 text-xs text-surface-500">If you want the same engineering discipline on your build, talk to A Square Solutions. Free consultation, 24h response.</p>
+        </div>
+        <span className="shrink-0 text-sm font-semibold text-brand-300">Start a conversation →</span>
+      </a>
 
       {/* ── Recent activity feed ─────────────────────────────── */}
       {recent.length > 0 && (
