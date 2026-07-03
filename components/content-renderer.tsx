@@ -105,6 +105,10 @@ export async function ContentRenderer({ source }: ContentRendererProps) {
         source={source}
         components={allComponents}
         options={{
+          // Strip the YAML frontmatter (title/description/date/tags/status) so it
+          // is NOT rendered as visible body text. Without this, every lesson leaked
+          // its frontmatter as a paragraph at the top of the content.
+          parseFrontmatter: true,
           // next-mdx-remote v6 defaults blockJS:true which strips JS expressions
           // (array/object literals in JSX props) via removeJavaScriptExpressions.
           // Our MDX is author-controlled content — not user-submitted — so we
