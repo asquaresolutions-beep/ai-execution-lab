@@ -67,7 +67,7 @@ const CONV: Record<string, { apiH: string; apiS: string; apiCta: string; certH: 
 const PILOT: Record<string, { h: string; s: string; b1: string; b2: string; b3: string; b4: string; cta: string }> = {
   en: {
     h: 'Founder pilot — we set it up with you',
-    s: 'We’re onboarding our first businesses personally. Join the founder pilot and we’ll verify your business and configure the badge for you — free for 30 days. If it doesn’t earn its place, walk away: no cost, no lock-in. Early businesses keep founder pricing.',
+    s: 'Open to any business with a website. We’re onboarding our first businesses personally, so places are limited by how many we can set up each week — no other qualifying hoops. Join the founder pilot and we’ll verify your business and configure the badge for you, free for 30 days. If it doesn’t earn its place, walk away: no cost, no lock-in. Early businesses keep founder pricing.',
     b1: 'Free 30-day pilot — no card to start',
     b2: 'We handle setup and verification for you',
     b3: 'Cancel anytime — access runs to period end',
