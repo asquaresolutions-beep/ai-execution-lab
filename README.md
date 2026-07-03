@@ -2,9 +2,11 @@
 
 **Operational knowledge base by [A Square Solutions](https://asquaresolution.com)**
 
-Real workflows, real systems, real results — documented while building production AI systems, SEO engineering pipelines, and generative engine optimization strategies across [asquaresolution.com](https://asquaresolution.com), [TrustSeal](https://trustseal.in), and [ScamCheck](https://scamcheck.in).
+Real workflows, real systems, real results — documented while building production AI systems, SEO engineering pipelines, and generative engine optimization strategies across [asquaresolution.com](https://asquaresolution.com), [TrustSeal](https://trustseal.asquaresolution.com), and [ScamCheck](https://scamcheck.asquaresolution.com).
 
 > This is not a tutorial site. Every document here comes from something we actually built, broke, fixed, or measured.
+
+**Live:** **[lab.asquaresolution.com](https://lab.asquaresolution.com)** — and the same Next.js platform also serves the production **[ScamCheck](https://scamcheck.asquaresolution.com)** and **[TrustSeal](https://trustseal.asquaresolution.com)** products via host-routed rendering.
 
 ---
 
@@ -12,7 +14,7 @@ Real workflows, real systems, real results — documented while building product
 
 A structured knowledge platform for capturing and sharing operational AI knowledge — the kind that exists only in codebases, terminal outputs, and post-mortems. Built for internal use at A Square Solutions, open to the public.
 
-**Five sections:**
+**Core sections:**
 
 | Section | Purpose |
 |---|---|
@@ -21,6 +23,8 @@ A structured knowledge platform for capturing and sharing operational AI knowled
 | **Labs** | Active research — hypotheses, methods, findings, ongoing experiments |
 | **Case Studies** | Real results — what we built, what broke, and what we measured |
 | **Playbooks** | Step-by-step execution guides for repeatable operations |
+| **Failure Archive** | Real production incidents with root cause, timeline, and prevention pattern |
+| **Execution Tracks** | Structured multi-lesson learning tracks — e.g. *AI for Students* (12 lessons), *Claude Code Operator*, *Build an AI Business With Almost No Money* |
 
 ---
 
@@ -243,21 +247,18 @@ This knowledge base documents work across three A Square Solutions properties:
 | Property | URL | Description |
 |---|---|---|
 | Main site | [asquaresolution.com](https://asquaresolution.com) | AI services, SEO engineering, GEO consulting |
-| TrustSeal | [trustseal.in](https://trustseal.in) | Website trust verification |
-| ScamCheck | [scamcheck.in](https://scamcheck.in) | Scam detection tool |
+| AI Execution Lab | [lab.asquaresolution.com](https://lab.asquaresolution.com) | This platform — knowledge base + execution tracks |
+| TrustSeal | [trustseal.asquaresolution.com](https://trustseal.asquaresolution.com) | Business trust verification — trust scores, verifiable badges & a public Trust API |
+| ScamCheck | [scamcheck.asquaresolution.com](https://scamcheck.asquaresolution.com) | Free AI scam detection for messages, links, emails & screenshots |
 
 ---
 
 ## Status
 
-**Phase: Local development only.**
+**Live in production** on Vercel at [lab.asquaresolution.com](https://lab.asquaresolution.com).
 
-Not deployed. No auth. No monetization. Building the foundation correctly before scaling.
+The same Next.js codebase also powers the production **ScamCheck** and **TrustSeal** products (host-routed), with authentication (Firebase), a public Trust API, subscription billing (Razorpay), a daily monitoring cron, and 1,000+ statically generated pages. Content, execution tracks, and the failure archive are added continuously.
 
 ---
 
 *A Square Solutions · [asquaresolution.com](https://asquaresolution.com)*
-
-<!-- redeploy: vercel.json schema fix (c8989a5) -->
-
-<!-- redeploy: fresh vercel deployment after schema fix -->
