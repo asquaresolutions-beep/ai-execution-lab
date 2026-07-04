@@ -8,6 +8,7 @@ import { useCredits, authHeaders } from '@/hooks/use-credits'
 import { useAuth } from '@/components/auth/auth-provider'
 import { ShareResult } from '@/components/scamcheck/share-result'
 import { NewsletterCapture } from '@/components/scamcheck/newsletter-capture'
+import { trackEvent } from '@/lib/track-event'
 import { SCAMCHECK_BASE as SITE } from '@/lib/seo/scamcheck-meta'
 
 type Tab = 'message' | 'link' | 'email' | 'phone' | 'screenshot'
@@ -48,12 +49,15 @@ export function QuickAnalyzer({ initialTab = 'message' as Tab }: { initialTab?: 
     setError(''); setResult(null)
     if (!value.trim() || value.trim().length < 3) { setError('Enter something to check.'); return }
     setBusy(true)
+    trackEvent('scan_start', { check_type: tab })
     try {
       const r = await fetch('/api/scam-intel/quick-check', { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders(user) }, body: JSON.stringify({ type: tab, value }) })
       const data = await r.json()
       if (r.status === 402) { setError(data.detail || `Daily limit reached (${quota}/day). Sign in for 50/day.`); void refresh(); return }
       if (!r.ok) { setError(data.detail || data.error || 'Check failed.'); return }
-      setResult(data as QuickResult)
+      const qd = data as QuickResult
+      setResult(qd)
+      trackEvent('scan_complete', { check_type: tab, verdict: qd.verdict, risk_score: qd.riskScore })
       void refresh()
     } catch (e) { setError(e instanceof Error ? e.message : 'Network error.') } finally { setBusy(false) }
   }

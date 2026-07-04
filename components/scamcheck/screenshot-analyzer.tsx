@@ -13,6 +13,7 @@ import { getCountry, resolveCountryDetailed, type CountryConfig, type GeoSource 
 import { NewsletterCapture } from '@/components/scamcheck/newsletter-capture'
 import { useCredits, authHeaders } from '@/hooks/use-credits'
 import { useAuth } from '@/components/auth/auth-provider'
+import { trackEvent } from '@/lib/track-event'
 
 interface VisualSignal { id: string; label: string; severity: 'info' | 'warn' | 'danger'; evidence: string }
 interface OcrWord { text: string; x: number; y: number; w: number; h: number }
@@ -97,6 +98,7 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
     const { dataUrl, mime } = await optimizeImage(file)
     setPreview(dataUrl)
     setStage('analyzing')
+    trackEvent('scan_start', { check_type: 'screenshot' })
     try {
       const r = await fetch('/api/scam-intel/screenshot', { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders(user) }, body: JSON.stringify({ imageBase64: dataUrl, mime }) })
       const data = await r.json()
@@ -104,6 +106,7 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
       if (!r.ok) { setError(data.detail || data.error || 'Analysis failed.'); setStage('error'); return }
       const v = data as Verdict
       setResult(v)
+      trackEvent('scan_complete', { check_type: 'screenshot', verdict: v.verdict, risk_score: v.riskScore })
       // Refine country from phone numbers in the screenshot if found.
       if (GEO_ENABLED) {
         const refined = resolveCountryDetailed({ phones: v.entities?.phones, geoHeader: geo.headerCode, locale: geo.locale })
