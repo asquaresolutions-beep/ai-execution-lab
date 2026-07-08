@@ -3,7 +3,7 @@
 //   - multipart:   form field `image` (file) [+ `forceDeep`]
 // Multimodal screenshot scam analysis: OCR → enrichment + visual signals →
 // semantic similarity → gated deep vision. Always returns structured JSON.
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { analyzeScreenshot } from '@/lib/scam-intel/multimodal'
 import { enforceRateLimit, RateLimitError } from '@/lib/ai/rate-limit'
 import { clientIp } from '@/lib/admin-auth'
@@ -91,11 +91,13 @@ export const POST = jsonRoute('scam-intel/screenshot', async (req) => {
   // quality is unchanged while the on-demand cost lever is removed.
   const effectiveForceDeep = forceDeep && sid.loggedIn
   // Funnel counter: a scan is actually running now (passed rate-limit + credits).
-  void logScanEvent('scan_start', { embedSource })
+  // `after()` guarantees the write lands post-response on Vercel (a plain
+  // fire-and-forget can be frozen before the async write completes).
+  after(() => logScanEvent('scan_start', { embedSource }))
   const result = await analyzeScreenshot(base64, mime, { forceDeep: effectiveForceDeep })
   if (sid.loggedIn && sid.uid) void recordScan(sid.uid, { ts: Date.now(), type: 'screenshot', verdict: result.verdict, risk: result.riskScore, label: result.campaignLabel })
   // Funnel counter: scan finished — record verdict + risk by originating page.
-  void logScanEvent('scan_complete', { embedSource, verdict: result.verdict, riskScore: result.riskScore })
+  after(() => logScanEvent('scan_complete', { embedSource, verdict: result.verdict, riskScore: result.riskScore }))
   // Budget circuit breaker tripped → deep vision was skipped; surface a soft notice.
   const notice = result.deepSkippedReason === 'budget'
     ? 'Deep visual analysis is temporarily at capacity — this result uses our standard checks. Please try again later for a full visual review.'
