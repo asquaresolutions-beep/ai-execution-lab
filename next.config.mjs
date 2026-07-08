@@ -75,9 +75,17 @@ const nextConfig = {
       "object-src 'none'",
       'upgrade-insecure-requests',
     ].join('; ')
+    // Embed CSP: identical lockdown EXCEPT it permits framing by the A Square blog
+    // (asquaresolution.com) so /embed/* can be iframed inline in articles. Applies
+    // ONLY to the /embed/ route group below — the product routes stay 'none'.
+    const embedCsp = csp.replace(
+      "frame-ancestors 'none'",
+      "frame-ancestors 'self' https://asquaresolution.com https://www.asquaresolution.com https://*.asquaresolution.com",
+    )
     return [
       {
-        source: '/(.*)',
+        // Global lockdown for every route EXCEPT the /embed group (handled below).
+        source: '/((?!embed/).*)',
         headers: [
           { key: 'X-Content-Type-Options',        value: 'nosniff' },
           { key: 'X-Frame-Options',                value: 'DENY' },
@@ -86,6 +94,19 @@ const nextConfig = {
           { key: 'Permissions-Policy',             value: 'camera=(), microphone=(), geolocation=()' },
           { key: 'Content-Security-Policy',        value: csp },
           // HSTS: enforce HTTPS for 1 year, include subdomains, allow preload submission
+          { key: 'Strict-Transport-Security',      value: 'max-age=31536000; includeSubDomains; preload' },
+        ],
+      },
+      {
+        // Embeddable checker route: NO X-Frame-Options (it can't allowlist origins),
+        // and CSP frame-ancestors permits the A Square blog only. Everything else
+        // stays locked down. This is the ONLY place framing is relaxed.
+        source: '/embed/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options',        value: 'nosniff' },
+          { key: 'Referrer-Policy',                value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy',             value: 'camera=(), microphone=(), geolocation=()' },
+          { key: 'Content-Security-Policy',        value: embedCsp },
           { key: 'Strict-Transport-Security',      value: 'max-age=31536000; includeSubDomains; preload' },
         ],
       },

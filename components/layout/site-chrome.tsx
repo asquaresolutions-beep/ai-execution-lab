@@ -38,6 +38,11 @@ function isScamCheckSegment(seg: string | null): boolean {
 
 export function SiteChrome({ children }: { children: ReactNode }) {
   const seg = useSelectedLayoutSegment()
+  // Embeddable routes (/embed/*) are chrome-free by design — they render inside
+  // an iframe on external blog pages, so no nav/footer/sidebar.
+  if (seg === 'embed') {
+    return <>{children}</>
+  }
   // TrustSeal is a STANDALONE product: never render the AI Execution Lab chrome
   // (Sidebar/TopBar/EcosystemFooter/Cmd+K) on any /trustseal/* route. Its own
   // [locale] layout supplies a TrustSeal-focused nav + footer. This covers the
