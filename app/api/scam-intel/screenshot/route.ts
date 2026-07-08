@@ -10,6 +10,7 @@ import { clientIp } from '@/lib/admin-auth'
 import { resolveSubject } from '@/lib/api/identify'
 import { consumeCredits } from '@/lib/credits/server-credits'
 import { recordScan } from '@/lib/scamcheck/scan-history'
+import { logScanEvent } from '@/lib/scam-intel/scan-log'
 import { jsonRoute, ApiError } from '@/lib/api/json'
 
 export const dynamic = 'force-dynamic'
@@ -40,12 +41,18 @@ export const POST = jsonRoute('scam-intel/screenshot', async (req) => {
   let base64 = ''
   let mime = 'image/png'
   let forceDeep = false
+  // Originating blog page (from the embed `?src=` / analyzer prop). Optional,
+  // attribution-only — used solely for aggregate funnel counters. Never trusted
+  // for anything security-relevant; sanitized again in scan-log.
+  let embedSource: string | undefined
   const ctype = req.headers.get('content-type') || ''
 
   if (ctype.includes('multipart/form-data')) {
     const form = await req.formData()
     const file = form.get('image')
     forceDeep = form.get('forceDeep') === 'true'
+    const es = form.get('embed_source')
+    embedSource = typeof es === 'string' ? es : undefined
     if (!(file instanceof File)) throw new ApiError('no_image', 'multipart form must include an `image` file', 400)
     const buf = Buffer.from(await file.arrayBuffer())
     if (buf.length > MAX_BYTES) throw new ApiError('too_large', `image exceeds ${MAX_BYTES} bytes`, 413)
@@ -54,9 +61,10 @@ export const POST = jsonRoute('scam-intel/screenshot', async (req) => {
     mime = sniffed
     base64 = buf.toString('base64')
   } else {
-    const body = await req.json().catch(() => ({})) as { imageBase64?: string; mime?: string; forceDeep?: boolean }
+    const body = await req.json().catch(() => ({})) as { imageBase64?: string; mime?: string; forceDeep?: boolean; embed_source?: string }
     base64 = (body.imageBase64 || '').replace(/^data:[^;]+;base64,/, '')
     forceDeep = !!body.forceDeep
+    embedSource = typeof body.embed_source === 'string' ? body.embed_source : undefined
     if (!base64) throw new ApiError('no_image', 'provide imageBase64 (or multipart `image`)', 400)
     if (Buffer.byteLength(base64, 'base64') > MAX_BYTES) throw new ApiError('too_large', `image exceeds ${MAX_BYTES} bytes`, 413)
     const buf = Buffer.from(base64, 'base64')
@@ -82,8 +90,12 @@ export const POST = jsonRoute('scam-intel/screenshot', async (req) => {
   // automatically when signals are ambiguous (server-decided), so detection
   // quality is unchanged while the on-demand cost lever is removed.
   const effectiveForceDeep = forceDeep && sid.loggedIn
+  // Funnel counter: a scan is actually running now (passed rate-limit + credits).
+  void logScanEvent('scan_start', { embedSource })
   const result = await analyzeScreenshot(base64, mime, { forceDeep: effectiveForceDeep })
   if (sid.loggedIn && sid.uid) void recordScan(sid.uid, { ts: Date.now(), type: 'screenshot', verdict: result.verdict, risk: result.riskScore, label: result.campaignLabel })
+  // Funnel counter: scan finished — record verdict + risk by originating page.
+  void logScanEvent('scan_complete', { embedSource, verdict: result.verdict, riskScore: result.riskScore })
   // Budget circuit breaker tripped → deep vision was skipped; surface a soft notice.
   const notice = result.deepSkippedReason === 'budget'
     ? 'Deep visual analysis is temporarily at capacity — this result uses our standard checks. Please try again later for a full visual review.'
