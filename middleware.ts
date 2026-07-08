@@ -37,6 +37,8 @@ const ALLOW_PREFIXES = [
   '/privacy-policy', '/terms', '/disclaimer', '/contact', '/about', '/how-it-works', '/methodology', // legal + E-E-A-T
   '/api/scam-intel', '/api/geo', '/api/semantic-search', '/api/credits', '/api/scans', '/api/contact', '/api/newsletter', '/api/lead',
   '/guides', // static lead-magnet assets (e.g. /guides/fake-upi-scam-detection-guide.html)
+  '/embed', // embeddable checker (/embed/checker) iframed inline in A Square blog articles
+
   '/_next', '/sitemap', '/robots', '/manifest', '/icon', '/apple-icon', '/opengraph-image', '/favicon',
 ]
 
