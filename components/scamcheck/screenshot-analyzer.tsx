@@ -100,7 +100,7 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang, source }: { def
     setStage('analyzing')
     trackEvent('scan_start', { check_type: 'screenshot', ...(source ? { embed_source: source } : {}) })
     try {
-      const r = await fetch('/api/scam-intel/screenshot', { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders(user) }, body: JSON.stringify({ imageBase64: dataUrl, mime }) })
+      const r = await fetch('/api/scam-intel/screenshot', { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders(user) }, body: JSON.stringify({ imageBase64: dataUrl, mime, ...(source ? { embed_source: source } : {}) }) })
       const data = await r.json()
       if (r.status === 402) { setError(data.detail || `Daily limit reached (${quota} credits; screenshots use 3). Sign in for 50/day.`); setStage('error'); void refresh(); return }
       if (!r.ok) { setError(data.detail || data.error || 'Analysis failed.'); setStage('error'); return }
