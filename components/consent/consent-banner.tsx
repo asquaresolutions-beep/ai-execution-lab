@@ -12,6 +12,7 @@
 // gated. Until the user accepts, AdSense serves non-personalised ads only.
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 
 const KEY = 'sc-consent-v1'
 type Prefs = { analytics: boolean; ads: boolean }
@@ -36,12 +37,21 @@ export function ConsentBanner() {
   const [open, setOpen] = useState(false)
   const [custom, setCustom] = useState(false)
   const [prefs, setPrefs] = useState<Prefs>({ analytics: true, ads: true })
+  const pathname = usePathname()
+  // Embeddable routes (/embed/*) render inside an <iframe> on external blog pages.
+  // The embedding site owns the top-level cookie consent, and a second banner
+  // glued to the bottom of the iframe would cover the checker. Suppress it here.
+  // Consent stays at the layout default (denied) for the iframe origin, so GA4
+  // still receives events as cookieless Consent-Mode pings — attribution intact,
+  // no cookies set without consent.
+  const isEmbed = pathname?.startsWith('/embed')
 
   useEffect(() => {
+    if (isEmbed) return
     try {
       if (!localStorage.getItem(KEY)) setOpen(true)
     } catch { setOpen(true) }
-  }, [])
+  }, [isEmbed])
 
   function save(next: Prefs) {
     try { localStorage.setItem(KEY, JSON.stringify({ ...next, ts: Date.now() })) } catch { /* private mode */ }
@@ -49,7 +59,7 @@ export function ConsentBanner() {
     setOpen(false)
   }
 
-  if (!open) return null
+  if (isEmbed || !open) return null
 
   return (
     <div role="dialog" aria-label="Cookie consent" aria-live="polite"

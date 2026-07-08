@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { AuthProvider } from '@/components/auth/auth-provider'
 import { ScreenshotAnalyzer } from '@/components/scamcheck/screenshot-analyzer'
+import { EmbedAnalytics } from '@/components/scamcheck/embed-analytics'
 
 // Embeddable ScamCheck screenshot checker — purpose-built for inline <iframe> use
 // inside A Square blog articles (see next.config.mjs: /embed/* permits framing by
@@ -29,6 +30,7 @@ export default async function EmbedCheckerPage({
   return (
     <AuthProvider>
       <main className="mx-auto max-w-2xl px-3 py-4" id="scamcheck-embed">
+        <EmbedAnalytics source={source || 'embed'} />
         <ScreenshotAnalyzer source={source || 'embed'} />
         <p className="mt-4 text-center text-[11px] text-zinc-500">
           Free check by{' '}
