@@ -61,7 +61,7 @@ async function optimizeImage(file: File): Promise<{ dataUrl: string; mime: strin
   } catch { return { dataUrl: original, mime: file.type } }
 }
 
-export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang?: Lang }) {
+export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang, source }: { defaultLang?: Lang; source?: string }) {
   const [lang, setLang] = useState<Lang>(defaultLang)
   const [country, setCountry] = useState<CountryConfig>(getCountry())
   const [geo, setGeo] = useState<{ source: GeoSource; locale: string; headerCode: string | null }>({ source: 'fallback', locale: '', headerCode: null })
@@ -98,7 +98,7 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
     const { dataUrl, mime } = await optimizeImage(file)
     setPreview(dataUrl)
     setStage('analyzing')
-    trackEvent('scan_start', { check_type: 'screenshot' })
+    trackEvent('scan_start', { check_type: 'screenshot', ...(source ? { embed_source: source } : {}) })
     try {
       const r = await fetch('/api/scam-intel/screenshot', { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders(user) }, body: JSON.stringify({ imageBase64: dataUrl, mime }) })
       const data = await r.json()
@@ -106,7 +106,7 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
       if (!r.ok) { setError(data.detail || data.error || 'Analysis failed.'); setStage('error'); return }
       const v = data as Verdict
       setResult(v)
-      trackEvent('scan_complete', { check_type: 'screenshot', verdict: v.verdict, risk_score: v.riskScore })
+      trackEvent('scan_complete', { check_type: 'screenshot', verdict: v.verdict, risk_score: v.riskScore, ...(source ? { embed_source: source } : {}) })
       // Refine country from phone numbers in the screenshot if found.
       if (GEO_ENABLED) {
         const refined = resolveCountryDetailed({ phones: v.entities?.phones, geoHeader: geo.headerCode, locale: geo.locale })
@@ -115,7 +115,7 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang }: { defaultLang
       setStage('done')
       void refresh()
     } catch (e) { setError(e instanceof Error ? e.message : 'Network error.'); setStage('error') }
-  }, [geo.headerCode, geo.locale, user, refresh, quota])
+  }, [geo.headerCode, geo.locale, user, refresh, quota, source])
 
   // Paste-to-analyze (clipboard screenshot).
   useEffect(() => {
