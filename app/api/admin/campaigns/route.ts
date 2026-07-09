@@ -8,13 +8,16 @@
 // Bearer ADMIN_API_TOKEN. Draft-first: no send path exists without explicit approve+send.
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
-import { composeWeeklyScamcheckDraft, composeIssueOneDraft, composeCustomIssue, drainCampaign, listCampaigns, getCampaign, approveCampaign, enqueueCampaign } from '@/lib/newsletter/campaigns'
+import { composeWeeklyScamcheckDraft, composeIssueOneDraft, composeCustomIssue, drainCampaign, requeueFailedSends, listCampaignSends, listCampaigns, getCampaign, approveCampaign, enqueueCampaign } from '@/lib/newsletter/campaigns'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: Request) {
   if (!requireAdmin(req).ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  const id = new URL(req.url).searchParams.get('id')
+  const url = new URL(req.url)
+  const sends = url.searchParams.get('sends')
+  if (sends) return NextResponse.json(await listCampaignSends(sends), { headers: { 'Cache-Control': 'no-store' } })
+  const id = url.searchParams.get('id')
   if (id) return NextResponse.json({ campaign: await getCampaign(id) }, { headers: { 'Cache-Control': 'no-store' } })
   return NextResponse.json({ campaigns: await listCampaigns() }, { headers: { 'Cache-Control': 'no-store' } })
 }
@@ -40,6 +43,10 @@ export async function POST(req: Request) {
       // Explicit, admin-triggered send of an approved+enqueued campaign (status 'sending').
       if (!b.id) return NextResponse.json({ ok: false, error: 'id_required' }, { status: 400 })
       return NextResponse.json(await drainCampaign(b.id))
+    case 'requeue-failed':
+      // Reset FAILED recipients → queued (retry after rate-limit); never re-sends 'sent'.
+      if (!b.id) return NextResponse.json({ ok: false, error: 'id_required' }, { status: 400 })
+      return NextResponse.json(await requeueFailedSends(b.id))
     default:
       return NextResponse.json({ ok: false, error: 'bad_action' }, { status: 400 })
   }
