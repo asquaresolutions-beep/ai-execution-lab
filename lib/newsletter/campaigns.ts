@@ -139,6 +139,62 @@ export async function enqueueCampaign(id: string, maxRecipients = 5000): Promise
   return { ok: true, recipients }
 }
 
+// ── Custom editorial issue → DRAFT only (never sends) ──────────────
+/**
+ * Create (idempotently) a DRAFT campaign from arbitrary, hand-authored content —
+ * for one-off editorial issues that don't fit the fixed ISSUE_001 template. Same
+ * draft-first safety as the other composers: refreshes ONLY while still a draft,
+ * never touches an approved/sending/sent campaign. Sending still requires the
+ * explicit approve → enqueue → drain path below. Nothing here sends anything.
+ */
+export async function composeCustomIssue(input: { id: string; subject: string; title: string; bodyHtml: string; brand?: CampaignBrand }): Promise<{ created: boolean; id: string; reason?: string }> {
+  const store = getStore()
+  const id = input.id
+  const existing = await store.get<Campaign>(CAMPAIGNS, id)
+  if (existing && existing.data.status !== 'draft') return { created: false, id, reason: `not-draft (${existing.data.status})` }
+  const campaign: Campaign = {
+    id, brand: input.brand || 'scamcheck',
+    subject: input.subject, title: input.title, bodyHtml: input.bodyHtml,
+    status: 'draft', source: 'manual:custom',
+    createdAt: existing ? existing.data.createdAt : new Date().toISOString(),
+  }
+  await store.set<Campaign>(CAMPAIGNS, id, campaign)
+  return { created: !existing, id, ...(existing ? { reason: 'draft-refreshed' } : {}) }
+}
+
+// ── Manual drain (admin-triggered) of ONE approved+enqueued campaign ──
+/**
+ * Send the queued recipients of a single campaign, invoked EXPLICITLY by an admin.
+ * Unlike processCampaignSends (the daily cron, gated by WEEKLY_DIGEST_ENABLED), this
+ * is a deliberate one-shot for a campaign that was already composed → approved →
+ * enqueued (status must be 'sending'), so it does not depend on the cron flag. It
+ * still refuses anything not in 'sending' — i.e. never sends without prior approval.
+ */
+export async function drainCampaign(id: string, maxBatch = 200): Promise<{ ok: boolean; processed: number; sent: number; failed: number; done: boolean; error?: string }> {
+  const store = getStore()
+  const c = await getCampaign(id)
+  if (!c) return { ok: false, processed: 0, sent: 0, failed: 0, done: false, error: 'not_found' }
+  if (c.status !== 'sending') return { ok: false, processed: 0, sent: 0, failed: 0, done: false, error: `not_sending (${c.status})` }
+
+  const queued = await store.query<{ campaignId: string; email: string }>(
+    CAMPAIGN_SENDS, { where: [{ field: 'campaignId', op: '==', value: id }, { field: 'status', op: '==', value: 'queued' }], limit: maxBatch },
+  )
+  let sent = 0, failed = 0, processed = 0
+  for (const row of queued) {
+    processed++
+    const r = await sendListEmail({ to: row.data.email, subject: c.subject, title: c.title, bodyHtml: c.bodyHtml })
+    if (r.ok) { sent++; await store.update(CAMPAIGN_SENDS, row.id, { status: 'sent', sentAt: new Date().toISOString() }) }
+    else if (r.skipped) { /* no RESEND key configured — leave queued for a later run */ }
+    else { failed++; await store.update(CAMPAIGN_SENDS, row.id, { status: 'failed', error: r.error?.slice(0, 200) }) }
+  }
+  const left = await store.query(CAMPAIGN_SENDS, { where: [{ field: 'campaignId', op: '==', value: id }, { field: 'status', op: '==', value: 'queued' }], limit: 1 })
+  const done = left.length === 0
+  if (done) {
+    await store.update<Campaign>(CAMPAIGNS, id, { status: 'sent', sentAt: new Date().toISOString(), stats: { ...(c.stats || {}), sent: (c.stats?.sent || 0) + sent, failed: (c.stats?.failed || 0) + failed } })
+  }
+  return { ok: true, processed, sent, failed, done }
+}
+
 // ── Drain (cron). Sends queued recipients; flag-gated; never auto-progresses a draft. ──
 export interface SendRunResult { enabled: boolean; processed: number; sent: number; failed: number; campaignsCompleted: number }
 
