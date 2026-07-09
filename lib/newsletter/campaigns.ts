@@ -180,12 +180,15 @@ export async function drainCampaign(id: string, maxBatch = 200): Promise<{ ok: b
     CAMPAIGN_SENDS, { where: [{ field: 'campaignId', op: '==', value: id }, { field: 'status', op: '==', value: 'queued' }], limit: maxBatch },
   )
   let sent = 0, failed = 0, processed = 0
-  for (const row of queued) {
+  for (let i = 0; i < queued.length; i++) {
+    const row = queued[i]
     processed++
     const r = await sendListEmail({ to: row.data.email, subject: c.subject, title: c.title, bodyHtml: c.bodyHtml })
     if (r.ok) { sent++; await store.update(CAMPAIGN_SENDS, row.id, { status: 'sent', sentAt: new Date().toISOString() }) }
     else if (r.skipped) { /* no RESEND key configured — leave queued for a later run */ }
     else { failed++; await store.update(CAMPAIGN_SENDS, row.id, { status: 'failed', error: r.error?.slice(0, 200) }) }
+    // Pace under Resend's ~2 req/sec rate limit — bursting causes 429s → failed sends.
+    if (i < queued.length - 1) await new Promise((res) => setTimeout(res, 600))
   }
   const left = await store.query(CAMPAIGN_SENDS, { where: [{ field: 'campaignId', op: '==', value: id }, { field: 'status', op: '==', value: 'queued' }], limit: 1 })
   const done = left.length === 0
@@ -193,6 +196,33 @@ export async function drainCampaign(id: string, maxBatch = 200): Promise<{ ok: b
     await store.update<Campaign>(CAMPAIGNS, id, { status: 'sent', sentAt: new Date().toISOString(), stats: { ...(c.stats || {}), sent: (c.stats?.sent || 0) + sent, failed: (c.stats?.failed || 0) + failed } })
   }
   return { ok: true, processed, sent, failed, done }
+}
+
+/** Reset a campaign's FAILED recipients back to 'queued' so drainCampaign can retry
+ *  them (e.g. after a rate-limit batch of 429s). Puts the campaign back to 'sending'.
+ *  Never touches 'sent' rows, so retry can't double-send. */
+export async function requeueFailedSends(id: string): Promise<{ ok: boolean; requeued: number; error?: string }> {
+  const store = getStore()
+  const c = await getCampaign(id)
+  if (!c) return { ok: false, requeued: 0, error: 'not_found' }
+  const failed = await store.query<{ campaignId: string }>(CAMPAIGN_SENDS, { where: [{ field: 'campaignId', op: '==', value: id }, { field: 'status', op: '==', value: 'failed' }], limit: 1000 })
+  let requeued = 0
+  for (const row of failed) { await store.update(CAMPAIGN_SENDS, row.id, { status: 'queued', error: '' }); requeued++ }
+  if (requeued > 0 && c.status !== 'sending') await store.update<Campaign>(CAMPAIGNS, id, { status: 'sending' })
+  return { ok: true, requeued }
+}
+
+/** Read per-recipient send statuses for a campaign (owner diagnostics; email masked). */
+export async function listCampaignSends(id: string, limit = 500): Promise<{ total: number; byStatus: Record<string, number>; rows: { email: string; status: string; error?: string }[] }> {
+  const store = getStore()
+  const rows = await store.query<{ email?: string; status?: string; error?: string }>(CAMPAIGN_SENDS, { where: [{ field: 'campaignId', op: '==', value: id }], limit })
+  const byStatus: Record<string, number> = {}
+  const out = rows.map((r) => {
+    const st = String(r.data.status || '?'); byStatus[st] = (byStatus[st] || 0) + 1
+    const em = String(r.data.email || ''); const mask = (em.split('@')[0] || '').slice(0, 3) + '***@' + (em.split('@')[1] || '?')
+    return { email: mask, status: st, error: r.data.error ? String(r.data.error).slice(0, 160) : undefined }
+  })
+  return { total: rows.length, byStatus, rows: out }
 }
 
 // ── Drain (cron). Sends queued recipients; flag-gated; never auto-progresses a draft. ──
