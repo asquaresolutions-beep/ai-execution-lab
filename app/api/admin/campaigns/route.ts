@@ -8,7 +8,7 @@
 // Bearer ADMIN_API_TOKEN. Draft-first: no send path exists without explicit approve+send.
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
-import { composeWeeklyScamcheckDraft, composeIssueOneDraft, listCampaigns, getCampaign, approveCampaign, enqueueCampaign } from '@/lib/newsletter/campaigns'
+import { composeWeeklyScamcheckDraft, composeIssueOneDraft, composeCustomIssue, drainCampaign, listCampaigns, getCampaign, approveCampaign, enqueueCampaign } from '@/lib/newsletter/campaigns'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,18 +21,25 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   if (!requireAdmin(req).ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  const b = await req.json().catch(() => ({})) as { action?: string; id?: string }
+  const b = await req.json().catch(() => ({})) as { action?: string; id?: string; subject?: string; title?: string; bodyHtml?: string }
   switch (b.action) {
     case 'compose':
       return NextResponse.json(await composeWeeklyScamcheckDraft())
     case 'compose-issue':
       return NextResponse.json(await composeIssueOneDraft())
+    case 'compose-custom':
+      if (!b.id || !b.subject || !b.title || !b.bodyHtml) return NextResponse.json({ ok: false, error: 'missing_fields' }, { status: 400 })
+      return NextResponse.json(await composeCustomIssue({ id: b.id, subject: b.subject, title: b.title, bodyHtml: b.bodyHtml }))
     case 'approve':
       if (!b.id) return NextResponse.json({ ok: false, error: 'id_required' }, { status: 400 })
       return NextResponse.json(await approveCampaign(b.id))
     case 'send':
       if (!b.id) return NextResponse.json({ ok: false, error: 'id_required' }, { status: 400 })
       return NextResponse.json(await enqueueCampaign(b.id))
+    case 'drain':
+      // Explicit, admin-triggered send of an approved+enqueued campaign (status 'sending').
+      if (!b.id) return NextResponse.json({ ok: false, error: 'id_required' }, { status: 400 })
+      return NextResponse.json(await drainCampaign(b.id))
     default:
       return NextResponse.json({ ok: false, error: 'bad_action' }, { status: 400 })
   }
