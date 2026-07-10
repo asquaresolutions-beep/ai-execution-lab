@@ -182,7 +182,7 @@ export const TRACKS: Track[] = [
           { id: 'claude-md-architecture',title: 'CLAUDE.md Architecture',          type: 'lesson',  duration: '25 min', description: 'Design a CLAUDE.md that fully briefs Claude at the start of every session.',                   status: 'available' },
           { id: 'project-settings',      title: 'Project Settings & Permissions',  type: 'lesson',  duration: '20 min', description: 'Safe, explicit permission configuration for real production codebases.',                       status: 'available' },
           { id: 'first-agentic-task',    title: 'Your First Agentic Task',         type: 'lesson',  duration: '30 min', description: 'Run a real multi-step task, read the tool-use loop, and catch problems early.',               status: 'available' },
-          { id: 'ide-integration',       title: 'IDE Integration & Keybindings',   type: 'lesson',  duration: '15 min', description: 'Connect Claude Code to VS Code and Cursor for inline AI development.',                        status: 'coming-soon' },
+          { id: 'ide-integration',       title: 'IDE Integration & Keybindings',   type: 'lesson',  duration: '15 min', description: 'Connect Claude Code to VS Code and Cursor for inline AI development.',                        status: 'available' },
         ],
       },
       // ── Module 2 ─────────────────────────────────────────
@@ -369,7 +369,7 @@ export const TRACKS: Track[] = [
         title: 'Automation Architecture',
         description: 'Design before you build — structure that survives production.',
         lessons: [
-          { id: 'pipeline-design', title: 'Pipeline Design Principles', type: 'lesson', duration: '25 min', description: 'Read→Transform→Check→Apply→Verify: the pattern that prevents disasters.', status: 'available' },
+          { id: 'pipeline-design', title: 'Pipeline Design Principles', type: 'lesson', duration: '25 min', description: 'Read→Transform→Check→Apply→Verify: the pattern that prevents disasters.', status: 'coming-soon' },
           { id: 'dry-run-pattern', title: 'The Dry-Run Pattern', type: 'lesson', duration: '20 min', description: 'Why every automation script needs a dry-run mode and how to implement it.', status: 'coming-soon' },
           { id: 'error-taxonomy', title: 'Error Taxonomy for Automation', type: 'lesson', duration: '20 min', description: 'Classify errors before writing retry logic.', status: 'coming-soon' },
         ],
@@ -435,7 +435,7 @@ export const TRACKS: Track[] = [
         title: 'Content Architecture',
         description: 'Structure your content for maximum compounding value.',
         lessons: [
-          { id: 'content-systems-thinking', title: 'Content Systems Thinking', type: 'lesson', duration: '20 min', description: 'Why standalone articles fail and how content systems compound.', status: 'available' },
+          { id: 'content-systems-thinking', title: 'Content Systems Thinking', type: 'lesson', duration: '20 min', description: 'Why standalone articles fail and how content systems compound.', status: 'coming-soon' },
           { id: 'topical-authority', title: 'Building Topical Authority', type: 'lesson', duration: '25 min', description: 'Cluster strategy for establishing expertise signals in AI and search.', status: 'coming-soon' },
           { id: 'content-types', title: 'Content Types for AI + Human Audiences', type: 'lesson', duration: '20 min', description: 'Match content format to query intent across both humans and AI models.', status: 'coming-soon' },
         ],
