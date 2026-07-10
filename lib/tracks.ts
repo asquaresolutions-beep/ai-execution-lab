@@ -206,7 +206,7 @@ export const TRACKS: Track[] = [
           { id: 'git-operations',    title: 'Git Operations with Claude Code',  type: 'lesson',   duration: '25 min', description: 'How Claude uses git, what it can see, and how to stage and commit safely.',                  status: 'available' },
           { id: 'branch-strategy',   title: 'Branch Strategy for AI Work',      type: 'lesson',   duration: '20 min', description: 'Feature branches, experiment branches, and the merge review discipline.',                    status: 'available' },
           { id: 'bad-commit-recovery', title: 'Bad Commit Recovery',            type: 'playbook', duration: '30 min', description: 'Recover from wrong files staged, broken code committed, and bad merge decisions.',           status: 'available' },
-          { id: 'pr-review-workflow', title: 'PR Review Workflow',              type: 'lesson',   duration: '25 min', description: 'Use Claude to review diffs, catch regressions, and write meaningful PR descriptions.',       status: 'coming-soon' },
+          { id: 'pr-review-workflow', title: 'PR Review Workflow',              type: 'lesson',   duration: '25 min', description: 'Use Claude to review diffs, catch regressions, and write meaningful PR descriptions.',       status: 'available' },
         ],
       },
       // ── Module 4 ─────────────────────────────────────────
