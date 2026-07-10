@@ -230,7 +230,7 @@ export const TRACKS: Track[] = [
           { id: 'wp-auth-patterns',         title: 'WP Authentication Patterns',        type: 'lesson',   duration: '20 min', description: 'Application Passwords, header format, auth testing, and common failure modes.',          status: 'available' },
           { id: 'content-patching-system',  title: 'Content Patching System',           type: 'playbook', duration: '45 min', description: 'The Read→Transform→Check→Apply→Verify pattern for safe content automation.',            status: 'available' },
           { id: 'bulk-operations',          title: 'Bulk Operations at Scale',          type: 'lab',      duration: '40 min', description: 'Process 500+ posts without timeouts, rate limits, or data corruption.',                  status: 'available' },
-          { id: 'error-handling-rollback',  title: 'Error Handling & Rollback',         type: 'lesson',   duration: '25 min', description: 'Design automation that recovers gracefully from partial failures.',                      status: 'coming-soon' },
+          { id: 'error-handling-rollback',  title: 'Error Handling & Rollback',         type: 'lesson',   duration: '25 min', description: 'Design automation that recovers gracefully from partial failures.',                      status: 'available' },
         ],
       },
       // ── Module 6 ─────────────────────────────────────────

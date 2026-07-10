@@ -1,0 +1,178 @@
+## What this lesson covers
+
+Bulk Operations built a runner that *can* recover — checkpoints, retries, idempotent transforms. This lesson is the other half: the operator judgment for when a run has actually gone wrong. Production automation rarely fails cleanly. It **partially succeeds** — 480 posts updated, 20 in an unknown state — and the money question is no longer "how do I catch exceptions" but "which posts are in which state, and do I resume, roll back, or fix forward?"
+
+<LessonObjectives items={[
+  "Classify a failure before reacting: transient vs permanent, retryable vs not",
+  "Choose correctly between resume, rollback, and fix-forward when a run half-completes",
+  "Read the run's audit log to compute exactly which posts are in which state",
+  "Roll back safely — as its own verified, idempotent operation — not a panicked re-run",
+  "Follow an incident workflow that keeps a broken run recoverable instead of making it worse"
+]} />
+
+---
+
+## The failure taxonomy — classify before you react
+
+The first move in any automation incident is **not** an action. It's a classification. Acting before you know what failed is how a recoverable situation becomes a corrupted one.
+
+| What happened | Signal | First response |
+|---|---|---|
+| **Transient** | `429`, `5xx`, timeout, dropped connection | Retry with backoff — usually the runner already did |
+| **Permanent (request wrong)** | `400`, `401`, `403`, `404`, `422` | Stop. Fix the request/auth/id. Retrying can't help |
+| **Partial success** | Run died mid-way; N done, M unknown | Read the log, decide resume vs rollback |
+| **Bad transform** | Writes *succeeded* but content is wrong | Roll back the affected posts, fix the transform, re-run |
+
+The dangerous quadrant is the last one: a transform that "succeeded" on every post but wrote the wrong thing. HTTP was happy; your content is corrupted. Only the post-run verification pass catches it — which is why Bulk Operations made that pass mandatory.
+
+---
+
+## Retryable vs non-retryable — the decision that saves the run
+
+Retries are only correct for failures that a later attempt could fix. Retrying the rest wastes time, burns rate limit, and buries the real error.
+
+<FailureAnalysis
+  title="Retrying a non-retryable error"
+  before={`# Runner retries EVERYTHING on failure:
+for attempt in range(4):
+    try: patch(post_id)
+    except: time.sleep(2 ** attempt)   # backoff on any error
+
+# Post has a bad auth token → 401 on every attempt.
+# Result: 4 slow retries per post × 500 posts of 401s,
+# rate-limit tripped, the real problem (expired token)
+# hidden under 2000 backoff sleeps. Run "fails" after 40 min.`}
+  after={`RETRYABLE = ("429", "500", "502", "503", "504", "timeout")
+def is_retryable(err: str) -> bool:
+    return any(code in str(err) for code in RETRYABLE)
+
+for attempt in range(4):
+    try: patch(post_id); break
+    except Exception as e:
+        if not is_retryable(str(e)):
+            log_fatal(post_id, e); break     # 401/404 → fail fast, surface it
+        time.sleep(2 ** attempt)
+
+# The 401 surfaces on post #1 in seconds. You refresh the
+# token and resume. The run is fixed in 2 minutes, not 40.`}
+  lesson="Retry is for transient failures only. A 4xx (except 429) means your request is wrong — retrying can't fix it and only delays the diagnosis. Classify the error, then decide whether another attempt could possibly succeed."
+/>
+
+---
+
+## The recovery decision tree — resume, roll back, or fix forward
+
+When a batch half-completes, there are exactly three moves. Pick by asking two questions: *were the applied changes correct?* and *is the operation idempotent?*
+
+<CodeBlock filename="recovery decision" language="text">
+{`Did the writes that succeeded produce CORRECT content?
+├─ YES → the run just didn't finish
+│        └─ RESUME from checkpoint (safe because the transform is idempotent).
+│           Re-running touches only the unprocessed posts.
+│
+└─ NO → the transform itself was wrong
+         ├─ Few posts affected, applied changes are wrong
+         │   └─ ROLL BACK the affected posts to their backup, fix the
+         │      transform, then re-run clean.
+         │
+         └─ Applied changes are fine but INCOMPLETE (e.g. added a block,
+            now need a second field on the same posts)
+             └─ FIX FORWARD: a new idempotent patch over the same set,
+                NOT a rollback. Rolling back correct work wastes it.`}
+</CodeBlock>
+
+**Resume** is the common case and the cheapest — it's why the runner checkpoints. **Rollback** is for when the change itself was wrong. **Fix-forward** is the one operators miss: if the applied changes are correct and you just need *more*, another idempotent patch is safer than undoing good work and redoing it.
+
+---
+
+## Reading the audit log to drive recovery
+
+The runner's JSONL log is the incident record. You don't guess which posts are in which state — you compute it. Every recovery starts by partitioning the target set into three groups.
+
+<CodeBlock filename="triage_run.py" language="python">
+{`import json
+from pathlib import Path
+
+def triage(target_ids: list[int], log_path: str):
+    """Partition the target set using the run's JSONL log."""
+    succeeded, failed = set(), {}
+    for line in Path(log_path).read_text().splitlines():
+        e = json.loads(line)
+        if e["success"]:
+            succeeded.add(e["post_id"])
+        else:
+            failed[e["post_id"]] = e.get("error", "unknown")
+
+    never_attempted = [p for p in target_ids if p not in succeeded and p not in failed]
+
+    print(f"succeeded:       {len(succeeded)}")
+    print(f"failed:          {len(failed)}  {list(failed)[:10]}")
+    print(f"never attempted: {len(never_attempted)}  {never_attempted[:10]}")
+    return succeeded, failed, never_attempted`}
+</CodeBlock>
+
+Now recovery is precise, not a full re-run:
+
+- **`never_attempted`** → feed straight back into the runner; the checkpoint already skips `succeeded`.
+- **`failed`** → look at the errors. All 429/timeout? A paced resume clears them. A 401? Fix auth first. A 422 on specific posts? Those posts have a data problem to fix individually.
+- **`succeeded`** → leave them alone. The cardinal rule of partial-success recovery: **re-run only the failed and unattempted items — never re-touch what already succeeded.** This is exactly how the real bulk work recovered — the per-post run report was the source of truth for which posts still needed the operation, and only those were re-run.
+
+---
+
+## Rollback done right
+
+Rollback is not a panic button — it's its own bulk operation, and it can fail the same way the forward run did. Three rules keep it safe:
+
+**1. Roll back only the affected set.** If a bad transform hit 20 posts, restore those 20 from backup — not the whole run. Restoring correct posts just risks corrupting them.
+
+**2. Verify after rollback.** Restoring is a write; a write must be verified. Re-GET each rolled-back post and assert it matches the backup.
+
+<CodeBlock filename="rollback_verified.py" language="python">
+{`def rollback_and_verify(patcher, backup_dir, affected_ids):
+    restored, mismatched = 0, []
+    for pid in affected_ids:
+        original = json.loads(Path(f"{backup_dir}/post_{pid}_backup.json").read_text())
+        want = original["content"]["raw"]
+        patcher.patch_post(
+            pid,
+            transform_fn=lambda p, w=want: {**p, "content": {"raw": w}},
+            description=f"ROLLBACK post {pid}",
+            dry_run=False,
+        )
+        # Verify: re-read and confirm the original content is back
+        got = patcher.get_post(pid)["content"]["raw"]
+        if got.strip() == want.strip():
+            restored += 1
+        else:
+            mismatched.append(pid)
+    print(f"rolled back: {restored}/{len(affected_ids)} verified")
+    if mismatched:
+        print(f"ROLLBACK MISMATCH on: {mismatched}")   # do NOT walk away — these are still wrong
+    return mismatched`}
+</CodeBlock>
+
+**3. Rollback is idempotent by nature** — writing the original content twice is harmless, so a rollback that itself gets interrupted is safe to re-run. That's the payoff of having backed up *before* the run: undo is always available, and always repeatable. A real large operation on this project — noindexing several hundred stale posts — shipped its rollback script in the same commit for exactly this reason: the decision was reversible with one command, verified.
+
+---
+
+## The production incident workflow
+
+When a run breaks — especially at 2am — the instinct is to re-run it immediately. That instinct corrupts data. Follow the sequence instead.
+
+<Checkpoint title="When an automation run goes wrong:">
+  <CheckItem>STOP — do not blindly re-run; a second uncontrolled pass can double-apply or spread a bad transform</CheckItem>
+  <CheckItem>CLASSIFY — read the errors: transient, permanent, partial success, or bad transform?</CheckItem>
+  <CheckItem>ASSESS — run triage against the log: how many succeeded, failed, never attempted?</CheckItem>
+  <CheckItem>DECIDE — resume (correct + incomplete), roll back (wrong change), or fix-forward (correct + needs more)</CheckItem>
+  <CheckItem>EXECUTE — act only on the affected subset; never re-touch succeeded posts</CheckItem>
+  <CheckItem>VERIFY — re-GET and assert the end state, whether you resumed or rolled back</CheckItem>
+  <CheckItem>RECORD — note what failed and why, so the transform or checklist prevents a repeat</CheckItem>
+</Checkpoint>
+
+The difference between an operator and a beginner is not that the operator's runs never break — they do. It's that the operator's broken run is a five-minute procedure with a known-good end state, because the backup, the checkpoint, and the log were in place *before* the run started.
+
+---
+
+<Milestone n={8} title="Recovery is a procedure, not a scramble">
+You can now take a run that partially succeeded and drive it to a known-good state — classifying the failure, computing exactly which posts need action, and resuming, rolling back, or fixing forward with verification at the end. WordPress automation is now fully accounted for: safe to write, safe to scale, and safe to recover. The wordpress-rest-api module is complete.
+</Milestone>
