@@ -1,0 +1,235 @@
+## What this lesson covers
+
+The Content Patching System made *one* post safe to change. Bulk operations are a different problem: when you run the same transform across 500 posts, new failure modes appear that never show up on a single post — rate limits, timeouts, a script that dies at post 347, and API calls that succeed for 490 posts and silently mangle 10. This lab builds the batch runner that makes patching hundreds of posts as safe as patching one.
+
+<LessonObjectives items={[
+  "Wrap the single-post patcher in a batch runner with pacing, retries, and a run report",
+  "Checkpoint progress so an interrupted run resumes instead of restarting",
+  "Make every operation idempotent so re-runs and resumes never double-apply",
+  "Back up before a live run and verify the whole set after — catching partial corruption",
+  "Follow a production checklist that keeps a 500-post run recoverable at every step"
+]} />
+
+---
+
+## Why bulk is a different problem
+
+A single patch either works or it doesn't, and you're watching it. A 500-post run introduces failure modes that don't exist at n=1:
+
+- **Partial completion.** The script dies at post 347 — network blip, a token expiry, a laptop sleep. Now 346 posts are changed, 154 aren't, and you don't know which is which.
+- **Rate limits and load.** Firing 500 writes as fast as possible triggers throttling, or hammers the server's cache/DB and slows the whole site.
+- **Silent per-item corruption.** A transform that's correct for 490 posts hits an edge case on 10 (an unusual block, a shortcode, an empty field) and writes garbage — and the run still reports "success."
+- **Non-repeatability.** You re-run "to be safe" and now the change is applied twice.
+
+The two properties that neutralize all of this: a bulk run must be **resumable** (it can stop and continue without losing or repeating work) and **idempotent** (running it again changes nothing that's already correct). Everything below serves those two properties.
+
+---
+
+## The batch runner architecture
+
+The runner wraps the `WPContentPatcher` from the Content Patching System lesson. It never re-implements Read→Transform→Check→Apply→Verify — it *orchestrates* it across a list, adding pacing, retries, checkpointing, and a report.
+
+<CodeBlock filename="wp_batch_runner.py" language="python">
+{`import json, time, random
+from pathlib import Path
+from wp_patcher import WPContentPatcher   # from the Content Patching System lesson
+
+class BatchRunner:
+    def __init__(self, patcher: WPContentPatcher, run_name: str,
+                 pace_seconds: float = 0.6, max_retries: int = 4):
+        self.patcher = patcher
+        self.pace = pace_seconds            # gap between writes — don't hammer the API
+        self.max_retries = max_retries
+        self.ckpt = Path(f"runs/{run_name}.checkpoint.json")
+        self.log  = Path(f"runs/{run_name}.log.jsonl")
+        self.ckpt.parent.mkdir(parents=True, exist_ok=True)
+
+    def _done_ids(self) -> set[int]:
+        """Resume support: which post ids already completed successfully."""
+        if not self.ckpt.exists():
+            return set()
+        return set(json.loads(self.ckpt.read_text()).get("done", []))
+
+    def _record(self, done: set[int]):
+        self.ckpt.write_text(json.dumps({"done": sorted(done)}, indent=2))
+
+    def _with_retry(self, fn, post_id):
+        """Exponential backoff with jitter on transient failures (429/5xx/network)."""
+        for attempt in range(self.max_retries):
+            try:
+                return fn()
+            except Exception as e:
+                transient = any(c in str(e) for c in ("429", "500", "502", "503", "timeout"))
+                if not transient or attempt == self.max_retries - 1:
+                    raise
+                sleep = (2 ** attempt) + random.uniform(0, 0.5)
+                print(f"    post {post_id}: transient error, retry in {sleep:.1f}s ({e})")
+                time.sleep(sleep)
+
+    def run(self, post_ids, transform_fn, description, dry_run=True):
+        done = self._done_ids()
+        todo = [pid for pid in post_ids if pid not in done]
+        print(f"{description} | {'DRY RUN' if dry_run else 'LIVE'} | "
+              f"{len(todo)} to process, {len(done)} already done")
+
+        ok = failed = 0
+        for pid in todo:
+            try:
+                result = self._with_retry(
+                    lambda: self.patcher.patch_post(pid, transform_fn, description, dry_run),
+                    pid,
+                )
+                entry = {"post_id": pid, "success": result.success, "error": result.error}
+                if result.success and not dry_run:
+                    done.add(pid); self._record(done)   # checkpoint AFTER each success
+                ok += result.success; failed += (not result.success)
+            except Exception as e:
+                entry = {"post_id": pid, "success": False, "error": str(e)}
+                failed += 1
+            with self.log.open("a") as f:
+                f.write(json.dumps(entry) + "\\n")
+            time.sleep(self.pace)                        # pace every iteration
+
+        print(f"Done: {ok} ok, {failed} failed. Checkpoint: {self.ckpt}")
+        return ok, failed
+`}
+</CodeBlock>
+
+Three things this buys you: it **paces** every write, it **retries** transient failures instead of dying on them, and it **checkpoints after every success** so the run is resumable and every attempt is logged to a JSONL you can inspect afterward.
+
+---
+
+## Checkpointing and resume
+
+The checkpoint is the difference between "the run died at 347, start over" and "the run died at 347, run it again and it finishes the last 153." Because `run()` reads `_done_ids()` at the start and skips them, **resume is just re-running the same command:**
+
+<TerminalBlock title="terminal" session={[
+  { cmd: "python run_bulk.py --live", out: "Add stats CTA | LIVE | 500 to process, 0 already done\n  ... processing ...\n  ^C  (interrupted at post 347)" },
+  { cmd: "python run_bulk.py --live", out: "Add stats CTA | LIVE | 153 to process, 347 already done\n  ... resumes exactly where it stopped ..." }
+]} />
+
+The checkpoint records a post id **only after** its patch succeeded and was verified. A post that failed mid-write is *not* in the done set, so the resume re-attempts it — which is only safe if the operation is idempotent. That's the next section.
+
+---
+
+## Idempotency — the property that makes resume safe
+
+Resume re-runs failed (and sometimes uncertain) posts. If your transform isn't idempotent, that re-run double-applies — you get two CTAs, two appended sections, a link added twice. **Every bulk transform must be safe to run more than once on the same post.**
+
+The pattern: mark the change, and make the transform a no-op if the marker is already present.
+
+<CodeBlock filename="idempotent transform" language="python">
+{`MARKER = "<!-- asq-stats-cta-v1 -->"
+
+def add_stats_cta(post: dict) -> dict:
+    content = post["content"]["raw"]
+    if MARKER in content:            # already applied → no-op
+        return post                  # transform returns unchanged; Check/Apply skip
+    block = f'{MARKER}\\n<p>See the data: ...</p>'
+    post["content"] = {"raw": content + "\\n\\n" + block}
+    return post`}
+</CodeBlock>
+
+The same idea covers non-content operations: **skip a post that already has a featured image** before uploading a new one; **skip a tag** that's already attached. This is exactly how the real cluster work stayed safe — link blocks and CTAs were wrapped in HTML-comment markers (`asq-cluster-v1`, `asq-xprop-v1`, …) so re-running a wiring script was always a no-op on posts already wired, and the featured-image generator skipped any post that already had `featured_media` set.
+
+<FailureAnalysis
+  title="A non-idempotent transform meets a resume"
+  before={`def add_cta(post):
+    # No marker check — blindly appends
+    post["content"]["raw"] += "\\n\\n<p>Try our tool ...</p>"
+    return post
+
+# Run dies at post 347. You re-run to finish.
+# The 40 posts that had ALSO been uncertain get the CTA appended a SECOND time.
+# Now dozens of posts have duplicate CTAs — a new bulk cleanup job to undo.`}
+  after={`MARKER = "<!-- asq-tool-cta-v1 -->"
+def add_cta(post):
+    if MARKER in post["content"]["raw"]:
+        return post                        # already applied — no-op
+    post["content"]["raw"] += f"\\n\\n{MARKER}\\n<p>Try our tool ...</p>"
+    return post
+
+# Re-run is safe. Applied posts are skipped. Only the genuinely
+# unprocessed posts get the change. Resume == correctness.`}
+  lesson="Idempotency is not a nicety for bulk work — it is the precondition for resume, retries, and the inevitable 'let me just run it again.' Mark the change; make the transform check the marker first."
+/>
+
+---
+
+## Rate limiting and retry
+
+At scale you are a load source. Two disciplines keep you a polite one:
+
+- **Pace writes.** A fixed gap between requests (`pace_seconds`) keeps you under throttling limits and stops you from spiking the server's cache/DB. On WordPress this also matters because each content POST purges page cache — 500 rapid purges is its own problem. Start conservative (0.5–1s) and only tighten if the host is comfortable.
+- **Back off on transient failures.** `429` (too many requests) and `5xx`/timeouts are *retryable* — wait and try again with exponential backoff + jitter (the `_with_retry` above). A `400`/`401`/`404` is *not* retryable; it means your request is wrong, so fail fast and log it rather than hammering.
+
+<Callout type="warn" title="Distinguish transient from terminal failures">
+Retrying a 401 (bad auth) 4 times just delays the inevitable and can trip rate limits. Retry only 429/5xx/network errors. Everything else should fail immediately, land in the log, and let you fix the root cause before resuming.
+</Callout>
+
+---
+
+## Verifying at scale
+
+You cannot eyeball 500 posts. The run's Verify step (from the patcher) checks each write landed, but you also want an independent, whole-set validation pass *after* the run — it catches the posts that were "successfully written" but wrong.
+
+<CodeBlock filename="verify_run.py" language="python">
+{`def verify_all(patcher, post_ids, expect_marker):
+    """Independent post-run check: re-GET every post, assert the change is present."""
+    missing, ok = [], 0
+    for pid in post_ids:
+        content = patcher.get_post(pid)["content"]["raw"]
+        if expect_marker in content:
+            ok += 1
+        else:
+            missing.append(pid)
+    print(f"Verified: {ok}/{len(post_ids)} carry the change")
+    if missing:
+        print(f"MISSING on {len(missing)} posts: {missing}")   # feed these back into a resume run
+    return missing`}
+</CodeBlock>
+
+Verification is also your **partial-corruption detector**: assert not just "the change is present" but "nothing else broke" — block-marker count unchanged, content not empty, length within expected bounds (the same class of assertion the patcher runs, applied across the whole set). A single number — "498/500 carry the change, 2 missing: [4412, 4530]" — turns an unknowable bulk run into a fact you can act on.
+
+---
+
+## Rollback planning for bulk
+
+Before any live run, back up **every** post you're about to touch — not a sample. Reuse the patcher's `backup_posts()` across the full id list. Rollback is then a bulk operation in reverse: read each backup JSON and POST the original `raw` content back.
+
+<CodeBlock filename="rollback_run.py" language="python">
+{`def rollback(patcher, backup_dir, post_ids):
+    for pid in post_ids:
+        original = json.loads(Path(f"{backup_dir}/post_{pid}_backup.json").read_text())
+        patcher.patch_post(
+            pid,
+            transform_fn=lambda p, o=original: {**p, "content": {"raw": o["content"]["raw"]}},
+            description=f"ROLLBACK post {pid} to pre-run state",
+            dry_run=False,
+        )
+        time.sleep(patcher_pace)`}
+</CodeBlock>
+
+Keep the rollback script with the run, not as an afterthought. A real large operation on this project — noindexing several hundred stale auto-generated posts — shipped *with* its rollback script in the same commit, precisely so a wrong call was a one-command undo rather than a manual repair of hundreds of posts.
+
+---
+
+## The bulk operation checklist
+
+Run every large operation through this sequence. It is the difference between a routine batch and a production incident.
+
+<Checkpoint title="Before, during, and after a bulk run:">
+  <CheckItem>Dry-run on a 3–5 post subset and read the diff by hand before anything is written</CheckItem>
+  <CheckItem>The transform is idempotent — it checks a marker and no-ops if already applied</CheckItem>
+  <CheckItem>Every target post is backed up to disk before the first live write</CheckItem>
+  <CheckItem>The runner paces writes and backs off on 429/5xx (not on 4xx auth/not-found)</CheckItem>
+  <CheckItem>Progress is checkpointed after each success so an interrupted run resumes</CheckItem>
+  <CheckItem>An independent verify pass confirms the change landed on the full set and reports the misses</CheckItem>
+  <CheckItem>A rollback script exists and was tested on one post before the live run</CheckItem>
+</Checkpoint>
+
+---
+
+<Milestone n={7} title="Bulk automation is safe at scale">
+You can now run the same transform across hundreds of posts with the same confidence as a single one. The run paces itself, survives interruption, never double-applies, verifies the whole set, and can be rolled back in one command. Scale stopped being a source of risk and became a matter of waiting for the loop to finish.
+</Milestone>
