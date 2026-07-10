@@ -1,0 +1,176 @@
+## What this lesson covers
+
+Claude Code is terminal-first — but it doesn't have to *stay* in the terminal. The IDE integration connects Claude Code to VS Code (and its forks, Cursor and Windsurf) and to JetBrains editors, so edits arrive as native diffs in your editor, your current selection becomes context, and Claude sees the same lint and type errors you do.
+
+By the end, Claude Code will be wired into your editor and you'll know the handful of keybindings that make it fast to drive.
+
+<Callout type="info" title="The terminal is still the engine">
+The IDE integration is a surface, not a replacement. Claude Code still runs as the CLI operator — the extension just gives it an editor-native diff view, your selection as context, and access to your IDE's diagnostics. You lose nothing by connecting; you gain a tighter review loop.
+</Callout>
+
+---
+
+## Two ways to run Claude Code
+
+Both are valid. The difference is the review surface, not the capability.
+
+| | Terminal-only | IDE-connected |
+|---|---|---|
+| Where edits show | Unified diff in the terminal | Native diff in your editor's diff viewer |
+| Selection context | You paste code manually | Highlighted code is shared automatically |
+| Errors Claude can see | Only what a command prints | Live lint + type diagnostics from the IDE |
+| File references | Full paths, typed out | `@`-mention with path completion |
+| Best for | Servers, quick tasks, SSH | Real feature work you review closely |
+
+If you review Claude's diffs carefully — and on production code you should — the IDE surface is worth the two-minute setup.
+
+---
+
+## Step 1 — Install the IDE extension
+
+**VS Code / Cursor / Windsurf** (all VS Code–based): open the editor's *integrated* terminal, move into your project, and launch Claude Code. On first launch inside a supported editor it offers to install the companion extension.
+
+<CodeBlock filename="integrated terminal" language="bash">
+{`cd /path/to/your/project
+claude
+# First launch inside the editor prompts to install the
+# "Claude Code" extension — accept it, then relaunch.`}
+</CodeBlock>
+
+You can also install it by hand: search **"Claude Code"** in the Extensions marketplace and install it.
+
+**JetBrains** (IntelliJ, PyCharm, WebStorm, etc.): install the **Claude Code** plugin from *Settings → Plugins → Marketplace*, then restart the IDE.
+
+<Callout type="warn" title="Launch from the editor's own terminal">
+The extension auto-connects only to the editor whose *integrated* terminal launched Claude Code. If you run `claude` in an external terminal (iTerm, Windows Terminal), it won't attach to your editor until you connect it manually — see the next step.
+</Callout>
+
+---
+
+## Step 2 — Connect and confirm
+
+If you launched from the integrated terminal, Claude Code auto-connects. If you started it elsewhere, connect explicitly with `/ide`:
+
+<TerminalBlock title="Claude Code REPL" session={[
+  { cmd: "/ide", prompt: ">" },
+  { out: "Select IDE to connect:" },
+  { out: "  ⬡ VS Code (workspace: ai-execution-lab)" },
+  { out: "" },
+  { out: "Connected to VS Code ✓" },
+  { out: "Diffs, selection, and diagnostics are now shared." }
+]} />
+
+Confirm the connection is live:
+
+<TerminalBlock title="Claude Code REPL" session={[
+  { cmd: "/status", prompt: ">" },
+  { out: "API Status:  Connected" },
+  { out: "IDE:         VS Code (connected)" },
+  { out: "Workspace:   /path/to/your/project" }
+]} />
+
+---
+
+## Step 3 — Selection and diagnostics as context
+
+Two things change the moment the IDE is connected.
+
+**Selection becomes context.** Highlight a function in the editor, then refer to it directly — Claude receives the exact selected range, not a guess.
+
+<CodeBlock filename="prompt" language="text">
+{`Refactor the selected function to return early instead of nesting.`}
+</CodeBlock>
+
+**Diagnostics become shared.** Claude sees your editor's live TypeScript and lint errors, so a prompt like this works against the *real* problem list rather than a re-run of the build:
+
+<CodeBlock filename="prompt" language="text">
+{`Fix the type errors the editor is showing in this file.`}
+</CodeBlock>
+
+**File references get shorter.** Type `@` to reference a file by path with completion, instead of pasting its contents into the prompt:
+
+<CodeBlock filename="prompt" language="text">
+{`Compare @lib/tracks.ts against @lib/lesson-content.ts and tell me where a lesson can exist in one but not the other.`}
+</CodeBlock>
+
+---
+
+## Step 4 — The keybindings that matter
+
+You only need a few. These are the ones worth committing to muscle memory.
+
+<CommandRefTable title="Claude Code IDE keybindings & commands">
+  <CommandRef command="Cmd+Esc  /  Ctrl+Esc" flag="flag" description="Open Claude Code from the editor (Mac / Windows-Linux)." example="Cmd+Esc" />
+  <CommandRef command="/ide" flag="slash" description="Connect Claude Code to the current IDE from the integrated terminal." example="> /ide" />
+  <CommandRef command="/terminal-setup" flag="slash" description="Bind Shift+Enter for multi-line prompts (VS Code and iTerm)." example="> /terminal-setup" />
+  <CommandRef command="@" flag="flag" description="Reference a file by path inline, with completion, instead of pasting it." example="> review @lib/tracks.ts" />
+  <CommandRef command="Esc" flag="flag" description="Interrupt Claude mid-task without ending the session — then redirect it." example="Esc" />
+</CommandRefTable>
+
+<Callout type="info" title="Exact bindings can vary">
+Editors and platforms occasionally remap shortcuts, and you can rebind them yourself. If `Cmd+Esc` doesn't open Claude Code, run `/help` or open the command palette and search "Claude Code" to see the binding your setup actually uses.
+</Callout>
+
+---
+
+## Step 5 — Cursor and the two-operator trap
+
+Cursor and Windsurf are VS Code forks, so the same extension and shortcuts apply. But they ship their *own* AI agents — and that's where operators get burned.
+
+<FailureAnalysis
+  title="Two AI operators editing the same file"
+  before={`# Cursor's agent and Claude Code both "helping" at once:
+
+# 1. Claude Code edits lib/tracks.ts (adds a lesson entry)
+# 2. Cursor's autocomplete "fixes" an import in the same file
+# 3. Claude Code's next Edit fails — the old_string no longer
+#    matches, because Cursor changed the file underneath it
+# 4. You spend 20 minutes reconciling two AI models of one file`}
+  after={`# One operator model of the codebase at a time:
+
+# - Claude Code owns file edits, git, and terminal
+# - Cursor's agent/autocomplete disabled while Claude works
+#   (or: use plain VS Code for Claude Code sessions)
+
+# The file only changes through one actor. Edits apply cleanly.`}
+  lesson="A VS Code fork's built-in AI and Claude Code are two operators with two independent models of your files. Let only one edit at a time. Pick Claude Code for agentic work and pause the editor's own agent — the conflict costs more than either tool saves."
+/>
+
+---
+
+## Checkpoint
+
+<Checkpoint title="IDE integration verified">
+  <CheckItem>Claude Code opens from your editor with Cmd+Esc / Ctrl+Esc</CheckItem>
+  <CheckItem>/status shows the IDE as connected</CheckItem>
+  <CheckItem>Edits appear as a native diff in the editor, not just terminal text</CheckItem>
+  <CheckItem>Selecting code and referring to "the selected code" works</CheckItem>
+  <CheckItem>Claude can see and fix the editor's live type/lint errors</CheckItem>
+  <CheckItem>Only one AI operator edits files at a time</CheckItem>
+</Checkpoint>
+
+---
+
+## What you built
+
+<Milestone n={4} title="Claude Code, wired into your editor">
+Foundations complete. Claude Code now runs where you work — native diffs, selection as context, and shared diagnostics — with the keybindings to drive it fast. You've finished the Foundations module: an authenticated, permission-scoped, CLAUDE.md-briefed, editor-connected operator setup, end to end. From here the track moves from setup to execution.
+</Milestone>
+
+---
+
+## Resources
+
+<Resource
+  title="Claude Code — IDE integrations"
+  description="Official setup and feature reference for the VS Code and JetBrains integrations."
+  href="https://docs.anthropic.com/en/docs/claude-code/ide-integrations"
+  type="docs"
+/>
+
+<Resource
+  title="Claude Code — terminal & keybinding setup"
+  description="How to configure multi-line input, key bindings, and terminal behavior."
+  href="https://docs.anthropic.com/en/docs/claude-code/terminal-config"
+  type="reference"
+/>
