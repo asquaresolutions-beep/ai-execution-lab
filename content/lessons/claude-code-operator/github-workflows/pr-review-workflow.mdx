@@ -1,0 +1,178 @@
+## What this lesson covers
+
+The Git Operations lesson noted what Claude *can't* see on its own: PR comments, CI results, and review status. This lesson closes that gap. You'll learn to feed a pull request's real context into Claude Code, run a disciplined review that finds regressions instead of nitpicks, and handle review feedback on your own PRs without blindly "fixing everything."
+
+<LessonObjectives items={[
+  "Bring full PR context — diff, comments, CI status — into a Claude session",
+  "Review a PR by scoping Claude to the diff, not the whole repo",
+  "Separate real signal (correctness, regressions, security) from style noise",
+  "Respond to reviewer feedback with agreement, partial agreement, or reasoned pushback",
+  "Apply review fixes as small, safe commits and write a PR description that earns a fast review"
+]} />
+
+---
+
+## What Claude can't see about a PR — and how to feed it
+
+Claude reads your working tree with git. It does **not** automatically know a PR exists, what reviewers said, or whether CI passed. You bring that context in. The standard tool is the GitHub CLI (`gh`), which turns PR state into text Claude can read.
+
+<CommandRefTable title="Pulling PR context with the GitHub CLI">
+  <CommandRef command="gh pr view 128" flag="bash" description="Title, description, author, labels, and the current review state of PR #128." />
+  <CommandRef command="gh pr diff 128" flag="bash" description="The full diff for the PR — the single most important input for a review." />
+  <CommandRef command="gh pr view 128 --comments" flag="bash" description="Every review comment and reply thread, as text you can paste into Claude." />
+  <CommandRef command="gh pr checks 128" flag="bash" description="CI/check status. A red check is context Claude needs before it trusts the diff." />
+  <CommandRef command="gh pr checkout 128" flag="bash" description="Check out the PR branch locally so Claude can read the actual files, not just the diff." />
+</CommandRefTable>
+
+<Callout type="info" title="No gh? The context still comes as text">
+If the GitHub CLI isn't installed, the same inputs come from the REST API (`/repos/{owner}/{repo}/pulls/{n}` and `/pulls/{n}/comments`) or by pasting the diff and comments directly. Claude reviews *text* — the delivery mechanism doesn't matter, only that the diff, comments, and check status actually reach the session.
+</Callout>
+
+---
+
+## Reviewing a PR inside Claude Code
+
+The single biggest mistake is asking Claude to "review the PR" while it has the whole repo in context. It drifts into unrelated files and general refactoring. **Scope the review to the diff.**
+
+<CodeBlock filename="review prompt" language="text">
+{`Here is the diff for PR #128 (output of 'gh pr diff 128'):
+[paste diff, or: "read it from the checked-out branch vs origin/master"]
+
+Review ONLY these changes. For each issue, give me:
+- file:line
+- severity: bug | regression-risk | security | style
+- what's wrong and the specific fix
+
+Do not review files outside this diff. Do not suggest unrelated refactors.
+Prioritize correctness and anything that could break existing behavior.`}
+</CodeBlock>
+
+If the change is subtle, have Claude check it out and compare against the base branch so it reads the real surrounding code, not just diff hunks:
+
+<TerminalBlock title="terminal" session={[
+  { cmd: "gh pr checkout 128", out: "Switched to branch 'feat/rate-limiter' (tracking origin)" },
+  { cmd: "git diff origin/master...HEAD --stat", out: "lib/rate-limit.ts        | 48 +++++++++\napp/api/scan/route.ts    | 12 ++--\n2 files changed, 54 insertions(+), 6 deletions(-)" }
+]} />
+
+Now Claude can read `lib/rate-limit.ts` in full and reason about how the 48 new lines interact with what was already there — the thing a raw diff hides.
+
+---
+
+## Separating signal from noise
+
+Claude will surface everything it notices. Your job is triage. Not every comment deserves a change, and acting on all of them is how a two-file PR turns into a twelve-file mess.
+
+| Severity | Examples | Default action |
+|---|---|---|
+| **bug / regression** | Off-by-one, null not handled, changed behavior for existing callers | Fix before merge |
+| **security** | Unvalidated input, secret in code, auth check removed | Fix before merge |
+| **correctness gap** | Missing error path, unhandled rejection, race | Fix or file a follow-up |
+| **style / preference** | Naming, formatting, "I'd have used a map here" | Usually skip; let the linter own it |
+
+<FailureAnalysis
+  title="Fixing everything Claude flags"
+  before={`# Claude's review returns 11 items on a 2-file PR:
+#   3 real (a regression + 2 missing error paths)
+#   8 style/preference nits
+
+# Operator tells Claude: "apply all of these"
+# Result:
+#   - The PR grows to 6 files
+#   - 2 "fixes" introduce new behavior nobody reviewed
+#   - The original regression is now buried in noise
+#   - The reviewer has to re-review everything from scratch`}
+  after={`# Operator triages first:
+#   "Apply items 2, 5, 7 (the regression + two error paths).
+#    Ignore the style items — the linter owns those.
+#    For item 9, explain the tradeoff but don't change it."
+
+# Result:
+#   - 3 scoped commits, same 2 files
+#   - The regression is fixed and visible in isolation
+#   - Reviewer re-reviews 3 small diffs, approves`}
+  lesson="A review tool's value is in what you act on, not how much it finds. Decide severity yourself, then instruct Claude to fix only what clears the bar. 'Apply all suggestions' is how good reviews produce bad PRs."
+/>
+
+---
+
+## Responding to feedback on your own PR
+
+When you're the author, each reviewer comment maps to exactly one of three decisions. Make the decision *first*, then let Claude execute only the "agree" ones.
+
+<CommandRefTable title="Three responses to a review comment">
+  <CommandRef command="agree" flag="flag" description="The comment is right. Make the change as a scoped commit and reply pointing to the commit." />
+  <CommandRef command="partial" flag="flag" description="Right about the problem, wrong about the fix. Solve the underlying issue your way and explain why." />
+  <CommandRef command="pushback" flag="flag" description="Disagree. Do NOT change the code — reply with the reasoning or the constraint the reviewer is missing." />
+</CommandRefTable>
+
+Give Claude the comments and your decisions together, so it never silently "fixes" something you meant to push back on:
+
+<CodeBlock filename="feedback-handling prompt" language="text">
+{`Reviewer comments on PR #128 (from 'gh pr view 128 --comments'):
+1. "This will throw if items is empty." → AGREE, fix it
+2. "Use a Set here instead of includes()." → PARTIAL: the array is
+   length ~3, a Set is premature; keep the array but add a comment
+3. "Move this to a shared util." → PUSHBACK: it's used once; don't move it
+
+Apply only #1 and #2 as separate commits. For #3, draft a short reply
+explaining the single-use reasoning. Do not change code for #3.`}
+</CodeBlock>
+
+<Callout type="warn" title="Claude drafts the reply — you post it">
+Claude can write the review reply, but posting comments, approving, requesting changes, and merging are actions you take. Read what Claude drafted, make sure "pushback" replies are respectful and correct, then post them yourself. The human owns the irreversible button.
+</Callout>
+
+---
+
+## The safe-change loop for review fixes
+
+Every round of review fixes runs the same loop. It keeps each reviewer concern isolated and re-reviewable.
+
+<CodeBlock filename="review-fix loop" language="bash">
+{`# 1. Make ONE reviewer concern's change (scoped, not "everything")
+# 2. Verify it in isolation
+node node_modules/typescript/bin/tsc --noEmit
+git diff --staged
+
+# 3. Commit with a message that references the concern
+git commit -m "fix(rate-limit): guard empty items array (review #1)"
+
+# 4. Push to the SAME branch — never force-push a PR under review
+git push
+
+# 5. Reply to that comment thread pointing at the commit`}
+</CodeBlock>
+
+Two rules keep follow-up review cheap:
+
+- **One concern per commit.** A reviewer can look at "guard empty array" in isolation instead of re-reading a squashed pile of unrelated edits. Squash at merge if you want a clean history — not before the re-review.
+- **Never force-push a branch under active review.** It rewrites the history the reviewer already read and destroys their in-progress comment anchors. Add commits; don't rewrite.
+
+---
+
+## Writing the PR description Claude actually helps with
+
+A PR with a good description gets reviewed faster because the reviewer knows what to look for. Claude can draft it from the diff — the one time "read the whole diff" is exactly what you want.
+
+<CodeBlock filename="PR description prompt" language="text">
+{`Read the diff for this branch (git diff origin/master...HEAD) and draft a
+PR description with these sections:
+- What changed (2-3 bullets, plain language)
+- Why (the problem this solves)
+- Risk / blast radius (what could this break? what did NOT change?)
+- How I verified it (tsc, build, the exact flow I exercised)
+
+Keep it tight. A reviewer should know where to focus in 20 seconds.`}
+</CodeBlock>
+
+The **Risk** section is the one most authors skip and the one reviewers value most. Naming the blast radius — "touches the scan rate-limiter only; no change to auth or billing paths" — tells the reviewer exactly where to concentrate and where they can trust the change.
+
+---
+
+<Checkpoint title="Your PR review workflow is production-grade when:">
+  <CheckItem>You feed Claude the diff, comments, and CI status — not just "review the PR"</CheckItem>
+  <CheckItem>Reviews are scoped to the diff; Claude never wanders into unrelated files</CheckItem>
+  <CheckItem>You triage findings by severity and apply only what clears the bar</CheckItem>
+  <CheckItem>Each reviewer concern lands as its own scoped commit — never a force-push under review</CheckItem>
+  <CheckItem>You post replies, approvals, and merges yourself; Claude only drafts them</CheckItem>
+</Checkpoint>
