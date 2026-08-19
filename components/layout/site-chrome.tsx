@@ -53,8 +53,9 @@ export function SiteChrome({ children }: { children: ReactNode }) {
   if (isScamCheckSegment(seg)) {
     return (
       <div className="flex min-h-screen flex-col bg-zinc-950">
-        {/* Ecosystem entity graph belongs on the Lab/ScamCheck surfaces, not TrustSeal. */}
-        <EcosystemJsonLd />
+        {/* Ecosystem entity graph belongs on the Lab/ScamCheck surfaces, not TrustSeal.
+            Tenant is passed explicitly: this branch IS ScamCheck. */}
+        <EcosystemJsonLd siteUrl="https://scamcheck.asquaresolution.com" siteName="ScamCheck" />
         <ScamCheckNav />
         <main className="flex-1">{children}</main>
         <ScamCheckFooter />
@@ -63,8 +64,9 @@ export function SiteChrome({ children }: { children: ReactNode }) {
   }
   return (
     <div className="flex min-h-screen">
-      {/* Ecosystem (AI Execution Lab / A Square Solutions) JSON-LD — Lab surface only. */}
-      <EcosystemJsonLd />
+      {/* Ecosystem (AI Execution Lab / A Square Solutions) JSON-LD — Lab surface only.
+          Tenant is passed explicitly: this branch IS the Lab. */}
+      <EcosystemJsonLd siteUrl="https://lab.asquaresolution.com" siteName="AI Execution Lab" />
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />

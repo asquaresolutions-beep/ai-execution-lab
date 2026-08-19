@@ -147,7 +147,7 @@ const tsldCode = tsld.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
 ok('seo: TrustSeal JSON-LD has NO AI Execution Lab / ScamCheck references', !/AI Execution Lab/.test(tsldCode) && !/ScamCheck/.test(tsldCode))
 ok('seo: TrustSeal JSON-LD references parent org A Square Solutions', /parentOrganization/.test(tsld) && /A Square Solutions/.test(tsld))
 ok('seo: [locale] layout emits buildTrustSealJsonLd', /buildTrustSealJsonLd\(lc\)/.test(read('app/trustseal/[locale]/layout.tsx')))
-ok('seo: ecosystem JSON-LD rendered only on Lab/ScamCheck (SiteChrome), not TrustSeal', /<EcosystemJsonLd \/>/.test(chrome) && (() => { const start = chrome.indexOf("if (seg === 'trustseal')"); const end = chrome.indexOf('if (isScamCheckSegment', start); return !chrome.slice(start, end).includes('EcosystemJsonLd') })())
+ok('seo: ecosystem JSON-LD rendered only on Lab/ScamCheck (SiteChrome), not TrustSeal', /<EcosystemJsonLd[\s/]/.test(chrome) && (() => { const start = chrome.indexOf("if (seg === 'trustseal')"); const end = chrome.indexOf('if (isScamCheckSegment', start); return !chrome.slice(start, end).includes('EcosystemJsonLd') })())
 
 // ── enterprise hardening: legal framework (PARTs 1/2/3/14) ────────
 for (const f of ['LICENSE.md','TRADEMARKS.md','COPYRIGHT.md','SECURITY.md','CODE_OF_CONDUCT.md','NOTICE.md']) {

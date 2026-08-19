@@ -6,33 +6,46 @@
 // TrustSeal pages emit their own self-contained graph (lib/trustseal/jsonld.ts).
 import type { ReactNode } from 'react'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
-
-const websiteSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'WebSite',
-  '@id': `${SITE_URL}/#website`,
-  name: 'AI Execution Lab',
-  url: SITE_URL,
-  description:
+// The WebSite entity is per-tenant. It used to read NEXT_PUBLIC_SITE_URL, but that
+// is a build-time constant and ONE deployment serves both lab.asquaresolution.com
+// and scamcheck.asquaresolution.com — so no single value was correct for both. In
+// production it resolved to the ScamCheck host, which made the Lab declare the
+// ScamCheck URL *and* made ScamCheck declare the name "AI Execution Lab". The
+// tenant is now passed explicitly by SiteChrome, which already knows which branch
+// it is rendering. Do not reintroduce an env-var default here.
+const WEBSITE_DESCRIPTIONS: Record<string, string> = {
+  'AI Execution Lab':
     'A practical AI systems lab by A Square Solutions. Real workflows, real tools, real results — built while shipping production AI systems, SEO engineering pipelines, and GEO strategies.',
-  publisher: {
-    '@type': 'Organization',
-    '@id': 'https://asquaresolution.com/#organization',
-    name: 'A Square Solutions',
-    url: 'https://asquaresolution.com',
-    sameAs: [
-      'https://twitter.com/asquaresolution',
-      'https://lab.asquaresolution.com',
-      'https://trustseal.asquaresolution.com',
-      'https://scamcheck.asquaresolution.com',
-    ],
-  },
-  potentialAction: {
-    '@type': 'SearchAction',
-    target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/search?q={search_term_string}` },
-    'query-input': 'required name=search_term_string',
-  },
+  ScamCheck:
+    'Free AI scam detection by A Square Solutions. Check messages, links, emails, phone numbers and screenshots for fraud indicators before you click, pay, or share details.',
+}
+
+function buildWebsiteSchema(siteUrl: string, siteName: string) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': `${siteUrl}/#website`,
+    name: siteName,
+    url: siteUrl,
+    description: WEBSITE_DESCRIPTIONS[siteName] ?? WEBSITE_DESCRIPTIONS['AI Execution Lab'],
+    publisher: {
+      '@type': 'Organization',
+      '@id': 'https://asquaresolution.com/#organization',
+      name: 'A Square Solutions',
+      url: 'https://asquaresolution.com',
+      sameAs: [
+        'https://twitter.com/asquaresolution',
+        'https://lab.asquaresolution.com',
+        'https://trustseal.asquaresolution.com',
+        'https://scamcheck.asquaresolution.com',
+      ],
+    },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: { '@type': 'EntryPoint', urlTemplate: `${siteUrl}/search?q={search_term_string}` },
+      'query-input': 'required name=search_term_string',
+    },
+  }
 }
 
 const organizationSchema = {
@@ -81,7 +94,14 @@ const organizationSchema = {
   ],
 }
 
-export function EcosystemJsonLd(): ReactNode {
+export function EcosystemJsonLd({
+  siteUrl,
+  siteName,
+}: {
+  siteUrl: string
+  siteName: string
+}): ReactNode {
+  const websiteSchema = buildWebsiteSchema(siteUrl, siteName)
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
