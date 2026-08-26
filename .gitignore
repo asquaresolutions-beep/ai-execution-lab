@@ -48,3 +48,14 @@ Thumbs.db
 
 # Build cache
 build/
+
+# Generated QA / automation output — NEVER commit.
+# verify-shots/ in particular held headless-Chromium user-data-dirs created by
+# cdp.mjs (--user-data-dir=verify-shots/cdp-profile-<ts>), which contain Cookies,
+# Login Data and Local State. Committing those would put session credentials in
+# git history. Regenerate these directories; never track them.
+verify-shots/
+output/
+_brandprev/
+_featured/
+_refresh/
