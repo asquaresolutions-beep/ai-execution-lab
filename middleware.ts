@@ -12,7 +12,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { resolveLocale } from '@/lib/trustseal/detect'
-import { isLocale } from '@/lib/trustseal/locales'
+import { isLocale, DEFAULT_LOCALE } from '@/lib/trustseal/locales'
 
 const LEGACY_301: Record<string, string> = {
   // Canonical homepage is the root "/". The product page lives at /scamcheck and
@@ -55,6 +55,37 @@ const TS_PASSTHROUGH = ['/_next', '/api', '/guides', '/sitemap', '/robots', '/fa
 // This allowlist lets /{locale}/trust/{domain} reach the seal route while genuine
 // assets still pass through. Scoped to the trustseal host branch only.
 const TS_ASSET_EXT = /\.(?:js|mjs|css|map|png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|eot|otf|txt|xml|webmanifest|json|wasm)$/i
+// Bare (locale-less) PUBLIC routes → their real locale sub-path. TrustSeal is
+// locale-first, so /pricing used to fall through to the hard 404 below — while
+// WordPress links to bare TrustSeal URLs 77 times and to locale-prefixed ones zero
+// times, and GSC showed those bare URLs being crawled and 404'd.
+//
+// EVERY destination here was verified HTTP 200 under /en/ on 2026-08-26. Routes with
+// NO verified destination are deliberately ABSENT — /contact, /refund-policy and /faq
+// do not exist at any path, and redirecting to a non-existent page is worse than a 404.
+//
+// DELIBERATELY EXCLUDED — /dashboard and /command. Both are authenticated,
+// entitlement-gated, noindex surfaces (dashboard = customer auth shell; command =
+// Pro/owner-gated ops prototype, index:false). They are not SEO surfaces, so a
+// permanent redirect buys nothing, and sending a signed-in user to a fixed locale
+// would override their preference. Bare hits keep their existing 404.
+//
+// PUBLIC ONLY — every entry below is indexable marketing/legal content.
+const TS_BARE_ROUTES: Record<string, string> = {
+  '/pricing': '/pricing',
+  '/about': '/about',
+  '/docs': '/docs',
+  '/product': '/product',
+  '/security': '/security',
+  '/verify': '/verify',
+  '/customers': '/customers',
+  '/enterprise': '/enterprise',
+  '/trust-center': '/trust-center',
+  // Legal documents live under /legal/<slug>; keep the conventional bare URLs working.
+  '/terms': '/legal/terms',
+  '/privacy-policy': '/legal/privacy',
+  '/privacy': '/legal/privacy',
+}
 function isAllowed(path: string): boolean {
   if (path === '/') return true
   if (/\.[a-z0-9]+$/i.test(path)) return true        // static assets (.png/.xml/.ico…)
@@ -95,6 +126,33 @@ export function middleware(req: NextRequest) {
     if (isLocale(pathname.split('/')[1])) {
       const url = req.nextUrl.clone(); url.pathname = `/trustseal${pathname}`
       return NextResponse.rewrite(url)
+    }
+    // Bare (locale-less) public route → 301 to the DEFAULT_LOCALE equivalent.
+    //
+    // The destination is FIXED — it deliberately does NOT call resolveLocale(). A 301
+    // is permanently cached by browsers and may be stored by shared caches, so its
+    // Location must not vary by cookie, Accept-Language, geo or user state. (Geo
+    // cannot even be expressed in a Vary header, so a varying 301 is uncacheable-safe
+    // nowhere.) A stable mapping is also what lets Google consolidate these URLs —
+    // which is the whole point, since GSC showed them crawled and 404'ing.
+    //
+    // The root handler above intentionally differs: "/" uses 307 + resolveLocale
+    // because a temporary, user-dependent destination is correct there. Do not
+    // "unify" these two branches — the difference is deliberate.
+    //
+    // Locale discovery for the other languages is served by the sitemap's hreflang
+    // alternates (+ x-default), not by this redirect.
+    //
+    // Bare /legal/<slug> passes through unchanged so an unknown slug still reaches
+    // the genuine 404 at /{DEFAULT_LOCALE}/legal/<slug> (dynamicParams=false +
+    // notFound()), rather than being silently redirected to something valid.
+    {
+      const clean = pathname.replace(/\/+$/, '')
+      const target = TS_BARE_ROUTES[clean] ?? (clean.startsWith('/legal/') ? clean : null)
+      if (target) {
+        const url = req.nextUrl.clone(); url.pathname = `/${DEFAULT_LOCALE}${target}`
+        return NextResponse.redirect(url, 301)
+      }
     }
     return new NextResponse('Not Found', { status: 404, headers: { 'content-type': 'text/plain' } })
   }

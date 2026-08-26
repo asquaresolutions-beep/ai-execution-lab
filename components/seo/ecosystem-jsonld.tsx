@@ -40,11 +40,14 @@ function buildWebsiteSchema(siteUrl: string, siteName: string) {
         'https://scamcheck.asquaresolution.com',
       ],
     },
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: { '@type': 'EntryPoint', urlTemplate: `${siteUrl}/search?q={search_term_string}` },
-      'query-input': 'required name=search_term_string',
-    },
+    // NO potentialAction/SearchAction. It previously advertised
+    // `${siteUrl}/search?q={search_term_string}`, but NEITHER tenant has a /search
+    // route — search is a Cmd+K modal over /api/search, with no crawlable results
+    // page. GSC's 2026-08-26 coverage export showed Google crawling the literal
+    // placeholder `/search?q=%7Bsearch_term_string%7D` and getting a 404. A
+    // sitelinks searchbox requires a working search URL, so declaring one we do not
+    // have could never earn the rich result — it only produced guaranteed 404s on
+    // both lab and scamcheck. Do not reintroduce this without a real /search page.
   }
 }
 

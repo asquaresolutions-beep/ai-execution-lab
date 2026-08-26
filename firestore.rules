@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── User profiles: only the owner can read/write their own document ──
+    match /users/{uid} {
+      allow read:   if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+                    && request.resource.data.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // ── Public scam reports: anyone may submit, with strict shape limits. ──
+    // Not publicly readable (these are unmoderated user reports).
+    match /submitted_scams/{id} {
+      allow read: if false;
+      allow create: if
+        request.resource.data.keys().hasOnly(['title','description','category','contact','createdAt','status'])
+        && request.resource.data.title is string       && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200
+        && request.resource.data.description is string  && request.resource.data.description.size() > 0
+        && request.resource.data.description.size() <= 5000
+        && request.resource.data.category is string     && request.resource.data.category.size() <= 50
+        && request.resource.data.contact is string      && request.resource.data.contact.size() <= 200
+        && request.resource.data.status == 'pending';
+      allow update, delete: if false;
+    }
+
+    // ── Default: deny everything not explicitly allowed above ──
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
