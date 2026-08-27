@@ -183,7 +183,8 @@ export async function drainCampaign(id: string, maxBatch = 200): Promise<{ ok: b
   for (let i = 0; i < queued.length; i++) {
     const row = queued[i]
     processed++
-    const r = await sendListEmail({ to: row.data.email, subject: c.subject, title: c.title, bodyHtml: c.bodyHtml })
+    // campaignId → Resend tag → inbound webhook events are attributable to this campaign.
+    const r = await sendListEmail({ to: row.data.email, subject: c.subject, title: c.title, bodyHtml: c.bodyHtml, campaignId: c.id })
     if (r.ok) { sent++; await store.update(CAMPAIGN_SENDS, row.id, { status: 'sent', sentAt: new Date().toISOString() }) }
     else if (r.skipped) { /* no RESEND key configured — leave queued for a later run */ }
     else { failed++; await store.update(CAMPAIGN_SENDS, row.id, { status: 'failed', error: r.error?.slice(0, 200) }) }
@@ -244,7 +245,9 @@ export async function processCampaignSends(maxBatch = 80): Promise<SendRunResult
     if (!c || c.status !== 'sending') continue   // only send for campaigns explicitly approved+enqueued
     touched.add(campaignId)
     res.processed++
-    const r = await sendListEmail({ to: email, subject: c.subject, title: c.title, bodyHtml: c.bodyHtml })
+    // c.id, not the row's campaignId — same value by construction, but sourced from
+    // the campaign document that was just status-checked above.
+    const r = await sendListEmail({ to: email, subject: c.subject, title: c.title, bodyHtml: c.bodyHtml, campaignId: c.id })
     if (r.ok) { res.sent++; await store.update(CAMPAIGN_SENDS, row.id, { status: 'sent', sentAt: new Date().toISOString() }) }
     else if (r.skipped) { /* no RESEND key — leave queued, retry next run */ }
     else { res.failed++; await store.update(CAMPAIGN_SENDS, row.id, { status: 'failed', error: r.error?.slice(0, 200) }) }

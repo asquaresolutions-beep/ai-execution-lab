@@ -57,7 +57,10 @@ export function parseResendEvent(body: unknown): NormalizedEmailEvent | null {
   const type = TYPE_MAP[b.type]
   if (!type) return null
   const data = b.data || {}
-  const to = Array.isArray(data.to) ? String(data.to[0]) : String(data.to ?? '')
+  // `?? ''` on the array branch is load-bearing: String(undefined) is the literal
+  // string "undefined", which is TRUTHY — so an empty `to: []` used to slip past the
+  // guard below and write a junk event row with email "undefined".
+  const to = Array.isArray(data.to) ? String(data.to[0] ?? '') : String(data.to ?? '')
   if (!to) return null
   const tags = (data.tags as Record<string, string> | undefined) || undefined
   return {

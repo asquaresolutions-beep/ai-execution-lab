@@ -18,6 +18,7 @@
 // ─────────────────────────────────────────────────────────────────
 import { subscriberDocId } from '@/lib/newsletter/subscribers'
 import { htmlToText } from './text'
+import { campaignTags, type EmailTag } from './tags'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || ''
 const EMAIL_FROM = process.env.EMAIL_FROM || 'ScamCheck <noreply@asquaresolution.com>'
@@ -36,7 +37,7 @@ export function emailConfigured(): boolean { return !!RESEND_API_KEY }
 
 const esc = (s: string) => s.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] as string))
 
-async function send(opts: { to: string; subject: string; html: string; text?: string; replyTo?: string; from?: string; headers?: Record<string, string> }): Promise<{ ok: boolean; skipped?: boolean; status?: number; error?: string }> {
+async function send(opts: { to: string; subject: string; html: string; text?: string; replyTo?: string; from?: string; headers?: Record<string, string>; tags?: EmailTag[] }): Promise<{ ok: boolean; skipped?: boolean; status?: number; error?: string }> {
   if (!RESEND_API_KEY) return { ok: false, skipped: true }
   // Always ship a text/plain alternative (derived from the HTML if not given) to
   // avoid the MIME_HTML_ONLY spam heuristic. Functionality/branding unchanged.
@@ -45,7 +46,9 @@ async function send(opts: { to: string; subject: string; html: string; text?: st
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ from: opts.from || EMAIL_FROM, to: [opts.to], subject: opts.subject, html: opts.html, text, ...(opts.replyTo ? { reply_to: opts.replyTo } : {}), ...(opts.headers ? { headers: opts.headers } : {}) }),
+      // `tags` is spread in ONLY when non-empty, so every caller that does not pass
+      // one keeps a byte-identical payload (verified in eval/email-payload.test.mjs).
+      body: JSON.stringify({ from: opts.from || EMAIL_FROM, to: [opts.to], subject: opts.subject, html: opts.html, text, ...(opts.replyTo ? { reply_to: opts.replyTo } : {}), ...(opts.headers ? { headers: opts.headers } : {}), ...(opts.tags?.length ? { tags: opts.tags } : {}) }),
     })
     if (r.ok) return { ok: true, status: r.status }
     let error = ''
@@ -98,13 +101,20 @@ function unsubFooter(email: string): string {
  * one-click List-Unsubscribe headers, in-body unsubscribe + postal address, and the
  * auto text/plain part. Shared primitive for the welcome drip + weekly digests.
  * (Also added by the welcome-sequence PR — keep a single copy when both merge.)
+ *
+ * `campaignId` is OPTIONAL and only the two campaign call sites pass it
+ * (campaigns.ts drainCampaign + processCampaignSends). It attaches a Resend tag so
+ * inbound webhook events can be attributed back to the campaign that produced them.
+ * The welcome sequence and TrustSeal monitoring deliberately omit it — for them
+ * campaignTags() returns undefined and the payload is unchanged.
  */
-export async function sendListEmail(d: { to: string; subject: string; title: string; bodyHtml: string }): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+export async function sendListEmail(d: { to: string; subject: string; title: string; bodyHtml: string; campaignId?: string }): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
   const r = await send({
     to: d.to,
     subject: d.subject,
     headers: listHeaders(d.to),
     html: wrap(d.title, d.bodyHtml + unsubFooter(d.to)),
+    tags: campaignTags(d.campaignId),
   })
   return { ok: r.ok, skipped: r.skipped, error: r.error }
 }
