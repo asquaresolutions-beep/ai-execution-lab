@@ -1,0 +1,107 @@
+## What this lesson covers
+
+There are hundreds of tutorials showing you how to call the Gemini API. They all show the same thing: get a key, send a prompt, print the response. It works on the first try, and then you ship it, and then it breaks in ways the tutorial never mentioned.
+
+This lesson is the other half. It is built from two failures we actually shipped to production and had to diagnose under pressure — both of which showed users an infinite loading spinner, which is the worst possible failure mode because it looks like your product is broken rather than the API being busy.
+
+<LessonObjectives items={[
+  "Call the Gemini API without an SDK — and understand why that is a defensible choice",
+  "Handle the two failures that actually take production down: malformed JSON and 429 rate limits",
+  "Never ship an interface that can spin forever",
+  "Verify your integration against failure, not just against success"
+]} />
+
+---
+
+## Why the happy path is a trap
+
+The happy path teaches you this shape:
+
+```
+send prompt → get response → JSON.parse(response) → render
+```
+
+Every step of that chain is an assumption. In production, over enough requests, each one is eventually false. The two that broke us first were the parse and the rate limit — and in both cases the *visible* symptom was identical: **the spinner never stopped.**
+
+That matters more than it sounds. A user who sees an error message knows the product works and today is a bad day. A user who watches a spinner forever concludes the product is broken and does not come back.
+
+---
+
+## Failure 1 — Gemini does not always return the JSON you asked for
+
+**What happened (15 Feb 2026, production):** we asked Gemini 1.5-flash for a JSON object. Most of the time it returned a JSON object. Intermittently it returned the same JSON object wrapped in markdown code fences, or with a sentence of explanation before it.
+
+`JSON.parse()` threw `SyntaxError: Unexpected token \` in JSON at position 0`. The Cloud Function crashed. The client got an HTTP 500 with no body. The spinner ran indefinitely.
+
+**Why it happens:** you are asking a language model to emit a data format. It is very good at this and it is not guaranteed at it. "Respond only with JSON" is an instruction, not a constraint. Treat model output as *untrusted input from a remote system*, because that is exactly what it is.
+
+**The fix has two halves, and most people only do the first:**
+
+1. **Clean before you parse.** Strip markdown fences, strip anything before the first `{` and after the last `}`, then parse.
+2. **Return a structured error when parsing still fails.** This is the half people skip. If your function crashes, the client has nothing to branch on. If it returns `{ ok: false, reason: "parse_failed" }`, the client can show a real message.
+
+<Callout type="warning">
+A crash is not an error state. A crash is the *absence* of an error state. If your backend can throw, your frontend has no way to distinguish "failed" from "still working" — and it will spin.
+</Callout>
+
+---
+
+## Failure 2 — 429 is not an edge case, it is a Tuesday
+
+**What happened (10 Feb 2026, production):** ScamCheck's scam-detection function hit the Gemini free-tier rate limit during a burst of testing. Gemini correctly returned `429 Too Many Requests`. Our Cloud Function had no branch for it. The client had no branch for anything that was not success.
+
+Same visible outcome: infinite spinner.
+
+**Why this one is worse than it looks:** rate limits arrive precisely when things are going well. Your first traffic spike, your first press mention, your first day of real usage — that is when 429 shows up. The failure is correlated with success, which is the most expensive time to look broken.
+
+**The fix:**
+
+1. Detect the 429 status specifically on the server. Do not let it fall into a generic catch.
+2. Return something the client can read: `{ rateLimited: true }`.
+3. Branch on it in the UI and say something true: *"We're handling a lot of requests right now — try again in a minute."*
+
+That message costs you nothing and buys back the user's trust in the product.
+
+---
+
+## The pattern, generalised
+
+Every model API call in production needs four exits, not one:
+
+| Exit | Client must be able to |
+|---|---|
+| Success | render the result |
+| Model returned unusable output | say "we couldn't read that result" |
+| Rate limited | say "busy, try shortly" |
+| Timeout / network | say "something went wrong" and offer retry |
+
+If your code has one exit, your UI has one state, and that state is "spinning".
+
+**A note on SDKs:** we call Gemini over plain HTTPS with no SDK. That is a deliberate trade. You lose convenience helpers; you gain the ability to see the raw status code and body when things go wrong — which, on both failures above, was the thing that let us diagnose them quickly. If you cannot see the response, you cannot debug the response.
+
+---
+
+## Verify against failure, not success
+
+Before you call this integration finished, force each failure and watch the interface:
+
+- **Force a parse failure** — prompt in a way that invites prose ("explain your answer, then give JSON"). Confirm the UI shows a real message, not a spinner.
+- **Force a 429** — fire requests in a tight loop on a free-tier key until it trips. Confirm the UI says "busy", not nothing.
+- **Force a timeout** — point the call at an unreachable host. Confirm the UI recovers.
+
+If you have not seen your own error states with your own eyes, you have not tested them. Shipping the happy path and hoping is how both failures above reached production.
+
+---
+
+## What this cost us
+
+Two incidents, both in February 2026, both presenting as "the product hangs". Neither was a model-quality problem — the model was working correctly in both cases. **Both were integration problems, and both were invisible in testing because testing only ever exercised the success path.**
+
+That is the real lesson: the Gemini API is not the hard part. Everything around it is.
+
+**Full write-ups, with symptoms and root causes:**
+- `gemini-json-parse-failure` — malformed JSON, Cloud Function parse crash
+- `gemini-rate-limit-429-no-ux` — 429 with no client branch
+- `gemini-structured-output-reliability` — related structured-output work
+
+*(These failures were observed on Gemini 1.5-flash; our production stack has since moved to 2.5-flash and 2.5-pro. The failure modes are properties of calling a model API, not of a model version.)*

@@ -1,0 +1,76 @@
+{
+  "_purpose": "Academic governance. What may change, who may change it, and what happens to certificates already issued when it does.",
+  "_principle": "A certificate states what was demonstrated under a stated curriculum version. Changing the curriculum must never silently revalue a credential already awarded.",
+  "curriculum_version": "1.0.0",
+  "effective_from": "2026-08-09",
+  "change_classes": {
+    "major": {
+      "triggers": [
+        "the competency graph changes - a node added, removed, or an edge redirected",
+        "graduation requirements change",
+        "the assessment rubric changes",
+        "a certification submission requirement is added or removed"
+      ],
+      "requires": ["founder_approval"],
+      "effect_on_issued_certificates": "none - issued certificates keep the version they were assessed under and remain valid. They are never retroactively upgraded or downgraded.",
+      "requires_notice": true
+    },
+    "minor": {
+      "triggers": [
+        "a unit is added",
+        "a capability or proof task is added",
+        "a project template is added"
+      ],
+      "requires": ["curriculum_owner_approval"],
+      "effect_on_issued_certificates": "none"
+    },
+    "patch": {
+      "triggers": [
+        "a unit's source document is corrected",
+        "a classification is corrected",
+        "wording is clarified with no change in what is assessed"
+      ],
+      "requires": ["curriculum_owner_approval"],
+      "effect_on_issued_certificates": "none"
+    }
+  },
+  "roles": {
+    "founder_approval": {
+      "holder": "Anis Ansari",
+      "scope": "major changes, graduation requirements, rubric"
+    },
+    "curriculum_owner_approval": {
+      "holder": "Anis Ansari",
+      "scope": "units, capabilities, projects",
+      "note": "Single-holder governance is recorded honestly rather than dressed as a committee. When a second reviewer exists, this becomes two roles."
+    }
+  },
+  "unit_retirement": {
+    "_rule": "A unit is retired, never deleted - a student who certified against it must still be able to read what they were assessed on.",
+    "triggers": [
+      "the source incident is superseded by a different root cause",
+      "the technology the incident depends on no longer exists",
+      "the fix is no longer correct"
+    ],
+    "states": ["active", "deprecated", "retired"],
+    "deprecated_behaviour": "still readable, no longer counts toward new certification",
+    "retired_behaviour": "readable and marked; historical certificates keep their reference"
+  },
+  "integrity_rules": [
+    "No unit may exist without a source document in the corpus.",
+    "No competency may be certified without a portfolio submission.",
+    "No certificate may be issued without the curriculum version recorded on it.",
+    "A retired unit never invalidates a certificate already issued.",
+    "Research contributions by students are governed by RESEARCH_STANDARD.md, not by this file."
+  ],
+  "approval_log": [
+    {
+      "version": "1.0.0",
+      "date": "2026-08-09",
+      "class": "major",
+      "summary": "Initial curriculum: 6 competencies, 11 capabilities, portfolio certification, 4-requirement graduation.",
+      "approved_by": "pending",
+      "note": "Encodes AI_LAB_UNIVERSITY.md v1.0. Awaiting founder approval before any certificate may be issued."
+    }
+  ]
+}

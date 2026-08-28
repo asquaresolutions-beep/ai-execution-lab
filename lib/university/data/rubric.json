@@ -1,0 +1,39 @@
+{
+  "_source": "AI_LAB_UNIVERSITY.md - 'graded on evidence quality, honesty about what is unproven, and whether a stranger could reproduce the fix - the same rubric this company applies to its own research.'",
+  "_rule": "The post-mortem is the assessment. These three criteria are the whole rubric; nothing is scored on effort, length or presentation.",
+  "version": "1.0.0",
+  "scale": {
+    "0": "absent",
+    "1": "asserted without support",
+    "2": "supported but incomplete",
+    "3": "a stranger could act on it"
+  },
+  "pass_mark": 2,
+  "criteria": [
+    {
+      "id": "evidence_quality",
+      "name": "Evidence quality",
+      "question": "Is every claim in this post-mortem backed by something a reader can inspect - a log line, a diff, a measurement?",
+      "fails_when": "The root cause is asserted rather than shown.",
+      "mirrors": "RESEARCH_STANDARD rule 1 - every number traces to a downloadable file."
+    },
+    {
+      "id": "honesty",
+      "name": "Honesty about what is unproven",
+      "question": "Does the author separate what they measured from what they inferred, and say plainly what they still do not know?",
+      "fails_when": "Uncertainty is converted into confidence. A post-mortem with no unknowns is not honest.",
+      "mirrors": "RESEARCH_STANDARD - unknown is a valid result."
+    },
+    {
+      "id": "reproducibility",
+      "name": "Reproducibility of the fix",
+      "question": "Could a stranger reproduce the failure and apply the fix from this document alone?",
+      "fails_when": "The fix depends on context only the author holds.",
+      "mirrors": "RESEARCH_SOP Gate 4 - load the published artefact cold."
+    }
+  ],
+  "returns": {
+    "note": "A returned submission is not a failure. It names which criterion fell short and what evidence would raise it.",
+    "must_state": ["criterion", "what is missing", "what would satisfy it"]
+  }
+}

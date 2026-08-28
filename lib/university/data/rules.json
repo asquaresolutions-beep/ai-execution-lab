@@ -1,0 +1,88 @@
+{
+  "_purpose": "Deterministic classification of existing corpus documents into competencies. These are rules, not content. A document that no rule claims is reported unmapped - never guessed.",
+  "_method": "Multi-label. Every matching signal scores. The highest scorer becomes the PRIMARY competency if it leads by the win margin; anything at or above the secondary floor is also taught by the unit. A document no rule claims is reported unmapped.",
+  "_why_multi_label": "AI_LAB_UNIVERSITY.md: 'The same unit may appear in several tracks.' Tags describe where a failure happened; a competency describes what it teaches. A Gemini rate-limit incident teaches Integrating (handle every branch) and Operating (detect and diagnose) at once. Single-label assignment starved Operating to zero, which would have made graduation impossible, since Operating is mandatory.",
+  "version": "1.1.0",
+  "win_margin": 2,
+  "secondary_floor": 2,
+  "weights": {
+    "tag": 3,
+    "failure_type": 2,
+    "system": 2,
+    "title_keyword": 1
+  },
+  "signals": {
+    "foundations": {
+      "tag": ["dns", "environment-variables", "environment", "deployment", "deploy", "git", "vercel", "hosting", "domain"],
+      "failure_type": ["deployment", "configuration"],
+      "title_keyword": ["deploy", "environment", "dns", "propagation", "domain"]
+    },
+    "building": {
+      "tag": ["next", "nextjs", "mdx", "react", "routing", "vite", "ui", "spa", "frontend", "bundle"],
+      "failure_type": ["build", "dependency"],
+      "title_keyword": ["routing", "bundle", "render", "component", "spa"]
+    },
+    "integrating": {
+      "tag": ["gemini", "api", "rate-limiting", "firebase-functions", "firebase", "razorpay", "billing", "json", "prompt-engineering", "structured-output", "llm", "ai"],
+      "failure_type": ["authentication"],
+      "system": ["scamcheck", "trustseal"],
+      "title_keyword": ["api", "gemini", "rate limit", "auth", "payment", "json"]
+    },
+    "operating": {
+      "tag": ["monitoring", "observability", "incident", "cache", "node-version", "stability", "runtime", "logs", "uptime"],
+      "title_keyword": ["runtime", "cache", "stability", "version", "exhaustion", "sequence"]
+    },
+    "evidencing": {
+      "tag": ["ga4", "analytics", "experiment", "evidence", "research", "data", "measurement", "telemetry"],
+      "title_keyword": ["tracking", "experiment", "evidence", "contamination", "measurement"]
+    },
+    "distributing": {
+      "tag": ["seo", "gsc", "sitemap", "geo", "litespeed", "indexing", "search-console", "wordpress", "content"],
+      "title_keyword": ["sitemap", "index coverage", "seo", "search", "css", "cache bypass"]
+    }
+  },
+  "structural": {
+    "_note": "Rules that do not depend on tags. Tag vocabulary describes the technology a failure occurred in, so a discipline like Operating is invisible to it - the corpus tags a production outage as 'firebase', never as 'incident response'.",
+    "operating": {
+      "rule": "Any resolved production incident carrying a severity teaches Operating - detection, diagnosis and write-up are what the incident record IS, independent of the technology it happened in.",
+      "requires": { "failure_status": "resolved", "has_severity": true },
+      "grants": "secondary",
+      "grants_primary_when_severity": "high",
+      "_primary_justification": "A high-severity production failure is first an operations lesson and second a lesson about the tool it happened in."
+    }
+  },
+  "beat_sources": {
+    "_note": "Which corpus folder supplies which beat of the Incident -> Principle -> Practice -> Proof model.",
+    "incident": {
+      "folder": "content/failures",
+      "available": true,
+      "note": "20 documented production failures with symptoms, root causes and fixes. An asset accumulated, not authored."
+    },
+    "principle": {
+      "folder": "content/docs",
+      "available": true,
+      "note": "The generalisable rule the incident reveals. Must be authored per unit; the engine reports which units lack one rather than inventing it."
+    },
+    "practice": {
+      "folder": "content/labs",
+      "available": true,
+      "note": "The reproduction task. The student causes the failure deliberately, then fixes it."
+    },
+    "proof": {
+      "folder": null,
+      "available": false,
+      "note": "The student's own deployed artefact. Not a corpus document - produced by the project engine."
+    }
+  },
+  "system_aliases": {
+    "_note": "The `project` field is inconsistent across the corpus. Normalised here rather than edited in 20 files.",
+    "scamcheck": "scamcheck",
+    "trustseal": "trustseal",
+    "ai-execution-lab": "lab",
+    "AI Execution Lab — SEO architecture": "lab",
+    "AI Execution Lab — publishing infrastructure": "lab",
+    "asquaresolution.com": "wordpress",
+    "asquaresolution-wp": "wordpress",
+    "asquaresolution-ecosystem": "ecosystem"
+  }
+}

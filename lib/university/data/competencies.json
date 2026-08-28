@@ -1,0 +1,51 @@
+{
+  "_source": "research-os/AI_LAB_UNIVERSITY.md v1.0 (approved, frozen). This file encodes the approved skill tree. It does not redesign it.",
+  "_model": "Competencies unlock by demonstration, not by sequence. A student may enter at any node whose prerequisites they can prove.",
+  "version": "1.0.0",
+  "competencies": [
+    {
+      "id": "foundations",
+      "name": "Foundations",
+      "scope": "environment, git, deploy",
+      "requires": [],
+      "description": "Can get code from a local machine to a reachable URL and read what the platform says when it fails."
+    },
+    {
+      "id": "building",
+      "name": "Building",
+      "scope": "product",
+      "requires": ["foundations"],
+      "description": "Can build a product surface that real users reach."
+    },
+    {
+      "id": "integrating",
+      "name": "Integrating",
+      "scope": "AI and third-party APIs",
+      "requires": ["foundations"],
+      "description": "Can call a model or a paid API from production and handle every branch it can return, not only the happy one."
+    },
+    {
+      "id": "operating",
+      "name": "Operating",
+      "scope": "monitoring, incident response",
+      "requires": ["foundations"],
+      "description": "Can detect that production is broken, diagnose it from evidence, and write up what happened.",
+      "note": "The strongest and least-exploited competency - the failure corpus and operational logs live here."
+    },
+    {
+      "id": "evidencing",
+      "name": "Evidencing",
+      "scope": "research, data",
+      "requires": ["building", "integrating", "operating"],
+      "description": "Can produce a claim that survives someone trying to break it, with the dataset attached.",
+      "note": "Shares an evidence base with the Research Hub. Units derive from published studies."
+    },
+    {
+      "id": "distributing",
+      "name": "Distributing",
+      "scope": "SEO, GEO, audience",
+      "requires": ["building", "integrating", "operating"],
+      "description": "Can make something findable and measure whether it was found."
+    }
+  ]
+}

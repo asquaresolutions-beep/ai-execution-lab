@@ -1,0 +1,76 @@
+{
+  "_source": "AI_LAB_UNIVERSITY.md - Certification and graduation sections. Encoded, not redesigned.",
+  "_rule": "Certification is portfolio-based, never exam-based. The post-mortem is the assessment.",
+  "version": "1.0.0",
+  "certification": {
+    "basis": "portfolio",
+    "required_submissions": [
+      {
+        "id": "artifact",
+        "statement": "A deployed artefact",
+        "check": "reachable_url",
+        "note": "Must be publicly reachable. A localhost demo teaches nothing about what actually goes wrong."
+      },
+      {
+        "id": "deliberate_incident",
+        "statement": "An incident the student caused deliberately, with the log showing it",
+        "check": "log_evidence",
+        "note": "Reproducing the failure on purpose is the pedagogical core."
+      },
+      {
+        "id": "fix",
+        "statement": "The fix",
+        "check": "diff_or_commit"
+      },
+      {
+        "id": "postmortem",
+        "statement": "A written post-mortem in the Lab failure format",
+        "check": "rubric",
+        "note": "This is the assessment. See rubric.json."
+      }
+    ],
+    "certificate_states": ["not_started", "submitted", "under_review", "certified", "returned"],
+    "certificate_records": [
+      "exactly what was demonstrated",
+      "a link to the artefact",
+      "the competency certified",
+      "the curriculum version in force at assessment"
+    ],
+    "prohibited": [
+      "time-based credentials",
+      "attendance-based credentials",
+      "certificates for watching",
+      "completion percentages",
+      "streaks"
+    ]
+  },
+  "graduation": {
+    "requirements": [
+      {
+        "id": "four_of_six",
+        "statement": "Four of six competencies certified, including Operating",
+        "type": "competency_count",
+        "count": 4,
+        "mandatory": ["operating"]
+      },
+      {
+        "id": "live_system",
+        "statement": "One production system live and publicly reachable for at least 30 days",
+        "type": "uptime_days",
+        "days": 30
+      },
+      {
+        "id": "corpus_contribution",
+        "statement": "One accepted contribution to a Lab failure doc or a research dataset",
+        "type": "accepted_contribution",
+        "note": "This is what makes the institution compound: every graduate leaves the corpus larger than they found it."
+      },
+      {
+        "id": "external_postmortem",
+        "statement": "One post-mortem of a failure the student did not cause",
+        "type": "external_postmortem",
+        "note": "Proves they can read someone else's evidence."
+      }
+    ]
+  }
+}

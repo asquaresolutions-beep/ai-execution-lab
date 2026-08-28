@@ -1,0 +1,88 @@
+{
+  "_source": "AI_LAB_UNIVERSITY.md - 'Prerequisites are expressed as capabilities, never as completed lessons.'",
+  "_rule": "A student who already has the capability skips the unit. Checked by a short proof task, never a quiz. This is what makes the tree navigable rather than a queue.",
+  "version": "1.0.0",
+  "capabilities": [
+    {
+      "id": "deploy-and-read-logs",
+      "competency": "foundations",
+      "statement": "You can deploy a web app to a custom domain and read its build log.",
+      "proof_task": "Deploy any app to a domain you control. Paste the build log line that shows the deploy succeeded, and the commit SHA it built.",
+      "proof_artifact": "url + build log excerpt"
+    },
+    {
+      "id": "version-control-recovery",
+      "competency": "foundations",
+      "statement": "You can recover work from git after a mistake, without deleting the repository.",
+      "proof_task": "Produce a reflog excerpt showing a commit you recovered after a bad reset.",
+      "proof_artifact": "reflog excerpt"
+    },
+    {
+      "id": "env-separation",
+      "competency": "foundations",
+      "statement": "You can explain why a value works locally and fails in production.",
+      "proof_task": "Show one environment variable configured differently in two environments, and the code path that reads it.",
+      "proof_artifact": "config diff + code reference"
+    },
+    {
+      "id": "ship-a-user-surface",
+      "competency": "building",
+      "statement": "You can ship a page that a stranger can use without instructions.",
+      "proof_task": "Link a live page and describe the one action a user takes on it.",
+      "proof_artifact": "url"
+    },
+    {
+      "id": "handle-every-api-branch",
+      "competency": "integrating",
+      "statement": "You can enumerate every response a third-party API can return and show your handler for each.",
+      "proof_task": "For one API you call, list its documented failure responses and link the code branch that handles each. A single try/catch is not an answer.",
+      "proof_artifact": "code reference + response list",
+      "derived_from_incident": "gemini-rate-limit-429-no-ux"
+    },
+    {
+      "id": "structured-output-contract",
+      "competency": "integrating",
+      "statement": "You can make a language model return output your parser accepts, and prove the failure rate fell.",
+      "proof_task": "Show a before/after parse-failure rate with the prompt change that caused it.",
+      "proof_artifact": "measurement + prompt diff",
+      "derived_from_incident": "gemini-json-parse-failure"
+    },
+    {
+      "id": "detect-production-break",
+      "competency": "operating",
+      "statement": "You can tell that production is broken without a user telling you.",
+      "proof_task": "Show the signal - log, alert, dashboard or scheduled check - that would surface a failure in a system you run, and when it last fired.",
+      "proof_artifact": "signal reference"
+    },
+    {
+      "id": "write-a-postmortem",
+      "competency": "operating",
+      "statement": "You can write a post-mortem a stranger could act on.",
+      "proof_task": "Submit a post-mortem in the Lab failure format for an incident you caused or observed.",
+      "proof_artifact": "failure document"
+    },
+    {
+      "id": "claim-with-dataset",
+      "competency": "evidencing",
+      "statement": "You can state a measured claim and attach the data behind it.",
+      "proof_task": "Publish a claim, its dataset, its sample size and at least one limitation. A claim with no stated limitation is returned.",
+      "proof_artifact": "dataset + limitation",
+      "governed_by": "RESEARCH_STANDARD.md"
+    },
+    {
+      "id": "falsifiable-claim",
+      "competency": "evidencing",
+      "statement": "You can state what observation would have proved you wrong.",
+      "proof_task": "For a claim you have made, write the observation that would falsify it.",
+      "proof_artifact": "falsifier statement",
+      "governed_by": "RESEARCH_STANDARD.md"
+    },
+    {
+      "id": "measure-findability",
+      "competency": "distributing",
+      "statement": "You can show whether something you published was actually found.",
+      "proof_task": "Show impressions or citations for one page over a stated period, and say what you cannot conclude from it.",
+      "proof_artifact": "measurement + stated limit"
+    }
+  ]
+}
