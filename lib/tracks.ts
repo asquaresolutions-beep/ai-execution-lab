@@ -218,7 +218,7 @@ export const TRACKS: Track[] = [
           { id: 'deployment-pipeline',      title: 'Deployment Pipeline Setup',        type: 'lesson',   duration: '25 min', description: 'Build the local→build→push→verify loop that catches failures before Vercel does.',      status: 'available' },
           { id: 'build-failure-diagnosis',  title: 'Build Failure Diagnosis',          type: 'playbook', duration: '35 min', description: 'Read Vercel logs systematically, categorize errors, and fix locally before re-pushing.', status: 'available' },
           { id: 'env-vars-secrets',         title: 'Environment Variables & Secrets',  type: 'lesson',   duration: '20 min', description: 'Manage .env files, Vercel environment variables, and secret rotation safely.',           status: 'available' },
-          { id: 'rollback-strategies',      title: 'Rollback Strategies',              type: 'playbook', duration: '25 min', description: 'Instant rollback patterns when a deployment breaks production.',                         status: 'available' },
+          { id: 'rollback-strategies',      title: 'Vercel Rollback Strategies',       type: 'playbook', duration: '25 min', description: 'Instant rollback patterns when a deployment breaks production — Vercel deployment history, git revert, and the decision tree for choosing the right recovery path.', status: 'available' },
         ],
       },
       // ── Module 5 ─────────────────────────────────────────
