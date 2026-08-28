@@ -281,7 +281,7 @@ export const TRACKS: Track[] = [
         lessons: [
           { id: 'multi-agent-orchestration',  title: 'Multi-Agent Orchestration',         type: 'lesson',   duration: '35 min', description: 'Orchestrator + worker patterns for tasks that exceed a single context window.',            status: 'available' },
           { id: 'cicd-integration',           title: 'CI/CD Pipeline Integration',        type: 'lesson',   duration: '30 min', description: 'Integrate Claude Code into GitHub Actions for automated review and deployment.',           status: 'coming-soon' },
-          { id: 'ai-ops-monitoring',          title: 'AI Ops Monitoring Dashboard',       type: 'lab',      duration: '50 min', description: 'Build a monitoring dashboard for long-running AI automation jobs.',                         status: 'coming-soon' },
+          { id: 'ai-ops-monitoring',          title: 'Detecting a Production Break',      type: 'lab',      duration: '50 min', description: 'The loop that tells you production broke before a user does — snapshot, diff, threshold, alert, and what your monitor cannot see.', status: 'available', proves: ['detect-production-break'] },
           { id: 'personal-ops-playbook',      title: 'Your Personal Ops Playbook',        type: 'project',  duration: '90 min', description: 'Final project: build your personal AI ops playbook from this track\'s systems.',          status: 'coming-soon' },
         ],
       },

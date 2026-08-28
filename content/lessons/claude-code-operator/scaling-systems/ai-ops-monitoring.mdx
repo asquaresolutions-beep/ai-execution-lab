@@ -1,0 +1,192 @@
+---
+title: "Detecting a Production Break"
+description: "Design the loop that tells you production broke before a user does — snapshot, diff, threshold, alert, and an honest account of what your monitor cannot see."
+date: "2026-08-28"
+tags: ["monitoring", "detection", "observability", "operations", "trustseal", "cron"]
+status: "published"
+---
+
+There is a specific sentence in this Lab's failure archive that describes the failure this lesson exists to prevent. It is the `time_to_detect` field of `environment-variable-missing-production`:
+
+> Found after user testing in production — feature appeared to work in dev.
+
+That is not a monitoring gap in the abstract. It is a high-severity break in a system its own operators were running, and the thing that surfaced it was a person. Everything below is the work of moving that sentence to something else.
+
+<LessonMeta
+  difficulty="operator"
+  implementationTime="50 minutes to read and trace the code; the loop you design is ongoing"
+  evidence="Traced from the Lab's own monitoring implementation: app/api/cron/trustseal-monitor/route.ts, lib/trustseal/monitoring/{scan,diff,alerts}.ts, lib/observability/{errors,logger}.ts. Motivation drawn from the time_to_detect fields recorded in content/failures/."
+/>
+
+<LessonObjectives items={[
+  "Separate detection from diagnosis, and from the post-mortem that follows both",
+  "Design a detection loop as a diff between two observations, not as an inspection",
+  "Choose thresholds and severities deliberately, and suppress the alerts you would ignore",
+  "Write an invariant that fires on absence, not only on change",
+  "Make a repeating check idempotent so it cannot alert twice for one condition",
+  "State what your own monitor cannot see"
+]} />
+
+---
+
+## Detection is not diagnosis, and monitoring is not a dashboard
+
+Three separate jobs get collapsed into one word:
+
+**Detection** — learning that something is wrong. **Diagnosis** — finding out what. **Post-mortem** — writing it down so it does not recur. This Lab teaches the second in [Debugging Methodology](/tracks/claude-code-operator/debugging-recovery/debugging-methodology) and the third in [Post-Mortem Process](/tracks/claude-code-operator/debugging-recovery/post-mortem-process). Both assume you already know something broke. **This lesson is about the moment before either can start.**
+
+The second collapse is worse. A dashboard is a place to look. Detection is something that happens when nobody is looking — which is most of the time. A dashboard nobody opens at 3am has detected nothing. What you are building is a loop that runs on a schedule and produces a signal; a dashboard is one optional way to read it afterwards.
+
+## What the deploy gate already gives you
+
+Some breaks announce themselves, and you should know which, because you do not need to build anything for those.
+
+From the failure archive's own `time_to_detect` records:
+
+- `server-module-client-bundle` — *"Immediate — next build fails with Module not found"*
+- `edge-runtime-deployment-failure` — *"2 minutes — next push after the change"*
+- `wordpress-rest-api-auth-failure` — *"Immediate — first API call returns 401"*
+- `vite-github-pages-spa-routing` — *"Immediate on first direct URL visit or refresh"*
+
+The build gate, the deploy pipeline and the first real request cover a lot. [Deployment Pipeline Setup](/tracks/claude-code-operator/vercel-deployment/deployment-pipeline) covers that verification properly. Detection work begins where those stop.
+
+### The green-build blind spot
+
+Then there is `next-mdx-remote-v6-blockjs`:
+
+> Manual visual inspection post-deploy — **build succeeded**.
+
+The build passed. The deploy succeeded. Every gate reported green, and the pages rendered with their components empty. Nothing in the pipeline had an opinion about output correctness, because pipelines check that code compiles and ships — not that the product still does what it did yesterday.
+
+**A green build is a statement about your code. It is not a statement about your product.** The gap between those two sentences is the entire subject of this lesson.
+
+And one more, from `dns-subdomain-propagation-delay`:
+
+> Appears resolved after 20 minutes, fails for other regions/users.
+
+A check that returns healthy from where you are standing is not the same as healthy. A false all-clear is worse than no check, because it ends the investigation.
+
+## Detection is a diff, not an inspection
+
+Here is the shape of the loop, traced from `lib/trustseal/monitoring/scan.ts`, which runs daily at 04:00 via `vercel.json`.
+
+**Take the prior state first.** Before touching anything, the scan reads the most recent record and keeps three fields — `{ band, score, signals }`:
+
+```ts
+const hist = await readVerificationHistory(c.domain)
+const last = hist[hist.length - 1]
+if (last) before = { band: last.band, score: last.score, signals: last.signals }
+```
+
+**Then re-observe, deliberately.** Not a cached read — a forced one. `getVerification(c.domain, { forceRefresh: true, now })` re-runs the real checks against DNS, SSL and reputation and appends a new history row.
+
+**Then take the state again, and compare.** `after` is read the same way, and `diffSnapshot(before, after)` decides what changed.
+
+That ordering is the lesson. A monitor that only inspects current state can tell you a value is low; it cannot tell you the value *moved*, and movement is what an alert is for. **You need two observations and a rule that compares them.**
+
+## Deciding what counts as a change
+
+`lib/trustseal/monitoring/diff.ts` is a pure function with no imports — deliberately, so it can be unit-tested without a database, a network or a clock. If you take one structural idea from this lesson, take that one: **the decision about what constitutes a break should be a pure function you can test with two objects.**
+
+Its rules are explicit and worth reading as design choices rather than as configuration:
+
+```ts
+const BAND_RANK = { verified: 5, established: 4, limited: 3, caution: 2, high_risk: 1 }
+const SCORE_DROP_THRESHOLD = 10
+```
+
+- A **band change** is ranked. Downward is `band_down`; upward is `band_up` and is only `info`, because things getting better is not an emergency.
+- A downward move is `critical` when the new rank is 2 or below — `caution` or `high_risk` — and `warning` otherwise. **Severity is a function of where you landed, not only of how far you fell.**
+- An **SSL** transition from a passing status to a failing one is `critical`. A DNS transition that breaks is `warning`.
+- A **score drop** must exceed 10 points to register at all.
+
+Every one of those numbers is a judgement someone made and wrote down. Yours will differ. What matters is that they exist in one readable place rather than being implied by scattered `if` statements.
+
+### Suppressing the alerts you would ignore
+
+This branch is the most instructive line in the file:
+
+```ts
+} else if (cur.score - prev.score <= -SCORE_DROP_THRESHOLD) {
+  // Only flag a score drop when the band held (a band change already says more).
+```
+
+If the band moved, the score drop is *not* reported. One condition, one alert. The alternative — firing both — trains you to skim, and a signal you skim is a signal you have already lost.
+
+**Every alert you send that a reasonable operator would ignore reduces the value of every other alert you send.** Suppression is not laziness; it is the thing that keeps the channel worth reading.
+
+## Invariants that fire on absence
+
+Diffs only catch things that changed. Some breaks are the absence of change — a job that stopped running, a check that never happened.
+
+The scan handles one such case explicitly, and it is time-based rather than comparative:
+
+```ts
+if (c.verifiedAt && now - (c.lastCheckedAt ?? c.verifiedAt) > REVERIFY_DUE_MS) {
+  events.push({ kind: 'reverify_due', severity: 'warning',
+                detail: 'Verification is overdue for re-check.' })
+}
+```
+
+`REVERIFY_DUE_MS` is 90 days, matching the certificate's own validity window. Nothing changed; the alert fires because something *should* have happened and did not.
+
+**Ask of your own system: what would silence look like if it were the failure?** That question finds the breaks a diff never will.
+
+## An alert nobody has to read twice
+
+A check that runs every day and re-alerts every day for an unchanged condition is noise with a schedule attached. `lib/trustseal/monitoring/alerts.ts` solves this with the alert's identity:
+
+```ts
+const day = new Date(a.createdAt).toISOString().slice(0, 10)
+const id = `${a.accountId}__${a.domain}__${a.kind}__${day}`
+await getStore().set<MonitorAlert>(ALERTS, id, { ...a, id, read: false })
+```
+
+Same account, same domain, same kind, same day → same document id → a write that overwrites rather than accumulates. **Idempotency is built into the key, not bolted on with a lookup.** That is the cheap way to do it and it survives concurrent runs.
+
+Note also that alerts carry `read`, and `markAlertRead` refuses an id that does not begin with the caller's `accountId`. A monitoring surface is still a surface; it needs an ownership check like any other.
+
+## Fail-closed outside, best-effort inside
+
+Two layers of the same system handle failure in deliberately opposite ways.
+
+**The scan is best-effort.** Its header says *"Best-effort throughout; never throws."* Individual domains are wrapped so that one unverifiable domain cannot end the pass for the other twenty-four. `alerts.ts` states the reason directly: *"monitoring must never break a request path."*
+
+**The route is fail-closed.** `app/api/cron/trustseal-monitor/route.ts` rejects an unauthorised call outright, and on any throw:
+
+```ts
+await reportError('cron.trustseal_monitor', err, { severity: 'error' })
+return NextResponse.json({ error: 'monitor_failed' }, { status: 500 })
+```
+
+The distinction is the design: **be forgiving about individual observations, unforgiving about the run itself.** A scan that quietly half-worked is the dangerous outcome.
+
+And underneath both, `lib/observability/errors.ts` gives every reported error a `fingerprint` that groups recurring instances, writes a structured log line, and persists a durable record. When the store is unavailable it returns an empty id, with the fallback stated in the code itself: *"store unavailable — the log line is the durable record."* **Your last line of defence should be the one with the fewest dependencies.**
+
+## What this system cannot see
+
+The most useful thing an operator can say about their own monitor is where it stops. Read from the code, not inferred:
+
+1. **If the initial store query throws, the scan returns an empty result.** A database outage produces `scanned: 0` — indistinguishable from a clean, quiet run.
+2. **A domain that cannot be verified at all is skipped**, not alerted. Total failure to observe is silent; only a successful observation that differs raises anything.
+3. **Only monitoring-entitled accounts are scanned.** Everything else increments `skipped`.
+4. **At most 25 domains are re-verified per run**, to fit the serverless time budget.
+5. **The cadence is daily.** A break that starts and ends inside 24 hours may never appear.
+6. **Nothing monitors the monitor.** If the cron stops firing, no code here says so.
+
+Point 6 deserves the last word, because the capability's proof task asks for a signal *and when it last fired* — and that is precisely the question this system cannot answer about itself. Naming that is not an admission of failure. It is the difference between an operator who knows the shape of their blind spot and one who believes they do not have one.
+
+## Practice: design your own loop
+
+Take one system you actually run and write down, in this order:
+
+1. **The state** — what is true when it is healthy? Name the specific values.
+2. **The observation** — what code reads those values, and on what schedule?
+3. **The comparison** — diff against a prior snapshot, an absolute invariant, or both?
+4. **The threshold** — what magnitude of change is worth waking up for? Write the number.
+5. **The severity** — which conditions are `critical`, and what makes them different from `warning`?
+6. **The suppression** — which alert would you ignore if it fired next to another one?
+7. **The delivery** — where does the signal go, and who reads it?
+8. **The blind spots** — list what this loop cannot see, honestly.
+
+Then answer the only question that matters: **when did it last fire, and how do you know?** If you cannot answer that from a log line, a record or a message, you have written a plan, not a signal.
