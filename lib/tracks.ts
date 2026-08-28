@@ -263,7 +263,7 @@ export const TRACKS: Track[] = [
           { id: 'debugging-methodology',      title: 'Debugging Methodology',          type: 'lesson',   duration: '30 min', description: 'Reproduce → isolate → fix → verify. The discipline that separates operators from beginners.', status: 'available' },
           { id: 'reading-build-errors',       title: 'Reading Build Errors',           type: 'lesson',   duration: '25 min', description: 'TypeScript errors, module resolution, edge runtime failures — decoded.',                      status: 'available' },
           { id: 'runtime-failure-diagnosis',  title: 'Runtime Failure Diagnosis',      type: 'lab',      duration: '40 min', description: 'Diagnose failures that only appear in production, after deployment.',                         status: 'coming-soon' },
-          { id: 'post-mortem-process',        title: 'Post-Mortem Process',            type: 'lesson',   duration: '20 min', description: 'Write post-mortems that prevent the same failure from recurring.',                           status: 'coming-soon' },
+          { id: 'post-mortem-process',        title: 'Post-Mortem Process',            type: 'lesson',   duration: '20 min', description: 'Write post-mortems that prevent the same failure from recurring.',                           status: 'available' },
         ],
       },
       // ── Module 9 ─────────────────────────────────────────

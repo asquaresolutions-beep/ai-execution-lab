@@ -1,0 +1,166 @@
+---
+title: "Post-Mortem Process"
+description: "Write a post-mortem a stranger could act on — the Lab's failure format, the three criteria it is assessed against, and how to document a failure you did not cause."
+date: "2026-08-28"
+tags: ["post-mortem", "incident-response", "failures", "documentation", "operations", "claude-code"]
+status: "published"
+---
+
+The fix is deployed and production is healthy again. That is the moment the work looks finished and is not. What remains is the artefact that decides whether this failure costs you once or costs you every time it recurs — and whether anyone other than you can act on it.
+
+<LessonMeta
+  difficulty="operator"
+  implementationTime="20 minutes to read; 30–45 minutes to write your first one"
+  evidence="Built from the Lab's own failure format (content/_templates/failure-report.mdx), the assessment rubric (lib/university/data/rubric.json), and a worked example from the corpus: content/failures/server-module-client-bundle.mdx — a high-severity build failure resolved in 18 minutes."
+/>
+
+<LessonObjectives items={[
+  "Tell the difference between a narrative of what happened and a post-mortem someone can act on",
+  "Write each of the six sections the Lab's failure format requires, with the frontmatter vocabulary that drives classification",
+  "State a root cause as a mechanism rather than a restatement of the symptom",
+  "Separate what you measured from what you inferred, and say plainly what you still do not know",
+  "Apply the three-criterion rubric to your own draft before anyone else reads it",
+  "Write a post-mortem for a failure you did not personally cause"
+]} />
+
+---
+
+## A post-mortem is not a story
+
+A story is ordered by your experience. A post-mortem is ordered by the reader's need. Those two orders are almost never the same.
+
+The Lab's own template says it in one line: *do not start with "I was working on…" — start with what broke.* Your Tuesday afternoon is not the subject. The failure is.
+
+The test that matters is the third rubric criterion: **could a stranger reproduce the failure and apply the fix from this document alone?** A stranger has no access to your terminal history, your mental model, or the thing you happened to remember. If the fix depends on context only you hold, the document has failed regardless of how accurate it is.
+
+## The format
+
+Six sections, in this order, from `content/_templates/failure-report.mdx`:
+
+**Error → Root Cause → Investigation Path → Fix → Prevention → References**
+
+Above them sits frontmatter with a fixed vocabulary. These are not decorative — the classification engine reads them:
+
+- `failure_status`: `open` · `investigating` · `resolved`
+- `severity`: `low` · `medium` · `high` · `critical`
+- `failure_type`: `build` · `runtime` · `data` · `auth` · `deployment` · `config` · `integration`
+- `resolution_time`: how long it actually took — `"18 minutes"`, `"3 days"`
+- `affected_systems`: what was broken, concretely — `"Vercel production deployment"`, not `"the site"`
+
+The slug is part of the artefact. `next-mdx-remote-v6-blockjs` is a slug. `deployment-issue` and `bug-fix` are not — they describe a mood, not a failure.
+
+## Establish the incident
+
+The Error section carries one instruction that overrides your judgement: **paste the exact error, copied from the terminal or log. Never retype from memory.** Retyping silently normalises the text, and the normalised version is the one nobody can search for.
+
+From `server-module-client-bundle`:
+
+```
+Module not found: Can't resolve 'fs'
+Import trace for requested module:
+  ./lib/tracks.ts
+  ./components/tracks/track-roadmap.tsx
+```
+
+The import trace is the most useful thing in that block, and it is exactly what a paraphrase destroys.
+
+Then the environment — tool and exact version, platform, date. A failure without a version is a failure nobody can reproduce.
+
+If the failure was silent, there is no error to paste. Describe precisely what the wrong output looked like instead. "Components rendered with empty output — no error message, no warning" is a usable observation. "It didn't work" is not.
+
+## Identify the root cause
+
+This is the section most drafts get wrong, because a restated symptom reads like an explanation.
+
+> ❌ "The build failed because `fs` could not be resolved."
+
+That is the error again, in a longer sentence. Compare:
+
+> ✅ "`lib/tracks.ts` imported `fs` and `path` at the top level. `components/tracks/track-roadmap.tsx` is a `'use client'` component that imports from `lib/tracks.ts`. Next.js bundles the entire import tree of a client component for the browser, and the browser has no Node.js built-ins."
+
+The second names a **mechanism**. It explains why the failure was inevitable given the code, which is what makes it generalisable — and the generalisable rule here is the transitive boundary: if a client component imports file B, everything B imports must also be browser-safe, even though B itself carries no `'use client'` directive.
+
+A root cause you can only state as "because it broke" means the investigation is not finished. Say so and mark the document `investigating` rather than inventing a mechanism.
+
+## Document the investigation path
+
+Numbered steps: what you checked, what it showed, and the point at which the cause became clear. Include the diagnostic commands you actually ran.
+
+This section exists for the reader whose symptoms differ from yours. They arrive with a different error and need your *route*, not your destination. It is also the section that proves the root cause was found rather than guessed — the steps are the evidence.
+
+Record the dead ends. A path that shows three things ruled out is more useful than one that appears to have gone straight to the answer, and no real investigation ever does.
+
+## Document the fix
+
+Copy-pasteable, before and after. The template asks for both states because a diff of one half is a suggestion, not a fix.
+
+Then the line most drafts omit — **Verification: what output or state confirms the fix worked.** In the worked example that is simply: `next build` completes and the error does not reappear. Without it, a reader cannot tell whether they have finished.
+
+Note what the fix did *not* address. The Lab's rollback guidance makes the same point from the other direction: restoring service and fixing the cause are two different operations, and a document that conflates them will send someone into production believing they are done.
+
+## Document prevention
+
+Prevention is not a resolution to be more careful. It is a check somebody can actually perform. The worked example lists four, and every one is executable:
+
+- Name server-only files `*.server.ts` so the boundary is visible at a glance
+- Before adding a Node.js import to a shared `lib/` file, check whether that file sits in any client component's import chain
+- Run `next build` locally after adding imports to `lib/` — it catches this before Vercel does
+- Use the `server-only` package in files that must never reach the client
+
+Each names a moment and an action. "Be careful with imports" names neither.
+
+## Evidence and assumption are different things
+
+The second rubric criterion asks whether you separated what you measured from what you inferred — and it fails a document when *uncertainty is converted into confidence.*
+
+Some fields are measured. `resolution_time: 18 minutes` is a clock reading. `time_to_detect: "Immediate — next build fails"` is an observation.
+
+Others are judgement. `repeat_risk: medium` is an estimate. `deployment_risk: high` is a call. They are legitimate — but they are not measurements, and a reader deciding how much to trust your document needs to know which is which.
+
+Mark inference in the prose: *"the dev server appears more lenient about module resolution, which is likely why this surfaced only at build time."* The word *likely* is doing real work there. Deleting it would be a small lie.
+
+And state what you still do not know. The rubric is explicit: **a post-mortem with no unknowns is not honest.** Every real incident leaves a residue — a log you could not retrieve, a timeline you could not reconstruct, a contributing factor you suspect but never confirmed. Write it down.
+
+## How the artefact is assessed
+
+The Lab grades post-mortems on three criteria and nothing else. Not effort, not length, not presentation.
+
+| Criterion | The question | It fails when |
+|---|---|---|
+| **Evidence quality** | Is every claim backed by something the reader can inspect — a log line, a diff, a measurement? | The root cause is asserted rather than shown |
+| **Honesty about the unproven** | Did you separate measurement from inference and say what you still don't know? | Uncertainty is converted into confidence |
+| **Reproducibility of the fix** | Could a stranger reproduce the failure and apply the fix from this document alone? | The fix depends on context only you hold |
+
+Each is scored 0–3 — *absent · asserted without support · supported but incomplete · a stranger could act on it* — and the pass mark is **2 on every criterion**. A document cannot average its way through; a 3 on evidence does not rescue a 1 on honesty.
+
+A submission that falls short is **returned, not failed**. A return names the criterion, what is missing, and what would satisfy it. That is a revision instruction, and revision is the normal path.
+
+Use the three criteria on your own draft first. They are cheap to self-apply and they catch most of what a reviewer would catch.
+
+<Callout type="warn" title="On certification">
+This rubric is currently in use as a writing standard. The Lab's certification programme is a separate matter: its curriculum record carries `approved_by: "pending"`, and **no certificates are being issued.** Write to this standard because it produces documents people can act on — not in expectation of a credential.
+</Callout>
+
+## Writing about a failure you did not cause
+
+Reading someone else's evidence is a distinct skill, and it is harder, because the temptation is to fill gaps with plausibility.
+
+Three rules hold it together:
+
+1. **Report the investigation the record shows, not the one you would have run.** If the original document skipped a step you consider obvious, that absence is a finding — note it. Do not silently insert the step.
+2. **Never promote inference to observation.** When the record does not say why something was done, write "the record does not state why." That sentence costs nothing and preserves the document's evidence quality.
+3. **Verify what you can, and mark what you cannot.** If the fix is a commit you can read, read it and say so. If it references a log you have no access to, say that instead of assuming the log said what the author claims.
+
+The output is not a summary of the original. It is your own document with the same six sections, in which the Error and Fix are inherited and the Investigation Path is explicitly second-hand.
+
+## Before you publish
+
+- Slug names the specific failure, not a category
+- Frontmatter uses the fixed vocabularies; `severity` and `failure_status` are both set
+- Error is pasted, not retyped, with tool version and date
+- Root cause names a mechanism, not a restatement
+- Investigation path includes the dead ends
+- Fix shows before and after, and states its verification
+- Prevention items are checks somebody can perform
+- Inference is marked as inference, and at least one open unknown is stated
+- You scored your own draft 2 or better on all three criteria
