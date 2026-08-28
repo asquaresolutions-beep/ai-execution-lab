@@ -169,7 +169,7 @@ export const TRACKS: Track[] = [
       'Basic programming knowledge (any language)',
       'A real project to work on — not a tutorial repo',
     ],
-    tools: ['Claude Code', 'Node.js', 'Git', 'GitHub', 'Vercel', 'VS Code / Cursor'],
+    tools: ['Claude Code', 'Node.js', 'Git', 'GitHub', 'Vercel', 'VS Code / Cursor', 'Gemini API'],
     modules: [
       // ── Module 1 ─────────────────────────────────────────
       {
@@ -235,6 +235,15 @@ export const TRACKS: Track[] = [
       },
       // ── Module 6 ─────────────────────────────────────────
       {
+        id: 'model-integration',
+        title: 'Model API Integration',
+        description: 'Call a model API from production and handle every branch it can return, not only the happy one.',
+        lessons: [
+          { id: 'connect-gemini-api',       title: 'Connecting the Gemini API in Production', type: 'lesson',   duration: '25 min', description: 'Call Gemini without an SDK and handle the two failures that take production down — malformed JSON and 429 rate limits.', status: 'available' },
+        ],
+      },
+      // ── Module 7 ─────────────────────────────────────────
+      {
         id: 'product-development',
         title: 'AI-Assisted Product Development',
         description: 'Ship features faster without sacrificing production quality.',
@@ -245,7 +254,7 @@ export const TRACKS: Track[] = [
           { id: 'ship-velocity-quality',    title: 'Ship Velocity vs. Code Quality',      type: 'lesson',   duration: '20 min', description: 'Where to move fast and where to enforce standards in AI-assisted work.',                 status: 'coming-soon' },
         ],
       },
-      // ── Module 7 ─────────────────────────────────────────
+      // ── Module 8 ─────────────────────────────────────────
       {
         id: 'debugging-recovery',
         title: 'Debugging + Failure Recovery',
@@ -257,7 +266,7 @@ export const TRACKS: Track[] = [
           { id: 'post-mortem-process',        title: 'Post-Mortem Process',            type: 'lesson',   duration: '20 min', description: 'Write post-mortems that prevent the same failure from recurring.',                           status: 'coming-soon' },
         ],
       },
-      // ── Module 8 ─────────────────────────────────────────
+      // ── Module 9 ─────────────────────────────────────────
       {
         id: 'scaling-systems',
         title: 'Scaling AI Execution Systems',
