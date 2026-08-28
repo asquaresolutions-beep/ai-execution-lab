@@ -247,6 +247,7 @@ export const TRACKS: Track[] = [
         description: 'Call a model API from production and handle every branch it can return, not only the happy one.',
         lessons: [
           { id: 'connect-gemini-api',       title: 'Connecting the Gemini API in Production', type: 'lesson',   duration: '25 min', description: 'Call Gemini without an SDK and handle the two failures that take production down — malformed JSON and 429 rate limits.', status: 'available', proves: ['handle-every-api-branch'] },
+          { id: 'output-contract-measurement', title: 'Measuring a Structured Output Contract', type: 'lesson', duration: '30 min', description: 'Define what your parser will accept, measure how often the model breaks it, and separate the prompt change from the defensive parse.', status: 'available', proves: ['structured-output-contract'] },
         ],
       },
       // ── Module 7 ─────────────────────────────────────────

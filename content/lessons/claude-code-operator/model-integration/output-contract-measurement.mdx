@@ -1,0 +1,164 @@
+---
+title: "Measuring a Structured Output Contract"
+description: "Define what your parser will accept, measure how often the model breaks it, and separate the prompt change from the defensive parse."
+date: "2026-08-28"
+tags: ["structured-output", "gemini", "json", "measurement", "prompt-engineering", "experiment"]
+status: "published"
+---
+
+Handling a malformed response and designing a contract that produces fewer malformed responses are two different jobs. [Connecting the Gemini API in Production](/tracks/claude-code-operator/model-integration/connect-gemini-api) covers the first: every branch the API can return needs a handler. This lesson covers the second, and the part that is harder than it sounds — **proving the change worked.**
+
+<LessonMeta
+  difficulty="intermediate"
+  implementationTime="30 minutes to read; a baseline takes as long as your traffic does"
+  evidence="Reconstructed from the Lab's own experiment: content/labs/gemini-structured-output-reliability.mdx — four prompt iterations against Gemini 1.5-flash during the ScamCheck and TrustSeal builds, measured as SyntaxError events on JSON.parse() in Cloud Function logs. Its limitations are stated in this lesson rather than omitted."
+/>
+
+<LessonObjectives items={[
+  "Write down the output contract before writing the prompt",
+  "Define failure as an event you can count in a log, not a feeling about quality",
+  "Establish a baseline before changing anything",
+  "Read the Lab's four-iteration result and say what each change actually bought",
+  "Keep prompt improvement and defensive parsing as separate, measurable layers",
+  "State what a measurement does not establish — including in your own work"
+]} />
+
+---
+
+## The contract comes before the prompt
+
+An output contract is the set of shapes your parser will accept. Not "JSON" — the exact fields, their types, and the permitted values.
+
+Writing it down first changes what you ask for. Compare the two requests the Lab actually used. The first names an output format; the second *is* one:
+
+```
+Analyze whether the following message is a scam. Return a JSON response.
+```
+
+```
+Required output format (return ONLY this structure):
+{
+  "verdict": "LIKELY_SCAM" | "UNLIKELY_SCAM" | "UNCERTAIN",
+  "probability": <number between 0 and 1>,
+  "signals": [<array of signal type strings from the taxonomy below>],
+  "explanation": "<1-2 sentence plain language explanation for non-technical users>"
+}
+```
+
+The second is a contract. The first is a hope.
+
+## Failure has to be an event you can count
+
+You cannot measure "the output was bad." You can measure a thrown exception.
+
+The Lab's experiment defines failure as one specific, observable thing: **`SyntaxError` events on `JSON.parse()` in the Cloud Function logs.** Not a quality judgement, not a human review — a log line that either exists or does not.
+
+That definition is doing more work than it appears to. It makes the failure rate a count over a period, it makes the measurement repeatable by someone who was not there, and it puts the number in a place that already exists rather than requiring new instrumentation.
+
+**Before you change a prompt, answer this: what event, in what log, means the contract was broken?** If you cannot answer, you are about to make an unmeasurable change.
+
+## Establish the baseline before you touch anything
+
+The most skippable step is the one that makes everything after it meaningful.
+
+The Lab's baseline — iteration 0, the minimal prompt above — decomposed into three observed behaviours rather than one number:
+
+- Clean JSON returned: ~94% of calls
+- Markdown code-fence wrapping: ~4%
+- Explanation prefix/suffix: ~2%
+- **Parse failure rate: ~6%**
+
+Splitting the failures by *shape* is what made the next three iterations targetable. "6% fails" tells you to try harder. "4% is wrapped in fences and 2% has prose around it" tells you exactly what to forbid.
+
+A sample of what iteration 0 produced — the model reasoned correctly and decorated the answer, which `JSON.parse()` rejects at position 0:
+
+````
+```json
+{"verdict":"LIKELY_SCAM","probability":0.85,"signals":["urgency","financial_request"], ...}
+```
+````
+
+## Four iterations, and what each one bought
+
+The experiment ran **four** prompt structures, not three. Reading them as a sequence is the point:
+
+| # | What changed | Parse failure rate |
+|---|---|---|
+| **0** | Minimal — *"Return a JSON response"* | **~6%** |
+| **1** | Schema described **in prose** (a field list) | **~4%** |
+| **2** | **Exact JSON shape** embedded in the prompt | **~2%** |
+| **3** | Schema **+ explicit format suppression** | **~0.8%** |
+| **3 +** | Iteration 3 **+ `cleanGeminiOutput()` pre-parse layer** | **~0%** |
+
+**0 → 1** is the instructive one. Describing the schema in English moved the rate from ~6% to ~4%. The lab's own verdict: *"Marginal improvement — the prose description of the schema did not eliminate decorated output."* The obvious fix bought the least.
+
+**1 → 2** halved it. Giving the model a literal template to mirror, rather than a description to interpret, is a different kind of instruction.
+
+**2 → 3** added the explicit prohibition: *"Do not wrap it in code fences. Do not add any text before or after the JSON."* The lab records this as *"not redundant."*
+
+**3 → 3+** is not a prompt change at all, and that distinction is the next section.
+
+## Prompt improvement and defensive parsing are different layers
+
+The last row of that table comes from code, not from the model:
+
+```javascript
+function cleanGeminiOutput(raw) {
+  let text = raw.trim()
+  // Strip markdown code fences
+  text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+  // Extract first JSON object
+  const firstBrace = text.indexOf('{')
+  const lastBrace  = text.lastIndexOf('}')
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    text = text.slice(firstBrace, lastBrace + 1)
+  }
+  return text
+}
+```
+
+Keeping these two layers separate in your head — and in your measurements — matters, because they fail differently. **A prompt constraint reduces how often the model misbehaves. A cleaning layer absorbs the misbehaviour that remains.** The first can regress silently when the model is updated; the second cannot, because it is your code.
+
+The lab's conclusion is the pattern worth taking: *"tight prompt constraints (reduce failure frequency) + pre-parse cleaning (handle residual failures). Neither layer alone is sufficient for production reliability."*
+
+If you collapse them — clean the output and never measure the prompt — you lose the ability to notice that the model got worse. Your cleaner will quietly absorb a rising rate until it meets something it cannot fix.
+
+## What this experiment does not establish
+
+This is the section most write-ups omit, and the one that separates a measurement from a marketing claim. Every limitation below is a property of the source, read from it directly.
+
+- **No sample size is recorded.** There is no n, no denominator, no row count. Every rate in the table is written with a `~` and should be read as an approximation, not a computed statistic.
+- **No confidence interval and no significance test.** A difference of ~2% to ~0.8% is reported, not shown to be reliable.
+- **Iteration 3 changed more than one thing.** Its prompt added format suppression **and** a twelve-value signal taxonomy **and** three edge-case instructions. The lab attributes the improvement to the suppression line; the design does not isolate it. Treat that attribution as the author's reading, not as demonstrated.
+- **One model.** Gemini 1.5-flash. Nothing here predicts another model, another vendor, or a later version of the same one.
+- **Two products, one domain.** ScamCheck and TrustSeal — both scam and trust classification with similar prompt shapes.
+- **Different time windows.** Iterations 0–2 were observed during February 2026; iteration 3 cites production data across February–May 2026. The comparison is not strictly like-for-like.
+- **`~0%` is a count, not a rate.** It records zero parse failures across logged production inputs over an unstated denominator. Zero observed failures is not the same as a demonstrated zero failure rate.
+
+None of this makes the experiment worthless. It makes it *honest evidence of a direction* rather than a universal constant. **The number you should trust is the one you measure on your own traffic.**
+
+One more thing worth knowing if you read the corpus: the failure report [Gemini API Returns Malformed JSON](/failures/gemini-json-parse-failure) describes the same ~6% baseline but credits the recovery to the cleaning layer, where the lab credits most of it to prompt iteration and the remainder to cleaning. The lab is the finer-grained account. When two of your own documents frame the same number differently, say so rather than picking one silently.
+
+## Measuring is not the same as proving causality
+
+You changed the prompt. The rate fell. That is two facts and one assumption.
+
+The assumption is that nothing else moved. Over a multi-month window, plenty can: the input mix changes, the model is updated underneath you, traffic shifts to different users. A before/after comparison across different periods is **suggestive**, not controlled.
+
+What you can honestly claim: *"After this prompt change, the observed parse-failure rate over this period was X, down from Y over the prior period."* What you cannot claim without more work: *"This prompt change caused a Z% reduction."*
+
+Change one thing at a time where the system lets you. Where it does not — as with iteration 3 — say which things changed together.
+
+## Practice: measure your own contract
+
+Reading this lesson does not demonstrate the capability. Producing the artefact does. The capability asks for a **before/after parse-failure rate with the prompt change that caused it** — a measurement *and* a diff.
+
+1. **Write the contract.** The exact fields, types and permitted values your parser accepts.
+2. **Name the failure event.** Which exception, in which log, over which period.
+3. **Measure the baseline.** Do not change anything yet. Record the period and the count, and split the failures by shape if you can.
+4. **Change one thing.** Embed the literal schema. Keep the diff.
+5. **Measure again** over a comparable period.
+6. **Add the defensive layer separately**, and measure its contribution on its own.
+7. **Write the limitations.** Your denominator, your window, your model version, and anything that changed alongside your change.
+
+Step 7 is the one that makes the artefact worth reading. A before/after with no stated denominator is the same shape of claim this lesson has just spent a section qualifying — and you now know how that reads to somebody else.
