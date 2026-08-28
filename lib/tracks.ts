@@ -29,6 +29,13 @@ export interface Lesson {
   duration:    string
   description: string
   status:      ContentStatus
+  /**
+   * University capability ids this lesson teaches — see
+   * lib/university/data/capabilities.json. Optional: most Lab lessons map to no
+   * capability and should not. Teaching is not proving; a capability is proven
+   * by a student artefact, never by reading a lesson.
+   */
+  proves?:     string[]
 }
 
 export interface Module {
@@ -93,9 +100,9 @@ export const TRACKS: Track[] = [
           { id: 'free-tier-architecture',          title: 'Free-Tier Infrastructure Architecture',    type: 'lesson',  duration: '25 min', description: 'Build a production-capable stack on GitHub, Vercel, and Cloudflare free tiers.',                    status: 'available' },
           { id: 'claude-wordpress-workflow',       title: 'Claude + WordPress Operational Workflow',  type: 'playbook', duration: '30 min', description: 'The exact research-to-publish workflow using Claude — without writing a word manually.',            status: 'available' },
           { id: 'github-for-non-developers',       title: 'GitHub for Non-Developers',                type: 'lesson',  duration: '20 min', description: 'Git and GitHub in plain terms — the five commands you need and nothing more.',                      status: 'available' },
-          { id: 'vercel-for-beginners',            title: 'Vercel Deployment for Beginners',          type: 'lesson',  duration: '20 min', description: 'Deploy your first Next.js site, add a custom domain, and use preview deployments.',                 status: 'available' },
-          { id: 'google-search-console-setup',     title: 'Google Search Console Setup',              type: 'playbook', duration: '20 min', description: 'Verify your site, submit your sitemap, and use Search Console as a content strategy tool.',        status: 'available' },
-          { id: 'google-analytics-data-thinking',  title: 'Google Analytics + Data Thinking',         type: 'lesson',  duration: '25 min', description: 'Set up GA4, identify the 5 metrics that matter, and build a weekly data review habit.',            status: 'available' },
+          { id: 'vercel-for-beginners',            title: 'Vercel Deployment for Beginners',          type: 'lesson',  duration: '20 min', description: 'Deploy your first Next.js site, add a custom domain, and use preview deployments.',                 status: 'available', proves: ['deploy-and-read-logs'] },
+          { id: 'google-search-console-setup',     title: 'Google Search Console Setup',              type: 'playbook', duration: '20 min', description: 'Verify your site, submit your sitemap, and use Search Console as a content strategy tool.',        status: 'available', proves: ['measure-findability'] },
+          { id: 'google-analytics-data-thinking',  title: 'Google Analytics + Data Thinking',         type: 'lesson',  duration: '25 min', description: 'Set up GA4, identify the 5 metrics that matter, and build a weekly data review habit.',            status: 'available', proves: ['measure-findability'] },
           { id: 'adsense-approval-reality',        title: 'AdSense Approval Reality',                 type: 'lesson',  duration: '20 min', description: 'What AdSense actually requires, why applications fail, and realistic RPM expectations.',            status: 'available' },
           { id: 'avoid-tool-subscription-traps',   title: 'How to Avoid Tool Subscription Traps',     type: 'lesson',  duration: '20 min', description: 'The psychology of subscription creep and a three-question framework for every new tool.',          status: 'available' },
           { id: 'first-organic-traffic-system',    title: 'Your First Organic Traffic System',        type: 'lesson',  duration: '30 min', description: 'The topic cluster model, content cadence, and realistic timeline from zero to first results.',     status: 'available' },
@@ -205,7 +212,7 @@ export const TRACKS: Track[] = [
         lessons: [
           { id: 'git-operations',    title: 'Git Operations with Claude Code',  type: 'lesson',   duration: '25 min', description: 'How Claude uses git, what it can see, and how to stage and commit safely.',                  status: 'available' },
           { id: 'branch-strategy',   title: 'Branch Strategy for AI Work',      type: 'lesson',   duration: '20 min', description: 'Feature branches, experiment branches, and the merge review discipline.',                    status: 'available' },
-          { id: 'bad-commit-recovery', title: 'Bad Commit Recovery',            type: 'playbook', duration: '30 min', description: 'Recover from wrong files staged, broken code committed, and bad merge decisions.',           status: 'available' },
+          { id: 'bad-commit-recovery', title: 'Bad Commit Recovery',            type: 'playbook', duration: '30 min', description: 'Recover from wrong files staged, broken code committed, and bad merge decisions.',           status: 'available', proves: ['version-control-recovery'] },
           { id: 'pr-review-workflow', title: 'PR Review Workflow',              type: 'lesson',   duration: '25 min', description: 'Use Claude to review diffs, catch regressions, and write meaningful PR descriptions.',       status: 'available' },
         ],
       },
@@ -215,9 +222,9 @@ export const TRACKS: Track[] = [
         title: 'Vercel Deployment + Recovery',
         description: 'Ship to production with confidence and recover from failures fast.',
         lessons: [
-          { id: 'deployment-pipeline',      title: 'Deployment Pipeline Setup',        type: 'lesson',   duration: '25 min', description: 'Build the local→build→push→verify loop that catches failures before Vercel does.',      status: 'available' },
-          { id: 'build-failure-diagnosis',  title: 'Build Failure Diagnosis',          type: 'playbook', duration: '35 min', description: 'Read Vercel logs systematically, categorize errors, and fix locally before re-pushing.', status: 'available' },
-          { id: 'env-vars-secrets',         title: 'Environment Variables & Secrets',  type: 'lesson',   duration: '20 min', description: 'Manage .env files, Vercel environment variables, and secret rotation safely.',           status: 'available' },
+          { id: 'deployment-pipeline',      title: 'Deployment Pipeline Setup',        type: 'lesson',   duration: '25 min', description: 'Build the local→build→push→verify loop that catches failures before Vercel does.',      status: 'available', proves: ['deploy-and-read-logs'] },
+          { id: 'build-failure-diagnosis',  title: 'Build Failure Diagnosis',          type: 'playbook', duration: '35 min', description: 'Read Vercel logs systematically, categorize errors, and fix locally before re-pushing.', status: 'available', proves: ['deploy-and-read-logs'] },
+          { id: 'env-vars-secrets',         title: 'Environment Variables & Secrets',  type: 'lesson',   duration: '20 min', description: 'Manage .env files, Vercel environment variables, and secret rotation safely.',           status: 'available', proves: ['env-separation'] },
           { id: 'rollback-strategies',      title: 'Vercel Rollback Strategies',       type: 'playbook', duration: '25 min', description: 'Instant rollback patterns when a deployment breaks production — Vercel deployment history, git revert, and the decision tree for choosing the right recovery path.', status: 'available' },
         ],
       },
@@ -239,7 +246,7 @@ export const TRACKS: Track[] = [
         title: 'Model API Integration',
         description: 'Call a model API from production and handle every branch it can return, not only the happy one.',
         lessons: [
-          { id: 'connect-gemini-api',       title: 'Connecting the Gemini API in Production', type: 'lesson',   duration: '25 min', description: 'Call Gemini without an SDK and handle the two failures that take production down — malformed JSON and 429 rate limits.', status: 'available' },
+          { id: 'connect-gemini-api',       title: 'Connecting the Gemini API in Production', type: 'lesson',   duration: '25 min', description: 'Call Gemini without an SDK and handle the two failures that take production down — malformed JSON and 429 rate limits.', status: 'available', proves: ['handle-every-api-branch'] },
         ],
       },
       // ── Module 7 ─────────────────────────────────────────
@@ -263,7 +270,7 @@ export const TRACKS: Track[] = [
           { id: 'debugging-methodology',      title: 'Debugging Methodology',          type: 'lesson',   duration: '30 min', description: 'Reproduce → isolate → fix → verify. The discipline that separates operators from beginners.', status: 'available' },
           { id: 'reading-build-errors',       title: 'Reading Build Errors',           type: 'lesson',   duration: '25 min', description: 'TypeScript errors, module resolution, edge runtime failures — decoded.',                      status: 'available' },
           { id: 'runtime-failure-diagnosis',  title: 'Runtime Failure Diagnosis',      type: 'lab',      duration: '40 min', description: 'Diagnose failures that only appear in production, after deployment.',                         status: 'coming-soon' },
-          { id: 'post-mortem-process',        title: 'Post-Mortem Process',            type: 'lesson',   duration: '20 min', description: 'Write post-mortems that prevent the same failure from recurring.',                           status: 'available' },
+          { id: 'post-mortem-process',        title: 'Post-Mortem Process',            type: 'lesson',   duration: '20 min', description: 'Write post-mortems that prevent the same failure from recurring.',                           status: 'available', proves: ['write-a-postmortem'] },
         ],
       },
       // ── Module 9 ─────────────────────────────────────────
