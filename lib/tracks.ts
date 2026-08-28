@@ -113,7 +113,7 @@ export const TRACKS: Track[] = [
         title: 'Your First AI Product',
         description: 'Build and ship a real product in under two weeks.',
         lessons: [
-          { id: 'mvp-with-claude', title: 'Building an MVP With Claude Code', type: 'lesson', duration: '40 min', description: 'End-to-end product build using Claude Code as your development partner.', status: 'coming-soon' },
+          { id: 'mvp-with-claude', title: 'Building an MVP With Claude Code', type: 'lesson', duration: '40 min', description: 'End-to-end product build using Claude Code as your development partner.', status: 'available', proves: ['ship-a-user-surface'] },
           { id: 'landing-page-system', title: 'Landing Page That Converts', type: 'lesson', duration: '25 min', description: 'Page architecture and copy system optimized for AI-skeptic buyers.', status: 'coming-soon' },
           { id: 'launch-checklist', title: 'Pre-Launch Execution Checklist', type: 'checkpoint', duration: '30 min', description: 'Verification checklist before your first public launch.', status: 'coming-soon' },
         ],

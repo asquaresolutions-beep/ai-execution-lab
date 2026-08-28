@@ -1,0 +1,132 @@
+---
+title: "Building an MVP With Claude Code"
+description: "Take a working prototype to a surface a stranger can use without instructions — the one action, the unstructured input, and what you owe the page after it is live."
+date: "2026-08-28"
+tags: ["mvp", "product", "shipping", "claude-code", "scamcheck", "user-surface"]
+status: "published"
+---
+
+A prototype works when you use it. A product works when someone you have never met uses it, gets what they came for, and never contacts you. The distance between those two things is smaller than it looks and is almost never code.
+
+<LessonMeta
+  difficulty="beginner"
+  implementationTime="40 minutes to read; the build is measured in weeks"
+  evidence="Built from the Lab's own shipped surface: content/case-studies/scamcheck-architecture-build.mdx — ScamCheck, four weeks of initial build, live at scamcheck.asquaresolution.com on React, Vite, Firebase, Gemini and GitHub Pages. Its companion record is content/case-studies/trustseal-architecture-build.mdx."
+/>
+
+<LessonObjectives items={[
+  "State the one action your product exists to complete, in a single sentence",
+  "Accept the input a real user actually has, not the input your parser prefers",
+  "Write output for someone who does not know how the system works",
+  "Decide the data model before you build the screen that reads from it",
+  "Ship to a name a stranger can reach, and verify it as a stranger would",
+  "Know what you still owe the surface after it is live"
+]} />
+
+---
+
+## An MVP is not a small version of the product
+
+It is the smallest surface on which a stranger can complete **one action**.
+
+That framing does real work, because it rules things out. A page that requires a README is not an MVP. A page that works only if you already know the input format is not an MVP. A demo you have to narrate over a call is not an MVP — it is a prototype with a presenter attached.
+
+ScamCheck's one action, from its own build record:
+
+> A user submits text — a message they received, a URL they are unsure about, a description of an interaction — and receives a structured verdict: scam probability, detected patterns, and a recommended action.
+
+One sentence. One input. One output. Everything else in that product — accounts, history, quota — was built around an action that already worked for a stranger.
+
+**Write your sentence before you write your first component.** If it takes two sentences, you have two products and should ship one of them.
+
+## The input a real user has
+
+Here is the trap, and it catches almost everyone: you build the surface, and without noticing, you build it for the input *you* would type.
+
+The ScamCheck record names the problem directly:
+
+> The user's input is unstructured: a message they received, a URL they want to check, a description of a phone call or online interaction. The AI layer must handle this ambiguity — the user is not always going to provide a cleanly formatted URL or message text.
+
+A stranger arrives with a screenshot's worth of text pasted badly, a URL with tracking junk on the end, or three sentences describing a phone call. If your surface requires them to clean that up first, you have written instructions — you just wrote them in the form of a validation error.
+
+**The design rule:** accept what the user actually has, and do the normalising on your side. Every constraint you push onto the input is a sentence of instructions you are asking a stranger to read.
+
+## Output for someone who does not know how it works
+
+You know what the system computed. Your user knows what they are afraid of. These call for different pages.
+
+ScamCheck returns four things — a probability score from 0 to 100, a verdict label (*Safe · Probably Safe · Uncertain · Likely Scam · High Risk*), the specific patterns detected, and a plain-language recommended action. But it does not present them as equals:
+
+> The output is designed for users who are not technically sophisticated. The verdict label and recommended action are the primary elements; the detected patterns are secondary detail for users who want to understand the reasoning.
+
+That hierarchy is the product decision. The label and the recommendation are what a frightened person needs in the first two seconds. The pattern breakdown is for the minority who want to argue with it, and it goes below.
+
+**Ask of every element on your page: does a stranger need this to complete the one action, or is it here because I found it interesting to compute?** The second category belongs lower, collapsed, or gone.
+
+## Decide the data model before you build the screen
+
+The most repeatable lesson in that build record is not about UI at all:
+
+> The decision to define the Firestore schema before writing a single React component paid off throughout the build. The history list, quota enforcement, and verdict display all derived their structure from the data model. Starting with the UI and retrofitting the data model is a common mistake that creates mismatches between what the UI expects and what the database can query efficiently.
+
+This is where Claude Code earns its place in an MVP build. Describing the shape of a record — what a result *is*, what belongs to a user, what has to be queryable later — and arguing it through before any screen exists is exactly the kind of work that goes faster with a partner that can hold the whole shape at once and tell you where it will not query.
+
+Build the screen first and you will discover the mismatch at the worst possible moment: when there is already data in production shaped the wrong way.
+
+## The surface must say something when the system fails
+
+Your one action will fail sometimes. The surface is what the stranger sees when it does, and silence is the worst answer available.
+
+From the same build's repeatable checklist:
+
+> Handle rate limit responses explicitly — return a structured `rateLimited` response and display user-facing copy, not a hanging spinner.
+
+A spinner that never resolves does not read as "the API is busy." It reads as **your product is broken**, and the stranger leaves with that conclusion. The handling side of this is a separate subject — [Connecting the Gemini API in Production](/tracks/claude-code-operator/model-integration/connect-gemini-api) covers enumerating the branches an API can return. What belongs here is the surface obligation: **every branch that can happen must have something on the page.**
+
+Go through your one action and list what can go wrong: the model is busy, the input is empty, the response is malformed, the network drops. Each one needs a sentence a stranger can read. Not an error code.
+
+## Shipped means reachable at a name
+
+There is a hard line in the Lab's own standards: a localhost demo does not count. Certification requires a **publicly reachable** artefact, and the reason is not bureaucratic — a surface nobody can reach has never been used by a stranger, so none of the above has been tested.
+
+Deployment mechanics are covered properly elsewhere — [Vercel Deployment for Beginners](/tracks/ai-business-zero-budget/zero-budget-stack/vercel-for-beginners) and [Free-Tier Infrastructure Architecture](/tracks/ai-business-zero-budget/zero-budget-stack/free-tier-architecture). What matters at this point is only that the name survives your next build. ScamCheck's record makes the point with its own scar:
+
+> Deploy the CNAME file to `dist/` (or `public/`) so the custom domain setting survives each build.
+
+Miss that and your custom domain silently reverts on the next deploy. The product is fine; the address is gone.
+
+## Verify it as a stranger, not as the author
+
+This is the step almost everyone skips, because it feels like theatre when you already know the answer.
+
+Open the live URL in a private window, signed out, on a phone. Then complete the one action **without touching anything you know about the system.** Do not fix the input. Do not skip a step because you know it works. Do not explain anything to yourself.
+
+What you are testing:
+
+- Is it obvious what to do first, with no instructions on screen?
+- Does it accept input in the messy form a real person would paste?
+- When it answers, is the answer readable by someone who does not know how it was computed?
+- If you deliberately break it — empty input, nonsense input — does the page say something human?
+
+The capability this lesson teaches is proven by exactly this: **a live URL, and one sentence describing the single action a user takes on it.** If you cannot write that sentence after using your own page cold, the surface is not finished.
+
+## What you owe the surface after it is live
+
+Shipping is not the end of the obligation, and the cheapest thing you owe it is documentation of the parts that are not self-evident:
+
+> The pattern is not self-documenting. A fresh developer — or a future version of yourself returning to the project after months away — will not understand why `dist/` is in `.gitignore` and where deployments go. A three-line README section covering the setup and the deployment sequence saves diagnostic work on every return visit.
+
+The future stranger is often you. Whatever was clever enough to need explaining is clever enough to be forgotten.
+
+Beyond that, two things stay true once a surface is public: it can break without anyone telling you, and when it breaks you will want a record of what happened. Both are separate disciplines with their own lessons in this Lab. What belongs here is only the handover: **the moment a stranger can reach your page, you own it in production.**
+
+## Before you call it shipped
+
+- The one action is written in a single sentence
+- The surface accepts input in the form a real person actually has
+- The primary output is readable without knowing how it was computed
+- The data model was decided before the screen that reads from it
+- Every failure branch puts a human sentence on the page — no infinite spinner
+- It is reachable at a public name, and the name survives a rebuild
+- You completed the action yourself, signed out, on a phone, without helping yourself
+- The non-obvious parts of the setup are written down
