@@ -1,0 +1,199 @@
+---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
+title: "Reproduction — Pulling a Node Built-in into the Client Bundle"
+description: "Deliberately re-cause the build failure from server-module-client-bundle: two lines in lib/tracks.ts, one of which is the line that actually matters. Capture the import trace, then revert."
+date: "2026-08-29"
+tags: ["next.js", "client-bundle", "fs", "module-boundary"]
+status: published
+hypothesis: "A Node built-in imported into a module that a 'use client' component imports will fail to resolve for the browser and stop the build — but only if the import survives compilation. An unused import does not."
+reproduces:
+  - server-module-client-bundle
+---
+
+This is a reproduction task. The explanation already exists: [Node.js fs Module Pulled into Client Bundle](/failures/server-module-client-bundle). **Read its symptom and root cause, then stop before the fix** and come back here to cause it yourself.
+
+<LessonMeta
+  difficulty="intermediate"
+  implementationTime="20–30 minutes, most of it waiting on two builds"
+  evidence="Reproduces content/failures/server-module-client-bundle.mdx — a high-severity build failure resolved in 18 minutes. Verified 2026-08-29 in a disposable worktree on Next.js 15.5.18: baseline exit 0, mutated exit 1, with the recorded error and import trace."
+/>
+
+---
+
+## 1. Safety boundary
+
+- **Do not make this change on production**, or on any branch that auto-deploys.
+- **Work on a throwaway branch or a disposable worktree.** `git checkout -b repro/client-bundle` is enough.
+- **Capture the failure before you revert.** A reverted failure you did not record is a wasted reproduction.
+- **Revert only your own two lines.** Do not run destructive cleanup against a shared working tree.
+- **Report what you observe**, not what this page predicts. Your Next version and your file layout may differ.
+
+No credentials, no external service, no deployment, no database, no network. Two lines, undone by one `git checkout`.
+
+## 2. The historical mechanism
+
+From the incident: `getLessonContent()` was added to `lib/tracks.ts`. It read MDX from disk, so the file gained `import fs from 'fs'` and `import path from 'path'` at the top.
+
+`lib/tracks.ts` was already imported by `components/tracks/track-roadmap.tsx`, which carries `'use client'`. The incident states the rule plainly:
+
+> The boundary is transitive — if `track-roadmap.tsx` imports `lib/tracks.ts`, then everything `lib/tracks.ts` imports must also be browser-safe.
+
+The chain you are about to re-create:
+
+```
+lib/tracks.ts
+  → a USED Node built-in that survives compilation
+  → value import by a 'use client' component
+  → module enters the client dependency graph
+  → webpack must resolve 'fs' for the browser
+  → it cannot
+  → build fails
+```
+
+Note the second line. It is not in the incident, and it is the part most people get wrong. §7 is about that.
+
+## 3. Baseline
+
+In this repository, `lib/tracks.ts` has **zero imports** — it is a pure data module. The fix from the incident is still in place: the filesystem work lives in `lib/lesson-content.ts`, which only a Server Component imports.
+
+Establish your baseline before touching anything:
+
+```bash
+git status                 # clean
+next build                 # record the exit code and the page count
+```
+
+Verified here on 2026-08-29: **exit 0**, 1032/1032 static pages. Record yours. A reproduction with no baseline proves nothing.
+
+## 4. The controlled mutation
+
+Two lines, at the top of `lib/tracks.ts`:
+
+```ts
+import fs from 'fs'
+const _reproFs = fs.readFileSync
+```
+
+That is the whole change. **Do not** add `path`, recreate `getLessonContent()`, touch any component, edit `next.config`, or install anything.
+
+Three things about the second line:
+
+- **The property is referenced, never called.** `fs.readFileSync` is read as a value; no filesystem I/O happens at build time or any other time.
+- **Its only job is to keep the import alive.** It creates a real reference so the compiler cannot delete the import.
+- **It is temporary.** It exists to be observed and removed.
+
+Before building, confirm exactly one file differs:
+
+```bash
+git status --porcelain     # expect a single ' M lib/tracks.ts'
+git diff -- lib/tracks.ts  # expect +2 -0
+```
+
+## 5. The observed failure
+
+Verified 2026-08-29, Next.js 15.5.18, full output — fifteen lines, nothing omitted:
+
+```
+   ▲ Next.js 15.5.18
+
+   Creating an optimized production build ...
+Failed to compile.
+
+./lib/tracks.ts
+Module not found: Can't resolve 'fs'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./components/tracks/track-roadmap.tsx
+
+
+> Build failed because of webpack errors
+```
+
+**Exit code 1.** Note what did *not* happen: there is no `Generating static pages` line. Compilation failed first, so page generation never began. This is a build-time failure in the strict sense — the app was never assembled, let alone run.
+
+## 6. Read the import trace
+
+The trace has two halves and they do different jobs:
+
+- **`./lib/tracks.ts`** — the file that *contains* the unresolvable import. This is where the mistake is.
+- **`./components/tracks/track-roadmap.tsx`** — the client component that *pulls that file into the browser graph*. This is why the mistake matters.
+
+The incident makes the same point: *"The error message points to `track-roadmap.tsx`, but the actual problem is in `lib/tracks.ts`, one level up the import chain."*
+
+**One precise detail worth more than it looks.** In this repository, **two** `'use client'` components import `@/lib/tracks` — `track-roadmap.tsx` and `lesson-sidebar.tsx`. The trace named **only `track-roadmap.tsx`.** `lesson-sidebar.tsx` did not appear.
+
+So do not read the trace as an inventory. Webpack reports a failing path, not every failing path. Fixing the one component named in the trace would not have fixed the problem — the import in `lib/tracks.ts` is what has to go.
+
+## 7. Why a one-line attempt gives a false all-clear
+
+This is the most transferable thing in the exercise, and it was found by getting it wrong first.
+
+The obvious mutation is one line:
+
+```ts
+import fs from 'fs'
+```
+
+Run on 2026-08-29 against this same repository, that produced **exit 0. A completely green build.**
+
+The reason: `fs` was imported and never referenced. With `verbatimModuleSyntax` unset, the TypeScript transform **removes an unused import during compilation**. Webpack never receives a request for `fs`, so it never tries to resolve it. Measured at the time: zero client chunks referencing `fs`, zero `fs` references in the build manifest.
+
+The boundary was intact the whole time. The mutation was deleted before it reached the boundary.
+
+**So the real invariant is narrower than the headline:**
+
+> A Node built-in becomes a browser-bundle problem when a **used** dependency survives compilation and enters the dependency graph of a client component.
+
+Not *"importing `fs` anywhere near client code always breaks the build."* That is too broad, and this repository disproves it in one line.
+
+The practical consequence is uncomfortable and worth sitting with: **a green build after adding an import does not tell you the import is safe.** It may only tell you the compiler threw it away. If you add a Node import today and use it next week, the failure arrives next week, attached to a change that looks unrelated.
+
+## 8. Diagnosis boundary — stop here
+
+This lab ends at the evidence. Three things are separate and only the first is in scope:
+
+- **Build-time detection** — what you just did. The compiler and bundler refused to produce an artefact.
+- **Module-boundary diagnosis** — deciding *which* function belongs on which side, and splitting the file. The incident documents that fix; do not redo it here.
+- **Production runtime behaviour** — entirely unexamined. **This reproduction stops at compilation and proves nothing about how the app behaves once built.** Nothing was deployed, nothing was served, nothing was run.
+
+If you want the diagnosis discipline, that is [Debugging Methodology](/tracks/claude-code-operator/debugging-recovery/debugging-methodology) and [Reading Build Errors](/tracks/claude-code-operator/debugging-recovery/reading-build-errors).
+
+## 9. Recovery
+
+Remove the two lines you added, and nothing else:
+
+```bash
+git checkout -- lib/tracks.ts    # or your project's equivalent file
+next build                       # confirm it returns to your baseline
+```
+
+Then confirm the file is back to zero imports and your build exit code matches the baseline you recorded in §3. Do not run recursive deletes, and do not touch files you did not create.
+
+## 10. Evidence to capture
+
+Your artefact should establish eight things. Collect them as you go.
+
+1. **Baseline** — build exit code and page count *before* the change
+2. **The exact mutation** — the two-line diff from `git diff`
+3. **The changed file** — proof that only one file differs
+4. **Mutated build exit code**
+5. **The exact error** — pasted, not retyped
+6. **The import trace** — and which client component(s) it actually named in *your* run
+7. **Why the import survived compilation** — in your own words: what would have happened with only line one
+8. **Recovery** — the file restored and the build back to baseline
+
+Paste output; do not retype it, and **do not copy the output on this page.** Your Next version, your file paths and your component names may all differ. If your trace names a different component, or names two, that is your finding and it is more valuable than a match.
+
+## 11. Transfer
+
+Answer these in the artefact:
+
+1. **Which line caused the failure — and which line only looked like it did?** Say why.
+2. **Your trace named one client component. Was it the only one that imports the module?** Check, and say what that implies about reading traces as inventories.
+3. **What would catch this in your own project before a build?** Name the check and where it sits. The incident suggests a `.server.ts` naming convention and the `server-only` package — neither is currently used in this repository, which is worth noticing.
+4. **What did you not establish?** You did not deploy and you did not run the built app. Write down what remains unproven, and resist writing that you proved more than compilation refused to complete.
+
+Question 4 is the same discipline the [Post-Mortem Process](/tracks/claude-code-operator/debugging-recovery/post-mortem-process) lesson grades: separate what you measured from what you inferred, and say plainly what you still do not know.
