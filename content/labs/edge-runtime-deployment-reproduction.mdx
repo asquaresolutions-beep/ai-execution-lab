@@ -1,0 +1,173 @@
+---
+author: Anis Ansari
+author_role: Founder, A Square Solutions
+title: "Reproduction — Edge Runtime Blocks a Metadata Image Build"
+description: "Deliberately re-cause the deployment failure from edge-runtime-deployment-failure: add one runtime export to a next/og metadata image handler, capture the failure, then revert. Determine for yourself whether it surfaces locally or only on deploy."
+date: "2026-08-29"
+tags: ["edge-runtime", "next.js", "vercel", "deployment"]
+status: published
+hypothesis: "Adding `export const runtime = 'edge'` to a metadata image handler that uses next/og makes the build fail, because the Edge Runtime cannot supply the Node.js APIs next/og depends on. Where that failure surfaces — local build or deploy — is what you are here to establish."
+reproduces:
+  - edge-runtime-deployment-failure
+---
+
+This is a reproduction task, not an explanation. The explanation already exists: [Edge Runtime Deployment Failure](/failures/edge-runtime-deployment-failure). **Read the incident's symptom and root cause, then stop before the fix.** Come back here and cause it yourself.
+
+<LessonMeta
+  difficulty="intermediate"
+  implementationTime="20–40 minutes, most of it waiting on a build"
+  evidence="Reproduces content/failures/edge-runtime-deployment-failure.mdx — a high-severity production incident, resolved in 23 minutes, recorded with its Vercel build error and timeline."
+/>
+
+---
+
+## 1. Objective
+
+Cause a build to fail by declaring an incompatible runtime on a file that needs Node.js APIs, capture the evidence, and restore the working state.
+
+You are testing one claim: **a metadata image handler built on `next/og` cannot run on the Edge Runtime.** The incident says the Edge Runtime does not support `crypto`, which `next/og` uses internally.
+
+The second thing you are here to see is where that failure does *and does not* show up. It will not show up where you expect. See §5.
+
+## 2. Safety boundary
+
+Read this before you touch anything.
+
+- **Do not make this change on production.** Not on `main`, not on `master`, not on any branch that auto-deploys.
+- **Work on a throwaway branch or a disposable working tree.** `git checkout -b repro/edge-runtime` is enough.
+- **Capture the failure before you revert.** The evidence is the point of the exercise; a reverted failure you did not record is a wasted reproduction.
+- **Revert only after the evidence is captured.**
+- **Do not fabricate output.** If your environment behaves differently from the incident record, capture *your* output. A reproduction that reports what it expected rather than what happened is worthless, and §5 explains why that matters here more than usual.
+
+This exercise needs no credentials, no external service, no database, no email, and no customer data. It touches one file and is undone by one `git checkout`.
+
+## 3. Starting state
+
+Any Next.js App Router project with a metadata image handler that uses `next/og`. In this repository that file is `app/opengraph-image.tsx`, which begins:
+
+```tsx
+import { ImageResponse } from 'next/og'
+
+// No edge runtime — Node.js serverless is stable on Vercel and ImageResponse
+// works identically. Edge runtime on metadata image files can cause deployment
+// failures in Next.js 15 due to how Vercel handles the edge function step.
+export const alt         = 'AI Execution Lab — A Square Solutions'
+export const size        = { width: 1200, height: 630 }
+export const contentType = 'image/png'
+```
+
+**Read that comment.** It was written after the incident, specifically to stop the next person doing what you are about to do. Deliberately overriding a warning your own codebase left for you is the exercise.
+
+Confirm your baseline first:
+
+```bash
+git status            # clean
+npm run build         # or: node node_modules/next/dist/bin/next build
+```
+
+Record that the build **succeeds** before you change anything. A reproduction with no baseline proves nothing.
+
+## 4. The controlled mutation
+
+One line. Add it to the metadata image file, alongside the other exports:
+
+```diff
+  import { ImageResponse } from 'next/og'
+
++ export const runtime = 'edge'
+  export const alt         = '…'
+  export const size        = { width: 1200, height: 630 }
+  export const contentType = 'image/png'
+```
+
+That is the entire change. **Do not** alter dependencies, install or remove packages, change `next.config`, or touch any other file. If you need a second change to make the failure appear, you are no longer reproducing this incident.
+
+## 5. Expected result — the build passes, and that is the finding
+
+The incident records this Vercel build error:
+
+```
+Error: The Edge Runtime does not support Node.js 'crypto' module.
+Learn More: https://nextjs.org/docs/messages/node-module-in-edge-runtime
+```
+
+**You will almost certainly not see that error locally.** We tested it.
+
+On 29 Aug 2026 we applied exactly this mutation to this repository in a disposable git worktree, Next.js 15.5.18, and ran two builds:
+
+| Check | Command | Result |
+|---|---|---|
+| A | `next build` | **passed**, exit 0 |
+| B | `NODE_OPTIONS=--experimental-vm-modules next build` | **passed**, exit 0 |
+
+Check B is the incident's own Prevention Pattern #4, which claims that flag surfaces edge errors locally. **It did not.** The incident's structured prevention list also claims *"the error surfaces during static page generation."* **It does not.** The incident's prose is the accurate part: *"`next build` passes locally. The incompatibility only surfaces when Vercel actually runs the edge worker."*
+
+### What you *can* observe locally
+
+The mutation is not invisible. It lands, and it changes the build in three recordable ways:
+
+1. A **warning** appears: `⚠ Using edge runtime on a page currently disables static generation for that page`
+2. The route **changes symbol in the build table** — `○ (Static)` becomes `ƒ (Dynamic)`
+3. `.next/server/middleware-manifest.json` gains an entry: in our run, exactly one edge function, `/opengraph-image/route`
+
+That is the whole lesson in one observation. **A green build accepted a change that will fail in production, and told you so only in a warning you were free to ignore.** The gate did not stop it; the gate mentioned it.
+
+Run both checks. Record what yours does — your Next version, your file, your output. If your build *does* fail, that is a real difference from ours and worth writing down; do not assume ours is authoritative for your project.
+
+## 6. Evidence to capture
+
+Your artefact must establish six things. Capture them as you go, not afterwards from memory.
+
+1. **Baseline** — the build succeeding before the change, with the commit SHA, and the route's symbol in the build table
+2. **The mutation** — the one-line diff (`git diff`)
+3. **The commands** — both checks from §5, verbatim, with their exit codes
+4. **The outcome** — the warning line if one appeared, the route's symbol *after* the change, and the `middleware-manifest.json` entry if one was created. If a build failed, paste the full error
+5. **The revert** — the diff or `git checkout` showing the file restored
+6. **The clean rebuild** — the build succeeding again, and the route's symbol back to its baseline value
+
+Paste output; do not retype it. Your Next version, your file path and your exact wording may differ from ours — **record yours.** The incident was Next.js 15 on Vercel in May 2026; our verification was Next.js 15.5.18 locally in August 2026; your environment is required to match neither.
+
+The most valuable line in your artefact is item 4: the evidence that something changed and **nothing stopped it.**
+
+## 7. Diagnosis boundary — stop here
+
+This lab ends at the evidence. It is **not** a debugging exercise.
+
+Do not fix the underlying design, do not refactor the image handler, do not investigate `next/og` internals. If the build failed, you have what you came for. If you want the diagnosis, that is [Debugging Methodology](/tracks/claude-code-operator/debugging-recovery/debugging-methodology) and [Reading Build Errors](/tracks/claude-code-operator/debugging-recovery/reading-build-errors), and they are separate work.
+
+The one thing worth noting while the failure is in front of you: **which file does the error name?** The incident's Timeline shows five minutes between the build failing and the log pointing at `opengraph-image.tsx`. Whether your error names the file directly is worth recording.
+
+## 8. Recovery
+
+Remove the line you added:
+
+```bash
+git checkout -- app/opengraph-image.tsx     # or your project's equivalent
+```
+
+Next.js defaults metadata image routes to the Node.js runtime, which is the correct runtime for `next/og`. **The recovery is deletion, not configuration** — there is no edge-compatible way to do this. That is the transferable point.
+
+## 9. Verification
+
+You are done when all four hold:
+
+- [ ] The baseline build succeeded, and you recorded the route's symbol before the change
+- [ ] The mutation was exactly one line, and you have the diff
+- [ ] You ran both checks from §5 and recorded both outcomes and exit codes verbatim
+- [ ] You recorded what changed despite the build passing — warning, route symbol, or manifest entry
+- [ ] The file is restored and the build succeeds again
+
+**A preview deployment is optional and is not part of this lab.** It is the only place the historical error actually fires, but deploying is a separate decision with its own approval; do not deploy to satisfy a checklist. If you already have a non-production preview target and choose to use it, record whether the failure appeared and where in the build.
+
+**One thing this lab does not do: it does not certify anything.** It produces the artefact. What that artefact is worth is assessed elsewhere, against the post-mortem rubric — and no certificate is currently being issued by this Lab.
+
+## 10. Reflection and transfer
+
+Answer these in your own words, in the artefact:
+
+1. **Why is `export const runtime = 'edge'` a reasonable thing to write?** The incident notes it was copied from API route handlers where it is correct and useful. A mistake nobody would plausibly make is not worth a prevention pattern.
+2. **What class of file does this generalise to?** The incident names `next/og`, `sharp`, and anything using `crypto`, `fs`, `path`, `buffer` or `stream`. The rule is not about OG images — it is about declaring a runtime that cannot supply what your imports need, transitively.
+3. **Your build passed. What would have caught this before production?** Name the specific gate and where in your pipeline it would sit. "Read the warnings" is an answer, but only if you say how it is enforced.
+4. **What did you not establish?** You did not deploy. Write down what remains unproven by your run — and resist the temptation to write that you proved the incident, because you did not. You reproduced the *change*; production is where the *failure* lives.
+
+Question 4 is the one that matters, and it is the same discipline the [Post-Mortem Process](/tracks/claude-code-operator/debugging-recovery/post-mortem-process) lesson grades: separate what you measured from what you inferred, and state plainly what you still do not know.
