@@ -52,7 +52,7 @@ deployment_ref: 2026-05-14-tracks-failure-archive-build
   preventionPatterns={[
     "Never add export const runtime = 'edge' to files that use next/og, sharp, or any Node.js crypto/fs/path APIs",
     "Check the Vercel edge runtime compatibility table before adding the edge export to any new file",
-    "Run next build locally after adding any runtime export — the error surfaces during static page generation",
+    "A local next build does NOT catch this — verified 2026-08-29: with the edge export in place the build passed, the historical crypto error never appeared, and the route silently changed to dynamic/edge. Local build success is not proof of production safety, and current Vercel behaviour remains unverified",
     "Maintain a per-file comment: '// Do not add edge runtime — uses next/og (Node.js only)'"
   ]}
   relatedFailures={[
@@ -93,7 +93,7 @@ Error: The Edge Runtime does not support Node.js 'crypto' module.
 Learn More: https://nextjs.org/docs/messages/node-module-in-edge-runtime
 ```
 
-The build had passed locally because `next dev` and `next build` both run in the Node.js runtime by default. The edge runtime restriction only fires on Vercel's actual edge workers.
+The build had passed locally. Re-tested 2026-08-29 on Next.js 15.5.18: `next build` accepts the edge export, warns that static generation is disabled for the route, and registers `/opengraph-image/route` as an edge function in the middleware manifest — then exits 0. So the local build does honour the declaration; what it does not do is evaluate the edge bundle's Node.js API compatibility the way the production edge worker does. The restriction fires when Vercel actually runs that worker.
 
 ## Timeline
 
@@ -123,6 +123,6 @@ Before adding `export const runtime = 'edge'` to any file:
 1. Check whether the file imports any Node.js built-ins (directly or transitively)
 2. Check whether the file uses `next/og`, `sharp`, or any image processing
 3. Check whether the file uses any npm packages that internally use Node.js APIs
-4. Run `next build` with `NODE_OPTIONS=--experimental-vm-modules` to surface edge errors locally
+4. ~~Run `next build` with `NODE_OPTIONS=--experimental-vm-modules` to surface edge errors locally~~ — **retired 2026-08-29.** This does not work. Re-tested with the edge export in place: plain `next build` and `next build` under `NODE_OPTIONS=--experimental-vm-modules` both passed, and neither produced the crypto error. The only local signals are the warning that static generation has been disabled for the route, and the route appearing as an edge function in the middleware manifest. Treat those as the signal; do not treat a green local build as proof that the deployment is safe.
 
 For OG image routes specifically: **never add the edge runtime export**. The Node.js runtime is correct and required.
