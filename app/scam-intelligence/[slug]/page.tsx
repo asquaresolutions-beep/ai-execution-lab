@@ -11,6 +11,7 @@ const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.co
 
 type Props = { params: Promise<{ slug: string }> }
 
+export const dynamicParams = false
 export function generateStaticParams(): { slug: string }[] {
   return allIntelSlugs().map((slug) => ({ slug }))
 }

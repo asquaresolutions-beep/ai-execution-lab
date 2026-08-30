@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 
 interface Props { params: Promise<{ id: string }> }
 
+export const dynamicParams = false
 export async function generateStaticParams() {
   return EXECUTION_PATHWAYS.map(p => ({ id: p.id }))
 }

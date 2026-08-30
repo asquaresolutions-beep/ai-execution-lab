@@ -77,6 +77,7 @@ function statusColor(status?: string): string {
   return 'bg-surface-600'
 }
 
+export const dynamicParams = false
 export async function generateStaticParams() {
   return getAllTagSlugs().map((tag) => ({ tag }))
 }

@@ -10,6 +10,7 @@ interface PageProps {
   params: Promise<{ slug: string }>
 }
 
+export const dynamicParams = false
 export async function generateStaticParams() {
   return getAllSlugs('playbooks').map((slug) => ({ slug }))
 }

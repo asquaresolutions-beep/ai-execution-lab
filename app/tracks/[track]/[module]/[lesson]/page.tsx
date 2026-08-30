@@ -30,6 +30,7 @@ interface Props {
   params: Promise<{ track: string; module: string; lesson: string }>
 }
 
+export const dynamicParams = false
 export function generateStaticParams() {
   return getAllLessonPaths()
 }

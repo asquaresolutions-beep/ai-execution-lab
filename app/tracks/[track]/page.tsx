@@ -17,6 +17,7 @@ const RECOMMENDED_NEXT: Record<string, string[]> = {
 
 interface Props { params: Promise<{ track: string }> }
 
+export const dynamicParams = false
 export function generateStaticParams() {
   return TRACKS.map((t) => ({ track: t.id }))
 }
