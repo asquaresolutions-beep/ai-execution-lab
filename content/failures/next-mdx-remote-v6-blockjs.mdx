@@ -300,3 +300,55 @@ After any MDX-related package upgrade:
 4. **Explicitly document opt-outs** — when you set a security option to `false`, write the reason at the call site so future developers understand it was intentional
 
 For next-mdx-remote specifically: if your MDX is author-controlled and committed to a private repository, always set `blockJS: false` explicitly. The behavior should be documented, not inherited from a default that can change across versions.
+
+---
+
+## Addendum — 2026-08-30: re-validation in the current tree
+
+**Everything above is the May 2026 record and stands unchanged.** This section is additive. It records what a controlled re-test of the same flag produced three months later, and nothing above has been rewritten, corrected, or withdrawn.
+
+**Verified 2026-08-29** (controlled experiment, disposable worktree at `8c01c07`) and **2026-08-30** (read-only structural audit).
+
+### What was re-tested
+
+One mutation, the same flag: `blockJS: false` → `blockJS: true` in `components/content-renderer.tsx`. Baseline first: exit 0, 1033/1033 pages, with the affected components rendering their items correctly.
+
+### Result: the mechanism reproduces, the signature does not
+
+| | This incident records | Observed 2026-08-29 |
+|---|---|---|
+| Props inside components | `undefined` | `undefined` — **confirmed** |
+| Compilation | succeeds | succeeds — `✓ Compiled successfully in 18.5s` |
+| Build outcome | **succeeds, ships** | **fails, exit 1** |
+| How it surfaced | manual visual inspection post-deploy | the build refused to complete |
+
+The stripping mechanism this report describes is real and still present: with `blockJS: true`, array-literal props are removed and arrive at the component as `undefined`, exactly as documented above.
+
+What no longer follows is the *silent* outcome. Compilation succeeded, then page generation failed:
+
+```
+✓ Compiled successfully in 18.5s
+
+Error occurred prerendering page "/tracks/claude-code-operator/wordpress-rest-api/wp-auth-patterns".
+TypeError: Cannot read properties of undefined (reading 'map')
+Export encountered an error on /tracks/[track]/[module]/[lesson]/page, exiting the build.
+
+exit 1
+```
+
+No HTML was emitted for the affected pages. There was no green build to inspect and no deployed page to look at — **the pages do not ship at all.**
+
+### Why the failure class differs
+
+A stripped prop arrives as `undefined`. Whether that renders empty or throws depends entirely on the component receiving it.
+
+The current tree contains components that call `.map()` on such a prop with no guard and no default — verified 2026-08-30 as **8 call sites across 6 component files**, reached by **73** of the 99 content files that use expression props. `undefined.map` throws, and because these pages are statically prerendered, the throw aborts the export rather than degrading the page.
+
+**What the guard state of those components was in May 2026 is not established here.** Determining it is a question for the file history, not for this experiment, and no claim is made about it. The observation is only this: *given the consumers present today*, enabling `blockJS` produces a loud build failure rather than the quiet one recorded above.
+
+### Scope and limits of this re-validation
+
+- **The experiment stopped at its hard-stop boundary.** The single approved mutation did not reproduce the documented signature, so it was reverted and **no second mutation was attempted**.
+- **No correction to this incident is being asserted.** The divergence is real; its cause is not established well enough to claim the original account was wrong. The class change is a sufficient explanation and leaves the May 2026 record intact.
+- **`blockJS: false` remains correct and load-bearing.** Nothing here argues for changing it. Note also that `blockJS: false` does not disable filtering outright — the library substitutes its narrower dangerous-calls plugin, which still rejects `eval`, `Function`, `require`, `process`, `fs` and prototype access at compile time.
+- **This re-validation may need repeating.** It describes the tree as of 2026-08-30. If the component consumers gain guards, or if the affected routes stop being statically prerendered, the failure class could change again — including back toward the silent signature recorded above.
