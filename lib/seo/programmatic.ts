@@ -18,10 +18,14 @@ import { referencesForType, trustScore, type Reference, type TrustScore } from '
 import { buildDiscoverMeta, type DiscoverMeta } from './discover'
 import { HUB_BY_ID, hubTypes } from './hubs'
 
-// Canonical base = where these SSG pages are actually served. Defaults to
-// the lab site; set NEXT_PUBLIC_SCAM_BASE_URL to serve from a dedicated
-// scam subdomain mapped to the same Vercel project.
-const BASE = (process.env.NEXT_PUBLIC_SCAM_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://lab.asquaresolution.com').replace(/\/$/, '')
+// Canonical base = where these SSG pages are actually served: the Lab host.
+// Pinned to a literal (see lib/metadata.ts) because this deployment sets
+// NEXT_PUBLIC_SITE_URL to the ScamCheck origin — which made every /scams/*
+// page canonicalise to scamcheck.asquaresolution.com, where middleware.ts
+// 301s /scams/* to /scam-intelligence. The engine is Lab-owned, so its
+// canonical must be the Lab host and must not depend on shared env vars.
+// Moving these pages to another origin is now a code change, deliberately.
+const BASE = 'https://lab.asquaresolution.com'
 const BRAND = 'ScamCheck'
 const UPDATED_AT = Date.parse(process.env.SCAM_CONTENT_DATE || '') || Date.now()
 
