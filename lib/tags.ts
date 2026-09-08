@@ -10,6 +10,15 @@ export interface TagEntry {
   items: ContentMeta[]
 }
 
+/**
+ * A tag page needs at least this many items to be worth indexing; below it the
+ * page is noindex (app/tags/[tag]/page.tsx) and is therefore kept out of the
+ * sitemap (app/sitemap.ts). Both read this constant so the two can never drift —
+ * a sitemap that advertises a noindex URL is what GSC reports as
+ * "Excluded by 'noindex' tag".
+ */
+export const TAG_INDEX_MIN_ITEMS = 3
+
 // ─────────────────────────────────────────────────────────────
 // All indexed sections
 // ─────────────────────────────────────────────────────────────

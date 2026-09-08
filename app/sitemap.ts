@@ -6,7 +6,7 @@ import { ES_CHECKERS } from '@/lib/scamcheck/es-pages'
 import { HI_CHECKERS } from '@/lib/scamcheck/hi-pages'
 import { getAllItems, type ContentSection } from '@/lib/content'
 import { SECTION_META } from '@/lib/utils'
-import { buildTagIndex } from '@/lib/tags'
+import { buildTagIndex, TAG_INDEX_MIN_ITEMS } from '@/lib/tags'
 import { TRACKS } from '@/lib/tracks'
 import { allAuthorSlugs } from '@/lib/authors'
 import { getStore } from '@/lib/store/adapter'
@@ -129,12 +129,25 @@ function labSitemap(): MetadataRoute.Sitemap {
     ...allAuthorSlugs().map((s) => ({ url: `${LAB}/authors/${s}`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.6 })),
     ...SECTIONS.map((s) => ({ url: `${LAB}${SECTION_META[s].href}`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 })),
   ]
-  const items: MetadataRoute.Sitemap = getAllItems().map((i) => ({
-    url: `${LAB}${SECTION_META[i.section].href}/${i.slug}`,
-    lastModified: new Date(i.frontmatter.updated ?? i.frontmatter.date),
-    changeFrequency: 'monthly', priority: 0.7,
-  }))
-  const tags: MetadataRoute.Sitemap = buildTagIndex().map(({ tag }) => ({ url: `${LAB}/tags/${tag}`, lastModified: now, changeFrequency: 'weekly', priority: 0.4 }))
+  // A sitemap must list only indexable URLs. Two Lab surfaces are deliberately
+  // noindex, and both were being advertised here anyway — Google then reports them
+  // under "Excluded by 'noindex' tag", which is the sitemap's fault, not the page's.
+  // The filters below MIRROR the noindex rules; they do not create new policy:
+  //   • internal planning docs — lib/metadata.ts sets robots:{index:false} when
+  //     frontmatter has `noindex: true`
+  //   • thin tag pages — app/tags/[tag]/page.tsx sets robots:{index:false} when the
+  //     tag has fewer than 3 items (TAG_INDEX_MIN_ITEMS)
+  // The pages themselves are untouched: still built, still served, still noindex.
+  const items: MetadataRoute.Sitemap = getAllItems()
+    .filter((i) => !i.frontmatter.noindex)
+    .map((i) => ({
+      url: `${LAB}${SECTION_META[i.section].href}/${i.slug}`,
+      lastModified: new Date(i.frontmatter.updated ?? i.frontmatter.date),
+      changeFrequency: 'monthly', priority: 0.7,
+    }))
+  const tags: MetadataRoute.Sitemap = buildTagIndex()
+    .filter(({ count }) => count >= TAG_INDEX_MIN_ITEMS)
+    .map(({ tag }) => ({ url: `${LAB}/tags/${tag}`, lastModified: now, changeFrequency: 'weekly', priority: 0.4 }))
   const tracks: MetadataRoute.Sitemap = TRACKS.map((t) => ({ url: `${LAB}/tracks/${t.id}`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 }))
   // Published (available) lesson pages — exclude coming-soon so unbuilt lessons aren't indexed.
   const lessons: MetadataRoute.Sitemap = TRACKS.flatMap((t) =>

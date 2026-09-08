@@ -19,7 +19,15 @@ interface ContentPageProps {
   afterContent?: React.ReactNode
 }
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lab.asquaresolution.com'
+// Pinned to the Lab host (see lib/metadata.ts). ContentPage renders ONLY Lab
+// sections — docs, systems, labs, case-studies, playbooks, failures, logs — so
+// its URLs are always lab.asquaresolution.com. It must NOT read
+// NEXT_PUBLIC_SITE_URL: that variable is set to the ScamCheck origin for this
+// deployment, which made every Lab page emit share links, Article url/@id and
+// BreadcrumbList entries pointing at scamcheck.asquaresolution.com/<lab-path>
+// — URLs that 404 there, and that contradicted the (correct, pinned) canonical.
+// TrustSeal uses a separate component (components/trustseal/content-page.tsx).
+const SITE_URL = 'https://lab.asquaresolution.com'
 
 export async function ContentPage({ item, prev, next, afterContent }: ContentPageProps) {
   const sectionMeta = SECTION_META[item.section]

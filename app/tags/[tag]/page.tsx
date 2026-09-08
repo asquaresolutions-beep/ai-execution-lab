@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { buildTagIndex, getAllTagSlugs, getTagItems } from '@/lib/tags'
+import { buildTagIndex, getAllTagSlugs, getTagItems, TAG_INDEX_MIN_ITEMS } from '@/lib/tags'
 import { SECTION_META, ACCENT_CLASSES, formatDateMono } from '@/lib/utils'
 import { getEntityMeta, categoryLabel, type EntityMeta } from '@/lib/entities'
 
@@ -95,7 +95,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    ...(items.length < 3 ? { robots: { index: false, follow: true } } : {}),
+    ...(items.length < TAG_INDEX_MIN_ITEMS ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
       type: 'website',
       title: `${title} | ${SITE_NAME}`,
