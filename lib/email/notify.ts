@@ -107,6 +107,10 @@ function unsubFooter(email: string): string {
  * inbound webhook events can be attributed back to the campaign that produced them.
  * The welcome sequence and TrustSeal monitoring deliberately omit it — for them
  * campaignTags() returns undefined and the payload is unchanged.
+ *
+ * Reply-To is ADMIN_EMAIL for every list email (campaigns, welcome drip, TrustSeal
+ * alerts): the sender is noreply@, so without it a reader's reply goes nowhere. This
+ * matches the signup welcome in notifyNewsletter, which already sets it.
  */
 export async function sendListEmail(d: { to: string; subject: string; title: string; bodyHtml: string; campaignId?: string }): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
   const r = await send({
@@ -114,6 +118,7 @@ export async function sendListEmail(d: { to: string; subject: string; title: str
     subject: d.subject,
     headers: listHeaders(d.to),
     html: wrap(d.title, d.bodyHtml + unsubFooter(d.to)),
+    replyTo: ADMIN_EMAIL,
     tags: campaignTags(d.campaignId),
   })
   return { ok: r.ok, skipped: r.skipped, error: r.error }

@@ -18,7 +18,8 @@ import { pathToFileURL } from 'node:url'
 // requireAdmin captures ADMIN_API_TOKEN at module load — set it BEFORE importing.
 process.env.ADMIN_API_TOKEN = 'test-token-not-a-real-secret'
 
-const B = 'C:/Users/Acer/Desktop/ai-execution-lab/'
+// Repo root, derived from this file's location (was a hardcoded pre-migration C: path).
+const B = decodeURIComponent(new URL('../', import.meta.url).pathname).replace(/^\/(?=[A-Za-z]:)/, '')
 const imp = (p) => import(pathToFileURL(B + p).href)
 
 const realFetch = globalThis.fetch

@@ -15,7 +15,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { pathToFileURL } from 'node:url'
 
-const B = 'C:/Users/Acer/Desktop/ai-execution-lab/'
+// Repo root, derived from this file's location (was a hardcoded pre-migration C: path).
+const B = decodeURIComponent(new URL('../', import.meta.url).pathname).replace(/^\/(?=[A-Za-z]:)/, '')
 const imp = (p) => import(pathToFileURL(B + p).href)
 
 const realFetch = globalThis.fetch

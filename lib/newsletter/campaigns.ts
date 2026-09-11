@@ -21,7 +21,7 @@
 // ─────────────────────────────────────────────────────────────────
 import { getStore } from '@/lib/store/adapter'
 import { sendListEmail } from '@/lib/email/notify'
-import { subscriberDocId } from '@/lib/newsletter/subscribers'
+import { subscriberDocId, normalizeEmail, isValidEmail } from '@/lib/newsletter/subscribers'
 import { latestTrendingSnapshot } from '@/lib/scam-intel/feed'
 import { composeScamDigest } from './digest-copy'
 import { composeNewsletterIssue, ISSUE_001 } from './issue-template'
@@ -49,6 +49,8 @@ export interface Campaign {
   approvedAt?: string
   approvedBy?: string
   sentAt?: string
+  canceledAt?: string
+  canceledBy?: string
   stats?: { recipients?: number; sent?: number; failed?: number }
 }
 
@@ -113,6 +115,69 @@ export async function approveCampaign(id: string, actor = 'admin'): Promise<{ ok
   if (c.status !== 'draft') return { ok: false, error: `not_draft (${c.status})` }
   await getStore().update<Campaign>(CAMPAIGNS, id, { status: 'approved', approvedAt: new Date().toISOString(), approvedBy: actor })
   return { ok: true }
+}
+
+// ── Cancellation (draft | approved → canceled). Admin only. ──────────
+/**
+ * Retire a campaign permanently. 'canceled' was already part of CampaignStatus and
+ * every send-side guard already rejects it — approve needs 'draft', enqueue needs
+ * 'approved', drain and the cron need 'sending', compose refuses non-drafts — so
+ * setting it leaves no path to a send. The record and its content are kept.
+ *
+ * Deliberately refuses:
+ *  • 'sent'    — that is delivery history; rewriting it would falsify the record.
+ *  • 'sending' — an in-flight campaign may own failed rows, and requeueFailedSends
+ *                moves a campaign back to 'sending' when it resets them. Cancelling
+ *                one safely would mean changing that send path, which this does not.
+ * In the normal lifecycle a draft or approved campaign owns no failed rows (failures
+ * are only written while 'sending'), but a status edited back by hand could leave
+ * some — so that is checked, read-only, rather than assumed. With no failed rows,
+ * requeueFailedSends has nothing to reset, and the cancel is terminal without
+ * touching any existing send code. Idempotent: cancelling a canceled campaign is a no-op.
+ */
+export async function cancelCampaign(id: string, actor = 'admin'): Promise<{ ok: boolean; status?: CampaignStatus; alreadyCanceled?: boolean; error?: string }> {
+  const c = await getCampaign(id)
+  if (!c) return { ok: false, error: 'not_found' }
+  if (c.status === 'canceled') return { ok: true, status: 'canceled', alreadyCanceled: true }
+  if (c.status === 'sent') return { ok: false, error: 'already_sent' }
+  if (c.status !== 'draft' && c.status !== 'approved') return { ok: false, error: `in_flight (${c.status})` }
+  const store = getStore()
+  const failed = await store.query(CAMPAIGN_SENDS, { where: [{ field: 'campaignId', op: '==', value: id }, { field: 'status', op: '==', value: 'failed' }], limit: 1 })
+  if (failed.length > 0) return { ok: false, error: 'has_failed_sends' }
+  await store.update<Campaign>(CAMPAIGNS, id, { status: 'canceled', canceledAt: new Date().toISOString(), canceledBy: actor })
+  return { ok: true, status: 'canceled' }
+}
+
+// ── Single-recipient TEST send. Admin only. ──────────────────────────
+/** Addresses allowed to receive a test send: NEWSLETTER_TEST_RECIPIENTS, comma-separated. Read per call. */
+function testRecipientAllowlist(): Set<string> {
+  return new Set((process.env.NEWSLETTER_TEST_RECIPIENTS || '').split(',').map(normalizeEmail).filter(Boolean))
+}
+
+/**
+ * Send ONE preview of a campaign to ONE allowlisted address, so the real rendered
+ * email — brand shell, List-Unsubscribe, footer, Reply-To — can be inspected before
+ * any broadcast. It is isolated from the broadcast path by construction:
+ *  • the recipient is validated BEFORE the store is touched at all;
+ *  • it reads only the named campaign — never a subscriber collection, never
+ *    campaign_sends — and writes nothing: no queue row, no status, no stats;
+ *  • the subject is prefixed "[TEST]" and no campaignId is passed, so provider
+ *    events from a preview never count toward the campaign's attribution.
+ * Works in any status, so a draft can be previewed before it is approved.
+ */
+export async function sendCampaignTest(id: string, to: unknown): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+  if (typeof to !== 'string' || !to.trim()) return { ok: false, error: 'recipient_required' }
+  if (/[,;\s]/.test(to.trim())) return { ok: false, error: 'single_recipient_only' }
+  const email = normalizeEmail(to)
+  if (!isValidEmail(email)) return { ok: false, error: 'invalid_recipient' }
+  const allow = testRecipientAllowlist()
+  if (allow.size === 0) return { ok: false, error: 'test_recipients_not_configured' }
+  if (!allow.has(email)) return { ok: false, error: 'recipient_not_allowlisted' }
+
+  const c = await getCampaign(id)
+  if (!c) return { ok: false, error: 'not_found' }
+  const r = await sendListEmail({ to: email, subject: `[TEST] ${c.subject}`, title: c.title, bodyHtml: c.bodyHtml })
+  return { ok: r.ok, ...(r.skipped ? { skipped: true } : {}), ...(r.error ? { error: r.error } : {}) }
 }
 
 // ── Enqueue (approved → sending). Fans recipients into campaign_sends. ──

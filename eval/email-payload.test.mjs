@@ -1,6 +1,7 @@
 // eval/email-payload.test.mjs
 //
-// Proves what the Resend HTTP payload ACTUALLY contains after wiring campaign tags.
+// Proves what the Resend HTTP payload ACTUALLY contains after wiring campaign tags
+// and the list-mail Reply-To.
 //
 // The helper tests in email-attribution.test.mjs check campaignTags() in isolation;
 // these tests capture the real JSON body that send() would POST, so a regression in
@@ -17,12 +18,15 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 
-const B = 'C:/Users/Acer/Desktop/ai-execution-lab/'
+// Repo root, derived from this file's location (was a hardcoded pre-migration C: path).
+const B = decodeURIComponent(new URL('../', import.meta.url).pathname).replace(/^\/(?=[A-Za-z]:)/, '')
 const imp = (p) => import(pathToFileURL(B + p).href)
 
 // notify.ts captures RESEND_API_KEY at module load; without it send() no-ops and
 // no payload would ever be built. Obvious fake — not a credential.
 process.env.RESEND_API_KEY = 'test-key-not-a-real-secret'
+// notify.ts also captures ADMIN_EMAIL at load; this is what list mail must reply to.
+const EXPECTED_REPLY_TO = process.env.ADMIN_EMAIL || 'contact@asquaresolution.com'
 
 const RESEND_URL = 'https://api.resend.com/emails'
 /** @type {{url:string, body:any}[]} */
@@ -59,7 +63,7 @@ test('a send with no campaignId posts NO tags field at all', async () => {
   await sendListEmail({ ...MAIL })
   const body = only()
   assert.ok(!('tags' in body), 'tags must be absent, not an empty array')
-  assert.deepEqual(Object.keys(body).sort(), ['from', 'headers', 'html', 'subject', 'text', 'to'])
+  assert.deepEqual(Object.keys(body).sort(), ['from', 'headers', 'html', 'reply_to', 'subject', 'text', 'to'])
 })
 
 test('a send WITH a campaignId carries exactly one campaignId tag', async () => {
@@ -67,6 +71,29 @@ test('a send WITH a campaignId carries exactly one campaignId tag', async () => 
   await sendListEmail({ ...MAIL, campaignId: 'scamcheck-weekly-2026-09-02' })
   const body = only()
   assert.deepEqual(body.tags, [{ name: 'campaignId', value: 'scamcheck-weekly-2026-09-02' }])
+})
+
+// ── 1b · Reply-To on list mail ──────────────────────────────────────────────
+test('list mail replies to ADMIN_EMAIL, not to the noreply@ sender', async () => {
+  reset()
+  await sendListEmail({ ...MAIL })
+  const body = only()
+  assert.equal(body.reply_to, EXPECTED_REPLY_TO)
+  assert.ok(!/noreply@/i.test(body.reply_to), 'Reply-To must be a monitored inbox')
+})
+
+test('Reply-To comes from the ADMIN_EMAIL setting — it is not hardcoded', async () => {
+  reset()
+  const saved = process.env.ADMIN_EMAIL
+  process.env.ADMIN_EMAIL = 'replies@example.test'
+  try {
+    // notify.ts reads env at module load; a distinct URL yields a fresh module instance.
+    const fresh = await import(pathToFileURL(B + 'lib/email/notify.ts').href + '?admin-email-override')
+    await fresh.sendListEmail({ ...MAIL })
+    assert.equal(only().reply_to, 'replies@example.test')
+  } finally {
+    if (saved === undefined) delete process.env.ADMIN_EMAIL; else process.env.ADMIN_EMAIL = saved
+  }
 })
 
 // ── 2 · THE BACKWARD-COMPATIBILITY PROOF ────────────────────────────────────
@@ -162,6 +189,7 @@ test('the welcome drip sends UNTAGGED mail', async () => {
   assert.equal(res.sent, 1, 'sanity: the drip must have actually sent, or this test proves nothing')
   const body = only()
   assert.ok(!('tags' in body), 'welcome-drip mail must carry no campaign tag')
+  assert.equal(body.reply_to, EXPECTED_REPLY_TO, 'welcome-drip mail inherits the list-mail Reply-To')
   delete process.env.WELCOME_SEQUENCE_ENABLED
   delete process.env.WELCOME_SEQUENCE_SINCE
 })

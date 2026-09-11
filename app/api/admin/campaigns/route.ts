@@ -5,12 +5,20 @@
 //   approve : draft → approved
 //   send    : approved → sending (fans recipients into campaign_sends; the daily
 //             cron then drains them via sendListEmail). Requires prior approval.
+//   test-send : { id, to } — ONE preview email to ONE address on
+//               NEWSLETTER_TEST_RECIPIENTS. Reads only that campaign: never reads
+//               subscribers, never enqueues, never changes status. Subject "[TEST] …".
+//   cancel    : draft | approved → canceled (terminal; the record is kept).
 // Bearer ADMIN_API_TOKEN. Draft-first: no send path exists without explicit approve+send.
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
-import { composeWeeklyScamcheckDraft, composeIssueOneDraft, composeCustomIssue, drainCampaign, requeueFailedSends, listCampaignSends, listCampaigns, getCampaign, approveCampaign, enqueueCampaign } from '@/lib/newsletter/campaigns'
+import { composeWeeklyScamcheckDraft, composeIssueOneDraft, composeCustomIssue, drainCampaign, requeueFailedSends, listCampaignSends, listCampaigns, getCampaign, approveCampaign, enqueueCampaign, cancelCampaign, sendCampaignTest } from '@/lib/newsletter/campaigns'
 
 export const dynamic = 'force-dynamic'
+
+// sendCampaignTest failures caused by the request's recipient (→ 400) vs. by missing
+// server configuration (→ 503). Anything else is a provider-side failure (→ 502).
+const TEST_RECIPIENT_ERRORS = new Set(['recipient_required', 'single_recipient_only', 'invalid_recipient', 'recipient_not_allowlisted'])
 
 export async function GET(req: Request) {
   if (!requireAdmin(req).ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
@@ -24,7 +32,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   if (!requireAdmin(req).ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  const b = await req.json().catch(() => ({})) as { action?: string; id?: string; subject?: string; title?: string; bodyHtml?: string }
+  const b = await req.json().catch(() => ({})) as { action?: string; id?: string; subject?: string; title?: string; bodyHtml?: string; to?: unknown }
   switch (b.action) {
     case 'compose':
       return NextResponse.json(await composeWeeklyScamcheckDraft())
@@ -47,6 +55,20 @@ export async function POST(req: Request) {
       // Reset FAILED recipients → queued (retry after rate-limit); never re-sends 'sent'.
       if (!b.id) return NextResponse.json({ ok: false, error: 'id_required' }, { status: 400 })
       return NextResponse.json(await requeueFailedSends(b.id))
+    case 'test-send': {
+      // Single-recipient preview. Deliberately NOT routed through enqueue or drain.
+      if (!b.id) return NextResponse.json({ ok: false, error: 'id_required' }, { status: 400 })
+      const r = await sendCampaignTest(b.id, b.to)
+      const status = r.ok ? 200
+        : TEST_RECIPIENT_ERRORS.has(r.error || '') ? 400
+        : r.error === 'not_found' ? 404
+        : r.error === 'test_recipients_not_configured' || r.skipped ? 503
+        : 502
+      return NextResponse.json(r, { status })
+    }
+    case 'cancel':
+      if (!b.id) return NextResponse.json({ ok: false, error: 'id_required' }, { status: 400 })
+      return NextResponse.json(await cancelCampaign(b.id))
     default:
       return NextResponse.json({ ok: false, error: 'bad_action' }, { status: 400 })
   }
