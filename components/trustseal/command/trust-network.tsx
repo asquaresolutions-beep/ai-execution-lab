@@ -12,16 +12,18 @@ const BAND_COLOR: Record<Band, string> = {
 }
 
 interface Node { id: string; x: number; y: number; r: number; band: Band; label: string }
+// Unused Phase-1 prototype. Fixture labels are fictional reserved names only
+// (RFC 2606 *.example.test) — never real domains with a trust band.
 const NODES: Node[] = [
-  { id: 'core', x: 300, y: 200, r: 16, band: 'verified', label: 'asquaresolution.com' },
-  { id: 'n1', x: 150, y: 110, r: 9, band: 'established', label: 'acme.io' },
-  { id: 'n2', x: 470, y: 120, r: 10, band: 'verified', label: 'fastly.dev' },
-  { id: 'n3', x: 110, y: 300, r: 8, band: 'limited', label: 'mintly.co' },
-  { id: 'n4', x: 480, y: 310, r: 9, band: 'caution', label: 'payquik.net' },
-  { id: 'n5', x: 300, y: 60, r: 7, band: 'established', label: 'nova.app' },
-  { id: 'n6', x: 250, y: 350, r: 7, band: 'risk', label: 'lure-bank.top' },
-  { id: 'n7', x: 560, y: 220, r: 7, band: 'limited', label: 'orbit.sh' },
-  { id: 'n8', x: 60, y: 200, r: 6, band: 'established', label: 'helio.gg' },
+  { id: 'core', x: 300, y: 200, r: 16, band: 'verified', label: 'example.test' },
+  { id: 'n1', x: 150, y: 110, r: 9, band: 'established', label: 'app.example.test' },
+  { id: 'n2', x: 470, y: 120, r: 10, band: 'verified', label: 'site.example.test' },
+  { id: 'n3', x: 110, y: 300, r: 8, band: 'limited', label: 'shop.example.test' },
+  { id: 'n4', x: 480, y: 310, r: 9, band: 'caution', label: 'pay.example.test' },
+  { id: 'n5', x: 300, y: 60, r: 7, band: 'established', label: 'mail.example.test' },
+  { id: 'n6', x: 250, y: 350, r: 7, band: 'risk', label: 'bank.example.test' },
+  { id: 'n7', x: 560, y: 220, r: 7, band: 'limited', label: 'store.example.test' },
+  { id: 'n8', x: 60, y: 200, r: 6, band: 'established', label: 'login.example.test' },
 ]
 const EDGES: [string, string][] = [
   ['core', 'n1'], ['core', 'n2'], ['core', 'n3'], ['core', 'n4'], ['core', 'n5'],
