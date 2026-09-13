@@ -36,10 +36,10 @@ function DashboardInner({ locale }: { locale: Locale }) {
   const [claimsRefresh, setClaimsRefresh] = useState(0)
   const authLabels = {
     signIn: x('nav.signIn'), signOut: x('nav.signOut'), greeting: x('dash.greeting'),
-    continueGoogle: x('auth.continueGoogle'), email: x('auth.email'), password: x('auth.password'),
-    createAccount: x('auth.createAccount'), or: x('auth.or'),
-    switchToSignUp: x('auth.switchToSignUp'), switchToSignIn: x('auth.switchToSignIn'),
-    notConfigured: x('auth.notConfigured'), signInFailed: x('auth.signInFailed'), googleFailed: x('auth.googleFailed'),
+    continueGoogle: x('auth.continueGoogle'),
+    notConfigured: x('auth.notConfigured'), googleFailed: x('auth.googleFailed'),
+    googleLoading: x('auth.googleLoading'), googleSigningIn: x('auth.googleSigningIn'),
+    googleUnavailable: x('auth.googleUnavailable'), googleTimeout: x('auth.googleTimeout'), tryAgain: x('auth.tryAgain'),
   }
 
   useEffect(() => {
@@ -78,7 +78,7 @@ function DashboardInner({ locale }: { locale: Locale }) {
       <div className="rounded-xl border p-6" style={card}>
         <h2 className="text-lg font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>{x('dash.signInTitle')}</h2>
         <p className="mt-2 text-sm" style={{ color: 'rgb(var(--ts-text-2))' }}>{x('dash.signInBody')}</p>
-        <div className="mt-4"><AuthButton labels={authLabels} /></div>
+        <div className="mt-4"><AuthButton labels={authLabels} locale={locale} /></div>
       </div>
     )
   }
@@ -92,7 +92,7 @@ function DashboardInner({ locale }: { locale: Locale }) {
             {account?.email || user.email}
           </p>
         </div>
-        <AuthButton labels={authLabels} />
+        <AuthButton labels={authLabels} locale={locale} />
       </div>
 
       {error && (

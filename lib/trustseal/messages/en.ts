@@ -191,6 +191,11 @@ export const en = {
     signInFailed: 'Sign-in failed',
     googleFailed: 'Google sign-in failed',
     forgotPassword: 'Forgot password?',
+    googleLoading: 'Loading Google sign-in…',
+    googleSigningIn: 'Signing you in…',
+    googleUnavailable: 'Google sign-in couldn’t load. Check your connection or any ad/tracker blocker, then try again.',
+    googleTimeout: 'Google sign-in is taking too long. Please try again.',
+    tryAgain: 'Try again',
   },
 
   legal: {

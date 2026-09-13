@@ -190,6 +190,11 @@ export const ar: Messages = {
     signInFailed: 'فشل تسجيل الدخول',
     googleFailed: 'فشل تسجيل الدخول عبر Google',
     forgotPassword: 'هل نسيت كلمة المرور؟',
+    googleLoading: 'جارٍ تحميل تسجيل الدخول عبر Google…',
+    googleSigningIn: 'جارٍ تسجيل دخولك…',
+    googleUnavailable: 'تعذّر تحميل تسجيل الدخول عبر Google. تحقّق من اتصالك أو من أي أداة لحظر الإعلانات/التتبّع، ثم حاول مرة أخرى.',
+    googleTimeout: 'يستغرق تسجيل الدخول عبر Google وقتًا طويلًا. يُرجى المحاولة مرة أخرى.',
+    tryAgain: 'حاول مرة أخرى',
   },
 
   legal: {

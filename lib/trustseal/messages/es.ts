@@ -190,6 +190,11 @@ export const es: Messages = {
     signInFailed: 'Error al iniciar sesión',
     googleFailed: 'Error al iniciar sesión con Google',
     forgotPassword: '¿Olvidaste tu contraseña?',
+    googleLoading: 'Cargando el inicio de sesión de Google…',
+    googleSigningIn: 'Iniciando sesión…',
+    googleUnavailable: 'No se pudo cargar el inicio de sesión de Google. Revisa tu conexión o cualquier bloqueador de anuncios/rastreadores e inténtalo de nuevo.',
+    googleTimeout: 'El inicio de sesión de Google está tardando demasiado. Inténtalo de nuevo.',
+    tryAgain: 'Intentar de nuevo',
   },
 
   legal: {

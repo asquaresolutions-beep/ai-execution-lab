@@ -24,10 +24,10 @@ function expiryFrom(expiresIn?: string | number): number {
 
 interface IdpResponse { localId: string; email?: string; displayName?: string; idToken: string; refreshToken: string; fullName?: string; expiresIn?: string }
 
-async function call(path: string, body: Record<string, unknown>): Promise<AuthUser> {
+async function call(path: string, body: Record<string, unknown>, signal?: AbortSignal): Promise<AuthUser> {
   if (!API_KEY) throw new Error('Auth not configured (NEXT_PUBLIC_FIREBASE_API_KEY missing).')
   const res = await fetch(`${IDP}:${path}?key=${API_KEY}`, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal,
   })
   const data = await res.json()
   if (!res.ok) {
@@ -60,8 +60,8 @@ export function signUpEmail(email: string, password: string): Promise<AuthUser> 
 export function signInEmail(email: string, password: string): Promise<AuthUser> {
   return call('signInWithPassword', { email, password, returnSecureToken: true })
 }
-/** Exchange a Google ID token (from GIS) for a Firebase session. */
-export function signInWithGoogleIdToken(googleIdToken: string): Promise<AuthUser> {
+/** Exchange a Google ID token (from GIS) for a Firebase session. `signal` lets the caller abort a stalled exchange. */
+export function signInWithGoogleIdToken(googleIdToken: string, signal?: AbortSignal): Promise<AuthUser> {
   const requestUri = typeof window !== 'undefined' ? window.location.origin : 'https://scamcheck.asquaresolution.com'
-  return call('signInWithIdp', { postBody: `id_token=${googleIdToken}&providerId=google.com`, requestUri, returnIdpCredential: true, returnSecureToken: true })
+  return call('signInWithIdp', { postBody: `id_token=${googleIdToken}&providerId=google.com`, requestUri, returnIdpCredential: true, returnSecureToken: true }, signal)
 }

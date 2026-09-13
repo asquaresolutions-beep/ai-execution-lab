@@ -190,6 +190,11 @@ export const hi: Messages = {
     signInFailed: 'साइन-इन विफल',
     googleFailed: 'Google साइन-इन विफल',
     forgotPassword: 'पासवर्ड भूल गए?',
+    googleLoading: 'Google साइन-इन लोड हो रहा है…',
+    googleSigningIn: 'आपको साइन इन किया जा रहा है…',
+    googleUnavailable: 'Google साइन-इन लोड नहीं हो सका। अपना इंटरनेट कनेक्शन या कोई ऐड/ट्रैकर ब्लॉकर जाँचें, फिर दोबारा कोशिश करें।',
+    googleTimeout: 'Google साइन-इन में बहुत समय लग रहा है। कृपया दोबारा कोशिश करें।',
+    tryAgain: 'दोबारा कोशिश करें',
   },
 
   legal: {

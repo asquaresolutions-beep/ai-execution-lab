@@ -177,7 +177,10 @@ for (const comp of ['claims-list.tsx','billing/billing-section.tsx','seal-view.t
   ok(`i18n: ${comp} uses formatDate (not raw toLocaleDateString)`, /formatDate\(/.test(src) && !/toLocaleDateString/.test(src))
 }
 const ab = read('components/auth/auth-button.tsx')
-ok('i18n: auth-button modal strings localizable (Google/email/password/createAccount)', ['continueGoogle','email','password','createAccount'].every((k) => ab.includes(k)))
+// Email/password sign-in is disabled in Firebase, so the modal is Google-only; its
+// status/error strings must be localizable (behaviour covered in eval/auth-google-signin.test.mjs).
+ok('i18n: auth-button modal strings localizable (Google + loading/error/retry states)', ['continueGoogle','googleLoading','googleUnavailable','googleTimeout','googleFailed','tryAgain'].every((k) => ab.includes(k)))
+ok('auth-button: no email/password fields while password sign-in is disabled', !/type="password"|type="email"/.test(ab))
 
 // ── enterprise hardening: footer + badge (PARTs 13/8) ─────────────
 const footer = read('components/trustseal/site-footer.tsx')
