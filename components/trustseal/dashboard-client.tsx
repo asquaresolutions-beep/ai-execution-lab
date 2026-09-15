@@ -88,7 +88,7 @@ function DashboardInner({ locale }: { locale: Locale }) {
       <div className="flex items-center justify-between rounded-xl border p-4" style={card}>
         <div>
           <p className="text-sm" style={{ color: 'rgb(var(--ts-text-2))' }}>{x('dash.signedInAs')}</p>
-          <p className="text-base font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>
+          <p data-clarity-mask="True" className="text-base font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>
             {account?.email || user.email}
           </p>
         </div>

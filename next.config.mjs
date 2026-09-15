@@ -53,7 +53,8 @@ const nextConfig = {
     // Content-Security-Policy — compatible with everything the three products load:
     // Firebase Auth (apis.google.com / gstatic / *.firebaseapp.com auth iframe /
     // *.googleapis.com), Razorpay checkout (*.razorpay.com), Google AdSense +
-    // GA/Plausible/Vercel analytics, and Next's inline runtime + our inline
+    // GA/Plausible/Vercel analytics, Microsoft Clarity (*.clarity.ms tag/script/collect,
+    // c.bing.com; its c.gif beacon is covered by img-src https:), and Next's inline runtime + our inline
     // consent/JSON-LD scripts. 'unsafe-inline'/'unsafe-eval' are required here
     // (inline framework + AdSense + JSON-LD; nonce migration is a separate effort);
     // every other directive is locked down (object-src none, frame-ancestors none,
@@ -63,11 +64,11 @@ const nextConfig = {
       // accounts.google.com is REQUIRED for Google Identity Services (the
       // /gsi/client sign-in script + its One Tap iframe + status calls). Omitting
       // it (initial CSP) blocked the GIS script → Google sign-in never became ready.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://www.gstatic.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://checkout.razorpay.com https://*.razorpay.com https://*.googletagmanager.com https://*.google-analytics.com https://plausible.io https://va.vercel-scripts.com https://*.vercel-insights.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://www.gstatic.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://checkout.razorpay.com https://*.razorpay.com https://*.googletagmanager.com https://*.google-analytics.com https://plausible.io https://va.vercel-scripts.com https://*.vercel-insights.com https://*.clarity.ms",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' https://accounts.google.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://*.razorpay.com https://api.razorpay.com https://*.google-analytics.com https://*.googlesyndication.com https://plausible.io https://*.vercel-insights.com",
+      "connect-src 'self' https://accounts.google.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://*.razorpay.com https://api.razorpay.com https://*.google-analytics.com https://*.googlesyndication.com https://plausible.io https://*.vercel-insights.com https://*.clarity.ms https://c.bing.com",
       "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://*.razorpay.com https://*.google.com https://googleads.g.doubleclick.net https://*.googlesyndication.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",

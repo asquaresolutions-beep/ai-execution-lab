@@ -101,7 +101,7 @@ export function AuthButton({ labels, locale }: { labels?: AuthLabels; locale?: s
 
   if (user) return (
     <div className="flex items-center gap-2 text-sm">
-      <span className="text-zinc-400">{L('greeting')}, {user.name}</span>
+      <span data-clarity-mask="True" className="text-zinc-400">{L('greeting')}, {user.name}</span>
       <button onClick={signOut} className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-500">{L('signOut')}</button>
     </div>
   )

@@ -55,7 +55,7 @@ export function ApiAccessSection({ locale = 'en' as Locale }: { locale?: Locale 
   )
 
   return (
-    <section data-api-access className="rounded-xl border p-5" style={card}>
+    <section data-api-access data-clarity-mask="True" className="rounded-xl border p-5" style={card}>
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold" style={{ color: 'rgb(var(--ts-text-1))' }}>{x('dash.apiTitle')}</h2>
         <div className="flex items-center gap-2">

@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { setClarityConsent } from '@/components/analytics/clarity'
 
 const KEY = 'sc-consent-v1'
 type Prefs = { analytics: boolean; ads: boolean }
@@ -31,6 +32,8 @@ function apply(prefs: Prefs) {
       analytics_storage: prefs.analytics ? 'granted' : 'denied',
     })
   }
+  // Microsoft Clarity (Consent API v2) — no-op where Clarity isn't loaded.
+  setClarityConsent(prefs)
 }
 
 export function ConsentBanner() {

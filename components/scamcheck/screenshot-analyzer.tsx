@@ -163,6 +163,7 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang, source }: { def
       </div>
 
       <div
+        data-clarity-mask="True"
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }} onDragLeave={() => setDragOver(false)} onDrop={onDrop} onClick={pick}
         className={cn('mt-3 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition', dragOver ? 'border-sky-400 bg-sky-500/10' : 'border-zinc-700 hover:border-zinc-500')}
       >
@@ -183,7 +184,7 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang, source }: { def
       {preview && (
         <div className="mt-6 grid gap-6 md:grid-cols-2">
           <div>
-            <div className="relative inline-block overflow-hidden rounded-lg border border-zinc-800">
+            <div data-clarity-mask="True" className="relative inline-block overflow-hidden rounded-lg border border-zinc-800">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img ref={imgRef} src={preview} alt="uploaded screenshot" className="max-w-full" onLoad={(e) => setNat({ w: e.currentTarget.naturalWidth || 1, h: e.currentTarget.naturalHeight || 1 })} />
               {result?.regions?.map((r, i) => (
@@ -200,7 +201,7 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang, source }: { def
                   <span className="text-sm">Risk {result.riskScore}/100</span>
                 </div>
                 <div className="mt-1 text-xs opacity-80">Scam probability {Math.round(result.scamProbability * 100)}% · trust {result.trustScore}/100 · {result.classification.category.replace(/_/g, ' ')}{result.deepAnalysisUsed ? ' · deep vision' : ''}{result.cached ? ' · cached' : ''}</div>
-                {result.explanation && <p className="mt-2 text-sm opacity-90">{result.explanation}</p>}
+                {result.explanation && <p data-clarity-mask="True" className="mt-2 text-sm opacity-90">{result.explanation}</p>}
               </div>
 
               {result.safetyAdvice?.length > 0 && (
@@ -212,7 +213,7 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang, source }: { def
               {result.entities && (result.entities.phones.length + result.entities.urls.length + result.entities.upiIds.length + result.entities.amounts.length > 0) && (
                 <div className="space-y-2">
                   <h3 className="text-sm font-medium text-zinc-300">{t(lang, 'extracted')}</h3>
-                  <div className="flex flex-wrap gap-2 text-xs">
+                  <div data-clarity-mask="True" className="flex flex-wrap gap-2 text-xs">
                     {result.entities.urls.map((u, i) => <span key={`u${i}`} className={cn('rounded-full px-2 py-1', result.entities.shorteners.includes(u) ? 'bg-red-500/15 text-red-300' : 'bg-zinc-800 text-zinc-300')}>{u}</span>)}
                     {result.entities.upiIds.map((u, i) => <span key={`p${i}`} className="rounded-full bg-amber-500/15 px-2 py-1 text-amber-300">{u}</span>)}
                     {result.entities.phones.map((p, i) => <span key={`ph${i}`} className="rounded-full bg-zinc-800 px-2 py-1 text-zinc-300">📞 {p}</span>)}
@@ -227,7 +228,7 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang, source }: { def
                   <ul className="space-y-1">{result.visualSignals.map((s) => (
                     <li key={s.id} className="flex items-start gap-2 text-sm">
                       <span className={cn('mt-0.5 h-2 w-2 shrink-0 rounded-full', s.severity === 'danger' ? 'bg-red-400' : s.severity === 'warn' ? 'bg-amber-400' : 'bg-zinc-400')} />
-                      <span className="text-zinc-300">{s.label} <span className="text-zinc-500">— “{s.evidence}”</span></span>
+                      <span className="text-zinc-300">{s.label} <span data-clarity-mask="True" className="text-zinc-500">— “{s.evidence}”</span></span>
                     </li>
                   ))}</ul>
                 </div>

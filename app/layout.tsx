@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import { Analytics } from '@/components/analytics'
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react'
+import { Clarity } from '@/components/analytics/clarity'
 import { SiteChrome } from '@/components/layout/site-chrome'
 import { ConsentBanner } from '@/components/consent/consent-banner'
 
@@ -114,6 +115,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Vercel Analytics — single script, all routes, minimal overhead */}
         <VercelAnalytics />
+
+        {/* Microsoft Clarity — per-hostname project, production hosts only, consent-aware */}
+        <Clarity />
 
         {/* GDPR/UK/EU cookie consent — Google Consent Mode v2 */}
         <ConsentBanner />
