@@ -10,7 +10,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params
   const lc: Locale = isLocale(locale) ? locale : DEFAULT_LOCALE
   const p = aboutContent[lc]
-  return buildTrustMeta({ locale: lc, subpath: '/about', title: `${p.title} — TrustSeal`, description: p.subtitle, index: true })
+  return buildTrustMeta({ locale: lc, subpath: '/about', title: `${p.title} — TrustSeal`, description: p.metaDescription ?? p.subtitle, index: true })
 }
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {

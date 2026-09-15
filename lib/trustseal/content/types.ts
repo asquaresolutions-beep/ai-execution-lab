@@ -12,6 +12,8 @@ export interface ContentSection {
 export interface ContentPage {
   title: string
   subtitle: string
+  // Optional search-snippet description; metadata falls back to `subtitle` when unset.
+  metaDescription?: string
   sections: ContentSection[]
 }
 export type LocalizedPage = Record<Locale, ContentPage>

@@ -6,6 +6,7 @@ export const docsContent: LocalizedPage = {
   en: {
     title: 'Documentation',
     subtitle: 'Everything you need to verify a domain, publish your trust badge, and understand the trust score.',
+    metaDescription: 'TrustSeal docs: verify domain ownership with a DNS TXT record, add the trust badge script, understand the 0–100 trust score, and use the public Trust API.',
     sections: [
       { heading: 'Getting started', bullets: ['Sign in and open your dashboard.', 'Enter the domain you want to verify.', 'Add the DNS TXT record we generate, then click Verify.', 'Publish your badge and share your public seal page.'] },
       { heading: 'How verification works', paras: ['TrustSeal confirms that you control a domain, then turns ownership and reputation signals into a single, explainable trust score. The first account to verify a domain owns it within TrustSeal.'] },

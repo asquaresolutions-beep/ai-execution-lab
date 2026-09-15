@@ -6,6 +6,7 @@ export const aboutContent: LocalizedPage = {
   en: {
     title: 'About TrustSeal',
     subtitle: 'Verifiable business trust for an internet where anyone can claim to be anyone.',
+    metaDescription: 'About TrustSeal: a product by A Square Solutions that turns domain ownership and reputation signals into a verifiable trust score, badge and public seal page.',
     sections: [
       { heading: 'What is TrustSeal', paras: ['TrustSeal turns domain ownership and reputation signals into a verifiable trust score, an embeddable badge, and a public seal page — so customers, partners, and platforms can trust who they deal with.'] },
       { heading: 'Why TrustSeal exists', paras: ['Online, anyone can claim to be anyone. Logos and "trust us" copy are trivial to fake. TrustSeal replaces self-asserted trust with verifiable, tamper-resistant signals anchored to domain ownership.'] },
