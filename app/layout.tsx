@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import { Analytics } from '@/components/analytics'
-import { WebVitals } from '@/components/analytics/web-vitals'
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react'
 import { SiteChrome } from '@/components/layout/site-chrome'
 import { ConsentBanner } from '@/components/consent/consent-banner'
@@ -115,9 +114,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Vercel Analytics — single script, all routes, minimal overhead */}
         <VercelAnalytics />
-
-        {/* Web Vitals reporter — logs in dev, beacons to /api/vitals in prod */}
-        <WebVitals />
 
         {/* GDPR/UK/EU cookie consent — Google Consent Mode v2 */}
         <ConsentBanner />
