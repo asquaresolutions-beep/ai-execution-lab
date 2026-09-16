@@ -9,7 +9,7 @@ import { ES_CHECKERS, ES_HOME_FAQ } from '@/lib/scamcheck/es-pages'
 
 export const metadata: Metadata = buildMeta({
   path: '/es',
-  title: 'Detector de Estafas con IA Gratis — WhatsApp, SMS, Enlaces y Phishing | ScamCheck',
+  title: 'Detector de Estafas con IA — WhatsApp, SMS y Enlaces | ScamCheck',
   description: 'Detector de estafas con IA gratis. Analiza mensajes, enlaces, correos, números y capturas para detectar phishing y fraude. Para España, México, Argentina, Colombia, Perú y Chile.',
   keywords: ['detector de estafas', 'verificar enlace estafa', 'comprobar mensaje fraude', 'detector de phishing', 'es esto una estafa', 'verificador de estafas whatsapp'],
   languages: { es: '/es', en: '/', hi: '/hi', 'x-default': '/' },
