@@ -12,20 +12,25 @@ import { readVerificationHistory } from '@/lib/trustseal/verify/persistence'
 import { getEntitlement } from '@/lib/billing/entitlement'
 import { diffSnapshot, type MonSnapshot, type AlertEvent } from './diff'
 import { writeAlert } from './alerts'
+import { isReverifyOverdue, isTimestamp, resolveExpiryBasis } from './reverify-due'
 import { emailConfigured, sendListEmail } from '@/lib/email/notify'
+import { log } from '@/lib/observability/logger'
 
 const CLAIMS = 'ts_claims'
 const ACCOUNTS = 'ts_accounts'
 const MAX_DOMAINS = 25            // per-run cap (serverless budget)
 const RECHECK_AFTER_MS = 20 * 60 * 60 * 1000 // re-verify if last check older than 20h
-const REVERIFY_DUE_MS = 90 * 86_400_000      // verification-expiry window (matches the certificate)
 
 interface StoredClaim { domain: string; accountId: string; status: string; verifiedAt?: number; lastCheckedAt?: number }
 
 export interface ScanResult { scanned: number; reverified: number; alerts: number; emailed: number; skipped: number }
 
+/** Injectable collaborators (tests only; production uses the defaults). */
+export interface ScanDeps { reverify: typeof getVerification }
+
 /** Run one monitoring pass. Best-effort throughout; never throws. */
-export async function runMonitoringScan(now = Date.now()): Promise<ScanResult> {
+export async function runMonitoringScan(now = Date.now(), deps: Partial<ScanDeps> = {}): Promise<ScanResult> {
+  const reverify = deps.reverify ?? getVerification
   const res: ScanResult = { scanned: 0, reverified: 0, alerts: 0, emailed: 0, skipped: 0 }
   let claims: StoredClaim[] = []
   try {
@@ -64,22 +69,33 @@ export async function runMonitoringScan(now = Date.now()): Promise<ScanResult> {
     } catch { /* no prior history */ }
 
     // Force a fresh verification (re-checks DNS/SSL/reputation; appends history).
+    // A failed re-verify skips the diff but NOT the expiry check below, which must
+    // still see how old the last SUCCESSFUL verification is.
+    let reverifiedAt: number | null = null
     try {
-      await getVerification(c.domain, { forceRefresh: true, now })
+      const outcome = await reverify(c.domain, { forceRefresh: true, now })
       res.reverified++
-    } catch { continue }
+      reverifiedAt = isTimestamp(outcome?.checkedAt) ? outcome.checkedAt : now
+    } catch { /* re-verify failed: no diff; expiry evaluated only if the history is usable */ }
 
-    // Snapshot AFTER, diff against before.
+    // Snapshot AFTER (latest history row), diff against before. historyCheckedAt stays
+    // null when the history cannot be read (expiry state then unknown if re-verify failed).
     let after: MonSnapshot | null = null
+    let historyCheckedAt: unknown[] | null = null
     try {
       const hist = await readVerificationHistory(c.domain)
+      historyCheckedAt = hist.map((h) => h.checkedAt)
       const last = hist[hist.length - 1]
       if (last) after = { band: last.band, score: last.score, signals: last.signals }
     } catch { /* skip */ }
 
-    const events: AlertEvent[] = before && after ? diffSnapshot(before, after) : []
-    // Verification-expiry (time-based) alert.
-    if (c.verifiedAt && now - (c.lastCheckedAt ?? c.verifiedAt) > REVERIFY_DUE_MS) {
+    const events: AlertEvent[] = reverifiedAt != null && before && after ? diffSnapshot(before, after) : []
+    // Verification-expiry (time-based) alert, measured from the latest successful
+    // monitoring re-verification — never from ts_claims.lastCheckedAt (DNS-ownership check).
+    // Skipped when that time is unknown this run (re-verify failed AND history unreadable/malformed).
+    const basis = resolveExpiryBasis(reverifiedAt, historyCheckedAt)
+    if (basis.malformed > 0) log.warn({ event: 'trustseal.monitor.history_checkedAt_malformed', domain: c.domain, malformed: basis.malformed })
+    if (basis.known && isReverifyOverdue({ lastVerifiedAt: basis.lastVerifiedAt, verifiedAt: c.verifiedAt, now })) {
       events.push({ kind: 'reverify_due', severity: 'warning', detail: 'Verification is overdue for re-check.' })
     }
 
