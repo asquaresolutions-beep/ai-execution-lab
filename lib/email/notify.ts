@@ -154,6 +154,22 @@ export async function notifyContact(d: { name?: string; email?: string; kind?: s
   return { admin: admin.ok, user, error: admin.error }
 }
 
+// Readable names for the asquaresolution.com/contact/ service <select> option values,
+// used ONLY in the visitor autoresponder. The admin notification keeps the raw value.
+const SERVICE_LABELS: Record<string, string> = {
+  'ai-automation': 'AI automation',
+  seo: 'SEO and content',
+  'web-dev': 'web development',
+  'digital-marketing': 'digital marketing',
+  'ai-product': 'AI product development',
+  consulting: 'strategy and consulting',
+}
+
+/** Readable label for a known service value; null for "other", blank or anything unknown. */
+export function serviceLabel(service?: string): string | null {
+  return service && Object.prototype.hasOwnProperty.call(SERVICE_LABELS, service) ? SERVICE_LABELS[service] : null
+}
+
 /** Service lead form: admin notification (with service + message + source) + user autoresponder. */
 export async function notifyLead(d: { name?: string; email: string; service?: string; message?: string; source?: string }): Promise<{ admin: boolean; user: boolean; error?: string }> {
   const admin = await send({
@@ -168,12 +184,13 @@ export async function notifyLead(d: { name?: string; email: string; service?: st
       <p><b>Message:</b></p><p style="white-space:pre-wrap">${esc(d.message || '—')}</p>
       <p><b>Source page:</b> ${esc(d.source || '—')}</p>`),
   })
+  const label = serviceLabel(d.service)
   const user = await send({
     to: d.email,
     from: ASQ_FROM,
     subject: 'Thanks — we\'ll be in touch within 24 hours',
     html: wrapAsq('Thanks for reaching out', `
-      <p>Hi${d.name ? ' ' + esc(d.name) : ''}, thanks for your interest${d.service ? ` in our ${esc(d.service)}` : ''}. A Square Solutions will review your request and reply within 24 hours.</p>
+      <p>Hi${d.name ? ' ' + esc(d.name) : ''}, ${label ? `thanks for your interest in our ${esc(label)} services` : 'thanks for getting in touch'}. A Square Solutions will review your request and reply within 24 hours.</p>
       <p>In the meantime, explore <a href="https://asquaresolution.com/services/">our services</a> or our <a href="https://asquaresolution.com/case-studies/">case studies</a>.</p>`),
   })
   return { admin: admin.ok, user: user.ok, error: admin.error || user.error }
