@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { LANGS, t, type Lang } from '@/lib/i18n/scamcheck'
 import { getCountry, resolveCountryDetailed, type CountryConfig, type GeoSource } from '@/lib/scam-intel/countries'
+import { linkSourceFromSearch } from '@/lib/scam-intel/link-source'
 import { NewsletterCapture } from '@/components/scamcheck/newsletter-capture'
 import { useCredits, authHeaders } from '@/hooks/use-credits'
 import { useAuth } from '@/components/auth/auth-provider'
@@ -99,8 +100,11 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang, source }: { def
     setPreview(dataUrl)
     setStage('analyzing')
     trackEvent('scan_start', { check_type: 'screenshot', ...(source ? { embed_source: source } : {}) })
+    // Server-side funnel attribution only (GA4 params above/below are unchanged):
+    // embed routes pass `source`; tagged-link arrivals fall back to their UTM tags.
+    const logSource = source || (typeof window !== 'undefined' ? linkSourceFromSearch(window.location.search) : undefined)
     try {
-      const r = await fetch('/api/scam-intel/screenshot', { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders(user) }, body: JSON.stringify({ imageBase64: dataUrl, mime, ...(source ? { embed_source: source } : {}) }) })
+      const r = await fetch('/api/scam-intel/screenshot', { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders(user) }, body: JSON.stringify({ imageBase64: dataUrl, mime, ...(logSource ? { embed_source: logSource } : {}) }) })
       const data = await r.json()
       if (r.status === 402) { setError(data.detail || `Daily limit reached (${quota} credits; screenshots use 3). Sign in for 50/day.`); setStage('error'); void refresh(); return }
       if (!r.ok) { setError(data.detail || data.error || 'Analysis failed.'); setStage('error'); return }
