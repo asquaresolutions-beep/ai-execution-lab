@@ -190,6 +190,15 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Run on everything except Next internals/static; host + path gating is in code.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  // Run on everything except Next internals/static — and never on the Lab host, where this
+  // middleware is a no-op (see the "lab/other hosts untouched" early return above). Host + path
+  // gating for the product hosts stays in code.
+  // Only the exact Lab host is exempt. If the host condition ever stops matching, the
+  // middleware simply runs on Lab again (the previous behaviour).
+  matcher: [
+    {
+      source: '/((?!_next/static|_next/image|favicon.ico).*)',
+      missing: [{ type: 'host', value: 'lab\\.asquaresolution\\.com' }],
+    },
+  ],
 }
