@@ -75,7 +75,8 @@ export const POST = jsonRoute('scam-intel/quick-check', async (req) => {
   })
   risk = rep.risk
 
-  const verdict = risk >= 70 ? 'likely_scam' : risk >= 35 ? 'suspicious' : rep.trusted ? 'likely_safe' : value.length < 12 ? 'unclear' : 'likely_safe'
+  // Absence of evidence is not evidence of safety: only a trusted entity is `likely_safe`.
+  const verdict = risk >= 70 ? 'likely_scam' : risk >= 35 ? 'suspicious' : rep.trusted ? 'likely_safe' : 'unclear'
   if (id.loggedIn && id.uid) void recordScan(id.uid, { ts: Date.now(), type, verdict, risk, label: ts.category })
   const advice: string[] = []
   if (impersonations.length) advice.push(`This looks like a fake look-alike of ${impersonations[0].brand} (real: ${impersonations[0].legitDomain}). Do not trust it — open the official app/website directly, never via this link.`)
