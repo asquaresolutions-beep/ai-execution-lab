@@ -129,7 +129,47 @@ test('wiring: result cards use the shared helpers, no raw .replace on verdict/ca
 })
 test('wiring: share uses a fixed site URL, never window.location (which can carry ?q=<input>)', () => {
   assert.match(quick, /<ShareResult summary=\{buildShareSummary\(result\)\} url=\{SITE\} \/>/)
+  // Exactly one ShareResult and one SITE assignment: no second/commented-out share
+  // button and no shadowed or reassigned SITE that could bypass the guard.
+  assert.equal((quick.match(/<ShareResult\b/g) || []).length, 1)
+  assert.equal((quick.match(/\bSITE\s*=(?!=)/g) || []).length, 1)
 })
 test('wiring: screenshot header no longer shows the trust score / scam probability', () => {
   assert.doesNotMatch(shot, /result\.trustScore|result\.scamProbability/)
+})
+
+// ── Share-URL guard: empty NEXT_PUBLIC_SITE_URL ────────────────────────────
+// SCAMCHECK_BASE is `process.env.NEXT_PUBLIC_SITE_URL ?? <default>`, so an EMPTY
+// env value yields "". ShareResult treats a falsy `url` as "use window.location
+// .href", which can carry the user's message in ?q=. The quick analyzer must
+// therefore never hand ShareResult an empty URL.
+// No JSX/DOM tooling here, so this evaluates the REAL source expressions: the
+// `const SITE = …` declaration in quick-analyzer.tsx and the `shareUrl` line in
+// share-result.tsx (unchanged), chained exactly as at runtime.
+const FIXED_SITE = 'https://scamcheck.asquaresolution.com'
+const shareSrc = readFileSync(B + 'components/scamcheck/share-result.tsx', 'utf8')
+function sourceExpr(src, re, what) {
+  const m = src.match(re)
+  assert.ok(m, `${what} not found`)
+  return m[1].trim()
+}
+test('share URL guard: quick analyzer imports SCAMCHECK_BASE and passes the guarded SITE', () => {
+  assert.match(quick, /^import \{ SCAMCHECK_BASE \} from '@\/lib\/seo\/scamcheck-meta'$/m)
+  assert.match(quick, /<ShareResult summary=\{buildShareSummary\(result\)\} url=\{SITE\} \/>/)
+})
+test('share URL guard: empty or absent SITE → fixed ScamCheck URL, never window.location.href', () => {
+  const siteOf = new Function('SCAMCHECK_BASE', `return (${sourceExpr(quick, /^const SITE = (.+)$/m, 'quick-analyzer `const SITE = …`')})`)
+  const shareUrlOf = new Function('url', 'window', `return (${sourceExpr(shareSrc, /const shareUrl = (.+)$/m, 'share-result `const shareUrl = …`')})`)
+  const win = { location: { href: `${FIXED_SITE}/?q=${SENTINEL}` } }
+  // Control: ShareResult itself still falls back to window.location for an empty url.
+  assert.equal(shareUrlOf('', win), win.location.href)
+  for (const base of ['', undefined]) {
+    const site = siteOf(base)
+    assert.equal(site, FIXED_SITE, `SITE for SCAMCHECK_BASE=${JSON.stringify(base)}`)
+    const shared = shareUrlOf(site, win)
+    assert.equal(shared, FIXED_SITE)
+    assert.ok(!shared.includes(SENTINEL), 'user input leaked into the share URL')
+  }
+  // A configured, non-empty value is still respected.
+  assert.equal(siteOf('https://lab.asquaresolution.com'), 'https://lab.asquaresolution.com')
 })

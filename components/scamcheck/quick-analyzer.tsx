@@ -9,8 +9,12 @@ import { useAuth } from '@/components/auth/auth-provider'
 import { ShareResult } from '@/components/scamcheck/share-result'
 import { NewsletterCapture } from '@/components/scamcheck/newsletter-capture'
 import { trackEvent } from '@/lib/track-event'
-import { SCAMCHECK_BASE as SITE } from '@/lib/seo/scamcheck-meta'
+import { SCAMCHECK_BASE } from '@/lib/seo/scamcheck-meta'
 import { verdictStyle, verdictLabel, buildShareSummary, TRUSTED_NOTE } from '@/lib/scamcheck/result-presentation'
+
+// An empty NEXT_PUBLIC_SITE_URL would make ShareResult fall back to window.location,
+// which can carry the user's message in ?q= — always share a fixed origin instead.
+const SITE = SCAMCHECK_BASE || 'https://scamcheck.asquaresolution.com'
 
 type Tab = 'message' | 'link' | 'email' | 'phone' | 'screenshot'
 const TABS: { id: Tab; label: string }[] = [
