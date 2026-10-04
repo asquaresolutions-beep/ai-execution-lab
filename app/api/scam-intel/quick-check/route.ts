@@ -68,7 +68,9 @@ export const POST = jsonRoute('scam-intel/quick-check', async (req) => {
   if (impersonations.length) risk = Math.max(risk, impDanger ? 85 : 60)
   const strongFraudSignal = ts.signals.some((s) => STRONG.has(s.id)) || urlDanger > 0 || impDanger
   const rep = applyReputation(risk, {
-    domains: [...(type === 'link' ? [value] : []), ...ts.entities.urls],
+    // Only the exact entity being checked may earn trust: a domain merely mentioned
+    // in a message (or a fragment parsed out of a link) cannot prove who sent it.
+    domains: type === 'link' ? [value] : [],
     emails: type === 'email' ? [value] : [],
     upiIds: [...(type === 'upi' ? [value] : []), ...ts.entities.upiIds],
     strongFraudSignal,

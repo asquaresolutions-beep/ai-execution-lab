@@ -103,15 +103,12 @@ for (const [id, base, mention, verdict, risk] of PAIRS) {
   })
 }
 
-// ── Legitimate counterexamples: trust still confirms low-risk official input ─
+// ── Legitimate counterexamples: trust still confirms a low-risk CHECKED link/email ─
 const LEGIT = [
   ['link', 'https://www.hdfcbank.com'],
   ['link', 'https://www.onlinesbi.sbi/login'],
   ['email', 'alerts@hdfcbank.com'],
   ['email', 'support@asquaresolution.com'],
-  ['message', 'Your SBI account statement for September is ready. View it in the YONO app or at https://www.onlinesbi.sbi'],
-  ['message', 'Your OTP is 482913. Do not share it with anyone. -HDFC Bank hdfcbank.com'],
-  ['message', 'Order 4021 delivered. Rate your experience on the Amazon app. amazon.in'],
 ]
 for (const [type, value] of LEGIT) {
   test(`counterexample stays likely_safe + trusted: ${type} ${value.slice(0, 50)}`, async () => {
@@ -119,6 +116,65 @@ for (const [type, value] of LEGIT) {
     assert.equal(d.verdict, 'likely_safe'); assert.equal(d.trusted, true)
   })
 }
+
+// ── Benign MESSAGES that only mention an official domain (Fix 2B) ───────────
+// A domain named inside pasted text cannot prove who sent it, so it no longer
+// earns trust: these move from likely_safe (green) to unclear (grey). Accepted
+// behaviour change — they must never be pushed to suspicious/likely_scam either.
+const BENIGN_MENTIONS = [
+  'Your SBI account statement for September is ready. View it in the YONO app or at https://www.onlinesbi.sbi',
+  'Your OTP is 482913. Do not share it with anyone. -HDFC Bank hdfcbank.com',
+  'Order 4021 delivered. Rate your experience on the Amazon app. amazon.in',
+]
+for (const value of BENIGN_MENTIONS) {
+  test(`benign mention is unclear (not trusted, not scam): message ${value.slice(0, 50)}`, async () => {
+    const d = await check('message', value)
+    assert.equal(d.verdict, 'unclear'); assert.equal(d.trusted, false)
+    assert.notEqual(d.verdict, 'likely_scam')
+  })
+}
+
+// ── Fix 2B regression cases (audit 2026-10-04, synthetic) ───────────────────
+// Scams that carry an official domain and only warn-level signals scored < 35
+// and were turned green by the mention. They must no longer be trusted/green.
+const MENTION_SCAMS = [
+  ['A1 refund fee + UPI + official domain', 'Your SBI refund is on hold. Pay the Rs 99 processing fee to refund.desk@ybl to release it today, account will be blocked otherwise. Details at sbi.co.in'],
+  ['A2 reward fee + UPI + official domain', 'Your HDFC credit card reward points of Rs 5,000 will lapse tonight. Pay Rs 49 handling charge to reward.help@ybl to redeem. hdfcbank.com'],
+  ['B1 brand name + unknown link + official domain', 'SBI alert: your YONO access is paused. Re-activate at https://yono-secure-access.in today. Official site sbi.co.in'],
+  ['B2 look-alike sender + official domain', 'From: alerts@hdfc-netbanking-support.in — Your HDFC account needs verification. hdfcbank.com'],
+]
+for (const [id, value] of MENTION_SCAMS) {
+  test(`2B: official mention no longer makes a scam green — ${id}`, async () => {
+    const d = await check('message', value)
+    assert.notEqual(d.verdict, 'likely_safe'); assert.equal(d.trusted, false)
+    assert.doesNotMatch(d.reputationNotes.join(' '), /treated as likely legitimate/)
+    assert.ok(!d.advice.some((a) => /verified\/official entity/.test(a)), 'no "verified/official entity" advice')
+  })
+}
+test('2B: C4 benign branch-info mention is unclear, not suspicious', async () => {
+  const d = await check('message', 'Branch timings and holiday list are available at sbi.co.in')
+  assert.equal(d.verdict, 'unclear'); assert.equal(d.trusted, false)
+})
+test('2B: B3 shortener + official mention stays likely_scam (strong signal unchanged)', async () => {
+  const d = await check('message', 'SBI: verify now at bit.ly/sbi-kyc-now or your account will be blocked. sbi.co.in')
+  assert.equal(d.verdict, 'likely_scam'); assert.equal(d.trusted, false)
+})
+test('2B: A3 look-alike parcel link + official mention stays untrusted', async () => {
+  const d = await check('message', 'India Post: your parcel is held at the hub. Pay Rs 25 redelivery fee at indiapost-redelivery.in today. indiapost.gov.in')
+  assert.notEqual(d.verdict, 'likely_safe'); assert.equal(d.trusted, false)
+})
+test('2B: D3 link check with a backslash-@ fragment of an official domain is not trusted', async () => {
+  const d = await check('link', 'https://evil.example\\@sbi.co.in')
+  assert.notEqual(d.verdict, 'likely_safe'); assert.equal(d.trusted, false)
+})
+test('2B: D1 checked official link keeps likely_safe + trusted', async () => {
+  const d = await check('link', 'https://www.sbi.co.in/web/personal-banking')
+  assert.equal(d.verdict, 'likely_safe'); assert.equal(d.trusted, true)
+})
+test('2B: E1 unknown UPI ID stays unclear', async () => {
+  const d = await check('upi', 'refund.desk@ybl')
+  assert.equal(d.verdict, 'unclear'); assert.equal(d.trusted, false)
+})
 
 // ── Documented trade-off: a legitimate-STYLE message at/above the threshold ──
 // SYNTHETIC legitimate-style counterexample (written to resemble a routine bank
@@ -139,15 +195,15 @@ test('trade-off (Fix 2A): synthetic legitimate-style RBI/KYC reminder is suspici
   assert.equal(d.verdict, 'suspicious')
   assert.equal(d.riskScore, 36)
   assert.equal(d.trusted, false)
-  assert.match(d.reputationNotes.join(' '), /naming a real brand does not make it safe/)
+  assert.doesNotMatch(d.reputationNotes.join(' '), /treated as likely legitimate/)
   // Same inputs at the unit level: the official domain no longer caps 36 → 15.
   const r = applyReputation(36, { domains: ['https://www.onlinesbi.sbi'] })
   assert.equal(r.risk, 36); assert.equal(r.trusted, false)
 })
 
-// Known limitation, deliberately NOT fixed by 2A: a below-threshold message is
-// still *granted* trust by a mention (unclear 30 → likely_safe 15). Fix 2B.
-test('limitation (Fix 2B): mention still grants trust below the threshold', { todo: 'Fix 2B — trust only the checked entity' }, async () => {
+// Fix 2B: a below-threshold message is no longer *granted* trust by a mention
+// (was likely_safe 15; now unclear 30). Formerly a node:test todo.
+test('Fix 2B: mention no longer grants trust below the threshold', async () => {
   const d = await check('message', 'Your SBI refund is on hold. Pay the Rs 99 processing fee to refund.desk@ybl to release it today, account will be blocked otherwise. Details at sbi.co.in')
   assert.notEqual(d.verdict, 'likely_safe')
 })
