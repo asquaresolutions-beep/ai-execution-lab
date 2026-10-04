@@ -54,6 +54,9 @@ export function analyzeUrl(url: string): UrlFinding {
   const risks: UrlRisk[] = []
   const labels = host.split('.')
   const sld = labels.length >= 2 ? labels[labels.length - 2] : host
+  // Exact official-domain comparison only: the absolute form (one trailing dot) of
+  // an official host is that host. All other logic keeps the original `host`.
+  const officialHost = host.replace(/\.$/, '')
 
   if (/^https?:\/\//i.test(url) && url.toLowerCase().startsWith('http://')) risks.push('insecure_http')
   if (/xn--/i.test(host)) risks.push('punycode')
@@ -68,7 +71,7 @@ export function analyzeUrl(url: string): UrlFinding {
   // Brand look-alike: SLD close to a brand core but the full host isn't legit.
   const sldNorm = sld.replace(/[013455]/g, (c) => ({ '0': 'o', '1': 'l', '3': 'e', '4': 'a', '5': 's' }[c] || c))
   for (const b of BRANDS) {
-    if (b.legit.includes(host)) break // exact legit domain — not a look-alike
+    if (b.legit.includes(host) || b.legit.includes(officialHost)) break // exact legit domain — not a look-alike
     const dist = levenshtein(sldNorm, b.core)
     const contains = sldNorm.includes(b.core) || host.includes(b.core)
     if ((dist <= 2 || contains) && !b.legit.some((d) => host === d || host.endsWith('.' + d))) {

@@ -2,7 +2,7 @@
 // REUSES the existing scam-intel reputation engine (intel-graph). Maps its verdict
 // to a TrustSeal reputation signal; a malicious verdict carries an intel_graph cap.
 import type { Collector, CollectorContext, CollectorOutput, Signal } from '../types'
-import { domainReputation } from '@/lib/scam-intel/reputation'
+import { registrableDomainReputation } from '@/lib/scam-intel/reputation'
 
 export const reputationCollector: Collector = {
   id: 'reputation',
@@ -11,7 +11,8 @@ export const reputationCollector: Collector = {
   async collect(ctx: CollectorContext): Promise<CollectorOutput> {
     const start = Date.now()
     try {
-      const r = domainReputation(ctx.domain)
+      // TrustSeal policy (registrable domain), distinct from ScamCheck's exact-link policy.
+      const r = registrableDomainReputation(ctx.domain)
       const rep = String(r.reputation).toLowerCase()
       const score = rep === 'trusted' ? 92 : rep === 'malicious' || rep === 'fraud' ? 5 : rep === 'suspicious' ? 25 : 55
       const sig: Signal = {
