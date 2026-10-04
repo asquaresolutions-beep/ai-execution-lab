@@ -96,7 +96,7 @@ export function QuickAnalyzer({ initialTab = 'message' as Tab }: { initialTab?: 
         <div className="mt-4 space-y-3">
           <div className={cn('rounded-lg border p-4', verdictStyle(result.verdict))}>
             <div className="flex items-center justify-between">
-              <span className="text-base font-semibold capitalize">{verdictLabel(result.verdict)}</span>
+              <span className="text-base font-semibold">{verdictLabel(result.verdict)}</span>
               <span className="text-sm">Risk {result.riskScore}/100</span>
             </div>
             {result.trusted && <p className="mt-1 text-xs opacity-80">{TRUSTED_NOTE}</p>}
@@ -111,7 +111,7 @@ export function QuickAnalyzer({ initialTab = 'message' as Tab }: { initialTab?: 
             <ul className="list-inside list-disc space-y-1 text-sm text-zinc-300">{result.advice.map((a, i) => <li key={i}>{a}</li>)}</ul>
           )}
           <p className="text-[11px] text-zinc-500">Automated risk assessment — not legal or financial advice. If money is involved, verify through the official app or website before acting.</p>
-          <ShareResult summary={buildShareSummary(result, SITE)} />
+          <ShareResult summary={buildShareSummary(result)} url={SITE} />
           {/* asq-newsletter-v1 — capture at peak intent (after a verdict) */}
           <NewsletterCapture verdict={result.verdict} source="scan-result-quick" />
         </div>

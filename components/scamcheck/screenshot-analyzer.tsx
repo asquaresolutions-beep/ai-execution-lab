@@ -191,10 +191,10 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang, source }: { def
             <div className="space-y-4">
               <div className={cn('rounded-lg border p-4', verdictStyle(result.verdict))}>
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-semibold capitalize">{verdictLabel(result.verdict)}</span>
+                  <span className="text-lg font-semibold">{verdictLabel(result.verdict)}</span>
                   <span className="text-sm">Risk {result.riskScore}/100</span>
                 </div>
-                <div className="mt-1 text-xs opacity-80">Scam probability {Math.round(result.scamProbability * 100)}% · trust {result.trustScore}/100 · {categoryLabel(result.classification.category)}{result.deepAnalysisUsed ? ' · deep vision' : ''}{result.cached ? ' · cached' : ''}</div>
+                <div className="mt-1 text-xs opacity-80">{[categoryLabel(result.classification?.category), result.deepAnalysisUsed ? 'deep vision' : '', result.cached ? 'cached' : ''].filter(Boolean).join(' · ')}</div>
                 {result.explanation && <p data-clarity-mask="True" className="mt-2 text-sm opacity-90">{result.explanation}</p>}
               </div>
 
