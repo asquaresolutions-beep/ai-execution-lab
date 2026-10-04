@@ -71,10 +71,15 @@ export function phoneReputation(phone: string): ReputationResult {
   return { reputation: 'unknown', reason: 'unverified number', entity: p, kind: 'phone' }
 }
 
+/** Risk at/above which quick-check reports `suspicious` (app/api/scam-intel/quick-check/route.ts). */
+const SUSPICIOUS_RISK = 35
+
 /**
  * Adjust a raw risk score using reputation. Trusted entities get a strong
  * reduction UNLESS strong fraud signals are present (then trust is overridden,
- * because look-alikes/compromise exist). Returns the adjusted risk + note.
+ * because look-alikes/compromise exist) or the raw risk is already at the
+ * suspicious threshold (trust may confirm low risk, never erase high risk).
+ * Returns the adjusted risk + note.
  */
 export function applyReputation(rawRisk: number, opts: { domains?: string[]; emails?: string[]; upiIds?: string[]; strongFraudSignal?: boolean }): { risk: number; trusted: boolean; notes: string[] } {
   const notes: string[] = []
@@ -84,7 +89,14 @@ export function applyReputation(rawRisk: number, opts: { domains?: string[]; ema
   const emailReps = (opts.emails ?? []).map(emailReputation)
   const anyTrusted = checkTrusted(domReps) || checkTrusted(emailReps)
   const anySuspiciousDomain = domReps.some((r) => r.reputation === 'suspicious')
+  // A trusted mention never lowers an already-suspicious score: naming an official
+  // domain is trivial for a scammer. Must match the quick-check `suspicious` threshold.
+  const alreadyRisky = rawRisk >= SUSPICIOUS_RISK
 
+  if (anyTrusted && alreadyRisky && !opts.strongFraudSignal && !anySuspiciousDomain) {
+    notes.push('Mentions an official domain, but the message itself shows risk signals — naming a real brand does not make it safe.')
+    return { risk: rawRisk, trusted, notes }
+  }
   if (anyTrusted && !opts.strongFraudSignal && !anySuspiciousDomain) {
     trusted = true
     notes.push('Matched a verified/first-party entity with no strong fraud signals — treated as likely legitimate.')
