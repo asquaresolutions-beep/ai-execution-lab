@@ -18,7 +18,7 @@ import { extractEntities, entityRiskCount, type ExtractedEntities } from './extr
 import { analyzeUrls, type UrlFinding } from './url-intel'
 import { fingerprint as scamFingerprint } from './fingerprint'
 import { calibrate } from './calibration'
-import { computeTrustScore } from './trustscore'
+import { computeTrustScore, type TrustScoreResult } from './trustscore'
 import { embedQuery, EMBED_DIM } from '@/lib/ai/embeddings'
 import { vectorSearch, bigQueryReady, logImageAnalysis } from '@/lib/store/bigquery'
 import { vertexConfigured } from '@/lib/ai/provider'
@@ -170,7 +170,8 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
   // Cost optimization: return a cached verdict for an identical image — zero
   // OCR / embedding / vision cost on duplicate uploads. (task 10)
   // v3: fail-closed verdicts — never serve a `likely_safe` cached by earlier code.
-  const verdictKey = `screenshot:v3:${imgHash}:${opts.forceDeep ? 'deep' : 'std'}`
+  // v4: verdict-consistent explanations — never serve a cached contradictory one.
+  const verdictKey = `screenshot:v4:${imgHash}:${opts.forceDeep ? 'deep' : 'std'}`
   const cachedVerdict = await getCached<MultimodalVerdict>(verdictKey)
   if (cachedVerdict) return { ...cachedVerdict, cached: true }
 
@@ -196,11 +197,12 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
   if (signals.some((s) => s.id === 'otp_request' || s.id === 'upi_reverse_payment')) rawRisk = Math.max(rawRisk, 55)
 
   // 3. trustscore + retrieval grounding (semantic-search/scam-intel). (task 5, goal 8)
+  let trustModelVerdict: TrustScoreResult['verdict'] | null = null
   let trustScore = 50, scamProbability = rawRisk / 100, baseExplanation = enrichment.scam.tactics.length ? `Detected ${enrichment.scam.category.replace(/_/g, ' ')} with tactics: ${enrichment.scam.tactics.join(', ')}.` : 'Heuristic assessment from extracted text.'
   if (text.trim().length > 10) {
     try {
       const ts = await computeTrustScore(text.slice(0, 4000))
-      trustScore = ts.trustScore; scamProbability = ts.scamProbability; baseExplanation = ts.explanation
+      trustScore = ts.trustScore; scamProbability = ts.scamProbability; baseExplanation = ts.explanation; trustModelVerdict = ts.verdict
       rawRisk = Math.round(Math.min(100, rawRisk * 0.5 + ts.scamProbability * 100 * 0.5))
     } catch (e) { log.warn({ event: 'multimodal.trustscore_failed', detail: String(e).slice(0, 120) }) }
   }
@@ -270,7 +272,7 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
     ...(similarTop >= 0.6 ? [`Matches known scam pattern “${similar[0].title}” (${Math.round(similarTop * 100)}%)`] : []),
   ]
   const explainability: Explainability = {
-    whyFlagged: verdict === 'likely_scam' ? 'Multiple fraud indicators with corroborating evidence.' : verdict === 'suspicious' ? 'Some fraud indicators detected; treat with caution.' : verdict === 'needs_review' ? 'Insufficient/low-confidence evidence — manual review recommended.' : 'No strong fraud indicators detected.',
+    whyFlagged: verdict === 'likely_scam' ? 'Multiple fraud indicators with corroborating evidence.' : verdict === 'suspicious' ? 'Some fraud indicators detected; treat with caution.' : verdict === 'needs_review' ? 'Insufficient/low-confidence evidence — manual review recommended.' : verdict === 'unclear' ? (signals.length ? 'Some risk signals were found, but not enough for a clear verdict — treat with caution.' : 'No clear scam signals were found, but this does not prove the message is safe.') : 'No strong fraud indicators detected.',
     evidence,
     matchingPatterns,
     confidenceReasoning: cal.reasons,
@@ -284,7 +286,7 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
   const result: MultimodalVerdict = {
     verdict, riskScore, scamProbability: Math.round(scamProbability * 1000) / 1000, trustScore,
     confidence: cal.confidence, confidenceBand: cal.band,
-    explanation: baseExplanation,
+    explanation: screenshotExplanation(trustModelVerdict, verdict, explainability.whyFlagged, baseExplanation),
     fingerprint: fp.fingerprint,
     campaignLabel: fp.label,
     safetyAdvice: safetyAdvice(enrichment.scam.category, entities, signals),
@@ -316,6 +318,16 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
     signals: signals.length, deep_used: deepAnalysisUsed, created_at: new Date().toISOString(),
   })
   return result
+}
+
+/**
+ * Explanation shown with a screenshot result. The trust model explains its own
+ * text-only verdict; when that was `safe` but the final verdict is not, its
+ * reassurance ("No strong scam signals detected.") contradicts the result, so the
+ * final verdict's own reason is shown instead. Otherwise it is kept as is.
+ */
+export function screenshotExplanation(trustModelVerdict: TrustScoreResult['verdict'] | null, verdict: MultimodalVerdict['verdict'], whyFlagged: string, trustModelExplanation: string): string {
+  return trustModelVerdict === 'safe' && verdict !== 'likely_safe' ? whyFlagged : trustModelExplanation
 }
 
 // ── Deep Gemini-vision verdict (expensive; gated, retrieval-grounded) ──────
