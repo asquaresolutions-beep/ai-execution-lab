@@ -55,7 +55,7 @@ async function analyzeText(text) {
 
 // 1–2: below threshold with OCR text → unclear (were likely_safe), risk unchanged.
 const BELOW = [
-  ['reverse-QR Hinglish scam', 'Sir galti se 5000 bhej diya, QR code scan karke wapas bhej do', 12],
+  ['reverse-QR Hinglish scam', 'Sir galti se 5000 bhej diya, QR code scan karke wapas bhej do', 33],
   ['benign lunch message', 'Hi, lunch at 1pm tomorrow?', 9],
   ['unknown-UPI payment request', 'pay to refund.desk@ybl to get your money back', 12],
   ['benign statement notice', 'Your SBI account statement for September is ready. View it in the YONO app.', 18],
@@ -75,7 +75,7 @@ const UNCHANGED = [
   ['suspicious: QR prize', 'Scan this QR to receive your Rs 5000 prize money', 'suspicious', 58],
   ['likely_scam: KYC threat with link', 'Dear customer your SBI account will be blocked today. Update PAN at https://yono-kyc-portal.in or mail care@sbi.co.in', 'likely_scam', 76],
   ['likely_scam: KYC reply request', 'Your HDFC account will be suspended today. Update KYC by replying with your Aadhaar and PAN. Ref hdfcbank.com', 'likely_scam', 71],
-  ['needs_review: Hinglish OTP request', 'OTP de do sir, verification ke liye chahiye', 'needs_review', 41],
+  ['needs_review: Hinglish OTP request', 'OTP de do sir, verification ke liye chahiye', 'needs_review', 46],
   ['needs_review: short text (<25 chars)', 'Hi lunch 1pm?', 'needs_review', 9],
   ['needs_review: empty OCR text', '', 'needs_review', 8],
   ['unclear: whitespace-only OCR text', '                              ', 'unclear', 8],

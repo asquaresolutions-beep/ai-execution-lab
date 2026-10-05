@@ -17,13 +17,13 @@ import { jsonRoute, ApiError } from '@/lib/api/json'
 export const dynamic = 'force-dynamic'
 
 type CheckType = 'message' | 'link' | 'email' | 'phone' | 'upi'
-const STRONG = new Set(['otp_request', 'fake_payment', 'suspicious_link'])
+const STRONG = new Set(['otp_request', 'fake_payment', 'suspicious_link', 'upi_reverse_payment'])
 
 function scoreSignals(signals: { id: string; severity: string }[], entityRisk: number, urlDanger: number): number {
   const danger = signals.filter((s) => s.severity === 'danger').length
   const warn = signals.filter((s) => s.severity === 'warn').length
   let risk = Math.min(100, danger * 28 + warn * 12 + entityRisk * 6 + urlDanger * 10)
-  if (signals.some((s) => s.id === 'otp_request')) risk = Math.max(risk, 55)
+  if (signals.some((s) => s.id === 'otp_request' || s.id === 'upi_reverse_payment')) risk = Math.max(risk, 55)
   return risk
 }
 
@@ -83,7 +83,7 @@ export const POST = jsonRoute('scam-intel/quick-check', async (req) => {
   const advice: string[] = []
   if (impersonations.length) advice.push(`This looks like a fake look-alike of ${impersonations[0].brand} (real: ${impersonations[0].legitDomain}). Do not trust it — open the official app/website directly, never via this link.`)
   if (ts.signals.some((s) => s.id === 'otp_request')) advice.push('Never share an OTP/PIN/CVV — no bank or company asks for them.')
-  if (ts.entities.qrPaymentRefs.length || ts.entities.upiIds.length) advice.push('Receiving money on UPI never needs a PIN or QR scan.')
+  if (ts.entities.qrPaymentRefs.length || ts.entities.upiIds.length || ts.signals.some((s) => s.id === 'upi_reverse_payment')) advice.push('Receiving money on UPI never needs a PIN or QR scan.')
   if (urlDanger) advice.push('Do not open look-alike/shortened links.')
   if (rep.trusted) advice.push('This matches a verified/official entity — but always confirm via the official app, not links in messages.')
   advice.push('If in doubt, do not click, pay, or share details. Report at cybercrime.gov.in / 1930 (India).')
