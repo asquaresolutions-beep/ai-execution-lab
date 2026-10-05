@@ -60,12 +60,12 @@ async function screenshot(text) {
 }
 
 // ── Look-alike handles: detection pinned to 43ff8ce ──────────────────────
-// [handle, look-alike brand, technique, screenshot verdict/risk for "pay to <handle>" — measured at 43ff8ce]
+// [handle, look-alike brand, technique, screenshot verdict/risk for "pay to <handle>" — Fix 7 screenshot impersonation check; was 70/26/26/26 at 43ff8ce]
 const LOOKALIKE = [
-  ['sbi.kyc.refund@okaxis', 'sbi', 'deceptive-subdomain', 'likely_scam', 70],
-  ['paytm.care@okaxis', 'paytm', 'wrong-tld', 'needs_review', 26],
-  ['sbi.help@okaxis', 'sbi', 'wrong-tld', 'needs_review', 26],
-  ['paytm.support@okaxis', 'paytm', 'wrong-tld', 'unclear', 26],
+  ['sbi.kyc.refund@okaxis', 'sbi', 'deceptive-subdomain', 'likely_scam', 84],
+  ['paytm.care@okaxis', 'paytm', 'wrong-tld', 'needs_review', 40],
+  ['sbi.help@okaxis', 'sbi', 'wrong-tld', 'needs_review', 40],
+  ['paytm.support@okaxis', 'paytm', 'wrong-tld', 'suspicious', 40],
 ]
 for (const [handle, brand, technique, shotVerdict, shotRisk] of LOOKALIKE) {
   const prefix = handle.slice(0, handle.indexOf('@'))

@@ -23,7 +23,9 @@ const RE = {
   phone: /(?:\+?\d{1,3}[\s-]?)?(?:\d{5}[\s-]?\d{5}|\d{10}|\d{3}[\s-]?\d{3}[\s-]?\d{4})/g,
   url: /\b((?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s)]*)?)/gi,
   shortener: /\b(bit\.ly|tinyurl\.com|t\.co|t\.me|wa\.me|goo\.gl|cutt\.ly|rb\.gy|is\.gd|rebrand\.ly|[a-z0-9-]+\.(?:xyz|top|click|info|live|buzz|tk|ml|ga))\b/i,
-  upi: /\b[a-z0-9.\-_]{2,}@(?:okhdfcbank|okicici|oksbi|okaxis|ybl|paytm|apl|ibl|upi|axl|hdfcbank|sbi|icici)\b/gi,
+  // Not followed by more handle characters or by ".tld": care@sbi.co.in is an email,
+  // not the UPI ID care@sbi; sentence punctuation after a UPI ID is still allowed.
+  upi: /\b[a-z0-9.\-_]{2,}@(?:okhdfcbank|okicici|oksbi|okaxis|ybl|paytm|apl|ibl|upi|axl|hdfcbank|sbi|icici)(?![a-z0-9_-]|\.[a-z0-9])/gi,
   amount: /(?:₹|rs\.?|inr)\s?[\d,]+(?:\.\d{1,2})?|\b[\d,]{3,}\s?(?:rupees|rs)\b/gi,
   qr: /\b(scan (?:this )?qr|qr code|collect request|payment request|upi (?:ref|reference|id)|merchant (?:vpa|id)|pay ₹|request money)\b/gi,
 }

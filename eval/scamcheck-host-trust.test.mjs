@@ -224,7 +224,7 @@ test('trailing dot: official FQDNs are not impersonation (unit + route)', async 
 const HEAD_DOTTED = [
   // [type, dotted input, HEAD verdict/risk, non-dotted equivalent, its verdict/risk]
   ['link', 'https://paytm-refund.top.', 'likely_scam', 85, 'https://paytm-refund.top', 'suspicious', 60],
-  ['email', 'alerts@paytm-refund.top.', 'likely_scam', 85, 'alerts@paytm-refund.top', 'suspicious', 62],
+  ['email', 'alerts@paytm-refund.top.', 'likely_scam', 85, 'alerts@paytm-refund.top', 'suspicious', 60], // 62 → 60: false UPI alerts@paytm removed (Fix 7)
   ['link', 'https://icicibank-secure.com.', 'likely_scam', 85, 'https://icicibank-secure.com', 'suspicious', 60],
   ['email', 'alerts@icicibank-secure.com.', 'likely_scam', 85, 'alerts@icicibank-secure.com', 'suspicious', 60],
   ['link', 'https://evil.example.sbi.co.in.', 'likely_scam', 85, 'https://evil.example.sbi.co.in', 'unclear', 12],

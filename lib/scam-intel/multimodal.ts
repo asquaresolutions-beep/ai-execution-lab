@@ -16,6 +16,7 @@ import { ocrImage, type OcrResult, type OcrWord } from './ocr'
 import { enrich } from '@/lib/intelligence/enrichment'
 import { extractEntities, entityRiskCount, type ExtractedEntities } from './extract-entities'
 import { analyzeUrls, type UrlFinding } from './url-intel'
+import { detectImpersonations } from './impersonation'
 import { fingerprint as scamFingerprint } from './fingerprint'
 import { calibrate } from './calibration'
 import { computeTrustScore, type TrustScoreResult } from './trustscore'
@@ -179,7 +180,8 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
   // OCR / embedding / vision cost on duplicate uploads. (task 10)
   // v3: fail-closed verdicts — never serve a `likely_safe` cached by earlier code.
   // v4: verdict-consistent explanations — never serve a cached contradictory one.
-  const verdictKey = `screenshot:v4:${imgHash}:${opts.forceDeep ? 'deep' : 'std'}`
+  // v5: no false email-domain UPI IDs + brand look-alike check on screenshots.
+  const verdictKey = `screenshot:v5:${imgHash}:${opts.forceDeep ? 'deep' : 'std'}`
   const cachedVerdict = await getCached<MultimodalVerdict>(verdictKey)
   if (cachedVerdict) return { ...cachedVerdict, cached: true }
 
@@ -197,6 +199,10 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
   const signals = visualSignals(ocr)
   const urlFindings = analyzeUrls(Array.from(new Set([...entities.urls, ...entities.upiHandlePrefixes])))   // (goal 6) incl. UPI handle prefixes
   const urlDanger = urlFindings.filter((f) => f.severity === 'danger').length
+  // Brand look-alikes in links, UPI handle prefixes and email domains — the same
+  // detectImpersonations check quick-check runs — as one signal at the usual weights.
+  const impersonations = detectImpersonations([...entities.urls, ...entities.upiHandlePrefixes, ...(text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi) ?? [])])
+  if (impersonations.length) signals.push({ id: 'brand_impersonation', label: `Look-alike of ${impersonations[0].brand}`, severity: impersonations.some((i) => i.severity === 'danger') ? 'danger' : 'warn', evidence: impersonations.map((i) => i.host).join(', ').slice(0, 60) })
   const regions = suspiciousRegions(ocr, signals)
   let rawRisk = Math.min(100, scoreFromSignals(signals, enrichment.scam.confidence) + entityRiskCount(entities) * 6 + urlDanger * 10)
   // Soliciting an OTP/PIN/seed-phrase is inherently high-risk (legit messages
