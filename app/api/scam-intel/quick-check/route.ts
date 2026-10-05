@@ -44,7 +44,9 @@ export const POST = jsonRoute('scam-intel/quick-check', async (req) => {
   }
 
   const ts = analyzeTextSignals(value)                 // entities + signals + category + tactics
-  const urlFindings = analyzeUrls(ts.entities.urls.length ? ts.entities.urls : (type === 'link' ? [value] : []))
+  // UPI handle prefixes (sbi.kyc.refund@okaxis → sbi.kyc.refund) get the same look-alike checks as links.
+  const linkLike = Array.from(new Set([...ts.entities.urls, ...ts.entities.upiHandlePrefixes]))
+  const urlFindings = analyzeUrls(linkLike.length ? linkLike : (type === 'link' ? [value] : []))
   const urlDanger = urlFindings.filter((f) => f.severity === 'danger').length
   const entityRisk = [ts.entities.shorteners, ts.entities.upiIds, ts.entities.qrPaymentRefs, ts.entities.phones].filter((a) => a.length).length
 
@@ -60,7 +62,7 @@ export const POST = jsonRoute('scam-intel/quick-check', async (req) => {
   // Brand-impersonation / look-alike detection over the value + any extracted
   // links/emails (catches typosquats, homoglyphs, deceptive subdomains).
   const emailsInText = value.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi) ?? []
-  const impCandidates = [...(type === 'link' || type === 'email' || type === 'upi' ? [value] : []), ...ts.entities.urls, ...emailsInText]
+  const impCandidates = [...(type === 'link' || type === 'email' || type === 'upi' ? [value] : []), ...linkLike, ...emailsInText]
   const impersonations = detectImpersonations(impCandidates)
   const impDanger = impersonations.some((i) => i.severity === 'danger')
 

@@ -195,7 +195,7 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
   const enrichment = enrich({ text: text || '(no text detected)' })
   const entities = extractEntities(text)
   const signals = visualSignals(ocr)
-  const urlFindings = analyzeUrls(entities.urls)                       // (goal 6)
+  const urlFindings = analyzeUrls(Array.from(new Set([...entities.urls, ...entities.upiHandlePrefixes])))   // (goal 6) incl. UPI handle prefixes
   const urlDanger = urlFindings.filter((f) => f.severity === 'danger').length
   const regions = suspiciousRegions(ocr, signals)
   let rawRisk = Math.min(100, scoreFromSignals(signals, enrichment.scam.confidence) + entityRiskCount(entities) * 6 + urlDanger * 10)

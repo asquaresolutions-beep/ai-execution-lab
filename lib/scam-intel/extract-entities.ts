@@ -11,6 +11,7 @@ export interface ExtractedEntities {
   urls: string[]
   shorteners: string[]      // subset of urls that are link shorteners / risky TLDs
   upiIds: string[]          // name@bank VPAs
+  upiHandlePrefixes: string[] // host-like part before '@' of a UPI ID (e.g. sbi.kyc.refund) — checked for brand look-alikes
   amounts: string[]         // ₹ / Rs / INR amounts
   qrPaymentRefs: string[]   // QR / collect-request / payment-reference mentions
   urgencyMarkers: string[]
@@ -34,7 +35,13 @@ function uniq(arr: string[]): string[] { return Array.from(new Set(arr.map((s) =
 
 export function extractEntities(text: string): ExtractedEntities {
   const t = text || ''
-  const urls = uniq((t.match(RE.url) ?? []).filter((u) => !/@/.test(u) && u.includes('.')))
+  const urlMatches = [...t.matchAll(RE.url)].filter((m) => !/@/.test(m[0]) && m[0].includes('.'))
+  // A host-like run inside a UPI ID's name part (sbi.kyc.refund@okaxis) is not a link:
+  // it is reported as a UPI handle prefix so look-alike checks still see it.
+  const upiSpans = [...t.matchAll(RE.upi)].map((m) => [m.index!, m.index! + m[0].lastIndexOf('@')])
+  const inUpiPrefix = (m: RegExpMatchArray) => upiSpans.some(([s, at]) => m.index! >= s && m.index! + m[0].length <= at)
+  const urls = uniq(urlMatches.filter((m) => !inUpiPrefix(m)).map((m) => m[0]))
+  const upiHandlePrefixes = uniq(urlMatches.filter(inUpiPrefix).map((m) => m[0]))
   const phones = uniq((t.match(RE.phone) ?? []).map((p) => p.replace(/[\s-]/g, '')).filter((p) => p.replace(/\D/g, '').length >= 10 && p.replace(/\D/g, '').length <= 13))
   const shorteners = urls.filter((u) => RE.shortener.test(u))
   const matchAll = (re: RegExp) => uniq(t.match(re) ?? [])
@@ -43,6 +50,7 @@ export function extractEntities(text: string): ExtractedEntities {
     urls,
     shorteners,
     upiIds: matchAll(RE.upi),
+    upiHandlePrefixes,
     amounts: matchAll(RE.amount),
     qrPaymentRefs: matchAll(RE.qr),
     urgencyMarkers: uniq(URGENCY.flatMap((re) => t.match(re) ?? [])),
