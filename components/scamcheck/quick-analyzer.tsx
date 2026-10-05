@@ -9,7 +9,12 @@ import { useAuth } from '@/components/auth/auth-provider'
 import { ShareResult } from '@/components/scamcheck/share-result'
 import { NewsletterCapture } from '@/components/scamcheck/newsletter-capture'
 import { trackEvent } from '@/lib/track-event'
-import { SCAMCHECK_BASE as SITE } from '@/lib/seo/scamcheck-meta'
+import { SCAMCHECK_BASE } from '@/lib/seo/scamcheck-meta'
+import { verdictStyle, verdictLabel, buildShareSummary, TRUSTED_NOTE } from '@/lib/scamcheck/result-presentation'
+
+// An empty NEXT_PUBLIC_SITE_URL would make ShareResult fall back to window.location,
+// which can carry the user's message in ?q= — always share a fixed origin instead.
+const SITE = SCAMCHECK_BASE || 'https://scamcheck.asquaresolution.com'
 
 type Tab = 'message' | 'link' | 'email' | 'phone' | 'screenshot'
 const TABS: { id: Tab; label: string }[] = [
@@ -28,12 +33,6 @@ interface QuickResult {
   signals: { id: string; label: string; severity: string }[]
   advice: string[]; reputationNotes: string[]
   entities: { urls: string[]; phones: string[]; upiIds: string[] }
-}
-const STYLE: Record<string, string> = {
-  likely_scam: 'bg-red-500/15 text-red-300 border-red-500/40',
-  suspicious: 'bg-amber-500/15 text-amber-300 border-amber-500/40',
-  likely_safe: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40',
-  unclear: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/40',
 }
 
 export function QuickAnalyzer({ initialTab = 'message' as Tab }: { initialTab?: Tab }) {
@@ -99,12 +98,12 @@ export function QuickAnalyzer({ initialTab = 'message' as Tab }: { initialTab?: 
 
       {result && (
         <div className="mt-4 space-y-3">
-          <div className={cn('rounded-lg border p-4', STYLE[result.verdict] || STYLE.unclear)}>
+          <div className={cn('rounded-lg border p-4', verdictStyle(result.verdict))}>
             <div className="flex items-center justify-between">
-              <span className="text-base font-semibold capitalize">{result.verdict.replace(/_/g, ' ')}</span>
+              <span className="text-base font-semibold">{verdictLabel(result.verdict)}</span>
               <span className="text-sm">Risk {result.riskScore}/100</span>
             </div>
-            {result.trusted && <p className="mt-1 text-xs opacity-80">Matches a verified/official entity — likely legitimate (still verify in the official app).</p>}
+            {result.trusted && <p className="mt-1 text-xs opacity-80">{TRUSTED_NOTE}</p>}
             {result.reputationNotes?.map((n, i) => <p key={i} className="mt-1 text-xs opacity-80">{n}</p>)}
           </div>
           {result.signals?.length > 0 && (
@@ -116,7 +115,7 @@ export function QuickAnalyzer({ initialTab = 'message' as Tab }: { initialTab?: 
             <ul className="list-inside list-disc space-y-1 text-sm text-zinc-300">{result.advice.map((a, i) => <li key={i}>{a}</li>)}</ul>
           )}
           <p className="text-[11px] text-zinc-500">Automated risk assessment — not legal or financial advice. If money is involved, verify through the official app or website before acting.</p>
-          <ShareResult summary={`ScamCheck result: ${result.verdict.replace(/_/g, ' ')} (risk ${result.riskScore}/100) — ${result.category.replace(/_/g, ' ')}. Checked free at ${SITE}/scamcheck`} />
+          <ShareResult summary={buildShareSummary(result)} url={SITE} />
           {/* asq-newsletter-v1 — capture at peak intent (after a verdict) */}
           <NewsletterCapture verdict={result.verdict} source="scan-result-quick" />
         </div>

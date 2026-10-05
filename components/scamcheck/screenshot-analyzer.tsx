@@ -14,6 +14,7 @@ import { NewsletterCapture } from '@/components/scamcheck/newsletter-capture'
 import { useCredits, authHeaders } from '@/hooks/use-credits'
 import { useAuth } from '@/components/auth/auth-provider'
 import { trackEvent } from '@/lib/track-event'
+import { verdictStyle, verdictLabel, categoryLabel } from '@/lib/scamcheck/result-presentation'
 
 interface VisualSignal { id: string; label: string; severity: 'info' | 'warn' | 'danger'; evidence: string }
 interface OcrWord { text: string; x: number; y: number; w: number; h: number }
@@ -31,13 +32,6 @@ interface Verdict {
 }
 type Stage = 'idle' | 'compressing' | 'analyzing' | 'done' | 'error'
 
-const VERDICT_STYLE: Record<Verdict['verdict'], string> = {
-  likely_scam: 'bg-red-500/15 text-red-300 border-red-500/40',
-  suspicious: 'bg-amber-500/15 text-amber-300 border-amber-500/40',
-  likely_safe: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40',
-  unclear: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/40',
-  needs_review: 'bg-sky-500/15 text-sky-300 border-sky-500/40',
-}
 const ALLOWED = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
 // Feature flags (NEXT_PUBLIC_* are inlined at build). Default ON; set to the
 // string "false" to disable in a given environment. (task 4)
@@ -195,12 +189,12 @@ export function ScreenshotAnalyzer({ defaultLang = 'en' as Lang, source }: { def
 
           {result && (
             <div className="space-y-4">
-              <div className={cn('rounded-lg border p-4', VERDICT_STYLE[result.verdict])}>
+              <div className={cn('rounded-lg border p-4', verdictStyle(result.verdict))}>
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-semibold capitalize">{result.verdict.replace(/_/g, ' ')}</span>
+                  <span className="text-lg font-semibold">{verdictLabel(result.verdict)}</span>
                   <span className="text-sm">Risk {result.riskScore}/100</span>
                 </div>
-                <div className="mt-1 text-xs opacity-80">Scam probability {Math.round(result.scamProbability * 100)}% · trust {result.trustScore}/100 · {result.classification.category.replace(/_/g, ' ')}{result.deepAnalysisUsed ? ' · deep vision' : ''}{result.cached ? ' · cached' : ''}</div>
+                <div className="mt-1 text-xs opacity-80">{[categoryLabel(result.classification?.category), result.deepAnalysisUsed ? 'deep vision' : '', result.cached ? 'cached' : ''].filter(Boolean).join(' · ')}</div>
                 {result.explanation && <p data-clarity-mask="True" className="mt-2 text-sm opacity-90">{result.explanation}</p>}
               </div>
 

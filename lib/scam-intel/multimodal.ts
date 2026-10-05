@@ -16,9 +16,10 @@ import { ocrImage, type OcrResult, type OcrWord } from './ocr'
 import { enrich } from '@/lib/intelligence/enrichment'
 import { extractEntities, entityRiskCount, type ExtractedEntities } from './extract-entities'
 import { analyzeUrls, type UrlFinding } from './url-intel'
+import { detectImpersonations } from './impersonation'
 import { fingerprint as scamFingerprint } from './fingerprint'
 import { calibrate } from './calibration'
-import { computeTrustScore } from './trustscore'
+import { computeTrustScore, type TrustScoreResult } from './trustscore'
 import { embedQuery, EMBED_DIM } from '@/lib/ai/embeddings'
 import { vectorSearch, bigQueryReady, logImageAnalysis } from '@/lib/store/bigquery'
 import { vertexConfigured } from '@/lib/ai/provider'
@@ -73,12 +74,49 @@ export interface MultimodalVerdict {
 // ── Cheap visual / textual heuristics over OCR output ──────────────
 // Patterns cover English + Hindi (Devanagari) + Hinglish/transliterated scam
 // language ("KYC update karo", "account block ho jayega", "OTP bhejo"). (goal 4)
+
+// Hindi/Hinglish UPI scam instructions. Gated: a request verb only counts when it
+// acts on a security-sensitive object (OTP, UPI PIN, QR, collect/payment request)
+// within the same clause, and never across a negation ("mat batao", "न बताएं"), so
+// generic "bata do" / "bhej do" chat and awareness messages do not match.
+// Devanagari letters/marks, excluding the danda (।॥) so a sentence end is a word end.
+const HI_DEV = String.raw`\u0900-\u0963\u0971-\u097F`
+const HI_NEG = String.raw`(?<![a-z])(?:mat|na|nahi|nahin|kabhi|never|not|don'?t)(?![a-z])|(?<![${HI_DEV}])(?:मत|न|ना|नहीं|कभी)(?![${HI_DEV}])`
+const hiGap = (n: number) => String.raw`(?:(?!${HI_NEG})[^.।!?\n]){0,${n}}`
+const HI_END = String.raw`(?![a-z${HI_DEV}])(?!\s?(?:mat|nahi|nahin|मत|नहीं)(?![a-z${HI_DEV}]))`
+const HI_TELL = String.raw`(?:bata\s?(?:do|de|dena|dijiye|dijie|dein|den)|batao|bataiye|bataen|batayen|batayein|de\s?(?:do|dijiye|dijie|dein|dena)|dedo|bhej\s?(?:do|dena|dijiye|dein)|bhejo|bhejiye|bol\s?(?:do|dijiye)|bolo|share\s(?:karo|kar\s?do|kijiye|karein|karen)|बता\s?(?:दो|दीजिए|दीजिये|दें|देना)|बताओ|बताइए|बताइये|बताएं|बताएँ|बतायें|दे\s?(?:दो|दीजिए|दीजिये|दें)|भेज\s?(?:दो|दीजिए|दें)|भेजो|भेजिए|शेयर\s(?:करें|करो|कर\s?दो|कीजिए)|साझा\s(?:करें|करो|कर\s?दो|कीजिए))`
+const HI_ENTER = String.raw`(?:daalo|daal\s?(?:do|dijiye|dein|den)|daaliye|daalen|daalein|dalo|dal\s?do|dalen|enter\s(?:karo|kar\s?do|kijiye|karein|karen|kar\s?dijiye)|डालें|डालो|डाल\s?दो|डालिए|डालिये|डाल\s?दीजिए)`
+const HI_DO = String.raw`(?:karo|kar\s?do|kar\s?dena|kijiye|karein|karen|kar\s?dijiye|करें|करो|कर\s?दो|कीजिए|कर\s?दीजिए)`
+const HI_OTP = String.raw`(?:(?<![a-z])otp(?![a-z])|ओटीपी)`
+const HI_UPI_PIN = String.raw`(?:(?<![a-z])(?:(?:upi|atm|card|bank)\s?pin|m-?pin)(?![a-z])|(?:upi|यूपीआई|एटीएम)\s?पिन)`
+const HI_PIN = String.raw`(?:(?<![a-z])(?<!(?:location|map)\s)pin(?![a-z]|\s?-?\s?code)|(?<!लोकेशन\s)पिन(?!\s?कोड))`
+const HI_QR = String.raw`(?:(?<![a-z])qr(?![a-z])|क्यूआर)`
+const HI_SCAN = String.raw`(?:scan|स्कैन)\s?(?:karke|kar\s?ke|करके|कर\s?के|${HI_DO})`
+const HI_MONEY = String.raw`(?:paise|paisa|rupaye|rupees|amount|refund|cashback|prize|inaam|पैसे|रुपये|रिफंड|इनाम)`
+const HI_GET_MONEY = String.raw`(?:(?:wapas|vapas|वापस)\s?(?:bhej|kar|de|भेज|कर|दे)|${HI_MONEY}${hiGap(20)}(?:milenge|mil\s?jayenge|mil\s?jaenge|mil\s?jayega|mil\s?jaega|aa\s?jayenge|aa\s?jayega|मिलेंगे|मिल\s?जाएंगे|मिल\s?जायेंगे|मिल\s?जाएगा|आ\s?जाएंगे|आ\s?जाएगा))`
+const HI_TO_RECEIVE = String.raw`${HI_MONEY}\s?(?:lene|paane|pane|receive\s?karne|लेने|पाने)\s?(?:ke\s?liye|के\s?लिए)`
+const HI_PAY_REQUEST = String.raw`(?:(?<![a-z])(?:collect|payment|money|paise|upi)\s?request|कलेक्ट\s?रिक्वेस्ट|पेमेंट\s?रिक्वेस्ट|भुगतान\s?अनुरोध)`
+const HI_ACCEPT = String.raw`(?:approve|accept|swikar|sweekar|अप्रूव|एक्सेप्ट|स्वीकार)\s?${HI_DO}`
+// Asking for an OTP / UPI PIN, or telling the victim to enter their PIN.
+const HI_SECRET_REQUEST = String.raw`${HI_OTP}${hiGap(20)}${HI_TELL}${HI_END}|${HI_UPI_PIN}${hiGap(20)}(?:${HI_TELL}|${HI_ENTER})${HI_END}|${HI_PIN}${hiGap(12)}${HI_ENTER}${HI_END}`
+// Scan a QR / approve a collect or payment request — which SENDS money — to "receive" or return money.
+const HI_REVERSE_PAYMENT = String.raw`${HI_QR}${hiGap(25)}${HI_SCAN}${hiGap(40)}${HI_GET_MONEY}|${HI_TO_RECEIVE}${hiGap(25)}${HI_QR}${hiGap(15)}${HI_SCAN}${HI_END}|${HI_PAY_REQUEST}${hiGap(40)}${HI_ACCEPT}${HI_END}`
+
+// English reverse-QR: "scan this QR to receive/claim your refund" — scanning a QR
+// SENDS money. Gated on an imperative scan (not "scanning") tied to receiving money,
+// and not after a negation or a third-party "ask you to" (awareness text).
+const EN_SCAN_QR = String.raw`(?<!\b(?:never|not|don'?t|do not|cannot|can'?t|won'?t|shouldn'?t|should not|no need to|(?:do not|don'?t|never) need to|ask(?:s|ed|ing)? you to)\s+(?:ever\s+)?)\bscan\s+(?:(?:the|this|a|our|my|attached|below|given)\s+)*qr(?:\s*code)?\b`
+const EN_RECEIVE = String.raw`(?:receive|get|claim|collect|redeem|avail)`
+const EN_MONEY = String.raw`(?:money|payment|funds|refund|cashback|prize|reward|amount|winnings|advance|rs\.?|₹|inr)`
+const EN_REVERSE_QR = String.raw`${EN_SCAN_QR}[^.!?\n]{0,25}?\b(?:to|and)\s+${EN_RECEIVE}\s+(?:it|them|(?:(?:your|the|this|that|my)\s+)?(?:\w+\s+){0,2}${EN_MONEY})|\bto\s+${EN_RECEIVE}\s+(?:(?:your|the|this|that)\s+)?(?:\w+\s+){0,2}${EN_MONEY}[^.!?\n]{0,30}?${EN_SCAN_QR}`
+
 const DETECTORS: Array<{ id: string; label: string; severity: VisualSignal['severity']; re: RegExp }> = [
   // Unsolicited credit/refund/QR-collect bait — NOT routine debit/receipt alerts.
   { id: 'fake_payment', label: 'Fake payment/refund/QR bait', severity: 'danger', re: /\b(refund (of|credited|received|amount|ke liye)|you (have )?received (rs|₹|inr|money|a refund)|money received|cashback (of|credited)|scan (the |this )?qr|collect request|claim (your|rs|₹)|received a refund|paise? (aa gaye|wapas|milenge)|रिफंड)\b|congratulations[^.\n]{0,40}(refund|cashback|won|prize)/i },
   { id: 'urgency', label: 'Urgency / pressure tactic', severity: 'warn', re: /\b(urgent|immediately|within \d+\s?(min|hour|day)s?|account (will be )?(blocked|suspended|closed)|act now|last chance|expir(?:e|es|ing|ed)|failure to|do not ignore|turant|abhi|jaldi|aaj hi|warna|band ho ?jayega|block ho ?jayega|बंद हो|तुरंत|जल्दी)\b/i },
   // Solicitation to SHARE an OTP/PIN/CVV (the scam) — NOT legit "do not share your OTP".
-  { id: 'otp_request', label: 'OTP / PIN / CVV sharing request', severity: 'danger', re: /(?<!do not )(?<!don'?t )(?<!never )\b(share|send|tell|give|enter|forward)\b[^.\n]{0,15}\b(otp|one[\s-]?time password|cvv|pin|code)\b|\b(otp|cvv|pin|code)\b[^.\n]{0,14}\b(bhejo|batao|bhej do|share karo|chahiye)\b|ओटीपी[^।\n]{0,12}(भेजो|बताओ)/i },
+  { id: 'otp_request', label: 'OTP / PIN / CVV sharing request', severity: 'danger', re: new RegExp(/(?<!do not )(?<!don'?t )(?<!never )\b(share|send|tell|give|enter|forward)\b[^.\n]{0,15}\b(otp|one[\s-]?time password|cvv|pin|code)\b|\b(otp|cvv|pin|code)\b[^.\n]{0,14}\b(bhejo|batao|bhej do|share karo|chahiye)\b|ओटीपी[^।\n]{0,12}(भेजो|बताओ)/.source + '|' + HI_SECRET_REQUEST, 'i') },
+  { id: 'upi_reverse_payment', label: 'Scan-QR / approve-request instruction to "receive" money', severity: 'danger', re: new RegExp(HI_REVERSE_PAYMENT + '|' + EN_REVERSE_QR, 'i') },
   { id: 'kyc_phish', label: 'KYC / account-verification request', severity: 'warn', re: /\b(kyc|verify your account|update (your )?(kyc|pan|details)|re-?activate|kyc (update|karo|karein|karna)|verify karo|account (verify|update) karo|केवाईसी|सत्यापित)\b/i },
   { id: 'impersonation', label: 'Brand/authority impersonation', severity: 'warn', re: /\b(rbi|sbi|hdfc|icici|axis|kotak|pnb|paytm|phonepe|google ?pay|gpay|amazon|flipkart|netflix|india ?post|blue ?dart|dtdc|fedex|delhivery|courier|customs|customer care|bank official|income tax|uidai|aadhaar|npci|gst|बैंक|कस्टम)\b/i },
   { id: 'reward_bait', label: 'Lottery / reward / job / investment bait', severity: 'warn', re: /\b(congratulations|you (have )?won|lottery|prize|reward|work from home|earn \d|part[\s-]?time job|lucky draw|inaam|inam|jeeta|prize jeeta|ghar baithe|guaranteed return|airdrop|kamao|invest)\b|बधाई|इनाम|लॉटरी|गारंटीड|रिटर्न|निवेश|कमाएँ|जीता/i },
@@ -112,7 +150,7 @@ function safetyAdvice(category: string, entities: ExtractedEntities, signals: Vi
   const tips: string[] = []
   const has = (id: string) => signals.some((s) => s.id === id)
   if (has('otp_request') || /otp/i.test(category)) tips.push('Never share an OTP, PIN, or CVV — no bank or company ever asks for them.')
-  if (has('fake_payment') || entities.upiIds.length || entities.qrPaymentRefs.length) tips.push('A real credit never requires you to SCAN a QR or approve a "collect request" — scanning/approving SENDS money. Verify in your own bank app.')
+  if (has('fake_payment') || has('upi_reverse_payment') || entities.upiIds.length || entities.qrPaymentRefs.length) tips.push('A real credit never requires you to SCAN a QR or approve a "collect request" — scanning/approving SENDS money. Verify in your own bank app.')
   if (has('kyc_phish') || /kyc/i.test(category)) tips.push('Banks do not suspend accounts over WhatsApp/SMS links. Update KYC only at a branch or the official app.')
   if (entities.shorteners.length) tips.push('Do not open shortened/unknown links — they hide the real destination.')
   if (has('impersonation') || entities.impersonationMarkers.length) tips.push('Verify the sender independently using the number on the official website/card — not the number in the message.')
@@ -140,7 +178,10 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
 
   // Cost optimization: return a cached verdict for an identical image — zero
   // OCR / embedding / vision cost on duplicate uploads. (task 10)
-  const verdictKey = `screenshot:v2:${imgHash}:${opts.forceDeep ? 'deep' : 'std'}`
+  // v3: fail-closed verdicts — never serve a `likely_safe` cached by earlier code.
+  // v4: verdict-consistent explanations — never serve a cached contradictory one.
+  // v5: no false email-domain UPI IDs + brand look-alike check on screenshots.
+  const verdictKey = `screenshot:v5:${imgHash}:${opts.forceDeep ? 'deep' : 'std'}`
   const cachedVerdict = await getCached<MultimodalVerdict>(verdictKey)
   if (cachedVerdict) return { ...cachedVerdict, cached: true }
 
@@ -156,20 +197,26 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
   const enrichment = enrich({ text: text || '(no text detected)' })
   const entities = extractEntities(text)
   const signals = visualSignals(ocr)
-  const urlFindings = analyzeUrls(entities.urls)                       // (goal 6)
+  const urlFindings = analyzeUrls(Array.from(new Set([...entities.urls, ...entities.upiHandlePrefixes])))   // (goal 6) incl. UPI handle prefixes
   const urlDanger = urlFindings.filter((f) => f.severity === 'danger').length
+  // Brand look-alikes in links, UPI handle prefixes and email domains — the same
+  // detectImpersonations check quick-check runs — as one signal at the usual weights.
+  const impersonations = detectImpersonations([...entities.urls, ...entities.upiHandlePrefixes, ...(text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi) ?? [])])
+  if (impersonations.length) signals.push({ id: 'brand_impersonation', label: `Look-alike of ${impersonations[0].brand}`, severity: impersonations.some((i) => i.severity === 'danger') ? 'danger' : 'warn', evidence: impersonations.map((i) => i.host).join(', ').slice(0, 60) })
   const regions = suspiciousRegions(ocr, signals)
   let rawRisk = Math.min(100, scoreFromSignals(signals, enrichment.scam.confidence) + entityRiskCount(entities) * 6 + urlDanger * 10)
   // Soliciting an OTP/PIN/seed-phrase is inherently high-risk (legit messages
   // say "do NOT share") — floor the risk so lone-OTP scams aren't under-scored.
-  if (signals.some((s) => s.id === 'otp_request')) rawRisk = Math.max(rawRisk, 55)
+  // Same for scan-QR / approve-request "to receive money" instructions.
+  if (signals.some((s) => s.id === 'otp_request' || s.id === 'upi_reverse_payment')) rawRisk = Math.max(rawRisk, 55)
 
   // 3. trustscore + retrieval grounding (semantic-search/scam-intel). (task 5, goal 8)
+  let trustModelVerdict: TrustScoreResult['verdict'] | null = null
   let trustScore = 50, scamProbability = rawRisk / 100, baseExplanation = enrichment.scam.tactics.length ? `Detected ${enrichment.scam.category.replace(/_/g, ' ')} with tactics: ${enrichment.scam.tactics.join(', ')}.` : 'Heuristic assessment from extracted text.'
   if (text.trim().length > 10) {
     try {
       const ts = await computeTrustScore(text.slice(0, 4000))
-      trustScore = ts.trustScore; scamProbability = ts.scamProbability; baseExplanation = ts.explanation
+      trustScore = ts.trustScore; scamProbability = ts.scamProbability; baseExplanation = ts.explanation; trustModelVerdict = ts.verdict
       rawRisk = Math.round(Math.min(100, rawRisk * 0.5 + ts.scamProbability * 100 * 0.5))
     } catch (e) { log.warn({ event: 'multimodal.trustscore_failed', detail: String(e).slice(0, 120) }) }
   }
@@ -224,8 +271,10 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
   })
   const riskScore = cal.riskScore
 
+  // Fail closed: screenshots have no trusted-entity basis, and missed detection is
+  // not evidence of safety — below the suspicious threshold the verdict is `unclear`.
   const verdict: MultimodalVerdict['verdict'] = cal.needsReview && riskScore < 70 ? 'needs_review'
-    : riskScore >= 70 ? 'likely_scam' : riskScore >= 35 ? 'suspicious' : text.trim() ? 'likely_safe' : 'unclear'
+    : riskScore >= 70 ? 'likely_scam' : riskScore >= 35 ? 'suspicious' : 'unclear'
 
   // 6. Explainability (goal 9).
   const matchingPatterns = [...signals.map((s) => s.label), ...urlFindings.flatMap((f) => f.risks.map((r) => `${f.host}: ${r}`))]
@@ -237,7 +286,7 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
     ...(similarTop >= 0.6 ? [`Matches known scam pattern “${similar[0].title}” (${Math.round(similarTop * 100)}%)`] : []),
   ]
   const explainability: Explainability = {
-    whyFlagged: verdict === 'likely_scam' ? 'Multiple fraud indicators with corroborating evidence.' : verdict === 'suspicious' ? 'Some fraud indicators detected; treat with caution.' : verdict === 'needs_review' ? 'Insufficient/low-confidence evidence — manual review recommended.' : 'No strong fraud indicators detected.',
+    whyFlagged: verdict === 'likely_scam' ? 'Multiple fraud indicators with corroborating evidence.' : verdict === 'suspicious' ? 'Some fraud indicators detected; treat with caution.' : verdict === 'needs_review' ? 'Insufficient/low-confidence evidence — manual review recommended.' : verdict === 'unclear' ? (signals.length ? 'Some risk signals were found, but not enough for a clear verdict — treat with caution.' : 'No clear scam signals were found, but this does not prove the message is safe.') : 'No strong fraud indicators detected.',
     evidence,
     matchingPatterns,
     confidenceReasoning: cal.reasons,
@@ -251,7 +300,7 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
   const result: MultimodalVerdict = {
     verdict, riskScore, scamProbability: Math.round(scamProbability * 1000) / 1000, trustScore,
     confidence: cal.confidence, confidenceBand: cal.band,
-    explanation: baseExplanation,
+    explanation: screenshotExplanation(trustModelVerdict, verdict, explainability.whyFlagged, baseExplanation),
     fingerprint: fp.fingerprint,
     campaignLabel: fp.label,
     safetyAdvice: safetyAdvice(enrichment.scam.category, entities, signals),
@@ -283,6 +332,16 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
     signals: signals.length, deep_used: deepAnalysisUsed, created_at: new Date().toISOString(),
   })
   return result
+}
+
+/**
+ * Explanation shown with a screenshot result. The trust model explains its own
+ * text-only verdict; when that was `safe` but the final verdict is not, its
+ * reassurance ("No strong scam signals detected.") contradicts the result, so the
+ * final verdict's own reason is shown instead. Otherwise it is kept as is.
+ */
+export function screenshotExplanation(trustModelVerdict: TrustScoreResult['verdict'] | null, verdict: MultimodalVerdict['verdict'], whyFlagged: string, trustModelExplanation: string): string {
+  return trustModelVerdict === 'safe' && verdict !== 'likely_safe' ? whyFlagged : trustModelExplanation
 }
 
 // ── Deep Gemini-vision verdict (expensive; gated, retrieval-grounded) ──────

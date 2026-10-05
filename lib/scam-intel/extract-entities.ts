@@ -11,6 +11,7 @@ export interface ExtractedEntities {
   urls: string[]
   shorteners: string[]      // subset of urls that are link shorteners / risky TLDs
   upiIds: string[]          // name@bank VPAs
+  upiHandlePrefixes: string[] // host-like part before '@' of a UPI ID (e.g. sbi.kyc.refund) — checked for brand look-alikes
   amounts: string[]         // ₹ / Rs / INR amounts
   qrPaymentRefs: string[]   // QR / collect-request / payment-reference mentions
   urgencyMarkers: string[]
@@ -22,7 +23,9 @@ const RE = {
   phone: /(?:\+?\d{1,3}[\s-]?)?(?:\d{5}[\s-]?\d{5}|\d{10}|\d{3}[\s-]?\d{3}[\s-]?\d{4})/g,
   url: /\b((?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s)]*)?)/gi,
   shortener: /\b(bit\.ly|tinyurl\.com|t\.co|t\.me|wa\.me|goo\.gl|cutt\.ly|rb\.gy|is\.gd|rebrand\.ly|[a-z0-9-]+\.(?:xyz|top|click|info|live|buzz|tk|ml|ga))\b/i,
-  upi: /\b[a-z0-9.\-_]{2,}@(?:okhdfcbank|okicici|oksbi|okaxis|ybl|paytm|apl|ibl|upi|axl|hdfcbank|sbi|icici)\b/gi,
+  // Not followed by more handle characters or by ".tld": care@sbi.co.in is an email,
+  // not the UPI ID care@sbi; sentence punctuation after a UPI ID is still allowed.
+  upi: /\b[a-z0-9.\-_]{2,}@(?:okhdfcbank|okicici|oksbi|okaxis|ybl|paytm|apl|ibl|upi|axl|hdfcbank|sbi|icici)(?![a-z0-9_-]|\.[a-z0-9])/gi,
   amount: /(?:₹|rs\.?|inr)\s?[\d,]+(?:\.\d{1,2})?|\b[\d,]{3,}\s?(?:rupees|rs)\b/gi,
   qr: /\b(scan (?:this )?qr|qr code|collect request|payment request|upi (?:ref|reference|id)|merchant (?:vpa|id)|pay ₹|request money)\b/gi,
 }
@@ -34,7 +37,13 @@ function uniq(arr: string[]): string[] { return Array.from(new Set(arr.map((s) =
 
 export function extractEntities(text: string): ExtractedEntities {
   const t = text || ''
-  const urls = uniq((t.match(RE.url) ?? []).filter((u) => !/@/.test(u) && u.includes('.')))
+  const urlMatches = [...t.matchAll(RE.url)].filter((m) => !/@/.test(m[0]) && m[0].includes('.'))
+  // A host-like run inside a UPI ID's name part (sbi.kyc.refund@okaxis) is not a link:
+  // it is reported as a UPI handle prefix so look-alike checks still see it.
+  const upiSpans = [...t.matchAll(RE.upi)].map((m) => [m.index!, m.index! + m[0].lastIndexOf('@')])
+  const inUpiPrefix = (m: RegExpMatchArray) => upiSpans.some(([s, at]) => m.index! >= s && m.index! + m[0].length <= at)
+  const urls = uniq(urlMatches.filter((m) => !inUpiPrefix(m)).map((m) => m[0]))
+  const upiHandlePrefixes = uniq(urlMatches.filter(inUpiPrefix).map((m) => m[0]))
   const phones = uniq((t.match(RE.phone) ?? []).map((p) => p.replace(/[\s-]/g, '')).filter((p) => p.replace(/\D/g, '').length >= 10 && p.replace(/\D/g, '').length <= 13))
   const shorteners = urls.filter((u) => RE.shortener.test(u))
   const matchAll = (re: RegExp) => uniq(t.match(re) ?? [])
@@ -43,6 +52,7 @@ export function extractEntities(text: string): ExtractedEntities {
     urls,
     shorteners,
     upiIds: matchAll(RE.upi),
+    upiHandlePrefixes,
     amounts: matchAll(RE.amount),
     qrPaymentRefs: matchAll(RE.qr),
     urgencyMarkers: uniq(URGENCY.flatMap((re) => t.match(re) ?? [])),

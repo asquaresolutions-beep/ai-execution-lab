@@ -63,6 +63,9 @@ export function detectImpersonation(input: string): ImpersonationResult {
   const host = hostFrom(input)
   const none: ImpersonationResult = { isImpersonation: false, host, brand: null, legitDomain: null, techniques: [], severity: 'none', detail: '' }
   if (!host || !host.includes('.')) return none
+  // Exact official-domain comparison only: the absolute form (one trailing dot) of
+  // an official host is that host. All other logic keeps the original `host`.
+  const officialHost = host.replace(/\.$/, '')
 
   const labels = host.split('.')
   const sld = labels[labels.length - 2] || host
@@ -74,7 +77,7 @@ export function detectImpersonation(input: string): ImpersonationResult {
   let best: ImpersonationResult | null = null
   for (const b of WATCHED_BRANDS) {
     // Exact legitimate domain → trusted, never impersonation.
-    if (b.legit.some((d) => host === d || host.endsWith('.' + d))) return none
+    if (b.legit.some((d) => host === d || officialHost === d || host.endsWith('.' + d))) return none
 
     const tech = new Set<Technique>()
     const coreLen = b.core.length

@@ -39,7 +39,7 @@ function dominantBrand(text: string): string | null {
 }
 
 function domainCore(entities: ExtractedEntities): string | null {
-  const url = entities.urls[0]
+  const url = entities.urls[0] ?? entities.upiHandlePrefixes[0]
   if (!url) return null
   const host = url.replace(/^h(xx|tt)ps?:\/\//i, '').replace(/\[\.\]/g, '.').split(/[/?#]/)[0].toLowerCase()
   const labels = host.split('.')
