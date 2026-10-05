@@ -140,7 +140,8 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
 
   // Cost optimization: return a cached verdict for an identical image — zero
   // OCR / embedding / vision cost on duplicate uploads. (task 10)
-  const verdictKey = `screenshot:v2:${imgHash}:${opts.forceDeep ? 'deep' : 'std'}`
+  // v3: fail-closed verdicts — never serve a `likely_safe` cached by earlier code.
+  const verdictKey = `screenshot:v3:${imgHash}:${opts.forceDeep ? 'deep' : 'std'}`
   const cachedVerdict = await getCached<MultimodalVerdict>(verdictKey)
   if (cachedVerdict) return { ...cachedVerdict, cached: true }
 
@@ -224,8 +225,10 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
   })
   const riskScore = cal.riskScore
 
+  // Fail closed: screenshots have no trusted-entity basis, and missed detection is
+  // not evidence of safety — below the suspicious threshold the verdict is `unclear`.
   const verdict: MultimodalVerdict['verdict'] = cal.needsReview && riskScore < 70 ? 'needs_review'
-    : riskScore >= 70 ? 'likely_scam' : riskScore >= 35 ? 'suspicious' : text.trim() ? 'likely_safe' : 'unclear'
+    : riskScore >= 70 ? 'likely_scam' : riskScore >= 35 ? 'suspicious' : 'unclear'
 
   // 6. Explainability (goal 9).
   const matchingPatterns = [...signals.map((s) => s.label), ...urlFindings.flatMap((f) => f.risks.map((r) => `${f.host}: ${r}`))]
