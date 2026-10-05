@@ -72,7 +72,7 @@ for (const [id, text, risk] of BELOW) {
 // 3–6: everything else unchanged from HEAD ca66ff2.
 const UNCHANGED = [
   ['suspicious: merchant cashback', 'Congratulations! You received cashback of Rs 50 on your Swiggy order via PhonePe.', 'suspicious', 38],
-  ['suspicious: QR prize', 'Scan this QR to receive your Rs 5000 prize money', 'suspicious', 58],
+  ['likely_scam: QR prize (English reverse-QR detection)', 'Scan this QR to receive your Rs 5000 prize money', 'likely_scam', 78],
   ['likely_scam: KYC threat with link', 'Dear customer your SBI account will be blocked today. Update PAN at https://yono-kyc-portal.in or mail care@sbi.co.in', 'likely_scam', 76],
   ['likely_scam: KYC reply request', 'Your HDFC account will be suspended today. Update KYC by replying with your Aadhaar and PAN. Ref hdfcbank.com', 'likely_scam', 71],
   ['needs_review: Hinglish OTP request', 'OTP de do sir, verification ke liye chahiye', 'needs_review', 46],

@@ -101,13 +101,21 @@ const HI_SECRET_REQUEST = String.raw`${HI_OTP}${hiGap(20)}${HI_TELL}${HI_END}|${
 // Scan a QR / approve a collect or payment request — which SENDS money — to "receive" or return money.
 const HI_REVERSE_PAYMENT = String.raw`${HI_QR}${hiGap(25)}${HI_SCAN}${hiGap(40)}${HI_GET_MONEY}|${HI_TO_RECEIVE}${hiGap(25)}${HI_QR}${hiGap(15)}${HI_SCAN}${HI_END}|${HI_PAY_REQUEST}${hiGap(40)}${HI_ACCEPT}${HI_END}`
 
+// English reverse-QR: "scan this QR to receive/claim your refund" — scanning a QR
+// SENDS money. Gated on an imperative scan (not "scanning") tied to receiving money,
+// and not after a negation or a third-party "ask you to" (awareness text).
+const EN_SCAN_QR = String.raw`(?<!\b(?:never|not|don'?t|do not|cannot|can'?t|won'?t|shouldn'?t|should not|no need to|(?:do not|don'?t|never) need to|ask(?:s|ed|ing)? you to)\s+(?:ever\s+)?)\bscan\s+(?:(?:the|this|a|our|my|attached|below|given)\s+)*qr(?:\s*code)?\b`
+const EN_RECEIVE = String.raw`(?:receive|get|claim|collect|redeem|avail)`
+const EN_MONEY = String.raw`(?:money|payment|funds|refund|cashback|prize|reward|amount|winnings|advance|rs\.?|₹|inr)`
+const EN_REVERSE_QR = String.raw`${EN_SCAN_QR}[^.!?\n]{0,25}?\b(?:to|and)\s+${EN_RECEIVE}\s+(?:it|them|(?:(?:your|the|this|that|my)\s+)?(?:\w+\s+){0,2}${EN_MONEY})|\bto\s+${EN_RECEIVE}\s+(?:(?:your|the|this|that)\s+)?(?:\w+\s+){0,2}${EN_MONEY}[^.!?\n]{0,30}?${EN_SCAN_QR}`
+
 const DETECTORS: Array<{ id: string; label: string; severity: VisualSignal['severity']; re: RegExp }> = [
   // Unsolicited credit/refund/QR-collect bait — NOT routine debit/receipt alerts.
   { id: 'fake_payment', label: 'Fake payment/refund/QR bait', severity: 'danger', re: /\b(refund (of|credited|received|amount|ke liye)|you (have )?received (rs|₹|inr|money|a refund)|money received|cashback (of|credited)|scan (the |this )?qr|collect request|claim (your|rs|₹)|received a refund|paise? (aa gaye|wapas|milenge)|रिफंड)\b|congratulations[^.\n]{0,40}(refund|cashback|won|prize)/i },
   { id: 'urgency', label: 'Urgency / pressure tactic', severity: 'warn', re: /\b(urgent|immediately|within \d+\s?(min|hour|day)s?|account (will be )?(blocked|suspended|closed)|act now|last chance|expir(?:e|es|ing|ed)|failure to|do not ignore|turant|abhi|jaldi|aaj hi|warna|band ho ?jayega|block ho ?jayega|बंद हो|तुरंत|जल्दी)\b/i },
   // Solicitation to SHARE an OTP/PIN/CVV (the scam) — NOT legit "do not share your OTP".
   { id: 'otp_request', label: 'OTP / PIN / CVV sharing request', severity: 'danger', re: new RegExp(/(?<!do not )(?<!don'?t )(?<!never )\b(share|send|tell|give|enter|forward)\b[^.\n]{0,15}\b(otp|one[\s-]?time password|cvv|pin|code)\b|\b(otp|cvv|pin|code)\b[^.\n]{0,14}\b(bhejo|batao|bhej do|share karo|chahiye)\b|ओटीपी[^।\n]{0,12}(भेजो|बताओ)/.source + '|' + HI_SECRET_REQUEST, 'i') },
-  { id: 'upi_reverse_payment', label: 'Scan-QR / approve-request instruction to "receive" money', severity: 'danger', re: new RegExp(HI_REVERSE_PAYMENT, 'i') },
+  { id: 'upi_reverse_payment', label: 'Scan-QR / approve-request instruction to "receive" money', severity: 'danger', re: new RegExp(HI_REVERSE_PAYMENT + '|' + EN_REVERSE_QR, 'i') },
   { id: 'kyc_phish', label: 'KYC / account-verification request', severity: 'warn', re: /\b(kyc|verify your account|update (your )?(kyc|pan|details)|re-?activate|kyc (update|karo|karein|karna)|verify karo|account (verify|update) karo|केवाईसी|सत्यापित)\b/i },
   { id: 'impersonation', label: 'Brand/authority impersonation', severity: 'warn', re: /\b(rbi|sbi|hdfc|icici|axis|kotak|pnb|paytm|phonepe|google ?pay|gpay|amazon|flipkart|netflix|india ?post|blue ?dart|dtdc|fedex|delhivery|courier|customs|customer care|bank official|income tax|uidai|aadhaar|npci|gst|बैंक|कस्टम)\b/i },
   { id: 'reward_bait', label: 'Lottery / reward / job / investment bait', severity: 'warn', re: /\b(congratulations|you (have )?won|lottery|prize|reward|work from home|earn \d|part[\s-]?time job|lucky draw|inaam|inam|jeeta|prize jeeta|ghar baithe|guaranteed return|airdrop|kamao|invest)\b|बधाई|इनाम|लॉटरी|गारंटीड|रिटर्न|निवेश|कमाएँ|जीता/i },
