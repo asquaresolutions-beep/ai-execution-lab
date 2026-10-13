@@ -37,7 +37,7 @@ export function emailConfigured(): boolean { return !!RESEND_API_KEY }
 
 const esc = (s: string) => s.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] as string))
 
-async function send(opts: { to: string; subject: string; html: string; text?: string; replyTo?: string; from?: string; headers?: Record<string, string>; tags?: EmailTag[] }): Promise<{ ok: boolean; skipped?: boolean; status?: number; error?: string }> {
+async function send(opts: { to: string; subject: string; html: string; text?: string; replyTo?: string; from?: string; headers?: Record<string, string>; tags?: EmailTag[]; idempotencyKey?: string }): Promise<{ ok: boolean; skipped?: boolean; status?: number; error?: string }> {
   if (!RESEND_API_KEY) return { ok: false, skipped: true }
   // Always ship a text/plain alternative (derived from the HTML if not given) to
   // avoid the MIME_HTML_ONLY spam heuristic. Functionality/branding unchanged.
@@ -45,7 +45,11 @@ async function send(opts: { to: string; subject: string; html: string; text?: st
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'content-type': 'application/json' },
+      // Idempotency-Key is an HTTP header, sent ONLY when a caller supplies one (the
+      // campaign send loops). The provider documents it for POST /emails: a repeat of
+      // the same key and body within 24 hours is answered with the first response and
+      // not sent again. Every other caller's request is unchanged.
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'content-type': 'application/json', ...(opts.idempotencyKey ? { 'Idempotency-Key': opts.idempotencyKey } : {}) },
       // `tags` is spread in ONLY when non-empty, so every caller that does not pass
       // one keeps a byte-identical payload (verified in eval/email-payload.test.mjs).
       body: JSON.stringify({ from: opts.from || EMAIL_FROM, to: [opts.to], subject: opts.subject, html: opts.html, text, ...(opts.replyTo ? { reply_to: opts.replyTo } : {}), ...(opts.headers ? { headers: opts.headers } : {}), ...(opts.tags?.length ? { tags: opts.tags } : {}) }),
@@ -59,11 +63,28 @@ async function send(opts: { to: string; subject: string; html: string; text?: st
   }
 }
 
-const wrap = (title: string, body: string) =>
-  `<div style="font-family:system-ui,Arial,sans-serif;max-width:560px;margin:auto;color:#18181b">
+/**
+ * Per-email rendering options for list mail (asq-newsletter-send-eligibility-v1).
+ * Both are opt-in: with neither set, wrap() returns exactly the markup it always has.
+ *  • preheader — the inbox preview line. Rendered as a hidden block that is the first
+ *    text of the HTML part, so mail clients show it after the subject.
+ *  • footer    — 'no-link' keeps the brand line and drops the ScamCheck site link
+ *    (anchor and bare domain, which mail clients would otherwise auto-link).
+ */
+export type ListFooter = 'default' | 'no-link'
+export interface ListRenderOptions { preheader?: string; footer?: ListFooter }
+
+const BRAND_LINE_DEFAULT = 'ScamCheck · A Square Solutions · <a href="https://scamcheck.asquaresolution.com">scamcheck.asquaresolution.com</a>'
+const BRAND_LINE_NO_LINK = 'ScamCheck · A Square Solutions'
+
+const preheaderBlock = (text: string) =>
+  `<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all">${esc(text)}</div>`
+
+const wrap = (title: string, body: string, o: ListRenderOptions = {}) =>
+  `<div style="font-family:system-ui,Arial,sans-serif;max-width:560px;margin:auto;color:#18181b">${o.preheader ? preheaderBlock(o.preheader) : ''}
      <h2 style="color:#0ea5e9;margin:0 0 12px">${esc(title)}</h2>${body}
      <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0"/>
-     <p style="font-size:12px;color:#71717a">ScamCheck · A Square Solutions · <a href="https://scamcheck.asquaresolution.com">scamcheck.asquaresolution.com</a></p>
+     <p style="font-size:12px;color:#71717a">${o.footer === 'no-link' ? BRAND_LINE_NO_LINK : BRAND_LINE_DEFAULT}</p>
    </div>`
 
 // A Square Solutions-branded wrapper for company lead/contact emails.
@@ -111,17 +132,28 @@ function unsubFooter(email: string): string {
  * Reply-To is ADMIN_EMAIL for every list email (campaigns, welcome drip, TrustSeal
  * alerts): the sender is noreply@, so without it a reader's reply goes nowhere. This
  * matches the signup welcome in notifyNewsletter, which already sets it.
+ *
+ * `preheader` and `footer` are OPTIONAL per-campaign rendering options (see
+ * ListRenderOptions). Callers that pass neither get a byte-identical payload. The
+ * preview line is for the inbox list only, so it is kept out of the text/plain part:
+ * plain-text readers see the same body they always have.
+ *
+ * `idempotencyKey` is OPTIONAL and passed only by the campaign send loops; see send().
  */
-export async function sendListEmail(d: { to: string; subject: string; title: string; bodyHtml: string; campaignId?: string }): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+export async function sendListEmail(d: { to: string; subject: string; title: string; bodyHtml: string; campaignId?: string; idempotencyKey?: string } & ListRenderOptions): Promise<{ ok: boolean; skipped?: boolean; status?: number; error?: string }> {
   const r = await send({
     to: d.to,
     subject: d.subject,
     headers: listHeaders(d.to),
-    html: wrap(d.title, d.bodyHtml + unsubFooter(d.to)),
+    html: wrap(d.title, d.bodyHtml + unsubFooter(d.to), { preheader: d.preheader, footer: d.footer }),
+    ...(d.preheader ? { text: htmlToText(wrap(d.title, d.bodyHtml + unsubFooter(d.to), { footer: d.footer })) } : {}),
     replyTo: ADMIN_EMAIL,
     tags: campaignTags(d.campaignId),
+    idempotencyKey: d.idempotencyKey,
   })
-  return { ok: r.ok, skipped: r.skipped, error: r.error }
+  // `status` is the provider's HTTP status, absent when no answer was received at all.
+  // The campaign send loops need it to tell a definite refusal from an unknown outcome.
+  return { ok: r.ok, skipped: r.skipped, status: r.status, error: r.error }
 }
 
 /** Admin notification + user autoresponder for a contact / scam-report submission. */

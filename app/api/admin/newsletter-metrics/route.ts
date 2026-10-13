@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server'
 import { getStore } from '@/lib/store/adapter'
 import { requireAdmin } from '@/lib/admin-auth'
-import { summarizeSubscribers, subscriberTrends, subscriberDocId, type SubscriberRow } from '@/lib/newsletter/subscribers'
+import { summarizeSubscribers, subscriberTrends, subscriberDocId, clearlyInvalidEmail, type SubscriberRow } from '@/lib/newsletter/subscribers'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,16 +56,22 @@ export async function GET(req: Request) {
   })
 
   // ── Audience accounting — mirrors enqueueCampaign(campaigns.ts:126-137) exactly ──
-  // enqueue skips a row when: no email OR unsubscribed. It then derives a
+  // enqueue skips a row when: no email, unsubscribed, or a clearly invalid address
+  // (clearlyInvalidEmail — the same function enqueue calls). It then derives a
   // deterministic send id from subscriberDocId(email), so two rows normalising to
   // the same address collapse into ONE recipient. `eligible` therefore counts
   // DISTINCT doc ids, which is the number a fresh campaign would actually queue.
+  // An address held by several records is ruled by the strictest of them: if any of
+  // its records is unsubscribed, none of them is eligible and each is counted here.
+  const unsubscribedIds = new Set<string>()
+  for (const r of rows) { const email = (r.email || '').toLowerCase(); if (email && r.unsubscribed) unsubscribedIds.add(subscriberDocId(email)) }
   const seen = new Set<string>()
-  let blankEmail = 0, unsubscribed = 0, duplicateEmail = 0
+  let blankEmail = 0, unsubscribed = 0, invalidAddress = 0, duplicateEmail = 0
   for (const r of rows) {
     const email = (r.email || '').toLowerCase()
     if (!email) { blankEmail++; continue }
-    if (r.unsubscribed) { unsubscribed++; continue }
+    if (r.unsubscribed || unsubscribedIds.has(subscriberDocId(email))) { unsubscribed++; continue }
+    if (clearlyInvalidEmail(email)) { invalidAddress++; continue }
     const id = subscriberDocId(email)
     if (seen.has(id)) { duplicateEmail++; continue }
     seen.add(id)
@@ -75,6 +81,7 @@ export async function GET(req: Request) {
     active: rows.length - unsubscribed - blankEmail,
     unsubscribed,
     blankEmail,
+    invalidAddress,                     // clearly invalid by address grammar; not queued, record untouched
     duplicateEmail,
     eligible: seen.size,                // === recipients a NEW campaign would enqueue
     // Identified by doc id only — never the address. This is the same identifier the

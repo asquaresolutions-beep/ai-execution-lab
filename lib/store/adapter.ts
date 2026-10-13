@@ -37,6 +37,17 @@ export interface DocumentStore {
   readonly name: string
   /** Create or fully overwrite a document. Generates an id when omitted. */
   set<T extends object = DocData>(collection: string, id: string | null, data: T): Promise<string>
+  /**
+   * Create a document ONLY if none exists under this id. Resolves true when this call
+   * created it and false when one was already there (which is left untouched). In the
+   * production store (Firestore) and in the in-memory store the existence check and the
+   * write are a single step, so of any number of concurrent callers using the same id
+   * exactly one gets true. The exception is the in-memory store when it is backed by a
+   * file (STORE_FILE, development only): while that file is still being loaded, several
+   * callers can each be told they won. Use `create` wherever "the first caller wins" has
+   * to hold; `set` and `update` give no such guarantee anywhere.
+   */
+  create<T extends object = DocData>(collection: string, id: string, data: T): Promise<boolean>
   /** Merge fields into an existing document (creates if absent). */
   update<T extends object = DocData>(collection: string, id: string, patch: Partial<T>): Promise<void>
   get<T extends object = DocData>(collection: string, id: string): Promise<StoredDoc<T> | null>

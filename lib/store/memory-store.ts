@@ -65,6 +65,16 @@ export class MemoryStore implements DocumentStore {
     return docId
   }
 
+  async create<T extends object = DocData>(collection: string, id: string, data: T): Promise<boolean> {
+    await this.ensureLoaded()
+    const c = this.col(collection)
+    // has() and set() run with no await between them, so no other caller can interleave.
+    if (c.has(id)) return false
+    c.set(id, { ...data, id } as DocData)
+    await this.persist()
+    return true
+  }
+
   async update<T extends object = DocData>(collection: string, id: string, patch: Partial<T>): Promise<void> {
     await this.ensureLoaded()
     const c = this.col(collection)
