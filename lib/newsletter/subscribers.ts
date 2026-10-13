@@ -33,6 +33,37 @@ export function isValidEmail(email: string): boolean {
 }
 
 /**
+ * True only when an address can never be a deliverable mailbox by the address
+ * grammar itself (RFC 5321 §4.1.2, RFC 5322 §3.4.1). Deliberately narrower than
+ * "looks unusual": an address that is merely uncommon is NOT flagged and is left for
+ * the mail provider to accept or reject. Used to keep such addresses out of campaign
+ * queues and sends without touching the subscriber record; the signup check
+ * (isValidEmail) is unchanged. (asq-newsletter-send-eligibility-v1)
+ */
+export function clearlyInvalidEmail(raw?: string): boolean {
+  const email = normalizeEmail(raw)
+  if (!EMAIL_RE.test(email) || email.length > 254) return true
+  // EMAIL_RE already excludes whitespace; control and invisible format characters it does not.
+  if (/[\p{Cc}\p{Cf}]/u.test(email)) return true
+  const at = email.lastIndexOf('@') // EMAIL_RE guarantees exactly one '@'
+  const local = email.slice(0, at)
+  const domain = email.slice(at + 1)
+  if (local.length > 64) return true
+  // A quoted local part ("…") has its own grammar and is rare; it is not judged here.
+  if (!(local.length > 1 && local.startsWith('"') && local.endsWith('"'))) {
+    if (local.startsWith('.') || local.endsWith('.') || local.includes('..')) return true
+    if (/[()<>[\]:;,\\"]/.test(local)) return true
+  }
+  // An address literal ([203.0.113.5]) is likewise not judged here.
+  if (domain.startsWith('[') && domain.endsWith(']')) return false
+  for (const label of domain.split('.')) {
+    if (!label || label.length > 63 || label.startsWith('-') || label.endsWith('-')) return true
+    if (/[^a-z0-9\-\u00a1-\uffff]/.test(label)) return true
+  }
+  return false
+}
+
+/**
  * Deterministic, collision-safe document id for a subscriber.
  * SHA-1 of the normalized email (no PII in the id itself), `nl_`-prefixed.
  */

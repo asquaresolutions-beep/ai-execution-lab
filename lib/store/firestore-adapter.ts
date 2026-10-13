@@ -60,6 +60,24 @@ export class FirestoreStore implements DocumentStore {
     return docId
   }
 
+  async create<T extends object = DocData>(collection: string, id: string, data: T): Promise<boolean> {
+    // documents.createDocument. Firestore itself refuses the write when the id is taken
+    // (HTTP 409, ALREADY_EXISTS): the existence check and the write are one server-side
+    // step, which a GET followed by a PATCH can never be. Anything other than success or
+    // that exact refusal throws, so an unexpected answer is never read as "created".
+    const { qs, headers } = await this.auth()
+    const url = `${ROOT}/${collection}?documentId=${encodeURIComponent(id)}${qs ? `&${qs.slice(1)}` : ''}`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ fields: toFirestoreFields({ ...data, id }) }),
+    })
+    if (res.ok) return true
+    const body = await res.text()
+    if (res.status === 409 && body.includes('ALREADY_EXISTS')) return false
+    throw new Error(`Firestore create ${res.status}: ${body}`)
+  }
+
   async update<T extends object = DocData>(collection: string, id: string, patch: Partial<T>): Promise<void> {
     const mask = Object.keys(patch).map((k) => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&')
     const { qs, headers } = await this.auth()
