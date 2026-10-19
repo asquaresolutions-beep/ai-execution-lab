@@ -283,7 +283,14 @@ test('cancel: an unknown campaign', async () => {
   assert.deepEqual(await C.cancelCampaign('nope'), { ok: false, error: 'not_found' })
 })
 
-test('after cancel no send path remains: approve, enqueue, drain, requeue and the cron all leave it canceled', async () => {
+test('after cancel no send path remains: approve, enqueue, drain, requeue and the cron all leave it canceled', async (t) => {
+  // The production send switch is ON for this test (review R-06): the cancel guard, not the switch, must refuse.
+  const was = { on: process.env.CAMPAIGN_SENDS_ENABLED, env: process.env.VERCEL_ENV }
+  process.env.CAMPAIGN_SENDS_ENABLED = 'true'; process.env.VERCEL_ENV = 'production'
+  t.after(() => {
+    if (was.on === undefined) delete process.env.CAMPAIGN_SENDS_ENABLED; else process.env.CAMPAIGN_SENDS_ENABLED = was.on
+    if (was.env === undefined) delete process.env.VERCEL_ENV; else process.env.VERCEL_ENV = was.env
+  })
   const { store } = await seed('approved')
   await C.cancelCampaign('c-test')
   // Even a stray queued row for this campaign must never be sent.

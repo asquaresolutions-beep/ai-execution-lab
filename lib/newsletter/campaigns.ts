@@ -21,6 +21,11 @@
 // It does NOT act on stored bounce or complaint events (a stored event does not say
 // whether a bounce was permanent) and it has no provider suppression data.
 //
+// Production send switch (asq-campaign-send-switch-v1): no campaign recipient is handed
+// to the provider unless CAMPAIGN_SENDS_ENABLED is exactly 'true' AND the deployment is
+// production (VERCEL_ENV === 'production'). Off by default; a preview deployment can
+// never send a campaign. Checked first in drainCampaign and processCampaignSends.
+//
 // Per-campaign exclusions (asq-newsletter-send-safety-v2): a campaign may carry a
 // reviewed list of subscriber record ids to leave out, each with a reason, the
 // evidence it rests on and the time it was reviewed. The list only ever REMOVES
@@ -77,6 +82,16 @@ import { subscriberDocId, normalizeEmail, isValidEmail, clearlyInvalidEmail } fr
 import { latestTrendingSnapshot } from '@/lib/scam-intel/feed'
 import { composeScamDigest } from './digest-copy'
 import { composeNewsletterIssue, ISSUE_001 } from './issue-template'
+
+/**
+ * The production send switch. True only when CAMPAIGN_SENDS_ENABLED is exactly 'true' AND this is a production
+ * deployment (Vercel sets VERCEL_ENV). Anything else — unset, 'TRUE', '1', a preview or a local run — is OFF.
+ * Read at call time, so each test can set it. On Vercel a change to the variable reaches only deployments built
+ * after it: switching it on or off needs a new deployment, and older deployments keep the value they were built with.
+ */
+export function campaignSendsEnabled(): boolean {
+  return process.env.CAMPAIGN_SENDS_ENABLED === 'true' && process.env.VERCEL_ENV === 'production'
+}
 
 export type CampaignBrand = 'scamcheck' | 'lab' | 'asquare' | 'trustseal'
 export type CampaignStatus = 'draft' | 'approved' | 'sending' | 'sent' | 'canceled'
@@ -968,6 +983,8 @@ export interface DrainResult {
  */
 export async function drainCampaign(id: string, maxBatch = 200): Promise<DrainResult> {
   const none = { processed: 0, sent: 0, failed: 0, skipped: 0, done: false }
+  // The production send switch, before anything is read, locked or claimed.
+  if (!campaignSendsEnabled()) return { ok: false, ...none, error: 'campaign_sends_disabled' }
   const store = getStore()
   const c = await getCampaign(id)
   if (!c) return { ok: false, ...none, error: 'not_found' }
@@ -1190,11 +1207,12 @@ export async function listCampaignSends(id: string, limit = 500): Promise<{ tota
 }
 
 // ── Drain (cron). Sends queued recipients; flag-gated; never auto-progresses a draft. ──
-export interface SendRunResult { enabled: boolean; processed: number; sent: number; failed: number; skipped: number; campaignsCompleted: number; uncertain?: number }
+export interface SendRunResult { enabled: boolean; processed: number; sent: number; failed: number; skipped: number; campaignsCompleted: number; uncertain?: number; sendsDisabled?: true }
 
 export async function processCampaignSends(maxBatch = 80): Promise<SendRunResult> {
   const res: SendRunResult = { enabled: false, processed: 0, sent: 0, failed: 0, skipped: 0, campaignsCompleted: 0 }
   if (process.env.WEEKLY_DIGEST_ENABLED !== 'true') return res          // belt: disabled by default
+  if (!campaignSendsEnabled()) return { ...res, sendsDisabled: true }   // the production send switch: nothing read or claimed
   res.enabled = true
   const store = getStore()
 

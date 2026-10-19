@@ -33,6 +33,10 @@ import { pathToFileURL } from 'node:url'
 
 // Captured by the modules under test at load — set BEFORE importing. Obvious fakes.
 process.env.RESEND_API_KEY = 'test-key-not-a-real-secret'
+// This suite exercises campaign sending: the production send switch (asq-campaign-send-switch-v1) is set ON
+// for this test process only. eval/newsletter-send-switch.test.mjs covers it OFF.
+process.env.CAMPAIGN_SENDS_ENABLED = 'true'
+process.env.VERCEL_ENV = 'production'
 process.env.ADMIN_API_TOKEN = 'test-token-not-a-real-secret'
 process.env.NEWSLETTER_TEST_RECIPIENTS = 'preview-inbox@example.test'
 delete process.env.WEEKLY_DIGEST_ENABLED

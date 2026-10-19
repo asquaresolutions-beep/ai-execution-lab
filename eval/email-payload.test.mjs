@@ -25,6 +25,10 @@ const imp = (p) => import(pathToFileURL(B + p).href)
 // notify.ts captures RESEND_API_KEY at module load; without it send() no-ops and
 // no payload would ever be built. Obvious fake — not a credential.
 process.env.RESEND_API_KEY = 'test-key-not-a-real-secret'
+// This suite exercises campaign sending: the production send switch (asq-campaign-send-switch-v1) is set ON
+// for this test process only. eval/newsletter-send-switch.test.mjs covers it OFF.
+process.env.CAMPAIGN_SENDS_ENABLED = 'true'
+process.env.VERCEL_ENV = 'production'
 // notify.ts also captures ADMIN_EMAIL at load; this is what list mail must reply to.
 const EXPECTED_REPLY_TO = process.env.ADMIN_EMAIL || 'contact@asquaresolution.com'
 

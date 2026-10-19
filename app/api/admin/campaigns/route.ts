@@ -26,7 +26,9 @@
 //             Each is re-checked against the current subscriber record immediately
 //             before delivery and skipped, with the reason recorded, if no longer
 //             eligible. Safe to repeat: refused while a run is alive, and no recipient
-//             is handed to the provider twice for one attempt.
+//             is handed to the provider twice for one attempt. Refused with HTTP 423
+//             ('campaign_sends_disabled') unless CAMPAIGN_SENDS_ENABLED is 'true' on a
+//             production deployment (asq-campaign-send-switch-v1).
 //   resolve-uncertain : { id, recordId, outcome: 'sent' | 'retry', evidence } — settles
 //             ONE recipient whose outcome is unknown. Never automatic.
 //   selfcheck : proves the live store's create-if-absent lets exactly one caller win.
@@ -112,7 +114,9 @@ export async function POST(req: Request) {
       // Explicit, admin-triggered send of an approved+enqueued campaign (status 'sending').
       if (!b.id) return NextResponse.json({ ok: false, error: 'id_required' }, { status: 400 })
       if (b.batch != null && !(Number.isInteger(b.batch) && (b.batch as number) >= 1 && (b.batch as number) <= 200)) return NextResponse.json({ ok: false, error: 'invalid_batch' }, { status: 400 })
-      return NextResponse.json(await drainCampaign(b.id, b.batch == null ? undefined : (b.batch as number)))
+      const r = await drainCampaign(b.id, b.batch == null ? undefined : (b.batch as number))
+      // The production send switch is off (asq-campaign-send-switch-v1): a refusal, never a result to read past.
+      return NextResponse.json(r, r.error === 'campaign_sends_disabled' ? { status: 423 } : undefined)
     }
     case 'resolve-uncertain': {
       if (!b.id) return NextResponse.json({ ok: false, error: 'id_required' }, { status: 400 })
