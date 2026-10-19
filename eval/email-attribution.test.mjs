@@ -14,6 +14,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { pathToFileURL } from 'node:url'
+// This suite exercises campaign sending: the production send switch (asq-campaign-send-switch-v1) is set ON
+// for this test process only. eval/newsletter-send-switch.test.mjs covers it OFF.
+process.env.CAMPAIGN_SENDS_ENABLED = 'true'
+process.env.VERCEL_ENV = 'production'
 
 // Repo root, derived from this file's location (was a hardcoded pre-migration C: path).
 const B = decodeURIComponent(new URL('../', import.meta.url).pathname).replace(/^\/(?=[A-Za-z]:)/, '')
