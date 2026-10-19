@@ -17,8 +17,9 @@
 // eval/newsletter-send-safety.test.mjs.
 //
 // What these tests deliberately do NOT claim:
-//   • that bounced addresses are excluded — the stored event does not say whether a
-//     bounce was permanent, and which bounced addresses to exclude is an open decision;
+//   • that every bounced address is excluded — since asq-campaign-send-switch-v1 (B2) the
+//     send path skips an address only on a complaint, a provider suppression, a permanent
+//     bounce or repeated bounces since the last delivery; one bounce alone never stops a send;
 //   • that provider-suppressed addresses are excluded — this code has no provider
 //     suppression data.
 // Both limits are pinned below so they cannot be mistaken for safeguards.
@@ -365,26 +366,36 @@ test('a run that leaves recipients queued does not mark the campaign sent, by ei
 })
 
 // ══ 5 · What this code does NOT know: bounces, complaints, provider suppression ═
-test('LIMIT: a stored bounce event carries nothing that says whether the bounce was permanent', () => {
+// Changed by asq-welcome-deliverability-v1: the bounce type and sub-type are now kept (the welcome drip
+// uses them); the provider's free-text message is still discarded. The campaign send path below still
+// does not consult stored events — that limit is unchanged and stays pinned.
+test('a stored bounce event keeps the provider\'s bounce type and sub-type, never its free-text message', () => {
   const evt = parseResendEvent({
     type: 'email.bounced', created_at: '2026-10-01T10:00:00.000Z',
     data: { to: ['Reader@Example.Test'], email_id: 'msg_1', bounce: { type: 'Permanent', subType: 'General', message: 'mailbox does not exist' }, tags: { campaignId: 'c1' } },
   })
-  assert.deepEqual(Object.keys(evt).sort(), ['campaignId', 'email', 'messageId', 'meta', 'ts', 'type'])
+  assert.deepEqual(Object.keys(evt).sort(), ['bounceSubType', 'bounceType', 'campaignId', 'email', 'messageId', 'meta', 'ts', 'type'])
   assert.equal(evt.type, 'bounced')
+  assert.deepEqual([evt.bounceType, evt.bounceSubType], ['Permanent', 'General'])
   assert.deepEqual(evt.meta, { tags: { campaignId: 'c1' } })
-  assert.ok(!/permanent|mailbox does not exist|subType/i.test(JSON.stringify(evt)), 'the detail is discarded on the way in, so it cannot be used to decide anything later')
+  assert.ok(!/mailbox does not exist/i.test(JSON.stringify(evt)), 'the provider\'s free-text message is discarded on the way in')
 })
 
-test('LIMIT: stored bounce and complaint events are not consulted — who to exclude for them is an open decision, not a safeguard here', async () => {
+// Changed by asq-campaign-send-switch-v1 (B2): immediately before each delivery the send path now reads the stored
+// provider events for the address (lib/newsletter/deliverability.ts). One bounce on record is still not treated as
+// proof the address is dead; a complaint stops the send. The QUEUE is still built without reading any event.
+test('stored provider events: one bounce does not stop a send, a complaint does (B2); the queue never reads them', async () => {
   const { store, calls } = await seed([{ email: 'bounced-before@example.test' }, { email: 'complained-before@example.test' }])
   await store.set(EVENTS, 'ev_1', { type: 'bounced', email: 'bounced-before@example.test', ts: Date.parse('2026-09-11T09:20:00Z') })
   await store.set(EVENTS, 'ev_2', { type: 'complained', email: 'complained-before@example.test', ts: Date.parse('2026-09-11T09:21:00Z') })
   const q = await C.enqueueCampaign('c1')
-  assert.deepEqual([q.recipients, q.notQueued], [2, {}], 'a bounce on record is not treated as proof the address is dead')
+  assert.deepEqual([q.recipients, q.notQueued], [2, {}], 'a bounce or complaint on record does not change who is queued')
+  assert.equal(calls.filter((x) => x.collection === EVENTS).length, 0, 'building the queue reads no event')
   const r = await C.drainCampaign('c1')
-  assert.deepEqual([r.sent, r.skipped], [2, 0])
-  assert.equal(calls.filter((x) => x.collection === EVENTS).length, 0, 'the send path never reads the event history')
+  assert.deepEqual([r.sent, r.skipped], [1, 1])
+  assert.deepEqual(sentTo(), ['bounced-before@example.test'], 'one bounce alone never stops a send')
+  assert.equal((await rowFor(store, 'complained-before@example.test')).skipReason, 'deliverability')
+  assert.equal(calls.filter((x) => x.collection === EVENTS && WRITES.has(x.op)).length, 0, 'events are read, never written')
 })
 
 test('LIMIT: no provider suppression list is read — the only outbound request is the send itself', async () => {

@@ -18,8 +18,10 @@
 // why on the row — anyone who has since unsubscribed, whose record is gone, or whose
 // address is clearly invalid. Rows end as 'sent', 'failed' or 'skipped'; campaign
 // totals are counted from the rows. This code never writes to a subscriber record.
-// It does NOT act on stored bounce or complaint events (a stored event does not say
-// whether a bounce was permanent) and it has no provider suppression data.
+// Since asq-campaign-send-switch-v1 it also skips ('deliverability') an address whose
+// stored provider events show a complaint, a provider suppression, a permanent bounce
+// or repeated bounces since the last delivery (lib/newsletter/deliverability.ts, the
+// rule the welcome drip uses). It reads no provider suppression list of its own.
 //
 // Production send switch (asq-campaign-send-switch-v1): no campaign recipient is handed
 // to the provider unless CAMPAIGN_SENDS_ENABLED is exactly 'true' AND the deployment is
@@ -82,6 +84,8 @@ import { subscriberDocId, normalizeEmail, isValidEmail, clearlyInvalidEmail } fr
 import { latestTrendingSnapshot } from '@/lib/scam-intel/feed'
 import { composeScamDigest } from './digest-copy'
 import { composeNewsletterIssue, ISSUE_001 } from './issue-template'
+import { EMAIL_EVENTS } from '@/lib/email/events'
+import { deliverabilityBlock, type DeliveryEventLike } from './deliverability'
 
 /**
  * The production send switch. True only when CAMPAIGN_SENDS_ENABLED is exactly 'true' AND this is a production
@@ -170,7 +174,7 @@ interface SubDoc { email?: string; unsubscribed?: boolean }
 export type NotQueuedReason = 'no_email' | 'unsubscribed' | 'invalid_address' | 'excluded' | 'duplicate_address'
 
 /** Why a queued recipient was not sent to. Stored on the row as `skipReason`. */
-export type SendSkipReason = 'unsubscribed' | 'not_subscribed' | 'invalid_address' | 'excluded'
+export type SendSkipReason = 'unsubscribed' | 'not_subscribed' | 'invalid_address' | 'excluded' | 'deliverability'
 
 /**
  * A campaign_sends row. `subscriberId` is the subscriber document it was queued from.
@@ -722,8 +726,9 @@ export async function enqueueCampaign(id: string, maxRecipients = 5000, expect?:
  * must not be sent to, or null. The unsubscribe link marks the record stored under
  * the id derived from the address, so that record is always read; when the row was
  * queued from a record stored under a different id, that one is read as well.
- * The exclusion list is consulted LAST, so it can add a reason not to send but never
- * replaces an invalid address, an unsubscribe or a missing record. The list used is
+ * The exclusion list is consulted after those, so it can add a reason not to send but never
+ * replaces an invalid address, an unsubscribe or a missing record; the provider's events
+ * (asq-campaign-send-switch-v1) are consulted last, on the same terms. The list used is
  * the one FROZEN in the campaign's queue record — the addresses it excluded when the
  * queue was built — so nothing written to the campaign afterwards can change who is
  * sent to. (A queue built before queue records existed has none; the campaign's own
@@ -744,9 +749,14 @@ async function sendSkipReason(c: Campaign, row: SendRow, queue: QueueRecord | nu
     if (doc.data?.unsubscribed) return 'unsubscribed'
   }
   if (!found) return 'not_subscribed'
-  if (queue) return queue.excludedIdentities.includes(ids[0]) ? 'excluded' : null
-  const excluded = exclusionIndex(c)
-  return ids.some((sid) => excluded.has(sid)) ? 'excluded' : null
+  if (queue) { if (queue.excludedIdentities.includes(ids[0])) return 'excluded' }
+  else if (ids.some((sid) => exclusionIndex(c).has(sid))) return 'excluded'
+  // asq-campaign-send-switch-v1 (B2): the provider's own events for this address. A complaint, a provider
+  // suppression, a permanent bounce or repeated bounces since the last delivery mean another send would only
+  // fail again. Like the exclusion list it can only add a reason NOT to send. A store error is passed on, so the
+  // attempt is abandoned and nothing is sent (skipIfIneligible). One equality query: no composite index needed.
+  const events = await store.query<DeliveryEventLike>(EMAIL_EVENTS, { where: [{ field: 'email', op: '==', value: String(row.email).trim().toLowerCase() }], limit: 500 })
+  return deliverabilityBlock(events.map((e) => e.data)) ? 'deliverability' : null
 }
 
 /**

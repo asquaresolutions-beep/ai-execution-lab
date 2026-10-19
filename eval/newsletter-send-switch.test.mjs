@@ -1,12 +1,13 @@
 // eval/newsletter-send-switch.test.mjs   (asq-campaign-send-switch-v1)
 //
-// Offline tests for the production send switch — no campaign recipient reaches the provider unless
+// Offline tests for (1) the production send switch — no campaign recipient reaches the provider unless
 // CAMPAIGN_SENDS_ENABLED is exactly 'true' on a production deployment (VERCEL_ENV === 'production') — on every
 // path that sends a campaign: drainCampaign, the admin route's "drain" action and the daily job
-// (processCampaignSends).
+// (processCampaignSends); and (2) B2, the send-time skip of an address whose stored provider events show a
+// complaint, a provider suppression, a permanent bounce or repeated bounces since the last delivery.
 //
-// The store is a MemoryStore behind a proxy that records every data call. The provider request is stubbed: no
-// I/O; any other request is recorded as a violation. Nothing leaves the machine.
+// The store is a MemoryStore behind a proxy that records every data call and can be told to fail one. The provider
+// request is stubbed: no I/O; any other request is recorded as a violation. Nothing leaves the machine.
 //
 // Run: node --test --import ./eval/hooks.mjs eval/newsletter-send-switch.test.mjs
 
@@ -48,7 +49,9 @@ function instrument(store) {
     get(t, prop) {
       const v = Reflect.get(t, prop)
       if (typeof v !== 'function' || !DATA_OPS.includes(String(prop))) return v
-      return (...args) => { const call = { op: String(prop), collection: args[0] }; calls.push(call); if (ctl.fault) ctl.fault(call, args); return v.apply(t, args) }
+      // A fault is delivered as an async rejection, the way a Firestore failure arrives (review R-07), so a
+      // fail-open `.catch(() => [])` on the call is noticed.
+      return (...args) => { const call = { op: String(prop), collection: args[0] }; calls.push(call); if (ctl.fault) { try { ctl.fault(call, args) } catch (e) { return Promise.reject(e) } } return v.apply(t, args) }
     },
   })
   return { proxy, calls, ctl }
@@ -146,4 +149,60 @@ test('the single-recipient preview (test-send) is not a campaign send and is not
   const r = await C.sendCampaignTest('c1', 'preview-inbox@example.test')
   assert.equal(r.ok, true); assert.equal(captured.length, 1); assert.equal(captured[0].to[0], 'preview-inbox@example.test')
   delete process.env.NEWSLETTER_TEST_RECIPIENTS
+})
+
+// ══ 2 · B2: the provider's own events stop a send ═════════════════════════════
+for (const [label, events, skip] of [
+  ['repeated bounces (two, untyped, as stored before the welcome patch)', [['bounced', 3], ['bounced', 1]], true],
+  ['a permanent bounce', [['bounced', 1, { bounceType: 'Permanent' }]], true],
+  ['a provider suppression', [['suppressed', 1, { suppressedType: 'OnAccountSuppressionList' }]], true],
+  ['a spam complaint, even after a later delivery', [['complained', 5], ['delivered', 1]], true],
+  ['one transient bounce only', [['bounced', 1, { bounceType: 'Temporary' }]], false],
+  ['two bounces, then a delivery', [['bounced', 5], ['bounced', 4], ['delivered', 1]], false],
+]) {
+  test(`B2 — ${label}: ${skip ? 'skipped as "deliverability", never handed to the provider' : 'still sent'}`, async () => {
+    const { store, calls } = await queued(['ok@example.test', 'x@example.test'], { 'x@example.test': events })
+    on()
+    const r = await C.drainCampaign('c1')
+    assert.equal(r.ok, true)
+    const sent = captured.map((p) => p.to[0]).sort()
+    assert.deepEqual(sent, skip ? ['ok@example.test'] : ['ok@example.test', 'x@example.test'])
+    const row = (await store.get(CAMPAIGN_SENDS, `cs_c1_${subscriberDocId('x@example.test')}`)).data
+    assert.equal(row.status, skip ? 'skipped' : 'sent'); if (skip) assert.equal(row.skipReason, 'deliverability')
+    assert.equal(calls.filter((c) => WRITES.has(c.op) && [LIST, EVENTS].includes(c.collection)).length, 0, 'no subscriber record and no event is written')
+    setEnv(undefined, undefined)
+  })
+}
+
+test('B2 — the address case of the queue row does not hide its events', async () => {
+  const { store } = await queued(['Mixed.Case@Example.test'], { 'mixed.case@example.test': [['bounced', 3], ['bounced', 1]] })
+  // The queue stores addresses lower-cased; a row written otherwise (older code, a hand repair) must not slip past.
+  const [row] = await store.query(CAMPAIGN_SENDS, { limit: 10 })
+  await store.update(CAMPAIGN_SENDS, row.id, { email: 'Mixed.Case@Example.test' })
+  on()
+  await C.drainCampaign('c1')
+  assert.equal(captured.length, 0)
+  assert.deepEqual(await statuses(store), ['skipped'])
+  setEnv(undefined, undefined)
+})
+
+test('B2 — the events cannot be read (store error): nothing is sent; the attempt is abandoned for a later run', async () => {
+  const { store, ctl } = await queued(['a@example.test'])
+  on()
+  ctl.fault = (call) => { if (call.op === 'query' && call.collection === EVENTS) throw new Error('store down') }
+  await assert.rejects(() => C.drainCampaign('c1'))
+  assert.equal(captured.length, 0, 'nothing handed to the provider')
+  const row = (await store.query(CAMPAIGN_SENDS, { limit: 10 }))[0].data
+  assert.equal(row.status, 'queued'); assert.ok((row.attempt || 1) >= 2, 'the attempt was abandoned, so a later run claims it afresh')
+  ctl.fault = null; setEnv(undefined, undefined)
+})
+
+test('B2 — the daily job applies the same skip', async () => {
+  const { store } = await queued(['ok@example.test', 'x@example.test'], { 'x@example.test': [['bounced', 2], ['bounced', 1]] })
+  process.env.WEEKLY_DIGEST_ENABLED = 'true'; on()
+  const r = await C.processCampaignSends()
+  assert.equal(r.sent, 1); assert.equal(r.skipped, 1)
+  assert.deepEqual(captured.map((p) => p.to[0]), ['ok@example.test'])
+  assert.deepEqual(await statuses(store), ['sent', 'skipped'])
+  delete process.env.WEEKLY_DIGEST_ENABLED; setEnv(undefined, undefined)
 })

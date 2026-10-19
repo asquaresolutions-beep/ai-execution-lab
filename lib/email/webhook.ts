@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────────
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
-export type EmailEventType = 'delivered' | 'bounced' | 'opened' | 'clicked' | 'complained' | 'unsubscribed' | 'sent' | 'delivery_delayed'
+export type EmailEventType = 'delivered' | 'bounced' | 'opened' | 'clicked' | 'complained' | 'unsubscribed' | 'sent' | 'delivery_delayed' | 'suppressed'
 
 export interface NormalizedEmailEvent {
   type: EmailEventType
@@ -17,6 +17,15 @@ export interface NormalizedEmailEvent {
   campaignId?: string
   ts: number
   meta?: Record<string, unknown>
+  // What the provider says about a bounce (data.bounce.type / subType, e.g. "Permanent" / "Suppressed")
+  // or a suppressed send (data.suppressed.type, e.g. "OnAccountSuppressionList"). Present only when the
+  // provider sent it; events stored before asq-welcome-deliverability-v1 never carry it.
+  // Field names as documented by the provider (read 19 Oct 2026): https://resend.com/docs/webhooks/emails/bounced
+  // (data.bounce = { type: "Permanent", subType: "Suppressed", message }) and
+  // https://resend.com/docs/webhooks/emails/suppressed (data.suppressed = { type: "OnAccountSuppressionList", message }).
+  bounceType?: string
+  bounceSubType?: string
+  suppressedType?: string
 }
 
 const TYPE_MAP: Record<string, EmailEventType> = {
@@ -27,7 +36,13 @@ const TYPE_MAP: Record<string, EmailEventType> = {
   'email.opened': 'opened',
   'email.clicked': 'clicked',
   'email.complained': 'complained',
+  // The provider skipped the send because the address is on its suppression list. It documents that
+  // this does not count toward the bounce rate; it is stored so the welcome drip stops trying.
+  'email.suppressed': 'suppressed',
 }
+
+/** A short provider label, or undefined. Never more than 64 characters. */
+const label = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 64) : undefined)
 
 /** Verify a Svix/Resend webhook signature. Returns true on any matching v1 sig. */
 export function verifyResendSignature(opts: {
@@ -63,6 +78,9 @@ export function parseResendEvent(body: unknown): NormalizedEmailEvent | null {
   const to = Array.isArray(data.to) ? String(data.to[0] ?? '') : String(data.to ?? '')
   if (!to) return null
   const tags = (data.tags as Record<string, string> | undefined) || undefined
+  const bounce = (type === 'bounced' && data.bounce && typeof data.bounce === 'object') ? data.bounce as Record<string, unknown> : null
+  const suppressed = (type === 'suppressed' && data.suppressed && typeof data.suppressed === 'object') ? data.suppressed as Record<string, unknown> : null
+  const bounceType = label(bounce?.type), bounceSubType = label(bounce?.subType), suppressedType = label(suppressed?.type)
   return {
     type,
     email: to.toLowerCase(),
@@ -70,6 +88,10 @@ export function parseResendEvent(body: unknown): NormalizedEmailEvent | null {
     campaignId: tags?.campaignId || tags?.campaign_id,
     ts: b.created_at ? Date.parse(b.created_at) || Date.now() : Date.now(),
     meta: tags ? { tags } : undefined,
+    // Spread in only when present, so every other event keeps exactly the shape it had before.
+    ...(bounceType ? { bounceType } : {}),
+    ...(bounceSubType ? { bounceSubType } : {}),
+    ...(suppressedType ? { suppressedType } : {}),
   }
 }
 
