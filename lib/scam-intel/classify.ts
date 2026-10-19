@@ -23,7 +23,12 @@ const PHONE_RE = /(?:\+?\d[\d\s-]{7,}\d)/g
 const MONEY_RE = /(?:₹|rs\.?|inr|usd|\$)\s?[\d,]+(?:\.\d+)?|\b\d+\s?(?:lakh|crore|k)\b/gi
 const OTP_RE = /\b(otp|one[\s-]?time\s?password|verification code|cvv|pin)\b/i
 const KYC_RE = /\b(kyc|re-?kyc|update.{0,12}(aadhaar|pan|account)|account.{0,8}(block|suspend|frozen))\b/i
-const JOB_RE = /\b(work from home|part[\s-]?time job|earn .{0,15}(daily|per day)|hiring|recruit|registration fee|telegram task)\b/i
+// The earnings terms are exported so the pay-to-get-paid detector (multimodal.ts) uses
+// the SAME wording as its task/job context. The generic terms are ordinary words and are
+// not shared. JOB_RE matches exactly what it matched as a single literal.
+export const JOB_EARNINGS_TERMS = String.raw`work from home|part[\s-]?time job|earn .{0,15}(?:daily|per day)|telegram task`
+const JOB_GENERIC_TERMS = String.raw`hiring|recruit|registration fee`
+const JOB_RE = new RegExp(String.raw`\b(${JOB_EARNINGS_TERMS}|${JOB_GENERIC_TERMS})\b`, 'i')
 const INVEST_RE = /\b(guaranteed returns?|double your money|crypto|trading (signal|tips)|stock tip|investment plan|profit \d+%)\b/i
 const PRIZE_RE = /\b(you (have )?won|lottery|lucky draw|prize|gift|reward claim)\b/i
 const LOAN_RE = /\b(instant loan|pre-?approved loan|loan approv|low interest loan)\b/i

@@ -14,6 +14,7 @@
 import { createHash } from 'node:crypto'
 import { ocrImage, type OcrResult, type OcrWord } from './ocr'
 import { enrich } from '@/lib/intelligence/enrichment'
+import { JOB_EARNINGS_TERMS } from './classify'
 import { extractEntities, entityRiskCount, type ExtractedEntities } from './extract-entities'
 import { analyzeUrls, type UrlFinding } from './url-intel'
 import { detectImpersonations } from './impersonation'
@@ -110,13 +111,174 @@ const EN_RECEIVE = String.raw`(?:receive|get|claim|collect|redeem|avail)`
 const EN_MONEY = String.raw`(?:money|payment|funds|refund|cashback|prize|reward|amount|winnings|advance|rs\.?|₹|inr)`
 const EN_REVERSE_QR = String.raw`${EN_SCAN_QR}[^.!?\n]{0,25}?\b(?:to|and)\s+${EN_RECEIVE}\s+(?:it|them|(?:(?:your|the|this|that|my)\s+)?(?:\w+\s+){0,2}${EN_MONEY})|\bto\s+${EN_RECEIVE}\s+(?:(?:your|the|this|that)\s+)?(?:\w+\s+){0,2}${EN_MONEY}[^.!?\n]{0,30}?${EN_SCAN_QR}`
 
-const DETECTORS: Array<{ id: string; label: string; severity: VisualSignal['severity']; re: RegExp }> = [
+// ── Pay-to-get-paid demand (task / job advance fee) ─────────────────
+// An instruction to pay, deposit, recharge or top up IN ORDER TO withdraw or release
+// money described as the reader's earnings or balance, or to continue / unlock task
+// work. Narrow by design: task and job earnings only.
+//   Tier 1 fires on its own — a payment instruction, a purpose link and "withdraw" /
+//     "release your earnings or balance" / the scheme's own task account, in ONE sentence.
+//     No task or job wording is required: people often paste only the latest message.
+//   Tier 2 needs context — a payment instruction with a weaker goal (unlock, continue,
+//     start, registration fee …) in one sentence AND task or job-earnings wording
+//     anywhere in the message.
+//   Tier 1 also has three goal-first forms: "a verification / clearance / withdrawal /
+//     processing / tax fee … is required / must be paid … to release your earnings"; "to
+//     withdraw …, pay ₹X" (or "pay 30% …": a percentage counts as the amount) / "to
+//     withdraw you must complete the prepaid task"; and "your earnings will be released
+//     after you pay ₹X".
+// Never matched: a negated or reported-advice verb ("never pay", "asks you to pay",
+// "you are asked to deposit"), and a demand whose sentence names lottery / prize /
+// cashback / refund / bonus / loan money without also naming earnings, commission,
+// salary, payout or tasks.
+// One bank-service wording is left alone: "withdraw cash at / from another bank's ATM"
+// (the inter-bank ATM fee notice), and only when the message has no earnings, task or job
+// wording anywhere. With such wording the sentence is judged like any other. Nothing else
+// is excluded by what is withdrawn: PF, units of a mutual fund, "his / her …", an
+// application and the rest all count.
+// The withdrawal only has to be in the same sentence as the payment instruction, after a
+// purpose link. There is no rule about what may stand between them, so "deposit ₹5,000
+// to open a Fixed Deposit and withdraw anytime" IS matched (a known false positive).
+// A price list with no payment instruction ("to withdraw, a fee of ₹25 applies") is not
+// matched.
+// The word lists are the locked ones (plan sections C, D and I) plus inflections and
+// spellings of those words. Wider wording carried by an earlier draft is deliberately NOT
+// matched ("and you can withdraw", "fund your task account", "your pending commission",
+// "to cash out, pay …", "an activation fee is payable …"); the fixture pins each of those
+// as a documented gap.
+// A first-contact job offer with no payment demand is deliberately NOT this signal.
+
+// A character inside a sentence. A dot inside a token (Rs.500, 1.5, name@ok.handle) or
+// straight after "Rs" does not end the sentence.
+const AF_CH = String.raw`(?:[^.!?\n।]|\.(?!\s|$)|(?<=\brs)\.)`
+const afGap = (n: number) => `${AF_CH}{0,${n}}?`
+// A negated or reported verb is not a demand. The guard also covers the later verbs of a
+// list ("never asks you to pay, recharge or deposit …"), or the second verb would match.
+// Owner rulings of 19 Oct 2026: class 1 (awareness / FAQ text with a negation) — "need to" and "having to" beside
+// "have to", "without", and "never, ever"; F-08 — "asked to" / "told to" stay awareness wording EXCEPT after a
+// first-person subject ("I was / I am / I'm / I've been / we were … asked / told to"), so a victim's own report
+// ("I was told to pay ₹500 to withdraw my earnings") is flagged, while "you are asked to deposit …" and the
+// article's "… then told to deposit your own money …" are not.
+const AF_VERB_LIST = String.raw`(?:["'“”‘’]?(?:pay|deposit|recharge|top[\s-]?up|remit|send|add|transfer)["'“”‘’]?(?:\s*,\s*|\s+(?:or|and)\s+)){0,3}["'“”‘’]?`
+const AF_NEG = String.raw`(?<!\b(?:never|not|don['’]?t|do not|doesn['’]?t|won['’]?t|shouldn['’]?t|no need to|without|asks? you to|ask(?:ed|ing) you to|(?<!\b(?:i|we)(?:\s+(?:was|were|am|are|got|have\s+been|had\s+been)|['’](?:m|re|ve\s+been))\s+)(?:asked|told)\s+to|tells? you to),?\s+(?:ever,?\s+)?(?:(?:have|having|need)\s+to\s+)?${AF_VERB_LIST})`
+const AF_MONEY = String.raw`(?:(?:₹|rs\.?|inr|\$)\s?[\d,]+|\b[\d,]{2,}\s?(?:rupees|rs|usdt)\b)`
+// Money verbs stand alone; generic verbs (send / add / transfer) count only with an amount directly after.
+const AF_PAY = String.raw`${AF_NEG}\b(?:(?:pay|deposit|recharge|top[\s-]?up|remit)\b|(?:send|add|transfer)\s+${AF_MONEY})`
+// A percentage stands for the amount in "to withdraw, please pay 30% tax first" — only directly after the
+// payment verb (an article may come between), so "pay attention to the 30% tax rule" is not a payment.
+const AF_PERCENT = String.raw`\s+(?:(?:an?|the)\s+)?\d{1,2}(?:\.\d+)?\s?%`
+// The inter-bank ATM fee notice: "withdraw cash at / from another bank's ATM". Applied only to a message
+// with no earnings, task or job wording (see advanceFeeDemand). Kept this narrow on purpose: "withdraw cash
+// from your task wallet", "withdraw cash from any ATM", "withdraw your PF" and "withdraw your mutual fund
+// units" always count.
+const AF_OTHER_BANK_ATM = String.raw`(?!\s+cash\s+(?:at|from)\s+(?:an)?other\s+banks?(?:['’]s)?\s+atms?\b)`
+// Money the reader is told is already theirs. `atm` is AF_OTHER_BANK_ATM or nothing.
+const afEarn = (atm: string) => String.raw`(?:withdraw(?:al|als|ing)?\b${atm}|payout|cash[\s-]?out|unfreez\w*|(?:release|unlock|receive|claim|get)\s+(?:your|my|the)\s+(?:earnings|commission|salary|payout|funds|balance|money)|(?:your|my)\s+(?:earnings|commission|payout))`
+// The scheme's own account.
+const AF_TASK_ACCT = String.raw`(?:your|the)\s+(?:task|work|vip)\s+(?:account|wallet|id)`
+const AF_PURPOSE = String.raw`\b(?:to|in order to|before you can|before|so (?:that )?you can|then you can)\b`
+// The four fee names of plan section C, and "tax" from the locked release gate ("a tax or clearance fee").
+const AF_FEE = String.raw`(?:verification|clearance|withdrawal|processing|tax)\s+fee`
+// No Hinglish pattern: the owner's ruling of 19 Oct 2026 (option b) removed the planned Latin-script Hinglish
+// demand patterns from this signal, so Hinglish payment demands keep production behaviour. The production Hindi /
+// Hinglish UPI rules above (HI_* blocks) are unchanged.
+// The demand with the goal first: "your earnings will be released after you pay the ₹350 activation charge".
+// Only earnings words said to be the reader's own, only release wording, only "after / once / when / as soon as
+// you <pay>", and only with a stated amount or percentage (so "… after you pay your seller fees" is not matched).
+const AF_RELEASED_AFTER_PAY = String.raw`\b(?:your|my)\s+(?:earnings|commission|salary|payout)\b${afGap(40)}\b(?:released?|credited|unlocked|unfrozen|processed|paid\s+out)\b${afGap(30)}\b(?:only\s+)?(?:after|once|when|as\s+soon\s+as)\s+(?:you\s+)?${AF_PAY}(?:${AF_PERCENT}|${afGap(25)}${AF_MONEY})`
+// `atm` is AF_OTHER_BANK_ATM (the bank notice is left alone) or '' (every sentence is judged the same way).
+const afTier1Src = (atm: string) => [
+  String.raw`${AF_PAY}${afGap(80)}${AF_PURPOSE}${afGap(40)}\b${afEarn(atm)}`,                    // pay … to withdraw / release your earnings
+  String.raw`${AF_PAY}${afGap(60)}\b(?:in|into|to)\s+${AF_TASK_ACCT}`,                               // deposit … into your task account
+  String.raw`${AF_NEG}\b(?:recharge|top[\s-]?up)\s+${AF_TASK_ACCT}`,                                 // recharge your task account
+  String.raw`\b${AF_FEE}\b${afGap(50)}\b(?:is |are )?(?:required|must be paid)\b${afGap(60)}${AF_PURPOSE}${afGap(40)}\b${afEarn(atm)}`, // a verification fee … is required to release your earnings
+  String.raw`\bto\s+withdraw\w*\b${atm}${afGap(80)}(?:${AF_PAY}(?:${afGap(25)}${AF_MONEY}|${AF_PERCENT})|\bprepaid\s+(?:task|order))`, // to withdraw …, pay ₹200 / pay 30% tax / complete the prepaid task
+  AF_RELEASED_AFTER_PAY,
+].join('|')
+const AF_WEAK = String.raw`(?:unlock\w*|upgrade\w*|activate\w*|continue|proceed|next\s+(?:level|task|order)|vip(?:\s+level)?|more\s+tasks|start(?:\s+(?:work|working|earning|the\s+(?:tasks?|job)))?|complete\s+the\s+(?:task|order)|(?:registration|joining|training|security|verification|activation)\s+(?:fee|deposit)|refundable)`
+const AF_TIER2_SRC = [
+  String.raw`${AF_PAY}${afGap(90)}\b${AF_WEAK}\b`,
+  String.raw`\b(?:to|before you can)\s+(?:continue|proceed|start|unlock\w*|activate\w*)\b${afGap(60)}${AF_PAY}`,
+  String.raw`\b(?:before|for)\s+the\s+(?:next|vip)\s+(?:task|tasks|order|level)\b${afGap(40)}${AF_PAY}`,
+  String.raw`${AF_PAY}${afGap(60)}\band\b${afGap(20)}\bget\b${afGap(15)}${AF_MONEY}${afGap(40)}\bback\b`, // send ₹500 and get ₹800 back
+].join('|')
+// Task / job-earnings context. The first group is the classifier's earnings wording
+// (classify.ts JOB_EARNINGS_TERMS); its generic terms (hiring, recruit, registration
+// fee) and the bare word "tasks" are deliberately not context.
+const AF_CONTEXT = new RegExp(String.raw`\b(?:${JOB_EARNINGS_TERMS}|telegram group|tasks? (?:earnings|commission|balance|order)|(?:rating|like) tasks?|your (?:earnings|commission)|commission|earn(?:ed|ing|ings)?\b[^.!?\n]{0,25}(?:₹|rs\.?|inr|\d)|per (?:task|like|review)|online job|(?:selected|shortlisted) for|job offer|data entry|(?:prepaid|merchant) task|vip level)\b`, 'i')
+const AF_TIER1 = new RegExp(afTier1Src(''), 'i')
+// matchAll works on a copy of these, so their lastIndex is never shared between calls.
+const AF_TIER1_ALL = new RegExp(afTier1Src(''), 'gi')
+const AF_TIER1_BANK_NOTICE_ALL = new RegExp(afTier1Src(AF_OTHER_BANK_ATM), 'gi')
+const AF_TIER2_ALL = new RegExp(AF_TIER2_SRC, 'gi')
+const AF_EXCLUDED = /\b(?:lottery|lucky draw|jackpot|prize|winnings|cashback|refund|bonus|loan)\b/i
+const AF_KEPT = /\b(?:earnings?|commission|salary|payout|tasks?)\b/i
+const AF_SENTENCE_END = /[!?\n।]|(?<!\brs)\.(?=\s|$)/gi
+
+/** First position in the ascending `ends` that is at or after `pos` (binary search). */
+function afFirstAtOrAfter(ends: number[], pos: number): number {
+  let lo = 0, hi = ends.length
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (ends[mid] < pos) lo = mid + 1; else hi = mid }
+  return lo
+}
+
+/**
+ * The bounds [a, b) of the whole sentence around [start, end) — the scope guard must read all of it, not only the
+ * matched words. `ends` holds the message's sentence-end positions, found ONCE per message (C-1, 19 Oct 2026:
+ * scanning them again for every match made long messages quadratic). Same result as before: a = just after the
+ * last sentence end before `start`, b = the first sentence end at or after `end`.
+ */
+function afSentenceBounds(text: string, ends: number[], start: number, end: number): [number, number] {
+  const i = afFirstAtOrAfter(ends, start), j = afFirstAtOrAfter(ends, end)
+  return [i > 0 ? ends[i - 1] + 1 : 0, j < ends.length ? ends[j] : text.length]
+}
+
+/** Returns the matched demand, or null. Tier 1 alone; tier 2 only with task / job-earnings context. */
+function advanceFeeDemand(text: string): string | null {
+  // Out of scope when the demand's own sentence names an excluded category and no
+  // earnings wording. Judged per sentence on purpose: a message-wide check would let a
+  // stray "refund" or "bonus" elsewhere switch off a plain pay-to-withdraw demand.
+  // C-1: the sentence ends are found once (only if something matched), and the guard is worked out once per sentence.
+  let ends: number[] | undefined
+  const judged = new Map<string, boolean>()
+  const inScope = (m: RegExpMatchArray) => {
+    if (!ends) ends = Array.from(text.matchAll(AF_SENTENCE_END), (e) => e.index!)
+    const [a, b] = afSentenceBounds(text, ends, m.index!, m.index! + m[0].length)
+    const key = `${a}:${b}`
+    let ok = judged.get(key)
+    if (ok === undefined) { const s = text.slice(a, b); ok = !(AF_EXCLUDED.test(s) && !AF_KEPT.test(s)); judged.set(key, ok) }
+    return ok
+  }
+  // The inter-bank ATM fee notice is left alone only when nothing in the message talks about earnings, tasks
+  // or a job. With any such wording, "pay ₹999 to withdraw cash at other bank ATMs" is a demand like any other.
+  const earningsWording = AF_KEPT.test(text) || AF_CONTEXT.test(text)
+  for (const m of text.matchAll(earningsWording ? AF_TIER1_ALL : AF_TIER1_BANK_NOTICE_ALL)) if (inScope(m)) return m[0]
+  if (AF_CONTEXT.test(text)) for (const m of text.matchAll(AF_TIER2_ALL)) if (inScope(m)) return m[0]
+  return null
+}
+
+export const ADVANCE_FEE_ADVICE = 'A genuine job or platform never asks you to pay, recharge or deposit to unlock tasks or withdraw earnings. Stop paying: no payment releases the balance.'
+
+/**
+ * The UPI / QR tip is unrelated advice when the ONLY payment reference in the message is
+ * the literal "Pay ₹" of a pay-to-get-paid demand. Narrow on purpose: any UPI ID, QR or
+ * collect-request wording, reverse-QR signal or payment-bait signal keeps the tip. The
+ * reference itself, the entities and the score are never changed here.
+ */
+export function upiTipIsUnrelated(entities: Pick<ExtractedEntities, 'upiIds' | 'qrPaymentRefs'>, signals: { id: string }[]): boolean {
+  const has = (id: string) => signals.some((s) => s.id === id)
+  return has('advance_fee_demand') && !has('upi_reverse_payment') && !has('fake_payment') && entities.upiIds.length === 0
+    && entities.qrPaymentRefs.length > 0 && entities.qrPaymentRefs.every((r) => /^pay ₹$/i.test(r.trim()))
+}
+
+// `find`, when present, replaces the single-expression match (the rule needs more than one expression).
+const DETECTORS: Array<{ id: string; label: string; severity: VisualSignal['severity']; re: RegExp; find?: (text: string) => string | null }> = [
   // Unsolicited credit/refund/QR-collect bait — NOT routine debit/receipt alerts.
   { id: 'fake_payment', label: 'Fake payment/refund/QR bait', severity: 'danger', re: /\b(refund (of|credited|received|amount|ke liye)|you (have )?received (rs|₹|inr|money|a refund)|money received|cashback (of|credited)|scan (the |this )?qr|collect request|claim (your|rs|₹)|received a refund|paise? (aa gaye|wapas|milenge)|रिफंड)\b|congratulations[^.\n]{0,40}(refund|cashback|won|prize)/i },
   { id: 'urgency', label: 'Urgency / pressure tactic', severity: 'warn', re: /\b(urgent|immediately|within \d+\s?(min|hour|day)s?|account (will be )?(blocked|suspended|closed)|act now|last chance|expir(?:e|es|ing|ed)|failure to|do not ignore|turant|abhi|jaldi|aaj hi|warna|band ho ?jayega|block ho ?jayega|बंद हो|तुरंत|जल्दी)\b/i },
   // Solicitation to SHARE an OTP/PIN/CVV (the scam) — NOT legit "do not share your OTP".
   { id: 'otp_request', label: 'OTP / PIN / CVV sharing request', severity: 'danger', re: new RegExp(/(?<!do not )(?<!don'?t )(?<!never )\b(share|send|tell|give|enter|forward)\b[^.\n]{0,15}\b(otp|one[\s-]?time password|cvv|pin|code)\b|\b(otp|cvv|pin|code)\b[^.\n]{0,14}\b(bhejo|batao|bhej do|share karo|chahiye)\b|ओटीपी[^।\n]{0,12}(भेजो|बताओ)/.source + '|' + HI_SECRET_REQUEST, 'i') },
   { id: 'upi_reverse_payment', label: 'Scan-QR / approve-request instruction to "receive" money', severity: 'danger', re: new RegExp(HI_REVERSE_PAYMENT + '|' + EN_REVERSE_QR, 'i') },
+  { id: 'advance_fee_demand', label: 'Pay-to-get-paid demand (deposit, recharge or fee to unlock or withdraw earnings)', severity: 'danger', re: AF_TIER1, find: advanceFeeDemand },
   { id: 'kyc_phish', label: 'KYC / account-verification request', severity: 'warn', re: /\b(kyc|verify your account|update (your )?(kyc|pan|details)|re-?activate|kyc (update|karo|karein|karna)|verify karo|account (verify|update) karo|केवाईसी|सत्यापित)\b/i },
   { id: 'impersonation', label: 'Brand/authority impersonation', severity: 'warn', re: /\b(rbi|sbi|hdfc|icici|axis|kotak|pnb|paytm|phonepe|google ?pay|gpay|amazon|flipkart|netflix|india ?post|blue ?dart|dtdc|fedex|delhivery|courier|customs|customer care|bank official|income tax|uidai|aadhaar|npci|gst|बैंक|कस्टम)\b/i },
   { id: 'reward_bait', label: 'Lottery / reward / job / investment bait', severity: 'warn', re: /\b(congratulations|you (have )?won|lottery|prize|reward|work from home|earn \d|part[\s-]?time job|lucky draw|inaam|inam|jeeta|prize jeeta|ghar baithe|guaranteed return|airdrop|kamao|invest)\b|बधाई|इनाम|लॉटरी|गारंटीड|रिटर्न|निवेश|कमाएँ|जीता/i },
@@ -127,8 +289,8 @@ const DETECTORS: Array<{ id: string; label: string; severity: VisualSignal['seve
 function visualSignals(ocr: OcrResult): VisualSignal[] {
   const out: VisualSignal[] = []
   for (const d of DETECTORS) {
-    const m = ocr.text.match(d.re)
-    if (m) out.push({ id: d.id, label: d.label, severity: d.severity, evidence: m[0].slice(0, 60) })
+    const evidence = d.find ? d.find(ocr.text) : ocr.text.match(d.re)?.[0]
+    if (evidence != null) out.push({ id: d.id, label: d.label, severity: d.severity, evidence: evidence.slice(0, 60) })
   }
   return out
 }
@@ -149,14 +311,15 @@ function scoreFromSignals(signals: VisualSignal[], scamConfidence: number): numb
 function safetyAdvice(category: string, entities: ExtractedEntities, signals: VisualSignal[]): string[] {
   const tips: string[] = []
   const has = (id: string) => signals.some((s) => s.id === id)
+  if (has('advance_fee_demand')) tips.push(ADVANCE_FEE_ADVICE)
   if (has('otp_request') || /otp/i.test(category)) tips.push('Never share an OTP, PIN, or CVV — no bank or company ever asks for them.')
-  if (has('fake_payment') || has('upi_reverse_payment') || entities.upiIds.length || entities.qrPaymentRefs.length) tips.push('A real credit never requires you to SCAN a QR or approve a "collect request" — scanning/approving SENDS money. Verify in your own bank app.')
+  if ((has('fake_payment') || has('upi_reverse_payment') || entities.upiIds.length || entities.qrPaymentRefs.length) && !upiTipIsUnrelated(entities, signals)) tips.push('A real credit never requires you to SCAN a QR or approve a "collect request" — scanning/approving SENDS money. Verify in your own bank app.')
   if (has('kyc_phish') || /kyc/i.test(category)) tips.push('Banks do not suspend accounts over WhatsApp/SMS links. Update KYC only at a branch or the official app.')
   if (entities.shorteners.length) tips.push('Do not open shortened/unknown links — they hide the real destination.')
   if (has('impersonation') || entities.impersonationMarkers.length) tips.push('Verify the sender independently using the number on the official website/card — not the number in the message.')
   if (entities.phones.length) tips.push('Do not call back numbers sent in unsolicited messages.')
-  tips.push('If money was lost or shared, call the cybercrime helpline 1930 or report at cybercrime.gov.in immediately.')
-  return Array.from(new Set(tips)).slice(0, 6)
+  // C-2 (19 Oct 2026): the closing helpline line is always kept; the list is cut before it, not after it.
+  return [...Array.from(new Set(tips)).slice(0, 5), 'If money was lost or shared, call the cybercrime helpline 1930 or report at cybercrime.gov.in immediately.']
 }
 
 /**
@@ -207,8 +370,9 @@ export async function analyzeScreenshot(base64: string, mime = 'image/png', opts
   let rawRisk = Math.min(100, scoreFromSignals(signals, enrichment.scam.confidence) + entityRiskCount(entities) * 6 + urlDanger * 10)
   // Soliciting an OTP/PIN/seed-phrase is inherently high-risk (legit messages
   // say "do NOT share") — floor the risk so lone-OTP scams aren't under-scored.
-  // Same for scan-QR / approve-request "to receive money" instructions.
-  if (signals.some((s) => s.id === 'otp_request' || s.id === 'upi_reverse_payment')) rawRisk = Math.max(rawRisk, 55)
+  // Same for scan-QR / approve-request "to receive money" instructions, and for a
+  // pay-to-get-paid demand (deposit / recharge / fee to unlock or withdraw earnings).
+  if (signals.some((s) => s.id === 'otp_request' || s.id === 'upi_reverse_payment' || s.id === 'advance_fee_demand')) rawRisk = Math.max(rawRisk, 55)
 
   // 3. trustscore + retrieval grounding (semantic-search/scam-intel). (task 5, goal 8)
   let trustModelVerdict: TrustScoreResult['verdict'] | null = null

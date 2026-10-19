@@ -3,7 +3,7 @@
 // Instant, deterministic scam check for text/links/emails/phones/UPI IDs —
 // no Vertex cost. Reuses detectors + URL intel + reputation. Always JSON.
 import { NextResponse } from 'next/server'
-import { analyzeTextSignals } from '@/lib/scam-intel/multimodal'
+import { analyzeTextSignals, ADVANCE_FEE_ADVICE, upiTipIsUnrelated } from '@/lib/scam-intel/multimodal'
 import { analyzeUrls } from '@/lib/scam-intel/url-intel'
 import { domainReputation, emailReputation, upiReputation, phoneReputation, applyReputation } from '@/lib/scam-intel/reputation'
 import { detectImpersonations } from '@/lib/scam-intel/impersonation'
@@ -17,13 +17,13 @@ import { jsonRoute, ApiError } from '@/lib/api/json'
 export const dynamic = 'force-dynamic'
 
 type CheckType = 'message' | 'link' | 'email' | 'phone' | 'upi'
-const STRONG = new Set(['otp_request', 'fake_payment', 'suspicious_link', 'upi_reverse_payment'])
+const STRONG = new Set(['otp_request', 'fake_payment', 'suspicious_link', 'upi_reverse_payment', 'advance_fee_demand'])
 
 function scoreSignals(signals: { id: string; severity: string }[], entityRisk: number, urlDanger: number): number {
   const danger = signals.filter((s) => s.severity === 'danger').length
   const warn = signals.filter((s) => s.severity === 'warn').length
   let risk = Math.min(100, danger * 28 + warn * 12 + entityRisk * 6 + urlDanger * 10)
-  if (signals.some((s) => s.id === 'otp_request' || s.id === 'upi_reverse_payment')) risk = Math.max(risk, 55)
+  if (signals.some((s) => s.id === 'otp_request' || s.id === 'upi_reverse_payment' || s.id === 'advance_fee_demand')) risk = Math.max(risk, 55)
   return risk
 }
 
@@ -83,12 +83,15 @@ export const POST = jsonRoute('scam-intel/quick-check', async (req) => {
   const verdict = risk >= 70 ? 'likely_scam' : risk >= 35 ? 'suspicious' : rep.trusted ? 'likely_safe' : 'unclear'
   if (id.loggedIn && id.uid) void recordScan(id.uid, { ts: Date.now(), type, verdict, risk, label: ts.category })
   const advice: string[] = []
+  if (ts.signals.some((s) => s.id === 'advance_fee_demand')) advice.push(ADVANCE_FEE_ADVICE)
   if (impersonations.length) advice.push(`This looks like a fake look-alike of ${impersonations[0].brand} (real: ${impersonations[0].legitDomain}). Do not trust it — open the official app/website directly, never via this link.`)
   if (ts.signals.some((s) => s.id === 'otp_request')) advice.push('Never share an OTP/PIN/CVV — no bank or company asks for them.')
-  if (ts.entities.qrPaymentRefs.length || ts.entities.upiIds.length || ts.signals.some((s) => s.id === 'upi_reverse_payment')) advice.push('Receiving money on UPI never needs a PIN or QR scan.')
+  // Not shown when the only payment reference is the "Pay ₹" of a pay-to-get-paid demand (unrelated advice).
+  if ((ts.entities.qrPaymentRefs.length || ts.entities.upiIds.length || ts.signals.some((s) => s.id === 'upi_reverse_payment')) && !upiTipIsUnrelated(ts.entities, ts.signals)) advice.push('Receiving money on UPI never needs a PIN or QR scan.')
   if (urlDanger) advice.push('Do not open look-alike/shortened links.')
   if (rep.trusted) advice.push('This matches a verified/official entity — but always confirm via the official app, not links in messages.')
-  advice.push('If in doubt, do not click, pay, or share details. Report at cybercrime.gov.in / 1930 (India).')
+  // C-2 (19 Oct 2026): the closing line is always kept; the list is cut before it, not after it.
+  const closing = 'If in doubt, do not click, pay, or share details. Report at cybercrime.gov.in / 1930 (India).'
 
   return NextResponse.json({
     type, verdict, riskScore: risk,
@@ -101,6 +104,6 @@ export const POST = jsonRoute('scam-intel/quick-check', async (req) => {
     urlFindings,
     reputation: reputations.slice(0, 6),
     reputationNotes: rep.notes,
-    advice: Array.from(new Set(advice)).slice(0, 5),
+    advice: [...Array.from(new Set(advice)).slice(0, 4), closing],
   }, { headers: { 'Cache-Control': 'no-store' } })
 })
