@@ -51,8 +51,9 @@
 //   - C-1: the scope guard finds sentence ends once per message (binary search, one result
 //     per sentence): no longer quadratic on long messages. C-2: the closing advice line is
 //     always kept, on both paths.
-//   - class 1 fixed: "need to", "having to", "without" and "never, ever" join the negation
-//     guard. F-08 fixed: "asked to" / "told to" stay awareness wording except after "I" or
+//   - class 1 fixed: "need to", "having to", "without having / needing to" and "never, ever"
+//     join the negation guard (review CR-03: no bare "without", no comma after the other guard
+//     words, so "If not, pay …" stays a demand). F-08 fixed: "asked to" / "told to" stay awareness wording except after "I" or
 //     "we", so a victim's own report ("I was told to pay …") warns and awareness text
 //     ("you are asked to …", "… then told to deposit …") does not.
 //   - Hinglish (option b): the planned Hinglish demand patterns are removed; Hinglish
@@ -393,6 +394,8 @@ test('ruling 19 Oct 2026: every remaining known false positive carries the owner
 test('ruling 19 Oct 2026, class 1: awareness text with a negation is not a demand; the plain demand still is', async () => {
   for (const t of [cases.find((x) => x.id === 'FK-02').text, "You don't need to pay anything to withdraw your earnings.", 'You do not need to pay a fee to withdraw your earnings.', 'Never, ever pay ₹500 to withdraw your earnings.']) assert.ok(!(await fires(t)), `negated, must stay unflagged: ${t}`)
   for (const t of ['You need to pay ₹500 to withdraw your earnings.', 'You will need to pay ₹500 to withdraw your earnings.', 'Without delay, pay ₹500 to withdraw your earnings.']) assert.ok(await fires(t), `must be flagged: ${t}`)
+  // review CR-03 (N01–N06): demands the reviewed candidate flagged must stay flagged
+  for (const t of ['If not, pay ₹500 to withdraw your earnings.', 'Did you finish the 30 tasks? If not, pay ₹500 to withdraw your commission today.', 'Your task earnings are ₹4,000. Upgraded to VIP? If not, deposit ₹2,000 to release your earnings.', 'Whether you finished or not, pay ₹500 to withdraw your earnings.', 'To withdraw your commission without deposit ₹500 is not possible.', 'To withdraw your balance without pay ₹1,200 tax is not allowed.']) assert.ok(await fires(t), `CR-03, must be flagged: ${t}`)
 })
 
 test('ruling 19 Oct 2026, F-08: a victim\'s own report ("I / we … asked or told to") warns; other "asked / told to" stays awareness', async () => {

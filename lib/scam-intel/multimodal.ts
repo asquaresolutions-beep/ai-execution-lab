@@ -154,12 +154,13 @@ const afGap = (n: number) => `${AF_CH}{0,${n}}?`
 // A negated or reported verb is not a demand. The guard also covers the later verbs of a
 // list ("never asks you to pay, recharge or deposit …"), or the second verb would match.
 // Owner rulings of 19 Oct 2026: class 1 (awareness / FAQ text with a negation) — "need to" and "having to" beside
-// "have to", "without", and "never, ever"; F-08 — "asked to" / "told to" stay awareness wording EXCEPT after a
+// "have to", "without having / needing to", and "never, ever" (review CR-03: no bare "without" and no comma after the
+// other guard words, so "If not, pay ₹500 to withdraw …" is still a demand); F-08 — "asked to" / "told to" stay awareness wording EXCEPT after a
 // first-person subject ("I was / I am / I'm / I've been / we were … asked / told to"), so a victim's own report
 // ("I was told to pay ₹500 to withdraw my earnings") is flagged, while "you are asked to deposit …" and the
 // article's "… then told to deposit your own money …" are not.
 const AF_VERB_LIST = String.raw`(?:["'“”‘’]?(?:pay|deposit|recharge|top[\s-]?up|remit|send|add|transfer)["'“”‘’]?(?:\s*,\s*|\s+(?:or|and)\s+)){0,3}["'“”‘’]?`
-const AF_NEG = String.raw`(?<!\b(?:never|not|don['’]?t|do not|doesn['’]?t|won['’]?t|shouldn['’]?t|no need to|without|asks? you to|ask(?:ed|ing) you to|(?<!\b(?:i|we)(?:\s+(?:was|were|am|are|got|have\s+been|had\s+been)|['’](?:m|re|ve\s+been))\s+)(?:asked|told)\s+to|tells? you to),?\s+(?:ever,?\s+)?(?:(?:have|having|need)\s+to\s+)?${AF_VERB_LIST})`
+const AF_NEG = String.raw`(?<!\b(?:never|not|don['’]?t|do not|doesn['’]?t|won['’]?t|shouldn['’]?t|no need to|without\s+(?:having|needing)\s+to|asks? you to|ask(?:ed|ing) you to|(?<!\b(?:i|we)(?:\s+(?:was|were|am|are|got|have\s+been|had\s+been)|['’](?:m|re|ve\s+been))\s+)(?:asked|told)\s+to|tells? you to)\s+(?:ever\s+)?(?:(?:have|having|need)\s+to\s+)?${AF_VERB_LIST}|\bnever,\s+ever,?\s+${AF_VERB_LIST})`
 const AF_MONEY = String.raw`(?:(?:₹|rs\.?|inr|\$)\s?[\d,]+|\b[\d,]{2,}\s?(?:rupees|rs|usdt)\b)`
 // Money verbs stand alone; generic verbs (send / add / transfer) count only with an amount directly after.
 const AF_PAY = String.raw`${AF_NEG}\b(?:(?:pay|deposit|recharge|top[\s-]?up|remit)\b|(?:send|add|transfer)\s+${AF_MONEY})`
