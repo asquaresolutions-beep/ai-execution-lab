@@ -1,0 +1,5460 @@
+{
+ "about": "Cases for eval/scamcheck-task-scam-payment-demand.test.mjs. All messages are made up. \"before\" is production commit f7f18c5; \"after\" is with the pay-to-get-paid signal. The expectation of each case is hand-written; scores are recorded. Categories S1 to S3 were added by the selective pass and F1 to F3 by the final pass of 11 Oct 2026. knownFalsePositive = a legitimate message that IS flagged; documentedGap = a demand that is NOT flagged. Owner rulings of 19 Oct 2026: class 1 fixed (FK-02 now unflagged); F-08 fixed (AD-11 now flagged); the Hinglish demand patterns removed from P1 (Hinglish cases keep production results (HG-12, an English demand inside a mixed message, is still flagged by the English rule)); SK-02 and SK-06 relabelled as correct warnings; every other knownFalsePositive accepted by the owner (acceptedByOwner, fpClass).",
+ "cases": [
+  {
+   "id": "L-1",
+   "category": "1 live",
+   "expect": "none",
+   "text": "Hello, we have a part-time job for you. Like 5 YouTube videos and earn ₹500 today. No investment required.",
+   "note": "live message 1: first-contact offer, no payment demand; stays Unclear",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "classifier": "fake_job"
+  },
+  {
+   "id": "L-2",
+   "category": "1 live",
+   "expect": "signal",
+   "tier": 2,
+   "text": "Your task earnings are ₹2,450. Pay ₹500 to recharge your account and unlock the next level. You will receive your deposit back with commission.",
+   "note": "live message 2",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "L-3",
+   "category": "1 live",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Congratulations! You have earned ₹8,500 from product rating tasks. Pay ₹1,000 verification fee to withdraw your balance.",
+   "note": "live message 3",
+   "before": {
+    "verdict": "unclear",
+    "risk": 18
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 18
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "L-4",
+   "category": "1 live",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Work from home: rate products on our platform and earn daily. To continue, deposit ₹2,000 into your task account.",
+   "note": "live message 4",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "fake_job",
+   "screenshot": {
+    "before": {
+     "verdict": "needs_review",
+     "risk": 48
+    },
+    "after": {
+     "verdict": "needs_review",
+     "risk": 62
+    }
+   }
+  },
+  {
+   "id": "L-5",
+   "category": "1 live",
+   "expect": "signal",
+   "tier": 2,
+   "text": "Congratulations! Work from home, earn ₹5000 daily. Pay ₹199 to start.",
+   "note": "the example shown on the checker page",
+   "before": {
+    "verdict": "unclear",
+    "risk": 18
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "fake_job",
+   "screenshot": {
+    "before": {
+     "verdict": "needs_review",
+     "risk": 41
+    },
+    "after": {
+     "verdict": "suspicious",
+     "risk": 65
+    }
+   }
+  },
+  {
+   "id": "T1-01",
+   "category": "2 tier 1",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Your earnings of ₹6,300 are ready. Pay ₹600 to withdraw your earnings to your bank account.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T1-02",
+   "category": "2 tier 1",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Please recharge your task account with ₹1,500 to receive the next order.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T1-03",
+   "category": "2 tier 1",
+   "expect": "signal",
+   "tier": 1,
+   "text": "A verification fee of ₹1,200 is required to release your earnings. Send it today.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T1-04",
+   "category": "2 tier 1",
+   "expect": "signal",
+   "tier": 1,
+   "text": "You must pay a clearance tax of ₹2,500 before you can withdraw ₹25,000.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T1-05",
+   "category": "2 tier 1",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Rate 5 products on our platform and earn ₹600. To start the rating tasks, deposit ₹1,000 in your work account.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T1-06",
+   "category": "2 tier 1",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Like 3 Instagram reels and get ₹150. For the VIP tasks, top up ₹2,000 to your task wallet.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T1-07",
+   "category": "2 tier 1",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Join our Telegram task group. Members withdraw daily. To withdraw your first ₹900, pay a ₹200 withdrawal fee.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "fake_job",
+   "screenshot": {
+    "before": {
+     "verdict": "needs_review",
+     "risk": 42
+    },
+    "after": {
+     "verdict": "needs_review",
+     "risk": 47
+    }
+   }
+  },
+  {
+   "id": "T1-08",
+   "category": "2 tier 1",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Withdrawal on hold. You must pay 18% GST of Rs 2,340 to release your payout of Rs 13,000 today.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 18
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T1-09",
+   "category": "2 tier 1",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Your withdrawal of Rs 9,200 is pending. Deposit Rs 1,500 security amount before you can withdraw.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T1-10",
+   "category": "2 tier 1",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Remit ₹750 so that you can cash out your commission this evening.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T1-11",
+   "category": "2 tier 1",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Transfer ₹3,000 into your VIP account and the order will open.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T1-12",
+   "category": "2 tier 1",
+   "expect": "signal",
+   "tier": 1,
+   "text": "The account is frozen. Pay ₹4,000 to unfreeze it and claim your commission.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 34
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 62
+   },
+   "classifier": "otp_fraud",
+   "screenshot": {
+    "before": {
+     "verdict": "needs_review",
+     "risk": 49
+    },
+    "after": {
+     "verdict": "likely_scam",
+     "risk": 75
+    }
+   }
+  },
+  {
+   "id": "F1-01",
+   "category": "2a object type absent",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Pay ₹1,000 verification fee to withdraw your balance.",
+   "note": "decision F1: no task or job wording anywhere",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "F1-02",
+   "category": "2a object type absent",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Deposit ₹2,000 today to release your funds.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "F1-03",
+   "category": "2a object type absent",
+   "expect": "signal",
+   "tier": 1,
+   "text": "You must pay ₹750 before you can withdraw.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T2-01",
+   "category": "3 tier 2 with context",
+   "expect": "signal",
+   "tier": 2,
+   "text": "You have completed today's free tasks. Pay ₹800 to unlock 30 more tasks and keep earning commission.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T2-02",
+   "category": "3 tier 2 with context",
+   "expect": "signal",
+   "tier": 2,
+   "text": "Before the next task you must deposit ₹3,000. The amount will be returned with 20% commission.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T2-03",
+   "category": "3 tier 2 with context",
+   "expect": "signal",
+   "tier": 2,
+   "text": "Send ₹500 now and you will get ₹800 back in 10 minutes as task commission.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T2-04",
+   "category": "3 tier 2 with context",
+   "expect": "signal",
+   "tier": 2,
+   "text": "You are shortlisted for data entry work from home. Pay Rs 499 registration fee to activate your employee ID.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "fake_job",
+   "screenshot": {
+    "before": {
+     "verdict": "needs_review",
+     "risk": 48
+    },
+    "after": {
+     "verdict": "needs_review",
+     "risk": 62
+    }
+   }
+  },
+  {
+   "id": "T2-05",
+   "category": "3 tier 2 with context",
+   "expect": "signal",
+   "tier": 2,
+   "text": "Great work! You completed 20 tasks. Top up Rs 3,000 to reach VIP level 2 and unlock tasks with higher commission.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "T2-06",
+   "category": "3 tier 2 with context",
+   "expect": "signal",
+   "tier": 2,
+   "text": "Part-time job, earn ₹2,000 per day from your phone. To start, pay ₹299 joining fee.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 18
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "fake_job",
+   "screenshot": {
+    "before": {
+     "verdict": "needs_review",
+     "risk": 41
+    },
+    "after": {
+     "verdict": "suspicious",
+     "risk": 65
+    }
+   }
+  },
+  {
+   "id": "T2-07",
+   "category": "3 tier 2 with context",
+   "expect": "signal",
+   "tier": 2,
+   "text": "This online job pays ₹40 per like. Recharge ₹1,000 to continue to the next task.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "NC-01",
+   "category": "4 tier 2 wording, no context",
+   "expect": "none",
+   "text": "Pay ₹99 to unlock the next level.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "NC-02",
+   "category": "4 tier 2 wording, no context",
+   "expect": "none",
+   "text": "Upgrade to Pro: pay ₹199 to unlock unlimited tasks and projects.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "NC-03",
+   "category": "4 tier 2 wording, no context",
+   "expect": "none",
+   "text": "Your pack expires tomorrow. Recharge with ₹299 to continue enjoying unlimited calls.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "NC-04",
+   "category": "4 tier 2 wording, no context",
+   "expect": "none",
+   "text": "Reminder: pay the ₹500 registration fee by Friday to confirm your seat in the Excel workshop.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "fake_job"
+  },
+  {
+   "id": "NC-05",
+   "category": "4 tier 2 wording, no context",
+   "expect": "none",
+   "text": "Your gym membership ends on Sunday. Pay ₹1,500 to continue for another month.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "NC-06",
+   "category": "4 tier 2 wording, no context",
+   "expect": "none",
+   "text": "Pay ₹99 to unlock offline downloads",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "NC-07",
+   "category": "4 tier 2 wording, no context",
+   "expect": "none",
+   "text": "Pay the ₹2,000 security deposit to activate your broadband connection.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "NC-08",
+   "category": "4 tier 2 wording, no context",
+   "expect": "none",
+   "text": "Deposit ₹500 to start your recurring deposit account at the branch.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-01",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "I got a part-time job",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "classifier": "fake_job"
+  },
+  {
+   "id": "LG-02",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "How do I apply for a part-time job?",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "classifier": "fake_job"
+  },
+  {
+   "id": "LG-03",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "My employer paid my salary",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-04",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "This app costs ₹99",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-05",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "I paid a subscription fee",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-06",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "How much should I charge for freelance work?",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-07",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "I received my salary through UPI",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "upi_fraud"
+  },
+  {
+   "id": "LG-08",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "SSC application: pay the ₹100 application fee online to submit your form before the last date.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-09",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "We are hiring part-time tutors for classes 6 to 8. ₹400 per hour. Send your CV to careers@brightminds.example and we will schedule an interview.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "fake_job"
+  },
+  {
+   "id": "LG-10",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "A withdrawal fee of ₹25 applies when you withdraw your wallet balance to a bank account.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-11",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Insufficient margin. Add funds to your trading account to continue holding your positions.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-12",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Your earnings of ₹12,400 for last week will be paid out to your bank account on Monday. No action is needed.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-13",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Like and share our post to win a ₹500 voucher.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-14",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Rate your delivery and get ₹20 cashback.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-15",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "My employer paid my salary late and deducted ₹500 as a processing fee.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-16",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Upwork charges a 10% fee on your earnings before you withdraw.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-17",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Can you send ₹500 to mom's account today? I will pay you back at the weekend.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-18",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "To withdraw your PF balance, add your bank details and send the form to HR.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-19",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Hiring: social media executive. You will post reels and reply to comments. Salary ₹18,000 per month. Apply with your CV.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "fake_job"
+  },
+  {
+   "id": "LG-20",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Complete surveys and earn ₹50 per survey on our app.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-21",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Your salary of ₹42,000 for September has been credited to your account.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-22",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Withdrawal of ₹5,000 from your savings account was successful.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-23",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Exam fee: candidates must pay ₹1,200 before 15 November. Late fee applies after that.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-24",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Course fee is ₹4,999. You can pay in two instalments.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-25",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Mobile recharge of ₹239 successful. Validity 28 days.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-26",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Your payout for order 4471 has been processed. It will reach your bank in 2 working days.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-27",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Freelancers: invoice the client and we pay within 15 days of approval.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-28",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Join our delivery partner programme. Weekly payout every Tuesday. No joining fee.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-29",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Please pay your electricity bill of ₹1,240 before 12 October to avoid a late fee.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-30",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "The hostel needs a caution deposit of ₹5,000, which is returned when you leave.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-31",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Add your bank account to withdraw your earnings.",
+   "note": "a genuine platform instruction: 'add' with no amount is not a payment",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "LG-32",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Send your KYC documents to withdraw your balance.",
+   "note": "'send' with no amount is not a payment",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "classifier": "otp_fraud"
+  },
+  {
+   "id": "LG-33",
+   "category": "5 legitimate",
+   "expect": "none",
+   "text": "Transfer the file to your manager before you can claim your salary.",
+   "note": "'transfer' with no amount is not a payment",
+   "before": {
+    "verdict": "unclear",
+    "risk": 28
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 28
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "OS-01",
+   "category": "6 out of scope",
+   "expect": "none",
+   "text": "Pay ₹500 processing fee to withdraw your lottery winnings.",
+   "note": "lottery",
+   "before": {
+    "verdict": "unclear",
+    "risk": 18
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 18
+   },
+   "classifier": "lottery_prize"
+  },
+  {
+   "id": "OS-02",
+   "category": "6 out of scope",
+   "expect": "signal",
+   "tier": 1,
+   "crossSentenceCategory": true,
+   "text": "You have won a prize of ₹50,000. Pay ₹999 tax to claim your money.",
+   "note": "PINNED SCOPE LEAK: the prize is named one sentence earlier; by the locked per-sentence rule the demand sentence alone (\"to claim your money\") still fires",
+   "before": {
+    "verdict": "suspicious",
+    "risk": 46
+   },
+   "after": {
+    "verdict": "likely_scam",
+    "risk": 74
+   },
+   "classifier": "lottery_prize",
+   "screenshot": {
+    "before": {
+     "verdict": "suspicious",
+     "risk": 58
+    },
+    "after": {
+     "verdict": "likely_scam",
+     "risk": 78
+    }
+   }
+  },
+  {
+   "id": "OS-03",
+   "category": "6 out of scope",
+   "expect": "none",
+   "text": "Deposit ₹100 to unlock your ₹500 welcome bonus.",
+   "note": "bonus",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "OS-04",
+   "category": "6 out of scope",
+   "expect": "none",
+   "text": "Pay ₹49 to withdraw your cashback balance.",
+   "note": "cashback",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "OS-05",
+   "category": "6 out of scope",
+   "expect": "none",
+   "text": "Your loan of ₹2,00,000 is approved. Pay ₹2,999 processing fee to release the loan amount.",
+   "note": "loan",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "OS-06",
+   "category": "6 out of scope",
+   "expect": "none",
+   "text": "Pay ₹150 handling charge to receive your refund.",
+   "note": "refund",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "OS-07",
+   "category": "6 out of scope",
+   "expect": "signal",
+   "tier": 1,
+   "crossSentenceCategory": true,
+   "text": "Lucky draw winner! Deposit ₹2,000 to release your funds.",
+   "note": "PINNED SCOPE LEAK: \"Lucky draw\" is in the previous sentence; the demand sentence alone still fires",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "lottery_prize",
+   "screenshot": {
+    "before": {
+     "verdict": "needs_review",
+     "risk": 41
+    },
+    "after": {
+     "verdict": "needs_review",
+     "risk": 55
+    }
+   }
+  },
+  {
+   "id": "OS-08",
+   "category": "6 out of scope",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Pay ₹800 to withdraw your task earnings and bonus.",
+   "note": "an excluded word next to earnings: still in scope",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "OS-09",
+   "category": "6 out of scope",
+   "expect": "signal",
+   "tier": 1,
+   "crossSentenceCategory": true,
+   "text": "Your balance is ₹8,000 including the welcome bonus. Pay ₹500 to withdraw.",
+   "note": "PINNED SCOPE LEAK: the bonus is named one sentence earlier; the bare \"Pay ₹500 to withdraw.\" still fires (decision F1)",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "OS-10",
+   "category": "6 out of scope",
+   "expect": "signal",
+   "tier": 1,
+   "text": "A joining bonus was added. Your commission is ₹3,000. Pay ₹500 to withdraw your balance.",
+   "note": "an excluded word elsewhere, but the message names commission: in scope",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "RD-01",
+   "category": "7 refundable deposit",
+   "expect": "none",
+   "text": "The company asked for a refundable security deposit",
+   "note": "bare mention",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "RD-02",
+   "category": "7 refundable deposit",
+   "expect": "signal",
+   "tier": 2,
+   "text": "You are selected for the data entry job. Pay a refundable security deposit of ₹2,500 for the laptop and ID card to start work.",
+   "note": "direct demand in a job offer",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "RD-03",
+   "category": "7 refundable deposit",
+   "expect": "none",
+   "text": "A refundable deposit may apply for the uniform.",
+   "note": "bare mention, no demand",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AW-01",
+   "category": "8 awareness",
+   "expect": "none",
+   "text": "Never pay to get paid. A real employer pays you. The moment a job asks you to pay in, it has stopped being a job.",
+   "note": "newsletter draft",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AW-02",
+   "category": "8 awareness",
+   "expect": "none",
+   "text": "Scam alert: if someone asks you to deposit money to withdraw your task earnings, it is a scam. Report it at cybercrime.gov.in or call 1930.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AW-03",
+   "category": "8 awareness",
+   "expect": "none",
+   "text": "To unlock more tasks, or to withdraw what you have earned, you are told to add your own money first. Do not pay a tax or verification fee to unfreeze the account.",
+   "note": "newsletter draft and article",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AW-04",
+   "category": "8 awareness",
+   "expect": "none",
+   "text": "You are asked to deposit, \"recharge\" or \"top up\" before you can continue or withdraw.",
+   "note": "newsletter draft and article, verbatim",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AW-05",
+   "category": "8 awareness",
+   "expect": "none",
+   "text": "You are paid small amounts for simple, repetitive actions, then told to deposit your own money to keep working or to withdraw what you have earned.",
+   "note": "article",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AW-06",
+   "category": "8 awareness",
+   "expect": "none",
+   "text": "It is a fake online job that pays small amounts for simple tasks such as liking videos or rating products, then asks you to deposit your own money to continue or to withdraw your earnings.",
+   "note": "article",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AW-07",
+   "category": "8 awareness",
+   "expect": "none",
+   "text": "The difference is that they never ask you to deposit money to unlock tasks or to withdraw what you have earned.",
+   "note": "article",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AW-08",
+   "category": "8 awareness",
+   "expect": "none",
+   "text": "Then a task set is said to have failed, or the account shows a shortfall, and you must pay again to release what is now a large balance.",
+   "note": "article",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AW-09",
+   "category": "8 awareness",
+   "expect": "none",
+   "text": "No payment will release the balance, and a \"tax\" or \"verification\" fee is the same scam asking again.",
+   "note": "newsletter draft",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AW-10",
+   "category": "8 awareness",
+   "expect": "none",
+   "text": "Don’t pay a fee to withdraw your earnings. A genuine platform never needs it.",
+   "note": "curly apostrophe",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AW-11",
+   "category": "8 awareness",
+   "expect": "none",
+   "text": "A genuine job or platform never asks you to pay, recharge or deposit to unlock tasks or withdraw earnings. Stop paying: no payment releases the balance.",
+   "note": "the checker's own advice line, pasted back in",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AW-12",
+   "category": "8 awareness",
+   "expect": "none",
+   "text": "Never pay, recharge or top up to withdraw your earnings.",
+   "note": "negation covering a list of verbs",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "IQ-01",
+   "category": "9 inquiry and reports",
+   "expect": "none",
+   "text": "Is this job offer legitimate?",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "IQ-02",
+   "category": "9 inquiry and reports",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Is this job offer legitimate? They said I must pay ₹500 to unlock the next tasks and withdraw my earnings.",
+   "note": "an inquiry that quotes the demand",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "IQ-03",
+   "category": "9 inquiry and reports",
+   "expect": "signal",
+   "tier": 1,
+   "text": "They told me to pay ₹1,000 verification fee to withdraw my balance. Is it real?",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "IQ-04",
+   "category": "9 inquiry and reports",
+   "expect": "none",
+   "text": "Someone offered me a part-time job on Telegram. Is it real?",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "classifier": "fake_job"
+  },
+  {
+   "id": "PR-01",
+   "category": "10 pay rupee",
+   "expect": "signal",
+   "tier": 1,
+   "upiTip": "absent",
+   "text": "Pay ₹600 to withdraw your commission.",
+   "note": "only 'Pay ₹': new advice, UPI tip absent, the 6 points stay",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "PR-02",
+   "category": "10 pay rupee",
+   "expect": "signal",
+   "tier": 1,
+   "upiTip": "shown",
+   "text": "Your task commission is ₹3,200. Pay ₹600 to mentor.pay@ybl to withdraw your commission.",
+   "note": "a UPI ID is present: both pieces of advice",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 15
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "PR-03",
+   "category": "10 pay rupee",
+   "expect": "signal",
+   "tier": 1,
+   "upiTip": "shown",
+   "text": "Pay ₹600 to withdraw your commission. Scan this QR code to pay.",
+   "note": "QR wording is present: both pieces of advice",
+   "before": {
+    "verdict": "unclear",
+    "risk": 34
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 62
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 26
+    },
+    "after": {
+     "verdict": "suspicious",
+     "risk": 40
+    }
+   }
+  },
+  {
+   "id": "PR-04",
+   "category": "10 pay rupee",
+   "expect": "none",
+   "upiTip": "shown",
+   "text": "Please pay ₹450 for the order. Scan the QR code or use UPI ID shop@okaxis.",
+   "note": "genuine payment request: unchanged",
+   "before": {
+    "verdict": "suspicious",
+    "risk": 40
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 40
+   },
+   "classifier": "upi_fraud"
+  },
+  {
+   "id": "PR-05",
+   "category": "10 pay rupee",
+   "expect": "none",
+   "upiTip": "shown",
+   "text": "Upgrade today: pay ₹199 to remove ads.",
+   "note": "'Pay ₹' with no demand: tip still shown, so the suppression is not global",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "PR-06",
+   "category": "10 pay rupee",
+   "expect": "signal",
+   "tier": 1,
+   "upiTip": "absent",
+   "text": "Urgent: pay ₹600 to withdraw your commission. Message me on WhatsApp.",
+   "note": "above the minimum, so the 6 points for the 'Pay ₹' reference are visible in the score (28 + 12 + 12 + 6 = 58)",
+   "before": {
+    "verdict": "unclear",
+    "risk": 30
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 58
+   },
+   "classifier": "whatsapp_scam",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 34
+    },
+    "after": {
+     "verdict": "suspicious",
+     "risk": 48
+    }
+   }
+  },
+  {
+   "id": "HG-01",
+   "category": "11 Hinglish",
+   "expect": "none",
+   "text": "Withdrawal ke liye pehle ₹2,000 recharge karo.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "note": "Hinglish demand pattern removed from P1 by the owner's ruling of 19 Oct 2026 (option b): production behaviour kept."
+  },
+  {
+   "id": "HG-02",
+   "category": "11 Hinglish",
+   "expect": "none",
+   "text": "Aapka commission ₹5,400 hai. Nikalne ke liye ₹500 verification fee bhejo.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "note": "Hinglish demand pattern removed from P1 by the owner's ruling of 19 Oct 2026 (option b): production behaviour kept."
+  },
+  {
+   "id": "HG-03",
+   "category": "11 Hinglish",
+   "expect": "none",
+   "text": "Aapka task balance Rs 6,800 hai. Withdrawal ke liye Rs 2,000 recharge karo, commission ke saath wapas milega.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "note": "Hinglish demand pattern removed from P1 by the owner's ruling of 19 Oct 2026 (option b): production behaviour kept."
+  },
+  {
+   "id": "HG-04",
+   "category": "11 Hinglish",
+   "expect": "none",
+   "text": "Commission nikalne ke liye ₹500 fee bhejo.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "note": "Hinglish demand pattern removed from P1 by the owner's ruling of 19 Oct 2026 (option b): production behaviour kept."
+  },
+  {
+   "id": "HG-05",
+   "category": "11 Hinglish",
+   "expect": "none",
+   "text": "Kamai nikalne ke liye pehle ₹1,000 jama karo.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "note": "Hinglish demand pattern removed from P1 by the owner's ruling of 19 Oct 2026 (option b): production behaviour kept."
+  },
+  {
+   "id": "HG-06",
+   "category": "11 Hinglish",
+   "expect": "none",
+   "text": "Withdrawal ke liye kabhi recharge mat karo. Yeh scam hai.",
+   "note": "awareness, negated",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "HG-07",
+   "category": "11 Hinglish",
+   "expect": "none",
+   "text": "Withdrawal ke liye recharge mat karo.",
+   "note": "negated",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "HG-08",
+   "category": "11 Hinglish",
+   "expect": "none",
+   "text": "PF withdrawal ke liye form jama karo.",
+   "note": "'jama karo' as 'submit', no money",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "HG-09",
+   "category": "11 Hinglish",
+   "expect": "none",
+   "text": "Lottery ka paisa nikalne ke liye ₹500 fee bhejo.",
+   "note": "excluded category",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "classifier": "lottery_prize"
+  },
+  {
+   "id": "HG-10",
+   "category": "11 Hinglish",
+   "expect": "none",
+   "text": "Cashback nikalne ke liye ₹99 recharge karo.",
+   "note": "excluded category",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "HG-11",
+   "category": "11 Hinglish",
+   "expect": "none",
+   "text": "Mobile recharge ke liye ₹299 pay karo.",
+   "note": "ordinary recharge",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "HG-12",
+   "category": "11 Hinglish",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Pay ₹500 fee to withdraw your commission, jaldi karo",
+   "note": "English demand inside a mixed message",
+   "before": {
+    "verdict": "unclear",
+    "risk": 18
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 18
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "DV-01",
+   "category": "11a Devanagari, deferred",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "अपनी कमाई निकालने के लिए पहले ₹1,000 जमा करें।",
+   "note": "DOCUMENTED GAP: deferred until fluent human review (decision F3)",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "DV-02",
+   "category": "11a Devanagari, deferred",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "कमीशन निकालने के लिए ₹500 फीस भेजें।",
+   "note": "DOCUMENTED GAP: deferred until fluent human review (decision F3)",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AD-01",
+   "category": "K adversarial",
+   "expect": "signal",
+   "tier": 1,
+   "text": "No need to pay anything now. Just deposit ₹500 to activate your withdrawal.",
+   "note": "negation used as cover",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "AD-02",
+   "category": "K adversarial",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Never pay to get paid. Pay ₹500 to withdraw your earnings.",
+   "note": "awareness followed by a real demand",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "AD-03",
+   "category": "K adversarial",
+   "expect": "signal",
+   "tier": 1,
+   "text": "To withdraw your balance you must first complete a prepaid order of ₹2,000.",
+   "note": "reversed order",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "AD-04",
+   "category": "K adversarial",
+   "expect": "signal",
+   "tier": 1,
+   "text": "To complete combo task 3 you need to add 100 USDT to your work account. After the task you can withdraw 180 USDT.",
+   "note": "crypto amount",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "AD-05",
+   "category": "K adversarial",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Recharge ₹500 now. After that you can withdraw your commission.",
+   "note": "DOCUMENTED GAP: the demand and the goal are in different sentences",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AD-06",
+   "category": "K adversarial",
+   "expect": "none",
+   "text": "Your electricity bill of ₹1,240 is due. Pay before 12 October to avoid disconnection. Your salary of ₹45,000 has been credited.",
+   "note": "two unrelated notices pasted together (watch case)",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AD-07",
+   "category": "K adversarial",
+   "expect": "signal",
+   "tier": 1,
+   "text": "PAY Rs.500 To WITHDRAW your earnings",
+   "note": "spacing and case",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "AD-08",
+   "category": "K adversarial",
+   "expect": "signal",
+   "tier": 1,
+   "text": "topup ₹2,000 to your task wallet now",
+   "note": "'topup' written as one word",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "AD-09",
+   "category": "K adversarial",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Top-up Rs. 1,000 to your work account to open the next order.",
+   "note": "'top-up' and 'Rs. ' with a space",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "AD-10",
+   "category": "K adversarial",
+   "expect": "signal",
+   "tier": 1,
+   "text": "pay   ₹500   to   withdraw   your   commission",
+   "note": "extra spaces",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "AD-11",
+   "category": "K adversarial",
+   "expect": "signal",
+   "text": "I was asked to pay ₹500 to withdraw my earnings.",
+   "note": "FIXED by the owner's F-08 ruling of 19 Oct 2026: a victim's own report (\"I was asked to\") warns; \"asked / told to\" without \"I\" or \"we\" stays awareness wording. Was a documented gap.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "tier": 1,
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "AD-12",
+   "category": "K adversarial",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "P a y ₹500 to w i t h d r a w your earnings.",
+   "note": "DOCUMENTED GAP: letter-spaced obfuscation is not handled",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AD-13",
+   "category": "K adversarial",
+   "expect": "none",
+   "tier": 1,
+   "text": "You need to pay ₹23 to withdraw cash at another bank's ATM after five free transactions.",
+   "note": "Inter-bank ATM fee notice. Pinned as a known false positive on 9 Oct; left alone since 11 Oct (decision D-4), because the message has no earnings, task or job wording",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AD-14",
+   "category": "K adversarial",
+   "expect": "none",
+   "tier": 1,
+   "documentedGap": true,
+   "text": "Deposit ₹1,000 to release your pending commission. Offer ends today!!!",
+   "note": "DOCUMENTED GAP since the final candidate (decision D-6): \"your pending commission\" is not in the locked object list, which has \"your commission\" with nothing in between. Flagged on 9 Oct. The trailing-punctuation check this case was written for is now case AD-19",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AD-15",
+   "category": "K adversarial",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Dear user,\nyour payout is ready.\nPay ₹350 to withdraw your payout.\nThank you.",
+   "note": "multi-line message",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "AD-16",
+   "category": "K adversarial",
+   "expect": "signal",
+   "tier": 1,
+   "text": "They asked me to pay ₹700 to withdraw my commission.",
+   "note": "a reported demand with an object ('asked me to') is still flagged",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "AD-17",
+   "category": "K adversarial",
+   "expect": "signal",
+   "tier": 1,
+   "text": "Do not delay. Deposit ₹900 to release your earnings.",
+   "note": "a negation in the previous sentence does not cover the demand",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "AD-18",
+   "category": "K adversarial",
+   "expect": "none",
+   "text": "Please send the signed form and add your bank details so that we can release your salary.",
+   "note": "generic verbs with no amount",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SP-01",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Customer service: Your balance is 12,400\nTo withdraw, please pay 30% tax first",
+   "note": "prioritised miss 1: a percentage as the amount in \"to withdraw …, pay …\" (decision D-1)",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-02",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "To withdraw your commission, pay 18% GST first.",
+   "note": "D-1, GST",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 18
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-03",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "You completed 20 like tasks and earned ₹1,850. Your earnings will be released after you pay the ₹350 activation charge.",
+   "note": "prioritised miss 2: \"released after you pay\" (decision D-2)",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-04",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Your payout will be processed only after you pay the ₹499 tax.",
+   "note": "D-2, \"only after\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-05",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Your salary will be released once you pay the ₹250 ID card charge.",
+   "note": "D-2, \"once\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-22",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Your earnings will be released after you pay 18% GST.",
+   "note": "D-2 with a percentage as the stated amount",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 18
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-23",
+   "category": "S1 selective: demand flagged",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "To cash out, pay 10% service tax.",
+   "note": "DOCUMENTED GAP since the final candidate (decision D-6): the locked goal-first form starts \"to withdraw\"; \"to cash out\" was wider wording",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SP-06",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Her account is ready: pay ₹700 to withdraw her share to your bank.",
+   "note": "the reported \"her share\" case: no rule about his / her",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-07",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Your wife's task account is frozen. Pay ₹2,000 to withdraw her earnings.",
+   "note": "his / her",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "otp_fraud",
+   "screenshot": {
+    "before": {
+     "verdict": "needs_review",
+     "risk": 47
+    },
+    "after": {
+     "verdict": "needs_review",
+     "risk": 49
+    }
+   }
+  },
+  {
+   "id": "SP-08",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Ask your friend to deposit ₹1,000 to withdraw his commission.",
+   "note": "his / her",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-09",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Pay ₹2,500 processing fee to withdraw your PF.",
+   "note": "PF is not left out",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-10",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "To withdraw your PF, pay ₹1,500 service charge to our agent.",
+   "note": "PF, goal first",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-11",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Deposit your documents and ₹2,000 to withdraw your earnings.",
+   "note": "\"deposit\" is a payment verb whatever else is deposited",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-12",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Pay ₹500 to pass the audit and withdraw.",
+   "note": "no rule about what stands between the payment and the withdrawal",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-13",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Deposit ₹3,000 to match your account balance and withdraw.",
+   "note": "same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-14",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Recharge ₹2,000 to increase your credit score and withdraw.",
+   "note": "same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-15",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Pay ₹999 to prove you are not a robot and withdraw your money.",
+   "note": "same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-16",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Pay ₹500 to join the VIP group and withdraw.",
+   "note": "same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-17",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Pay ₹500 to withdraw cash from your task wallet.",
+   "note": "\"withdraw cash from\" without another bank's ATM",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-18",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Pay ₹500 fee to withdraw your earnings at any ATM.",
+   "note": "earnings at an ATM",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-19",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Pay ₹1,500 card activation fee to withdraw cash from any ATM.",
+   "note": "\"any ATM\" is not the inter-bank fee wording",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-20",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Pay 10% tax to withdraw your mutual fund profits.",
+   "note": "a fake-investment tax demand; nothing about funds is left out",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SP-21",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Pay ₹5,000 tax to withdraw your mutual fund units.",
+   "note": "the reason no fund-unit rule was kept: such a rule would switch this demand off",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SN-01",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "Pay ₹25 ATM fee to withdraw cash at other bank ATMs.",
+   "note": "inter-bank ATM fee",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SN-02",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "Pay ₹23 to withdraw cash from another bank's ATM.",
+   "note": "inter-bank ATM fee, possessive form",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SN-03",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "To withdraw cash at another bank's ATM, pay ₹23 per transaction.",
+   "note": "inter-bank ATM fee, goal first",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SN-04",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "You need to pay ₹21 to withdraw cash at other bank ATMs after three free transactions.",
+   "note": "inter-bank ATM fee, monthly limit",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SN-05",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "To withdraw funds, a charge of ₹10 per transaction applies.",
+   "note": "a price list has no payment instruction (spec 8.2)",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SN-06",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "To withdraw, a fee of ₹25 applies.",
+   "note": "same; flagged on 9 Oct through a form the spec does not list, now removed",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SN-07",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "To withdraw to your bank, a fee of ₹5 is deducted from the amount.",
+   "note": "same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SN-08",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "A withdrawal fee of ₹25 applies to every payout.",
+   "note": "the spec's own terms-and-conditions example",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SN-09",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "To withdraw early, pay attention to the tax rules.",
+   "note": "D-1 needs an amount or a percentage after \"pay\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SN-10",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "To withdraw money from your account, pay no charges at our ATMs.",
+   "note": "same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SN-11",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "Your commission will be credited on the 5th of every month.",
+   "note": "D-2 needs \"after / once you pay\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SN-12",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "Your balance will be updated after you pay the bill.",
+   "note": "D-2 covers earnings words and release wording only",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SN-13",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "Your money will be sent to the seller after you pay at checkout.",
+   "note": "same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SK-01",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "Deposit ₹5,000 to open a Fixed Deposit and withdraw anytime with no penalty.",
+   "note": "KNOWN FALSE POSITIVE, pinned: the locked rule only asks for the same sentence; the adjacency rule was removed on the owner's instruction",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "2 bank deposit wording"
+  },
+  {
+   "id": "SK-02",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "text": "Deposit ₹500 to start trading and withdraw profits anytime.",
+   "note": "Relabelled by the owner on 19 Oct 2026 (class 7): a common investment lure, so a warning is correct. Was pinned as a known false positive.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "relabelled": "correct warning (owner, 2026-10-19, class 7)"
+  },
+  {
+   "id": "SK-03",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "Please deposit the cheque to receive your salary on time.",
+   "note": "KNOWN FALSE POSITIVE, pinned: \"deposit\" is a locked payment verb; no cheque guard was kept",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "8 paper / document wording"
+  },
+  {
+   "id": "SK-04",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "The scammers demanded that she pay ₹5,000 to withdraw her commission.",
+   "note": "KNOWN FALSE POSITIVE, pinned: a report about someone else; the locked reported-speech list does not cover it and the his / her rule was removed",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "1b report about someone else"
+  },
+  {
+   "id": "SK-05",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "A withdrawal fee of ₹15 is required to withdraw to your bank account.",
+   "note": "KNOWN FALSE POSITIVE, pinned: in scope by decision F1",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "3 fee / charge / penalty / exit load"
+  },
+  {
+   "id": "SK-06",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "text": "Pay ₹500 onboarding fee to start delivering and earn up to ₹25,000 per month.",
+   "note": "Relabelled by the owner on 19 Oct 2026 (class 7): a common job lure, so a warning is correct. Was pinned as a known false positive.",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "relabelled": "correct warning (owner, 2026-10-19, class 7)"
+  },
+  {
+   "id": "SK-07",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "Deposit ₹2,000 to activate your account and withdraw using your debit card.",
+   "note": "KNOWN FALSE POSITIVE, pinned: same wording as a scam demand",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "2 bank deposit wording"
+  },
+  {
+   "id": "SK-08",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "Dear customer, pay your credit card bill to restore your credit limit and withdraw cash up to ₹20,000.",
+   "note": "KNOWN FALSE POSITIVE, pinned",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "2 bank deposit wording"
+  },
+  {
+   "id": "SK-09",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "Pay ₹2,000 to join the self-help group and withdraw your savings after one year.",
+   "note": "KNOWN FALSE POSITIVE, pinned",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "2 bank deposit wording"
+  },
+  {
+   "id": "SK-10",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "Pay ₹499 to become a member and withdraw books from the library.",
+   "note": "KNOWN FALSE POSITIVE, pinned: nothing is excluded by what is withdrawn except cash at another bank ATM",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "4 withdraw in a non-money sense"
+  },
+  {
+   "id": "SK-11",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "Pay ₹100 to withdraw your complaint at the consumer forum.",
+   "note": "KNOWN FALSE POSITIVE, pinned: same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "4 withdraw in a non-money sense"
+  },
+  {
+   "id": "SK-12",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "Pay the exit load to withdraw your SIP before 12 months.",
+   "note": "KNOWN FALSE POSITIVE, pinned: no rule about funds was kept",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "3 fee / charge / penalty / exit load"
+  },
+  {
+   "id": "SK-13",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "To withdraw your wallet balance to bank, pay 3% charge.",
+   "note": "KNOWN FALSE POSITIVE, pinned: a cost of decision D-1",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "3 fee / charge / penalty / exit load"
+  },
+  {
+   "id": "SK-14",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "To withdraw before maturity, pay 1% penalty.",
+   "note": "KNOWN FALSE POSITIVE, pinned: a cost of decision D-1",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "3 fee / charge / penalty / exit load"
+  },
+  {
+   "id": "SK-17",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "Your salary will be credited after you pay back the ₹5,000 advance.",
+   "note": "KNOWN FALSE POSITIVE, pinned: a cost of decision D-2 (found by an attack probe written after the form was added)",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "5 D-2 look-alike (confirmed)"
+  },
+  {
+   "id": "SK-18",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "Your commission will be paid out once you pay the ₹1,000 annual membership renewal.",
+   "note": "KNOWN FALSE POSITIVE, pinned: a cost of decision D-2",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "5 D-2 look-alike (confirmed)"
+  },
+  {
+   "id": "SK-19",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "To withdraw your wallet balance to bank, pay ₹30 charge.",
+   "note": "KNOWN FALSE POSITIVE, pinned: the LOCKED form \"to withdraw …, pay ₹X\"; flagged on 9 Oct too. The rupee twin of SK-13",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "3 fee / charge / penalty / exit load"
+  },
+  {
+   "id": "SK-20",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "To withdraw before maturity, pay ₹500 penalty.",
+   "note": "KNOWN FALSE POSITIVE, pinned: same; the rupee twin of SK-14",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "3 fee / charge / penalty / exit load"
+  },
+  {
+   "id": "SK-15",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "Pay 1% exit load to withdraw your mutual fund units before one year.",
+   "note": "KNOWN FALSE POSITIVE, pinned: a fund-unit rule was tried and not kept, because it also switched off \"pay ₹5,000 tax to withdraw your mutual fund units\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "3 fee / charge / penalty / exit load"
+  },
+  {
+   "id": "SK-16",
+   "category": "S3 selective: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "To withdraw your mutual fund units before one year, pay ₹250.",
+   "note": "KNOWN FALSE POSITIVE, pinned: same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "3 fee / charge / penalty / exit load"
+  },
+  {
+   "id": "SN-14",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "Your payout will be released once you pay your outstanding seller fees.",
+   "note": "D-2 needs a stated amount; a first draft without that rule flagged this",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SN-15",
+   "category": "S2 selective: inter-bank ATM fee or price list left alone",
+   "expect": "none",
+   "text": "Your salary will be credited after you deposit the signed documents.",
+   "note": "same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SG-01",
+   "category": "S3 selective: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Please make a payment of ₹2,000 to activate withdrawal of your task earnings.",
+   "note": "documented gap: \"make a payment of\" is not a locked payment verb",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SG-02",
+   "category": "S3 selective: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "You need to clear the pending tax of ₹1,200 before withdrawal of your commission.",
+   "note": "documented gap: \"clear\" is not a locked payment verb",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SG-03",
+   "category": "S3 selective: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Buy the ₹3,000 merchant order to unlock your commission.",
+   "note": "documented gap: \"buy\" is not a locked payment verb",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SG-04",
+   "category": "S3 selective: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Invest ₹1,000 in the prepaid task and withdraw ₹1,300 after 10 minutes.",
+   "note": "documented gap: \"invest\" is not a locked payment verb",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SG-05",
+   "category": "S3 selective: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Final step: top-up ₹10,000 to complete the combo order, then the full ₹48,000 will be credited to your bank.",
+   "note": "documented gap: \"combo order\" is not in the locked context list",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SG-06",
+   "category": "S3 selective: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Madam aapka salary ready hai, bas ₹250 processing fee bhej do withdrawal ke liye.",
+   "note": "documented gap: Hinglish with the payment before the goal",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SG-07",
+   "category": "S3 selective: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Task complete. Ab next task ke liye ₹800 top up karo, commission milega.",
+   "note": "documented gap: Hinglish tier 2, deferred by the plan",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SG-08",
+   "category": "S3 selective: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "To receive your payout, pay the ₹120 processing fee.",
+   "note": "documented gap: the goal-first form is \"to withdraw\" / \"to cash out\" only",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SG-09",
+   "category": "S3 selective: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Before you can withdraw, pay the clearance charge.",
+   "note": "documented gap: goal first with neither an amount nor a percentage",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SG-10",
+   "category": "S3 selective: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "We will release your commission once you deposit ₹1,000.",
+   "note": "documented gap: D-2 was kept to the one passive form",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SG-11",
+   "category": "S3 selective: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Your balance will be unlocked as soon as you recharge ₹2,000.",
+   "note": "documented gap: D-2 covers earnings words, not \"balance\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SG-12",
+   "category": "S3 selective: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "To withdraw your commission a tax of ₹1,200 applies, pay now.",
+   "note": "documented gap: the unlisted \"a tax of ₹X\" goal-first form was removed; \"pay now\" has no amount",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SG-13",
+   "category": "S3 selective: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "To withdraw, a tax of ₹900 per withdrawal must be paid first.",
+   "note": "documented gap: same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "SG-15",
+   "category": "S1 selective: demand flagged",
+   "expect": "signal",
+   "text": "Your earnings are loaded on the card. Pay ₹999 to withdraw cash at other bank ATMs.",
+   "note": "decision D-4: the message talks about earnings, so the inter-bank ATM wording is judged like any other sentence. Not flagged by the selective candidate",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "SG-14",
+   "category": "S3 selective: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Your earnings will be released after you pay the activation charge.",
+   "note": "documented gap: D-2 needs a stated amount or percentage",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "AD-19",
+   "category": "K adversarial",
+   "expect": "signal",
+   "text": "Deposit ₹1,000 to release your commission. Offer ends today!!!",
+   "note": "trailing punctuation (replaces AD-14 for that check)",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "FP-01",
+   "category": "F1 final: demand flagged",
+   "expect": "signal",
+   "text": "Pay ₹300 to release your withdrawal.",
+   "note": "\"withdrawal\" is a locked object word on its own",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "FP-02",
+   "category": "F1 final: demand flagged",
+   "expect": "signal",
+   "text": "Pay ₹1,500 so you can withdraw your earnings.",
+   "note": "\"so you can\": the locked \"so that you can\" with \"that\" left out",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "FP-03",
+   "category": "F1 final: demand flagged",
+   "expect": "signal",
+   "text": "Your task balance is ₹4,200. Pay ₹500 to withdraw cash at another bank's ATM.",
+   "note": "D-4: task wording in the message, so the ATM wording is a demand",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "FP-04",
+   "category": "F1 final: demand flagged",
+   "expect": "signal",
+   "text": "Work from home job payout is ready: pay ₹300 to withdraw cash from other bank ATMs.",
+   "note": "D-4: job and payout wording",
+   "before": {
+    "verdict": "unclear",
+    "risk": 18
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "fake_job",
+   "screenshot": {
+    "before": {
+     "verdict": "needs_review",
+     "risk": 41
+    },
+    "after": {
+     "verdict": "suspicious",
+     "risk": 65
+    }
+   }
+  },
+  {
+   "id": "FP-05",
+   "category": "F1 final: demand flagged",
+   "expect": "signal",
+   "text": "Commission credited to your card. To withdraw cash at another bank's ATM, pay ₹250.",
+   "note": "D-4: goal-first form, commission wording",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "FP-12",
+   "category": "F1 final: demand flagged",
+   "expect": "signal",
+   "text": "Part-time job offer. Pay ₹300 to withdraw cash at other bank ATMs.",
+   "note": "D-4: job wording only (none of earnings / commission / salary / payout / tasks)",
+   "before": {
+    "verdict": "unclear",
+    "risk": 18
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "fake_job",
+   "screenshot": {
+    "before": {
+     "verdict": "needs_review",
+     "risk": 41
+    },
+    "after": {
+     "verdict": "suspicious",
+     "risk": 65
+    }
+   }
+  },
+  {
+   "id": "FP-13",
+   "category": "F1 final: demand flagged",
+   "expect": "signal",
+   "text": "A tax fee of ₹900 must be paid to release your earnings.",
+   "note": "\"tax fee\": the fee name comes from the locked release gate (\"a tax or clearance fee demanded to release earnings\")",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "FP-06",
+   "category": "F1 final: demand flagged",
+   "expect": "signal",
+   "text": "To withdraw your earnings, pay 12% TDS first.",
+   "note": "D-1: a percentage directly after the payment verb",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "FP-07",
+   "category": "F1 final: demand flagged",
+   "expect": "signal",
+   "text": "To withdraw, pay a 20% security tax now.",
+   "note": "D-1: an article between the verb and the percentage",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "FP-08",
+   "category": "F1 final: demand flagged",
+   "expect": "signal",
+   "text": "To withdraw your earnings, please pay the 18% GST.",
+   "note": "D-1",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 18
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "FP-09",
+   "category": "F1 final: demand flagged",
+   "expect": "signal",
+   "text": "Your commission will be unlocked as soon as you deposit ₹2,000.",
+   "note": "D-2",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "FP-10",
+   "category": "F1 final: demand flagged",
+   "expect": "signal",
+   "text": "Your earnings will be released after you pay the processing fee of ₹500.",
+   "note": "D-2: the amount within 25 characters of the verb",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "FP-11",
+   "category": "F1 final: demand flagged",
+   "expect": "signal",
+   "text": "Your payout will be released after you pay 5% tax.",
+   "note": "D-2 with a percentage directly after the verb",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "FN-01",
+   "category": "F2 final: left alone",
+   "expect": "none",
+   "text": "A processing fee is required for every withdrawal above ₹10,000.",
+   "note": "D-6: the locked form is \"a … fee is required … TO release your earnings\"; without a purpose word this is a fee notice. Flagged by the 9 Oct and selective versions",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FN-02",
+   "category": "F2 final: left alone",
+   "expect": "none",
+   "text": "A withdrawal fee is required for withdrawals to a bank account.",
+   "note": "same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FN-03",
+   "category": "F2 final: left alone",
+   "expect": "none",
+   "text": "A genuine company won't ask you to pay to withdraw your salary.",
+   "note": "negated: \"won't\" is a contraction of the locked \"not\"; \"ask you to\" an inflection of the locked \"asks you to\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FN-04",
+   "category": "F2 final: left alone",
+   "expect": "none",
+   "text": "You shouldn't pay to withdraw your own earnings.",
+   "note": "negated: contraction of the locked \"not\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FN-05",
+   "category": "F2 final: left alone",
+   "expect": "none",
+   "text": "You never have to pay to withdraw your earnings.",
+   "note": "negated: the verb is preceded by the locked \"never\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FN-06",
+   "category": "F2 final: left alone",
+   "expect": "none",
+   "text": "Don't ever pay to withdraw your earnings.",
+   "note": "negated: the verb is preceded by the locked \"don't\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FN-07",
+   "category": "F2 final: left alone",
+   "expect": "none",
+   "text": "Dear customer, you need to pay ₹23 to withdraw cash at other bank ATMs beyond the free limit.",
+   "note": "D-4: the bank notice",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FN-08",
+   "category": "F2 final: left alone",
+   "expect": "none",
+   "text": "Pay ₹999 to withdraw cash at other bank ATMs.",
+   "note": "D-4: the exception itself. The bare wording, with no earnings, task or job wording anywhere, is not flagged whoever sends it",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FN-09",
+   "category": "F2 final: left alone",
+   "expect": "none",
+   "text": "To withdraw early, pay attention to the 30% tax rule.",
+   "note": "D-1: the percentage is not what is paid. Flagged by the selective candidate",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FN-10",
+   "category": "F2 final: left alone",
+   "expect": "none",
+   "text": "To withdraw, pay nothing extra: only 2% is deducted automatically.",
+   "note": "D-1: same. Flagged by the selective candidate",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FK-01",
+   "category": "F3 final: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "Pay ₹100 to get your salary certificate from the HR portal.",
+   "note": "KNOWN FALSE POSITIVE, pinned (decision D-6): \"get your salary\" is the locked object; the exception for salary slip / certificate / statement was wider wording and is gone. Not flagged by the 9 Oct and selective versions",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "8 paper / document wording"
+  },
+  {
+   "id": "FK-02",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "text": "You can cash out anytime without having to pay to withdraw.",
+   "note": "FIXED by the owner's class-1 ruling of 19 Oct 2026: \"without having to\" is now in the negation guard. Was a known false positive (decision D-6).",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   }
+  },
+  {
+   "id": "FK-03",
+   "category": "F3 final: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "Salary account holders pay ₹21 to withdraw cash at other bank ATMs after five free transactions.",
+   "note": "KNOWN FALSE POSITIVE, pinned (decision D-4): a bank notice that contains the word \"salary\", so the ATM wording is judged like any other sentence. Flagged on 9 Oct too",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 12
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "6 salary-account ATM notice (D-4 proxy)"
+  },
+  {
+   "id": "FK-04",
+   "category": "F3 final: limitation pinned",
+   "expect": "signal",
+   "knownFalsePositive": true,
+   "text": "Your salary will be credited when you deposit the signed bond on ₹100 stamp paper.",
+   "note": "KNOWN FALSE POSITIVE, pinned: a third legitimate look-alike of decision D-2, found by a probe written in the final pass",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "suspicious",
+    "risk": 55
+   },
+   "classifier": "other",
+   "screenshot": {
+    "before": {
+     "verdict": "unclear",
+     "risk": 9
+    },
+    "after": {
+     "verdict": "unclear",
+     "risk": 33
+    }
+   },
+   "acceptedByOwner": "2026-10-19",
+   "fpClass": "5 D-2 look-alike (confirmed)"
+  },
+  {
+   "id": "FG-01",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Send only ₹500 to withdraw your earnings.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked: send / add / transfer count \"only when an amount follows directly\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-02",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Deposit ₹2,000 and you will receive your commission today.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. \"and you will\" is not a locked purpose link",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-03",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Last step: pay ₹999 and you can withdraw immediately.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. \"and you can\" is not a locked purpose link",
+   "before": {
+    "verdict": "unclear",
+    "risk": 18
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 18
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-04",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Pay ₹500, after which you can withdraw your earnings.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. \"after which you can\" is not a locked purpose link",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-05",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Pay ₹1,000 to release all earnings.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked determiners: your / my / the",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-06",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Pay ₹700 to claim your total commission.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked object: \"your commission\" with nothing in between",
+   "before": {
+    "verdict": "unclear",
+    "risk": 34
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 34
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-07",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Deposit ₹2,000 into our task account today.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked: \"your / the\" task account",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-08",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Fund your task account with ₹1,500 to open the order.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. \"fund\" is not a locked payment verb",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-09",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "An activation fee of ₹500 is required to release your earnings.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked fee names: verification, clearance, withdrawal, processing (and \"tax\" from the release gate)",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-10",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "A clearance charge of ₹800 must be paid to withdraw your commission.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked noun: fee",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-11",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "A verification fee of ₹1,200 is payable to release your earnings.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked: \"is required / must be paid\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-12",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Before you can withdraw, pay ₹500 verification fee.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. The locked goal-first form starts \"to withdraw\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-13",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "To cash out, pay ₹200 handling fee.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-14",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "To withdraw you must complete the merchant order first.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked: \"the prepaid task\" (and \"prepaid order\", from spec case A-17)",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-15",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Your commission is ready. Pay ₹300 to complete your order.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked weak goal: \"complete the task / order\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 6
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-16",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Work from home task: send ₹500 and receive ₹800 back in 5 minutes.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked: \"send ₹X and get ₹Y back\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 12
+   },
+   "classifier": "fake_job"
+  },
+  {
+   "id": "FG-17",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Telegram task group: send ₹1,000 and get ₹1,300 profit today.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "fake_job"
+  },
+  {
+   "id": "FG-18",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Telegram task group: send ₹500, then get ₹800 back.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Same",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "fake_job"
+  },
+  {
+   "id": "FG-19",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "This is a prepaid order. Recharge ₹2,000 to continue.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked context: \"prepaid or merchant task\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-20",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Payout ke liye pehle ₹500 recharge karo.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked Hinglish goal words: withdrawal, nikalne",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-21",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Withdrawal se pehle ₹1,000 recharge karo.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked Hinglish link: \"ke liye\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-22",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Withdrawal ke liye ₹500 payment karo.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked verbs with \"karo\": pay, deposit, recharge, top up",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-23",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Withdrawal ke liye paise bhejo.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. Locked: an amount or \"fee\" before \"bhejo\"",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-24",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "Paise nikalne ke liye pehle 1000 rupaye jama karo.",
+   "note": "DOCUMENTED GAP (decision D-6): wording outside the locked lists; flagged by the 9 Oct and selective versions. \"1000 rupaye\" is not read as an amount (locked examples use ₹ and Rs). One of the 71 readiness probes (S-11)",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  },
+  {
+   "id": "FG-25",
+   "category": "F3 final: limitation pinned",
+   "expect": "none",
+   "documentedGap": true,
+   "text": "To withdraw, pay tax of 30% first.",
+   "note": "DOCUMENTED GAP (decision D-1, accepted narrowly): the percentage must come directly after the payment verb. Flagged by the selective candidate",
+   "before": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "after": {
+    "verdict": "unclear",
+    "risk": 0
+   },
+   "classifier": "other"
+  }
+ ]
+}
