@@ -35,7 +35,7 @@ linked_incidents:
   severity="medium"
   status="resolved"
   impact="WordPress REST API automation script blocked entirely. All write operations (publishing posts, updating metadata) returned 401. No content could be pushed programmatically until the auth header was corrected."
-  rootCause="WordPress Application Passwords are displayed with spaces (e.g., 'Kbqw 8P2T QLnS p3Co SlOT SNAb'). The spaces are part of the credential and must be included as-is when Base64 encoding the Authorization header. URL-encoding the spaces as %20 before Base64 encoding corrupts the credential and produces a 401 on every request."
+  rootCause="WordPress Application Passwords are displayed with spaces (e.g., 'xxxx xxxx xxxx xxxx xxxx xxxx'). The spaces are part of the credential and must be included as-is when Base64 encoding the Authorization header. URL-encoding the spaces as %20 before Base64 encoding corrupts the credential and produces a 401 on every request."
   resolution="Removed URL encoding from the password string before Base64 encoding. The entire 'username:password' string — spaces in password intact — is passed directly to btoa() or base64 equivalent. Verified with curl before updating the automation script."
   prevention="Test WordPress REST API auth with a simple GET request using curl before writing any automation script. Construct the Authorization header by Base64 encoding the raw credential string — do not URL-encode any part of it."
 />
@@ -69,7 +69,7 @@ linked_incidents:
   steps={[
     "Copy the Application Password exactly as shown in WordPress Admin → Users → Profile → Application Passwords",
     "Build the auth string: 'username:ApplicationPassword with spaces intact'",
-    "Base64 encode the full string — NO URL encoding: echo -n 'user:Kbqw 8P2T QLnS p3Co SlOT SNAb' | base64",
+    "Base64 encode the full string — NO URL encoding: echo -n 'user:xxxx xxxx xxxx xxxx xxxx xxxx' | base64",
     "Test with curl: curl -H 'Authorization: Basic <base64result>' https://yoursite.com/wp-json/wp/v2/posts",
     "If GET returns 200, the auth is correct — use the same construction in your automation script"
   ]}
@@ -90,20 +90,20 @@ Every variation tried — different header formats, different credential strings
 
 ## The Root Cause
 
-WordPress Application Passwords are shown in the dashboard formatted with spaces between character groups: `Kbqw 8P2T QLnS p3Co SlOT SNAb`. These spaces are not decorators — they are part of the actual password string and must be present when constructing the Authorization header.
+WordPress Application Passwords are shown in the dashboard formatted with spaces between character groups: `xxxx xxxx xxxx xxxx xxxx xxxx`. These spaces are not decorators — they are part of the actual password string and must be present when constructing the Authorization header.
 
 The mistake was URL-encoding the spaces to `%20` before Base64 encoding. This produces a different Base64 string than WordPress expects, so authentication fails every time.
 
 The correct process:
 
-1. Take the credential string exactly as shown: `cantact:Kbqw 8P2T QLnS p3Co SlOT SNAb`
+1. Take the credential string exactly as shown: `your-username:xxxx xxxx xxxx xxxx xxxx xxxx`
 2. Base64 encode that entire string — spaces and all — without any prior encoding
 3. Set the Authorization header: `Authorization: Basic <base64-result>`
 
 ```bash
 # Correct
 curl -X GET https://asquaresolution.com/wp-json/wp/v2/posts \
-  -H "Authorization: Basic $(echo -n 'cantact:Kbqw 8P2T QLnS p3Co SlOT SNAb' | base64)"
+  -H "Authorization: Basic $(echo -n 'your-username:xxxx xxxx xxxx xxxx xxxx xxxx' | base64)"
 ```
 
 The difference: `echo -n 'cantact:Kbqw 8P2T ...'` — the password passed raw, spaces included, piped directly to `base64`. No URL encoding anywhere in the chain.
