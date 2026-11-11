@@ -10,7 +10,7 @@ import { hasQueueWork } from '@/lib/distribution/throttle'
 import { recomputeTrending } from '@/lib/scam-intel/feed'
 import { cleanExpiredCache, cleanExpiredRateLimits } from '@/lib/ai/cache'
 import { composeWeeklyScamcheckDraft, processCampaignSends } from '@/lib/newsletter/campaigns'
-import { processWelcomeSequence } from '@/lib/newsletter/welcome-sequence'
+import { processWelcomeSequence, welcomeAttention } from '@/lib/newsletter/welcome-sequence'
 import { isAuthorizedCron } from '@/lib/cron-auth'
 import { log } from '@/lib/observability/logger'
 import { reportError } from '@/lib/observability/errors'
@@ -62,7 +62,17 @@ export async function GET(req: Request) {
   //    subscriber. No-ops unless WELCOME_SEQUENCE_ENABLED==='true'. Isolated so a
   //    failure never fails the cron; advances welcomeStep only on confirmed send.
   try {
-    out.welcome = await processWelcomeSequence()
+    const welcome = await processWelcomeSequence()
+    out.welcome = welcome
+    // asq-welcome-alerts-v1: a run that needs a person (provider refused the account, repeated refusals, a new
+    // manual review, an unreadable budget, an incomplete scan) is recorded as a warning. Counts only, no address.
+    const attention = welcomeAttention(welcome)
+    if (attention) {
+      await reportError('cron.welcome_attention', new Error(attention), {
+        severity: 'warning',
+        meta: { stopped: welcome.stopped ?? null, failed: welcome.failed, unknown: welcome.unknown, manualReview: welcome.manualReview, reviewRecorded: welcome.reviewRecorded, reviewWriteFailed: welcome.reviewWriteFailed, sent: welcome.sent },
+      })
+    }
   } catch (err) {
     await reportError('cron.welcome_sequence', err, { severity: 'warning' })
     out.welcome = { error: (err as Error).message }
