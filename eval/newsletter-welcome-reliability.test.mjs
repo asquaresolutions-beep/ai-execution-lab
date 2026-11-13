@@ -39,20 +39,20 @@ globalThis.fetch = async (url, init) => {
   if (u !== RESEND_URL || method !== 'POST') { provider.violations.push(`${method} ${u}`); return new Response('{}', { status: 500 }) }
   const body = JSON.parse(String(init?.body ?? '{}'))
   const to = Array.isArray(body.to) ? body.to[0] : body.to
-  const req = { n: provider.requests.length + 1, to, key: (init?.headers || {})['Idempotency-Key'] ?? null, at: provider.clockNow() }
+  const req = { n: provider.requests.length + 1, to, key: (init?.headers || {})['Idempotency-Key'] ?? null, at: provider.clockNow(), tags: body.tags, body: String(init?.body ?? '') }
   provider.requests.push(req)
   if (provider.onRequest) await provider.onRequest(req)
   const res = provider.respond ? await provider.respond(req) : { status: 200 }
   if (res === 'throw') throw new Error('network down')
   const accepted = res.accepted ?? (res.status >= 200 && res.status < 300)
-  if (accepted && provider.webhook && provider.real) await provider.real.set('email_events', null, { type: 'sent', email: String(to).toLowerCase(), ts: provider.eventTs, messageId: `msg_${req.n}`, campaignId: null })
+  if (accepted && provider.webhook && provider.real) await provider.real.set('email_events', null, { type: 'sent', email: String(to).toLowerCase(), ts: provider.eventTs, messageId: `msg_${req.n}`, campaignId: null, welcomeKey: (body.tags || []).find((t) => t.name === 'welcomeKey')?.value ?? null })
   return new Response(JSON.stringify(res.status < 300 ? { id: `msg_${req.n}` } : { message: res.message || `refused ${res.status}` }), { status: res.status, headers: { 'content-type': 'application/json' } })
 }
 
 const { setStore, applyQuery } = await imp('lib/store/adapter.ts')
 const { MemoryStore } = await imp('lib/store/memory-store.ts')
 const { subscriberDocId } = await imp('lib/newsletter/subscribers.ts')
-const { processWelcomeSequence, WELCOME_LIMITS } = await imp('lib/newsletter/welcome-sequence.ts')
+const { processWelcomeSequence, WELCOME_LIMITS, welcomeAttention: welcomeAttentionOf } = await imp('lib/newsletter/welcome-sequence.ts')
 const W = await imp('lib/newsletter/welcome-claims.ts')
 
 const DAY = 86_400_000, MIN = 60_000, HOUR = 60 * MIN
@@ -317,7 +317,7 @@ async function unknownThen(h, ft, eventType, at, extra = {}, secondRunAt = NOW +
   provider.webhook = false
   provider.respond = () => ({ status: 504 })
   await run(h, ft)
-  if (eventType) await ev(h, s.email, eventType, at, extra)
+  if (eventType) await ev(h, s.email, eventType, at, { welcomeKey: W.welcomeDeliveryKey(s.id, 1, 1), ...extra })
   provider.respond = null; provider.webhook = true
   const r = await run(h, ft, secondRunAt)
   return { s, r }
@@ -508,4 +508,113 @@ test('review 5: evidence still wins over the age check — a delivered event a d
   const { h, ft } = fresh()
   const { s, r } = await unknownThen(h, ft, 'delivered', NOW + 2 * HOUR)   // second run at NOW + 1 day
   assert.equal(reqTo(s.email).length, 1); assert.equal(r.manualReview, 0); assert.equal(await stepOf(h, s.id), 1)
+})
+
+// ── Finding 4: evidence is bound to the attempt (asq-welcome-evidence-v1) ────
+test('finding 4: mail to the same address that is NOT this send is not evidence — untagged, another step, another key generation', async () => {
+  for (const [label, extra] of [
+    ['untagged (a notice, a reply, a form confirmation)', { welcomeKey: null }],
+    ['another step of the series', { welcomeKey: 'KEY_OTHER_STEP' }],
+    ['another key generation of the same step', { welcomeKey: 'KEY_OTHER_GEN' }],
+  ]) {
+    const { h, ft } = fresh()
+    const s = await sub(h, 3)
+    const other = { KEY_OTHER_STEP: W.welcomeDeliveryKey(s.id, 2, 1), KEY_OTHER_GEN: W.welcomeDeliveryKey(s.id, 1, 2) }[extra.welcomeKey] ?? null
+    provider.webhook = false; provider.respond = () => ({ status: 504 })
+    await run(h, ft)
+    // A "delivered" event well inside the old 6-hour window, but for other mail.
+    await ev(h, s.email, 'delivered', NOW + 10 * MIN, { welcomeKey: other })
+    provider.respond = null; provider.webhook = true
+    const r = await run(h, ft, NOW + 3 * HOUR)
+    assert.equal(r.reconciled, 0, label + ': not read as delivered')
+    assert.equal(reqTo(s.email).length, 2, label + ': the step is sent again (same key, still inside its window)')
+    assert.equal(reqTo(s.email)[1].key, `welcome-${s.id}-step1`, label)
+    assert.equal(await stepOf(h, s.id), 1, label + ': advanced by the real send')
+  }
+})
+
+test('finding 4: this send\'s own event is evidence whenever it arrives — even past the old 6-hour window', async () => {
+  const { h, ft } = fresh()
+  const s = await sub(h, 3)
+  provider.webhook = false; provider.respond = () => ({ status: 504 })
+  await run(h, ft)
+  await ev(h, s.email, 'delivered', NOW + 20 * HOUR, { welcomeKey: W.welcomeDeliveryKey(s.id, 1, 1) })
+  provider.respond = null; provider.webhook = true
+  const r = await run(h, ft, NOW + DAY)
+  assert.equal(r.reconciled, 1); assert.equal(r.manualReview, 0); assert.equal(reqTo(s.email).length, 1); assert.equal(await stepOf(h, s.id), 1)
+  const claim = (await h.real.get(CLAIMS, W.claimDocId(s.id, 1, 1))).data
+  assert.deepEqual([claim.outcome, claim.reconciled, claim.evidenceType], ['sent', 'provider_event', 'delivered'])
+})
+
+test('finding 4: every attempt made with one key sends the identical request body (the provider requires it for a repeated key)', async () => {
+  const { h, ft } = fresh()
+  const s = await sub(h, 8)
+  provider.webhook = false; provider.respond = () => ({ status: 504 })
+  for (let k = 0; k < 3; k++) await run(h, ft, NOW + k * 2 * HOUR)
+  const reqs = reqTo(s.email)
+  assert.equal(reqs.length, 3)
+  assert.ok(reqs.every((q) => q.key === reqs[0].key && q.body === reqs[0].body), 'same key, byte-identical body')
+  assert.deepEqual(reqs[0].tags, [{ name: 'welcomeKey', value: `welcome-${s.id}-step1` }])
+  provider.respond = null; provider.webhook = true
+})
+
+test('finding 4: classifyDeliveryEvidence with a key (pure)', () => {
+  const at = NOW, KEY = 'welcome-nl_x-step1'
+  const k = (evs) => W.classifyDeliveryEvidence(evs, at, KEY).kind
+  assert.equal(k([{ type: 'delivered', ts: at + 5000 }]), 'none', 'untagged mail in the window')
+  assert.equal(k([{ type: 'sent', ts: at + 5000 }]), 'none')
+  assert.equal(k([{ type: 'delivered', ts: at + 5000, welcomeKey: 'welcome-nl_x-step2' }]), 'none', 'another step')
+  assert.equal(k([{ type: 'delivered', ts: at + 5000, welcomeKey: KEY + '-k2' }]), 'none', 'another key generation')
+  assert.equal(k([{ type: 'delivered', ts: at + 5000, welcomeKey: KEY }]), 'delivered')
+  assert.equal(k([{ type: 'delivered', ts: at + 40 * HOUR, welcomeKey: KEY }]), 'delivered', 'no time limit on the send\'s own event')
+  assert.equal(k([{ type: 'sent', ts: at + 5000, welcomeKey: KEY }]), 'accepted')
+  assert.equal(k([{ type: 'bounced', ts: at + 5000, welcomeKey: KEY }]), 'not_delivered')
+  assert.equal(k([{ type: 'sent', ts: at + 1000, welcomeKey: KEY }, { type: 'bounced', ts: at + 9000, welcomeKey: KEY }]), 'not_delivered')
+  assert.equal(k([{ type: 'delivered', ts: at + 5000, welcomeKey: KEY, campaignId: 'c1' }]), 'none', 'campaign mail is never evidence')
+  assert.equal(k([{ type: 'bounced', ts: at + 5000 }]), 'none', 'an untagged bounce is about other mail')
+  assert.equal(k([{ type: 'suppressed', ts: at + 5 * MIN }]), 'not_delivered', 'untagged suppressed in its window: read cautiously as not delivered')
+  assert.equal(k([{ type: 'suppressed', ts: at + 20 * MIN }]), 'none', 'outside the window')
+  assert.equal(k([{ type: 'opened', ts: at + 5000, welcomeKey: KEY }]), 'none')
+})
+
+// ── Manual resolution of a 'key_window_expired' review (the documented procedure) ──
+async function expiredReview() {
+  const { h, ft } = fresh()
+  const s = await sub(h, 3)
+  provider.webhook = false; provider.respond = () => ({ status: 504 })
+  await run(h, ft)
+  provider.respond = null; provider.webhook = true
+  const r = await run(h, ft, NOW + DAY)
+  assert.equal(r.manualReview, 1); assert.equal(reqTo(s.email).length, 1)
+  assert.equal((await h.real.get(REVIEWS, W.reviewDocId(s.id, 1))).data.reason, 'key_window_expired')
+  return { h, ft, s, claimId: W.claimDocId(s.id, 1, 1) }
+}
+
+test('resolution A: the provider shows the email WAS delivered — mark the claim sent; the next run advances the step and sends nothing', async () => {
+  const { h, ft, s, claimId } = await expiredReview()
+  await h.real.update(CLAIMS, claimId, { outcome: 'sent', reconciled: 'manual', resolvedBy: 'owner', resolvedAt: new Date(NOW + DAY).toISOString() })
+  const r = await run(h, ft, NOW + 2 * DAY)
+  assert.equal(r.repaired, 1); assert.equal(r.sent, 0); assert.equal(r.manualReview, 0)
+  assert.equal(reqTo(s.email).length, 1, 'no second send'); assert.equal(await stepOf(h, s.id), 1)
+})
+
+test('resolution B: the provider shows it was NOT sent — mark the claim deferred; the next run sends once with a NEW key', async () => {
+  const { h, ft, s, claimId } = await expiredReview()
+  await h.real.update(CLAIMS, claimId, { outcome: 'deferred', reconciled: 'manual', resolvedBy: 'owner', resolvedAt: new Date(NOW + DAY).toISOString() })
+  const r = await run(h, ft, NOW + 2 * DAY)
+  assert.equal(r.sent, 1); assert.equal(r.manualReview, 0)
+  assert.deepEqual(reqTo(s.email).map((q) => q.key), [`welcome-${s.id}-step1`, `welcome-${s.id}-step1-k2`])
+  assert.equal(await stepOf(h, s.id), 1)
+  const again = await run(h, ft, NOW + 2 * DAY + HOUR)
+  assert.equal(reqTo(s.email).filter((q) => /step1/.test(q.key)).length, 2, 'and never again for this step')
+  assert.equal(again.manualReview, 0)
+})
+
+test('resolution C: left alone, the review stays as it is on every later run — no send, no new record, no repeated alert', async () => {
+  const { h, ft, s } = await expiredReview()
+  for (let d = 2; d < 5; d++) {
+    const r = await run(h, ft, NOW + d * DAY)
+    assert.equal(r.manualReview, 1); assert.equal(r.reviewRecorded, 0); assert.equal(welcomeAttentionOf(r), null)
+  }
+  assert.equal(reqTo(s.email).length, 1)
 })

@@ -59,7 +59,7 @@ globalThis.fetch = async (url, init) => {
   if (res === 'hang') return new Promise(() => {})
   const accepted = res.accepted ?? (res.status >= 200 && res.status < 300)
   if (accepted && provider.webhook && provider.real) {
-    await provider.real.set('email_events', null, { type: 'sent', email: String(to).toLowerCase(), ts: provider.eventTs, messageId: `msg_${req.n}`, campaignId: null })
+    await provider.real.set('email_events', null, { type: 'sent', email: String(to).toLowerCase(), ts: provider.eventTs, messageId: `msg_${req.n}`, campaignId: null, welcomeKey: (body.tags || []).find((t) => t.name === 'welcomeKey')?.value ?? null })
   }
   const payload = res.status < 300 ? { id: `msg_${req.n}` } : { message: res.message || `refused ${res.status}` }
   return new Response(JSON.stringify(payload), { status: res.status, headers: { 'content-type': 'application/json' } })
@@ -584,7 +584,7 @@ test('disabled: no read at all; enabled without a launch cutoff: nobody is enrol
 })
 
 // ── 8 · Ledger hygiene and static guards ────────────────────────────────────
-test('the ledger and review documents hold no email address; welcome mail stays untagged', async () => {
+test('the ledger and review documents hold no email address; welcome mail carries only its own key as a tag', async () => {
   const { h, ft } = fresh()
   await seedList(h, 40, (i) => i < 4)
   // The provider's error text names the recipient: it must not reach the ledger.
@@ -594,7 +594,8 @@ test('the ledger and review documents hold no email address; welcome mail stays 
   const docs = [...(await h.real.query(CLAIMS, {})), ...(await h.real.query(REVIEWS, {}))]
   assert.ok(docs.length > 0)
   for (const d of docs) assert.ok(!JSON.stringify(d.data).includes('@'), 'no address in ledger documents')
-  assert.ok(provider.requests.every((q) => q.tags === undefined))
+  for (const q of provider.requests) assert.deepEqual(q.tags, [{ name: 'welcomeKey', value: q.key }], 'one tag: the idempotency key, no address, no campaign')
+  for (const q of provider.requests) assert.ok(!JSON.stringify(q.tags).includes('@'))
 })
 
 test('static: the drip never paginates with offset and never passes a campaign id', () => {

@@ -545,7 +545,7 @@ export async function processWelcomeSequence(now: number = Date.now(), options: 
     if (wait > 0) await sleep(wait)
     lastProviderCallAt = clock()
     const r = await sendWithTimeout(
-      () => sendListEmail({ to: email, subject: mail.subject, title: mail.title, bodyHtml: mail.bodyHtml, idempotencyKey: key }),
+      () => sendListEmail({ to: email, subject: mail.subject, title: mail.title, bodyHtml: mail.bodyHtml, idempotencyKey: key, welcomeKey: key }),
       lim.sendTimeoutMs,
     )
     const outcome = classifySendResult(r)

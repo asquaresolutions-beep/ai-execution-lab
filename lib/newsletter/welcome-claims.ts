@@ -115,6 +115,8 @@ export interface ProviderEventLike {
   ts?: number | string
   campaignId?: string | null
   messageId?: string | null
+  /** The welcome-drip idempotency key echoed from the send's tags (lib/email/webhook.ts). */
+  welcomeKey?: string | null
 }
 
 export const claimDocId = (recordId: string, step: number, seq: number): string => `${recordId}__s${step}__c${seq}`
@@ -177,19 +179,35 @@ export type DeliveryEvidence =
 
 /**
  * What the provider's events for an address say about an attempt claimed at `claimedAtMs`. Pure.
+ * With `welcomeKey` (how the drip calls it): only events carrying that key count, whenever they arrived, plus an
+ * untagged 'suppressed' inside its window. Without it: the address-and-time windows below (kept for callers that
+ * have no key; the drip does not use this form).
  * Only events not attributed to a campaign, inside the window for their type, are read:
  *  'sent' / 'suppressed' within [claim − RECONCILE_BEFORE_MS, claim + RECONCILE_AFTER_MS];
  *  'delivered' / 'delivery_delayed' / 'bounced' within [claim − RECONCILE_BEFORE_MS, claim + RECONCILE_AFTER_DELIVERY_MS].
  * Priority: delivered → not delivered (bounced, suppressed) → accepted (sent, delayed) → none.
  */
-export function classifyDeliveryEvidence(events: readonly ProviderEventLike[], claimedAtMs: number): DeliveryEvidence {
+export function classifyDeliveryEvidence(events: readonly ProviderEventLike[], claimedAtMs: number, welcomeKey?: string): DeliveryEvidence {
   if (!Number.isFinite(claimedAtMs) || claimedAtMs <= 0) return { kind: 'none' }
-  const inWindow = events.filter((e) => {
+  const relevant = (type: string) => DELIVERED_TYPES.has(type) || ACCEPTED_TYPES.has(type) || NOT_DELIVERED_TYPES.has(type)
+  const windowed = (e: ProviderEventLike) => {
     const type = String(e.type)
-    if (e.campaignId || !(DELIVERED_TYPES.has(type) || ACCEPTED_TYPES.has(type) || NOT_DELIVERED_TYPES.has(type))) return false
     const t = timeOf(e)
     const after = SHORT_WINDOW_TYPES.has(type) ? RECONCILE_AFTER_MS : RECONCILE_AFTER_DELIVERY_MS
     return t >= claimedAtMs - RECONCILE_BEFORE_MS && t <= claimedAtMs + after
+  }
+  const inWindow = events.filter((e) => {
+    const type = String(e.type)
+    if (e.campaignId || !relevant(type)) return false
+    if (welcomeKey) {
+      // Bound to the attempt: an event counts only when the provider echoed this send's key. Mail to the same
+      // address that is not this send (another step, a notice, a reply) carries another key or none, and is ignored.
+      if (e.welcomeKey) return e.welcomeKey === welcomeKey
+      // One exception, on the cautious side: an untagged 'suppressed' in the short window is still read as NOT
+      // delivered. The provider skips such a send, and its echo of tags on that event type is unproven.
+      return type === 'suppressed' && windowed(e)
+    }
+    return windowed(e)
   })
   for (const [kind, types] of [['delivered', DELIVERED_TYPES], ['not_delivered', NOT_DELIVERED_TYPES], ['accepted', ACCEPTED_TYPES]] as const) {
     const e = inWindow.find((x) => types.has(String(x.type)))
@@ -314,7 +332,7 @@ export async function decideWelcomeClaim(
         if (!events) events = await o.readEvents()
         const at = new Date(o.now).toISOString()
         const previousOutcome = c.outcome ?? 'none'
-        const ev = classifyDeliveryEvidence(events, claimedAtMs)
+        const ev = classifyDeliveryEvidence(events, claimedAtMs, welcomeDeliveryKey(o.recordId, o.step, gen))
         if (ev.kind === 'delivered' || ev.kind === 'accepted') {
           await store.update<WelcomeClaim>(WELCOME_SEND_CLAIMS, id, { outcome: 'sent', reconciled: 'provider_event', reconciledAt: at, previousOutcome, evidenceType: ev.type, evidenceMessageId: ev.messageId })
           return { kind: 'already_sent', via: 'provider_event' }

@@ -363,3 +363,49 @@ test('Q13 the budget is read before every claim in both campaign loops, and the 
   assert.match(w, /await readDailyQuota\(now, \{ limit: lim\.dailyProviderLimit, reserve: lim\.dailyReserve, readLimit: lim\.quotaReadLimit \}\)/)
   assert.ok(!/campaignId/.test(w), 'welcome-sequence.ts stays free of campaign ids')
 })
+
+// ── Finding 11: the budget under concurrent runs (measured, not assumed) ─────
+test('Q14 with room for 3, a drain and the drip running together never start more than 3 + 1 attempts, over 8 rounds', async () => {
+  let worst = 0
+  for (let round = 0; round < 8; round++) {
+    const h = harness()
+    await queuedCampaign(h, Array.from({ length: 8 }, (_, i) => `c${i}@example.test`))
+    await dueSubscribers(h, 8)
+    await otherMail(h, 57)   // remaining 3
+    const [d, w] = await Promise.all([C.drainCampaign('c1'), processWelcomeSequence(Date.now(), dripOpts())])
+    const attempts = provider.requests.length
+    worst = Math.max(worst, attempts)
+    // Lower bound 2, not 3: each drip send is counted twice once its provider event arrives (claim + event), so the
+    // guard can stop one short. Early is the safe direction. Upper bound: the budget plus one for the extra run.
+    assert.ok(attempts >= 2 && attempts <= 4, `round ${round}: ${attempts} attempts (drain ${d.sent}, drip ${w.sent})`)
+    assert.ok(['quota_exhausted', undefined].includes(d.stopped) && ['quota_exhausted', undefined].includes(w.stopped), `round ${round}: ${d.stopped} / ${w.stopped}`)
+    assert.ok(d.stopped === 'quota_exhausted' || w.stopped === 'quota_exhausted', 'at least one of them was stopped by the budget')
+  }
+  assert.ok(worst <= 4, `overshoot is at most one attempt per extra run (worst ${worst})`)
+  delete process.env.WELCOME_SEQUENCE_ENABLED; delete process.env.WELCOME_SEQUENCE_SINCE
+  noViolations()
+})
+
+test('Q15 two drains of the SAME campaign started together: the run lock lets one through, so the budget is not overshot', async () => {
+  const h = harness()
+  await queuedCampaign(h, Array.from({ length: 6 }, (_, i) => `s${i}@example.test`))
+  await otherMail(h, 58)   // remaining 2
+  const [a, b] = await Promise.all([C.drainCampaign('c1'), C.drainCampaign('c1')])
+  assert.equal(provider.requests.length, 2, `exactly the budget (${JSON.stringify([a.sent, b.sent, a.stopped ?? a.error, b.stopped ?? b.error])})`)
+  assert.equal(new Set(provider.requests.map((q) => q.to)).size, 2, 'no recipient twice')
+  noViolations()
+})
+
+test('Q16 an unreadable budget stops BOTH senders when they run together: nothing is claimed or sent', async () => {
+  const h = harness()
+  await queuedCampaign(h, ['a@example.test', 'b@example.test'])
+  await dueSubscribers(h, 2)
+  h.ctl.fault = (c) => { if (c.op === 'query' && c.collection === EVENTS && c.args[1]?.where?.some((w) => w.field === 'ts')) throw new Error('store down') }
+  const [d, w] = await Promise.all([C.drainCampaign('c1'), processWelcomeSequence(Date.now(), dripOpts())])
+  h.ctl.fault = null
+  assert.equal(d.stopped, 'quota_unknown'); assert.equal(w.stopped, 'quota_unknown')
+  assert.equal(provider.requests.length, 0); assert.equal(await claimCount(h), 0)
+  assert.equal((await h.real.query(DRIP, {})).length, 0, 'no drip claim either')
+  delete process.env.WELCOME_SEQUENCE_ENABLED; delete process.env.WELCOME_SEQUENCE_SINCE
+  noViolations()
+})

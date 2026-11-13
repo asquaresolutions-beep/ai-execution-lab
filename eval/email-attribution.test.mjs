@@ -236,3 +236,22 @@ test('by contrast an APPROVED campaign still enqueues — proving the guards key
   assert.equal(r.ok, true)
   assert.equal(r.recipients, 1)
 })
+
+// ── asq-welcome-evidence-v1: the welcome key travels out as a tag and back on the webhook ──
+test('welcomeTags: the key becomes one tag; an unusable key gives no tag', async () => {
+  const { welcomeTags, WELCOME_KEY_TAG } = await imp('lib/email/tags.ts')
+  assert.deepEqual(welcomeTags('welcome-nl_0123abcd-step2-k3'), [{ name: WELCOME_KEY_TAG, value: 'welcome-nl_0123abcd-step2-k3' }])
+  for (const v of [undefined, '', '###']) assert.equal(welcomeTags(v), undefined)
+})
+
+test('parseResendEvent keeps the welcome key from the provider\'s tags, on every event type the drip reads; other events are unchanged', () => {
+  const key = 'welcome-nl_0123abcd-step1'
+  for (const type of ['email.sent', 'email.delivered', 'email.delivery_delayed', 'email.bounced']) {
+    const e = parseResendEvent({ type, created_at: '2026-11-14T07:00:05.000Z', data: { to: ['Reader@Example.test'], email_id: 'm1', tags: { welcomeKey: key } } })
+    assert.equal(e.welcomeKey, key, type); assert.equal(e.campaignId, undefined, type); assert.equal(e.email, 'reader@example.test')
+  }
+  const plain = parseResendEvent({ type: 'email.delivered', created_at: '2026-11-14T07:00:05.000Z', data: { to: ['reader@example.test'], email_id: 'm2' } })
+  assert.ok(!('welcomeKey' in plain), 'no tag, no field')
+  const camp = parseResendEvent({ type: 'email.delivered', created_at: '2026-11-14T07:00:05.000Z', data: { to: ['reader@example.test'], email_id: 'm3', tags: { campaignId: 'c1' } } })
+  assert.equal(camp.campaignId, 'c1'); assert.ok(!('welcomeKey' in camp))
+})
