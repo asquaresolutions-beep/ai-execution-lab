@@ -235,7 +235,7 @@ test('F1: a subscriber waiting for reconciliation is skipped by the pre-check wi
 })
 
 // ── F2 · Unknown outcomes isolated per recipient ────────────────────────────
-test('F2: one recipient with a persistent unknown outcome no longer stalls the others (multi-day); it reaches manual review after 3 attempts', async () => {
+test('F2: one recipient with a persistent unknown outcome no longer stalls the others (multi-day); a day later it goes to manual review, not to a second send', async () => {
   const { h, ft } = fresh()
   const stuck = await sub(h, 8)                       // oldest → first in the order
   const others = []; for (let i = 0; i < 8; i++) others.push(await sub(h, 3))
@@ -243,9 +243,11 @@ test('F2: one recipient with a persistent unknown outcome no longer stalls the o
   const days = []
   for (let d = 0; d < 5; d++) { const r = await run(h, ft, NOW + d * DAY); days.push([r.sent, r.unknown, r.manualReview, r.stopped ?? '-']) }
   assert.deepEqual(days[0], [8, 1, 0, '-'], 'day 0: the 8 others are served despite the stuck recipient')
-  assert.equal(reqTo(stuck.email).length, 3, 'three attempts, each only after reconciliation')
-  assert.ok(reqTo(stuck.email).every((q) => q.key === `welcome-${stuck.id}-step1`), 'same key: no evidence of a send')
-  assert.deepEqual(days[3].slice(2, 3), [1]); assert.equal((await h.real.get(REVIEWS, W.reviewDocId(stuck.id, 1)))?.data.state, 'manual_review')
+  assert.equal(reqTo(stuck.email).length, 1, 'one attempt only: 24 h later the same key no longer protects against a second send')
+  assert.deepEqual(days[1].slice(2, 3), [1], 'day 1: manual review')
+  const review = (await h.real.get(REVIEWS, W.reviewDocId(stuck.id, 1)))?.data
+  assert.equal(review.state, 'manual_review'); assert.equal(review.reason, 'key_window_expired')
+  for (const d of days.slice(1)) assert.deepEqual(d.slice(2), [1, '-'], 'counted once a run, the run is not stopped')
   // The others get step 1 once on day 0 (and, being 5 days old by day 2, step 2 once: one step per run).
   for (const o of others) {
     assert.equal(provider.requests.filter((q) => q.key === `welcome-${o.id}-step1`).length, 1)
@@ -310,14 +312,14 @@ test('F2: overlapping runs with unknown outcomes keep claim ownership — no rec
 })
 
 // ── F3 · Verified provider event types in reconciliation ────────────────────
-async function unknownThen(h, ft, eventType, at, extra = {}) {
+async function unknownThen(h, ft, eventType, at, extra = {}, secondRunAt = NOW + DAY) {
   const s = await sub(h, 3)
   provider.webhook = false
   provider.respond = () => ({ status: 504 })
   await run(h, ft)
   if (eventType) await ev(h, s.email, eventType, at, extra)
   provider.respond = null; provider.webhook = true
-  const r = await run(h, ft, NOW + DAY)
+  const r = await run(h, ft, secondRunAt)
   return { s, r }
 }
 
@@ -349,7 +351,7 @@ test('F3: a "suppressed" event (or a permanent bounce) stops the subscriber at t
 test('F3: "opened" / "clicked" / "complained" are not read as evidence for an attempt (they can belong to any earlier email)', async () => {
   for (const type of ['opened', 'clicked']) {
     const { h, ft } = fresh()
-    const { s } = await unknownThen(h, ft, type, NOW + 60_000)
+    const { s } = await unknownThen(h, ft, type, NOW + 60_000, {}, NOW + 3 * HOUR)
     assert.deepEqual(reqTo(s.email).map((q) => q.key), [`welcome-${s.id}-step1`, `welcome-${s.id}-step1`], `${type}: no evidence → same-key retry`)
   }
   const { h, ft } = fresh()
@@ -471,4 +473,39 @@ test('review 8: when the open-review read fails, a missing manual-review record 
   assert.deepEqual([r5.manualReview, r5.reviewRecorded, r5.reviewWriteFailed], [1, 0, 0])
   h.ctl.fault = null
   assert.equal(reqTo(s.email).length, 3, 'no further send to a subscriber in manual review')
+})
+
+test('review 5: inside the key window an unknown outcome is retried with the SAME key, up to 3 attempts, then manual review', async () => {
+  const { h, ft } = fresh()
+  const stuck = await sub(h, 8)
+  provider.webhook = false
+  provider.respond = () => ({ status: 504 })
+  const runs = []
+  for (let k = 0; k < 5; k++) { const r = await run(h, ft, NOW + k * 2 * HOUR); runs.push([r.unknown, r.manualReview]) }
+  assert.equal(reqTo(stuck.email).length, 3, 'three attempts, each only after reconciliation')
+  assert.ok(reqTo(stuck.email).every((q) => q.key === `welcome-${stuck.id}-step1`), 'same key every time')
+  assert.deepEqual(runs.map((x) => x[1]), [0, 0, 0, 1, 1])
+  assert.equal((await h.real.get(REVIEWS, W.reviewDocId(stuck.id, 1)))?.data.reason, 'max_attempts')
+  provider.respond = null; provider.webhook = true
+})
+
+test('review 5: the cut-off is the claim age, 23 h — just inside retries, at the cut-off it does not; nothing is written, so the decision repeats', async () => {
+  for (const [age, expectSends, expectReview] of [[W.KEY_WINDOW_MS - MIN, 2, false], [W.KEY_WINDOW_MS, 1, true]]) {
+    const { h, ft } = fresh()
+    const { s, r } = await unknownThen(h, ft, null, 0, {}, NOW + age)
+    assert.equal(reqTo(s.email).length, expectSends, `age ${age}`)
+    assert.equal(r.manualReview, expectReview ? 1 : 0, `age ${age}`)
+    if (expectReview) {
+      const claim = (await h.real.get(CLAIMS, W.claimDocId(s.id, 1, 1))).data
+      assert.equal(claim.outcome, 'unknown', 'the claim is left as it was'); assert.equal(claim.reconciled, undefined)
+      const again = await run(h, ft, NOW + age + DAY)
+      assert.equal(again.manualReview, 1); assert.equal(again.reviewRecorded, 0); assert.equal(reqTo(s.email).length, 1, 'still no second send')
+    }
+  }
+})
+
+test('review 5: evidence still wins over the age check — a delivered event a day later is read as sent, with no review', async () => {
+  const { h, ft } = fresh()
+  const { s, r } = await unknownThen(h, ft, 'delivered', NOW + 2 * HOUR)   // second run at NOW + 1 day
+  assert.equal(reqTo(s.email).length, 1); assert.equal(r.manualReview, 0); assert.equal(await stepOf(h, s.id), 1)
 })

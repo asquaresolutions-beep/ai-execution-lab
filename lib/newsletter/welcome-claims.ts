@@ -17,7 +17,9 @@
 //       – older → RECONCILED against the provider's own events for the address
 //         (classifyDeliveryEvidence): delivered or accepted → recorded 'sent';
 //         taken but bounced/suppressed → 'not_sent' (one attempt used, new key);
-//         no event → 'not_sent' (one attempt used, same key). Never retried before this check.
+//         no event → 'not_sent' (one attempt used, same key) while the claim is younger than
+//         KEY_WINDOW_MS; older than that → MANUAL REVIEW ('key_window_expired'), because the same
+//         key no longer protects against a second send. Never retried before this check.
 //   • 'failed'   (a definite refusal) → one attempt used; the next key is new
 //   • 'deferred' (HTTP 429: rate or quota limit; or 401/403: the ACCOUNT was refused — a
 //                 bad or restricted API key, an unverified sending domain) → not an attempt;
@@ -53,6 +55,11 @@ export const RECONCILE_BEFORE_MS = 60_000
 export const RECONCILE_AFTER_MS = 15 * 60_000
 /** For events that follow processing by minutes to hours ('delivered', 'delivery_delayed', 'bounced'). */
 export const RECONCILE_AFTER_DELIVERY_MS = 6 * 60 * 60_000
+/**
+ * Age after which a claim's idempotency key is no longer relied on. The provider honours a key for 24 h from the
+ * SEND, which is not recorded (only the claim is), so the cut-off is kept below that.
+ */
+export const KEY_WINDOW_MS = 23 * 60 * 60_000
 
 // Event types, as normalised by lib/email/webhook.ts (TYPE_MAP) from the provider's webhook. Only types that
 // are tied to one message's processing are used. 'opened', 'clicked' and 'complained' are NOT used: they
@@ -88,7 +95,7 @@ export interface WelcomeClaim {
   evidenceMessageId?: string | null
 }
 
-export type ReviewReason = 'max_attempts' | 'too_many_claims'
+export type ReviewReason = 'max_attempts' | 'too_many_claims' | 'key_window_expired'
 
 export interface WelcomeReview {
   recordId: string
@@ -318,6 +325,10 @@ export async function decideWelcomeClaim(
           attempts++; keyGen = gen + 1
           break
         }
+        // No provider event. A repeat with the same key is only safe while the provider still remembers that key.
+        // Past that, a send the provider did take (its events lost) would go out a second time: a person decides.
+        // Nothing is written, so every later run reaches the same decision.
+        if (o.now - claimedAtMs >= KEY_WINDOW_MS) return { kind: 'manual_review', reason: 'key_window_expired', attempts, last }
         await store.update<WelcomeClaim>(WELCOME_SEND_CLAIMS, id, { outcome: 'not_sent', reconciled: 'no_provider_event', reconciledAt: at, previousOutcome })
         attempts++; keyGen = gen
       }
