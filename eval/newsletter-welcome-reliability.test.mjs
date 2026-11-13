@@ -451,3 +451,24 @@ test('checks preserved: the pre-check and the check before the send together sto
   assert.ok(writes.every((c) => String(c.args[1]).startsWith(ok.id) || c.collection === EVENTS), 'only the sendable subscriber caused writes')
   void noConsent; void invalid; void rep
 })
+
+// ── Review of PR #129 (13 Nov 2026) ──────────────────────────────────────────
+test('review 8: when the open-review read fails, a missing manual-review record is still written (create is atomic)', async () => {
+  const { h, ft } = fresh()
+  const s = await sub(h, 3)
+  provider.respond = () => ({ status: 422 })
+  await run(h, ft); await run(h, ft)
+  h.ctl.fault = (c) => { if (c.op === 'create' && c.collection === REVIEWS) throw new Error('store down') }
+  const r3 = await run(h, ft)
+  assert.deepEqual([r3.manualReview, r3.reviewRecorded, r3.reviewWriteFailed], [1, 0, 1])
+  // Now the review QUERY fails instead: before the fix the record was skipped for as long as that read failed.
+  h.ctl.fault = (c) => { if (c.op === 'query' && c.collection === REVIEWS) throw new Error('store down') }
+  const r4 = await run(h, ft)
+  assert.deepEqual([r4.manualReview, r4.reviewRecorded, r4.reviewWriteFailed], [1, 1, 0])
+  assert.equal((await h.real.get(REVIEWS, W.reviewDocId(s.id, 1)))?.data.state, 'manual_review')
+  // Still failing: the record exists, so the atomic create changes nothing and nothing is counted twice.
+  const r5 = await run(h, ft)
+  assert.deepEqual([r5.manualReview, r5.reviewRecorded, r5.reviewWriteFailed], [1, 0, 0])
+  h.ctl.fault = null
+  assert.equal(reqTo(s.email).length, 3, 'no further send to a subscriber in manual review')
+})

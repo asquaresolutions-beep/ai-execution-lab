@@ -104,7 +104,7 @@ function harness() {
 }
 
 /** `n` provider-reported messages not attributed to a campaign, earlier today (or at `ts`). */
-async function otherMail(h, n, ts = Date.now() - 5 * MIN) {
+async function otherMail(h, n, ts = Math.max(Date.now() - 5 * MIN, W.utcDayStart(Date.now()) + 1_000)) {   // always inside the current UTC day
   for (let i = 0; i < n; i++) await h.real.set(EVENTS, null, { type: 'sent', email: `other${i}@example.test`, ts: ts - i, messageId: `other_${ts}_${i}`, campaignId: null })
 }
 
@@ -162,7 +162,8 @@ test('Q1 the reading: other mail, drip attempts and campaign attempts each count
   const drip = (seq, outcome, at = day + 10_000) => h.real.set(DRIP, `rec__s1__c${seq}`, { recordId: 'rec', step: 1, seq, keyGen: 1, runId: 'r', claimedAt: new Date(at).toISOString(), claimedAtMs: at, ...(outcome === undefined ? {} : { outcome }) })
   await drip(1, 'sent'); await drip(2, 'unknown'); await drip(3, undefined)                      // 3 that may have gone out
   await drip(4, 'failed'); await drip(5, 'deferred'); await drip(6, 'skipped')                    // definite non-sends
-  await drip(7, 'sent', day - 60_000)                                                              // yesterday
+  await drip(7, 'sent', day - Q.DRIP_CLAIM_LOOKBACK_MS - MIN)                                      // yesterday, before the lookback
+  await drip(8, 'sent', day - 60_000)                                                              // claimed by a run that straddled 00:00 UTC: counted
 
   const camp = (id, at) => h.real.set(CLAIMS, id, { sendId: id, campaignId: 'c1', attempt: 1, runId: 'r', claimedAt: new Date(at).toISOString(), claimedAtMs: at })
   for (let i = 0; i < 4; i++) await camp(`today${i}`, day + 20_000 + i)
@@ -170,7 +171,7 @@ test('Q1 the reading: other mail, drip attempts and campaign attempts each count
   await camp('before_lookback', day - Q.CAMPAIGN_CLAIM_LOOKBACK_MS - MIN)
 
   const r = await Q.readDailyQuota(now)
-  assert.deepEqual(r, { limit: 100, reserve: 40, otherSendsToday: 6, dripAttemptsToday: 3, campaignAttemptsToday: 5, remaining: 100 - 40 - 6 - 3 - 5 })
+  assert.deepEqual(r, { limit: 100, reserve: 40, otherSendsToday: 6, dripAttemptsToday: 4, campaignAttemptsToday: 5, remaining: 100 - 40 - 6 - 4 - 5 })
 })
 
 test('Q2 a read that reaches its limit cannot be trusted: the reading throws', async () => {
@@ -332,7 +333,8 @@ test('Q11 a drain and the drip started together at the last slot: at most one at
     const attempts = provider.requests.length
     assert.ok(attempts >= 1 && attempts <= 2, `round ${round}: ${attempts} attempts (drain ${d.sent}, drip ${w.sent})`)
     const q = await Q.readDailyQuota()
-    assert.ok(q.remaining >= -1, `round ${round}: remaining ${q.remaining}`)
+    // When both send: the drip's claim, the drip's own (unattributed) provider event and the campaign's claim.
+    assert.ok(q.remaining >= -2, `round ${round}: remaining ${q.remaining}`)
   }
   delete process.env.WELCOME_SEQUENCE_ENABLED; delete process.env.WELCOME_SEQUENCE_SINCE
   noViolations()

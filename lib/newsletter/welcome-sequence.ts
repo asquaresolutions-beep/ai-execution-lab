@@ -94,7 +94,7 @@ export type WelcomeBlockReason = 'unsubscribed' | 'not_subscribed' | 'no_consent
 
 export type WelcomeStopReason =
   | 'time_budget' | 'send_cap' | 'quota_exhausted' | 'quota_unknown' | 'rate_limited' | 'repeated_unknown'
-  | 'scan_failed' | 'page_cap' | 'cursor_stalled'
+  | 'scan_failed' | 'page_cap' | 'cursor_stalled' | 'scan_incomplete'
   /** The provider refused the account (401/403: API key or sending domain). Not an attempt for anyone. */
   | 'provider_refused'
   /** MAX_SAME_REFUSALS_IN_ROW definite refusals in a row with the same status: likely system-wide. */
@@ -116,6 +116,8 @@ export interface WelcomeRunResult {
   duplicateAddress: number
   /** Read-only pre-check: batch reads made, and due subscribers it could not classify (they get the full check). */
   precheckReads: number
+  /** Set when the pre-check ran out of its time budget and left some subscribers to the full check. */
+  precheckCutShort?: boolean
   unclassified: number
   /** Candidates after the pre-check: inside the active window, and older (the backlog). */
   activeCandidates: number
@@ -179,6 +181,8 @@ export const WELCOME_LIMITS = {
   prefetchBatch: 30,
   /** Upper bound on documents per pre-check read; reaching it leaves that batch unclassified. */
   prefetchReadLimit: 5_000,
+  /** Run time after which the pre-check starts no further batch read; what it has not read stays unclassified. */
+  precheckBudgetMs: 8_000,
   /** Unknown outcomes on first attempts, in a row, that stop the run. */
   maxConsecutiveUnknown: 2,
   /** Unknown outcomes on retries after which the remaining retries wait for the next run. */
@@ -192,7 +196,7 @@ export const WELCOME_LIMITS = {
 export type WelcomeLimits = { -readonly [K in keyof typeof WELCOME_LIMITS]: number }
 
 /** Stop reasons that mean the drip cannot work until someone fixes something. */
-const ATTENTION_STOPS = new Set<string>(['provider_refused', 'repeated_refusal', 'repeated_unknown', 'quota_unknown', 'scan_failed', 'cursor_stalled', 'page_cap'])
+const ATTENTION_STOPS = new Set<string>(['provider_refused', 'repeated_refusal', 'repeated_unknown', 'quota_unknown', 'scan_failed', 'cursor_stalled', 'page_cap', 'scan_incomplete'])
 
 /**
  * Whether a run needs a person, and why, for the daily cron's alert (asq-welcome-alerts-v1). Pure. null: nothing to report.
@@ -292,10 +296,11 @@ const chunks = <T,>(xs: T[], n: number): T[][] => { const out: T[][] = []; for (
  * READ-ONLY pre-check of every due subscriber, in batches (see the header). Never throws: a read that fails
  * or reaches its limit leaves its subscribers unclassified, and they then get the full per-subscriber check.
  */
-async function preCheck(due: Due[], now: number, lim: WelcomeLimits): Promise<{ by: Map<string, PreCheck>; openReviews: Set<string> | null; reads: number }> {
+async function preCheck(due: Due[], now: number, lim: WelcomeLimits, outOfTime: () => boolean = () => false): Promise<{ by: Map<string, PreCheck>; openReviews: Set<string> | null; reads: number; cutShort: boolean }> {
   const store = getStore()
   const by = new Map<string, PreCheck>()
   let reads = 0
+  let cutShort = false
   // 1. From the scanned record itself: no read needed.
   for (const d of due) {
     if (d.sub.consent === false) by.set(d.doc.id, { block: 'no_consent' })
@@ -306,6 +311,7 @@ async function preCheck(due: Due[], now: number, lim: WelcomeLimits): Promise<{ 
   const addressOf = (d: Due) => String(d.sub.email).trim().toLowerCase()
   const blockByAddress = new Map<string, DeliverabilityBlock | null>()
   for (const batch of chunks([...new Set(open.map(addressOf))], lim.prefetchBatch)) {
+    if (outOfTime()) { cutShort = true; break }   // the rest stay unclassified: the full per-subscriber check decides
     try {
       reads++
       const rows = await store.query<DeliveryEventLike & { email?: string }>(EMAIL_EVENTS, { where: [{ field: 'email', op: 'in', value: batch }], limit: lim.prefetchReadLimit })
@@ -319,6 +325,7 @@ async function preCheck(due: Due[], now: number, lim: WelcomeLimits): Promise<{ 
   const claimsByRecord = new Map<string, WelcomeClaim[]>()
   const ledgerKnown = new Set<string>()
   for (const batch of chunks([...new Set(open.map((d) => d.doc.id))], lim.prefetchBatch)) {
+    if (outOfTime()) { cutShort = true; break }
     try {
       reads++
       const rows = await store.query<WelcomeClaim>(WELCOME_SEND_CLAIMS, { where: [{ field: 'recordId', op: 'in', value: batch }], limit: lim.prefetchReadLimit })
@@ -341,7 +348,7 @@ async function preCheck(due: Due[], now: number, lim: WelcomeLimits): Promise<{ 
     else if (ledgerKnown.has(d.doc.id)) p.claims = summarizeClaims(claimsByRecord.get(d.doc.id) || [], d.step, now)
     by.set(d.doc.id, p)
   }
-  return { by, openReviews, reads }
+  return { by, openReviews, reads, cutShort }
 }
 
 /** Send due welcome-drip emails. `now` and the options are injectable for tests. */
@@ -400,6 +407,18 @@ export async function processWelcomeSequence(now: number = Date.now(), options: 
     base.stopped = 'scan_failed'
   }
   base.scanned = subs.length
+  // Completeness. The scan filters and orders on the `id` FIELD, and Firestore leaves out any document that lacks
+  // it, without an error. One unfiltered read (ordered by document name) must show no such document; when it
+  // cannot tell (it fails, or reaches its bound), the scan counts as incomplete.
+  if (!base.stopped) {
+    try {
+      const bound = subs.length + lim.pageSize
+      const all = await store.query<SubDoc>('newsletter', { limit: bound })
+      if (all.length >= bound || all.some((d) => typeof d.data?.id !== 'string')) base.stopped = 'scan_incomplete'
+    } catch {
+      base.stopped = 'scan_failed'
+    }
+  }
   // An incomplete scan cannot be ordered fairly: send nothing this run.
   if (base.stopped) return base
 
@@ -419,8 +438,9 @@ export async function processWelcomeSequence(now: number = Date.now(), options: 
   if (!due.length) return base
 
   // ── Read-only pre-check, then the processing order. ──
-  const pre = await preCheck(due, now, lim)
+  const pre = await preCheck(due, now, lim, () => elapsed() > lim.precheckBudgetMs)
   base.precheckReads = pre.reads
+  if (pre.cutShort) base.precheckCutShort = true
   type Candidate = Due & { retry: boolean }
   const active: Candidate[] = [], backlog: Candidate[] = []
   const reviewsToRecord: Array<{ d: Due; reason: ReviewReason; attempts: number; last: WelcomeClaim | null }> = []
@@ -432,7 +452,8 @@ export async function processWelcomeSequence(now: number = Date.now(), options: 
     if (s?.state === 'held') { base.held++; continue }
     if (s?.state === 'review') {
       base.manualReview++
-      if (pre.openReviews && !pre.openReviews.has(reviewDocId(d.doc.id, d.step))) {
+      // Unknown (the read failed) counts as missing: recordManualReview creates atomically and leaves an existing record alone.
+      if (!pre.openReviews || !pre.openReviews.has(reviewDocId(d.doc.id, d.step))) {
         reviewsToRecord.push({ d, reason: s.attempts >= MAX_WELCOME_ATTEMPTS ? 'max_attempts' : 'too_many_claims', attempts: s.attempts, last: s.last })
       }
       continue
@@ -494,6 +515,8 @@ export async function processWelcomeSequence(now: number = Date.now(), options: 
 
     const attempt = decision   // kind 'send' from here on
     const isRetry = attempt.seq > 1
+    // The pre-check may not have known this is a retry (its ledger read failed): apply the pause to the authoritative answer too.
+    if (retriesPaused && isRetry) { base.retriesPostponed++; return 'next' }
     const key = welcomeDeliveryKey(doc.id, step, attempt.keyGen)
 
     // Quota, read afresh immediately before this send.
@@ -504,7 +527,9 @@ export async function processWelcomeSequence(now: number = Date.now(), options: 
     }
     base.quota = quota
     if (quota.remaining <= 0) return 'quota_exhausted'
-    if (elapsed() > timeLimit) return 'later'
+    // The spacing wait before the provider call counts as well, so no claim is made for a send that could not start in time.
+    const spacingWait = Math.max(0, lim.spacingMs - (clock() - lastProviderCallAt))
+    if (elapsed() + spacingWait > timeLimit) return 'later'
 
     // Claim this attempt. Only the run that creates the claim may call the provider.
     const claimId = claimDocId(doc.id, step, attempt.seq)

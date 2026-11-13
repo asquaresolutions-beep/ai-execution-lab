@@ -175,7 +175,7 @@ test('A5 welcomeAttention: what raises an alert and what does not', () => {
   assert.equal(welcomeAttention(base), null)
   for (const s of ['time_budget', 'send_cap', 'quota_exhausted', 'rate_limited']) assert.equal(welcomeAttention({ ...base, stopped: s }), null, s)
   // R-01 (review of the fixes, 9 Nov): unknown outcomes are later reconciled and can use attempts, so they alert too.
-  for (const s of ['provider_refused', 'repeated_refusal', 'repeated_unknown', 'quota_unknown', 'scan_failed', 'cursor_stalled', 'page_cap']) assert.match(welcomeAttention({ ...base, stopped: s }), new RegExp(s), s)
+  for (const s of ['provider_refused', 'repeated_refusal', 'repeated_unknown', 'quota_unknown', 'scan_failed', 'cursor_stalled', 'page_cap', 'scan_incomplete']) assert.match(welcomeAttention({ ...base, stopped: s }), new RegExp(s), s)
   assert.match(welcomeAttention({ ...base, reviewRecorded: 1 }), /new manual review/)
   assert.match(welcomeAttention({ ...base, reviewWriteFailed: 1 }), /not written/)
   assert.equal(welcomeAttention({ ...base, failed: 1 }), null)

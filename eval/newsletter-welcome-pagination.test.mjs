@@ -220,8 +220,13 @@ test('1,000 records, 100 due across every page: 5 runs × 20, all reached, 0 dup
   const claims = await claimsOf(h)
   assert.equal(claims.length, 100); assert.ok(claims.every((c) => c.outcome === 'sent' && c.seq === 1))
   // Every list read is the verified keyset query: id > cursor, ordered by id, 200 a page, never an offset.
-  const listReads = h.calls.filter((c) => c.op === 'query' && c.collection === LIST)
+  const allListReads = h.calls.filter((c) => c.op === 'query' && c.collection === LIST)
+  const listReads = allListReads.filter((c) => c.args[1]?.where)
   assert.ok(listReads.length >= 36)
+  // Plus one completeness read per run: no filter, no order, bounded at scanned + one page.
+  const completeness = allListReads.filter((c) => !c.args[1]?.where)
+  assert.equal(completeness.length, 6)
+  for (const c of completeness) assert.deepEqual(c.args[1], { limit: 1000 + 200 })
   for (const c of listReads) {
     const o = c.args[1]
     assert.deepEqual({ where: o.where.map((w) => [w.field, w.op]), orderBy: o.orderBy, limit: o.limit, offset: o.offset }, { where: [['id', '>']], orderBy: { field: 'id', dir: 'asc' }, limit: 200, offset: undefined })
@@ -243,7 +248,7 @@ test('small pages (7) over 50 records: the cursor strictly advances and no recor
   await seedList(h, 50, (i) => i % 5 === 0)
   const r = await run(h, ft, NOW, { pageSize: 7 })
   assert.equal(r.scanned, 50); assert.equal(r.pages, 8); assert.equal(r.sent, 10); assert.equal(r.stopped, undefined)
-  const cursors = h.calls.filter((c) => c.op === 'query' && c.collection === LIST).map((c) => c.args[1].where[0].value)
+  const cursors = h.calls.filter((c) => c.op === 'query' && c.collection === LIST && c.args[1]?.where).map((c) => c.args[1].where[0].value)
   for (let i = 1; i < cursors.length; i++) assert.ok(cursors[i] > cursors[i - 1], 'cursor must increase')
 })
 
@@ -619,4 +624,38 @@ test('pure helpers: outcome classes, delivery evidence window, provider-send cou
   ], day), 2)
   assert.equal(W.welcomeDeliveryKey('nl_x', 2, 1), 'welcome-nl_x-step2')
   assert.equal(W.welcomeDeliveryKey('nl_x', 2, 3), 'welcome-nl_x-step2-k3')
+})
+
+// ── Review of PR #129 (13 Nov 2026) ──────────────────────────────────────────
+test('review 6: a record without an `id` field is invisible to the keyset scan, so the run reports scan_incomplete and sends nothing', async () => {
+  const { h, ft } = fresh()
+  await seedList(h, 12, (i) => i < 4)
+  await h.real.set(LIST, 'legacy_record', { email: 'legacy@example.test', createdAt: new Date(NOW - 3 * DAY).toISOString(), consent: true, list: 'asquare-newsletter' })
+  await h.real.update(LIST, 'legacy_record', { id: undefined })      // a document written without the field
+  const r = await run(h, ft)
+  assert.equal(r.scanned, 12, 'the keyset scan itself does not see it')
+  assert.equal(r.stopped, 'scan_incomplete'); assert.equal(r.sent, 0); assert.equal(provider.requests.length, 0)
+  assert.equal((await claimsOf(h)).length, 0)
+})
+
+test('review 6: a completeness read that fails counts as a failed scan; a complete list is unaffected', async () => {
+  const { h, ft } = fresh()
+  await seedList(h, 12, (i) => i < 4)
+  h.ctl.fault = (c) => { if (c.op === 'query' && c.collection === LIST && !c.args[1]?.where) throw new Error('store down') }
+  const r = await run(h, ft)
+  assert.equal(r.stopped, 'scan_failed'); assert.equal(r.sent, 0); assert.equal(provider.requests.length, 0)
+  h.ctl.fault = null
+  const r2 = await run(h, ft)
+  assert.equal(r2.stopped, undefined); assert.equal(r2.sent, 4)
+})
+
+test('review 7: a pre-check that runs out of its time budget leaves the rest to the full check — same sends, no duplicates', async () => {
+  const { h, ft } = fresh()
+  const rows = await seedList(h, 80, (i) => i % 4 === 0)   // 20 due
+  const r = await run(h, ft, NOW, { precheckBudgetMs: -1 })   // out of time before the first batch read
+  assert.equal(r.precheckCutShort, true); assert.equal(r.unclassified, 20); assert.equal(r.sent, 20); assert.equal(r.stopped, undefined)
+  assert.deepEqual(provider.requests.map((q) => q.to).sort(), rows.filter((x) => x.due).map((x) => x.email).sort())
+  assertNoDuplicateRecipients(); assertNoDuplicateKeys()
+  const r2 = await run(h, ft)
+  assert.equal(r2.precheckCutShort, undefined); assert.equal(r2.sent, 0)
 })

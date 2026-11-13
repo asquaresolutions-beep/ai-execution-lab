@@ -15,7 +15,7 @@
 //   otherSendsToday        distinct messages with a provider 'sent' or 'suppressed' event
 //                          since 00:00 UTC that are NOT attributed to a campaign: on-demand
 //                          mail, and the drip's own sends once their events have arrived;
-//   dripAttemptsToday      drip attempts claimed since 00:00 UTC by any run, except those
+//   dripAttemptsToday      drip attempts claimed since 00:00 UTC − DRIP_CLAIM_LOOKBACK_MS by any run, except those
 //                          the provider definitely did not send (failed, deferred, skipped);
 //   campaignAttemptsToday  campaign attempts claimed since 00:00 UTC − CAMPAIGN_CLAIM_LOOKBACK_MS,
 //                          every one of them (an attempt that ends skipped or refused counts too).
@@ -52,6 +52,12 @@ export const DAILY_PROVIDER_LIMIT = 100
 export const ROUTINE_RESERVE = 40
 /** Campaign claims made this long before 00:00 UTC still count today (a run lives at most 330 s). */
 export const CAMPAIGN_CLAIM_LOOKBACK_MS = 15 * 60_000
+/**
+ * Drip claims made this long before 00:00 UTC still count today. A drip claim carries its run's START time and the
+ * provider call follows within the run (at most 60 s), so a run that straddles midnight can send in the new day.
+ * Claims already sent before midnight are counted too: the guard can stop early, never late.
+ */
+export const DRIP_CLAIM_LOOKBACK_MS = 5 * 60_000
 /** Upper bound on the documents one count reads; reaching it means the count cannot be trusted. */
 export const QUOTA_READ_LIMIT = 5_000
 /**
@@ -108,7 +114,7 @@ export async function readDailyQuota(now: number = Date.now(), opts: DailyQuotaO
   const dayStart = utcDayStart(now)
   const [events, dripClaims, campaignClaims] = await Promise.all([
     store.query<ProviderEventLike>(EMAIL_EVENTS, { where: [{ field: 'ts', op: '>=', value: dayStart }], limit: readLimit }),
-    store.query<{ outcome?: string | null }>(WELCOME_SEND_CLAIMS, { where: [{ field: 'claimedAtMs', op: '>=', value: dayStart }], limit: readLimit }),
+    store.query<{ outcome?: string | null }>(WELCOME_SEND_CLAIMS, { where: [{ field: 'claimedAtMs', op: '>=', value: dayStart - DRIP_CLAIM_LOOKBACK_MS }], limit: readLimit }),
     store.query<{ claimedAtMs?: number }>(CAMPAIGN_CLAIMS_COLLECTION, { where: [{ field: 'claimedAtMs', op: '>=', value: dayStart - CAMPAIGN_CLAIM_LOOKBACK_MS }], limit: readLimit }),
   ])
   if (events.length >= readLimit || dripClaims.length >= readLimit || campaignClaims.length >= readLimit) throw new Error('quota read truncated')
