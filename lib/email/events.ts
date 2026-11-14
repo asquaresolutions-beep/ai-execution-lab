@@ -12,12 +12,20 @@ export interface StoredEmailEvent extends NormalizedEmailEvent {
   id?: string
 }
 
-/** Persist one normalized event. Best-effort; never throws to the caller. */
+/**
+ * Persist one normalized event and return its id. THROWS when the store write fails, so the caller can tell the
+ * provider the event was not taken (the Resend webhook: asq-webhook-store-v1).
+ */
+export async function storeEmailEvent(evt: NormalizedEmailEvent): Promise<string> {
+  return getStore().set<StoredEmailEvent>(EMAIL_EVENTS, null, { ...evt })
+}
+
+/** Persist one normalized event. Best-effort; never throws to the caller (returns '' when the write failed). */
 export async function recordEmailEvent(evt: NormalizedEmailEvent): Promise<string> {
   try {
-    return await getStore().set<StoredEmailEvent>(EMAIL_EVENTS, null, { ...evt })
+    return await storeEmailEvent(evt)
   } catch {
-    return '' // log line / webhook 200 is the durable signal; storage is best-effort
+    return '' // for callers whose own action must not fail because of this write (the unsubscribe link)
   }
 }
 
