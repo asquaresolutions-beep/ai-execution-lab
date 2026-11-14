@@ -18,7 +18,7 @@
 // ─────────────────────────────────────────────────────────────────
 import { subscriberDocId } from '@/lib/newsletter/subscribers'
 import { htmlToText } from './text'
-import { campaignTags, type EmailTag } from './tags'
+import { campaignTags, welcomeTags, type EmailTag } from './tags'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || ''
 const EMAIL_FROM = process.env.EMAIL_FROM || 'ScamCheck <noreply@asquaresolution.com>'
@@ -140,7 +140,7 @@ function unsubFooter(email: string): string {
  *
  * `idempotencyKey` is OPTIONAL and passed only by the campaign send loops; see send().
  */
-export async function sendListEmail(d: { to: string; subject: string; title: string; bodyHtml: string; campaignId?: string; idempotencyKey?: string } & ListRenderOptions): Promise<{ ok: boolean; skipped?: boolean; status?: number; error?: string }> {
+export async function sendListEmail(d: { to: string; subject: string; title: string; bodyHtml: string; campaignId?: string; idempotencyKey?: string; welcomeKey?: string } & ListRenderOptions): Promise<{ ok: boolean; skipped?: boolean; status?: number; error?: string }> {
   const r = await send({
     to: d.to,
     subject: d.subject,
@@ -148,7 +148,8 @@ export async function sendListEmail(d: { to: string; subject: string; title: str
     html: wrap(d.title, d.bodyHtml + unsubFooter(d.to), { preheader: d.preheader, footer: d.footer }),
     ...(d.preheader ? { text: htmlToText(wrap(d.title, d.bodyHtml + unsubFooter(d.to), { footer: d.footer })) } : {}),
     replyTo: ADMIN_EMAIL,
-    tags: campaignTags(d.campaignId),
+    // `welcomeKey` is passed only by the welcome drip (asq-welcome-evidence-v1); every other caller's tags are unchanged.
+    tags: d.welcomeKey ? [...(campaignTags(d.campaignId) || []), ...(welcomeTags(d.welcomeKey) || [])] : campaignTags(d.campaignId),
     idempotencyKey: d.idempotencyKey,
   })
   // `status` is the provider's HTTP status, absent when no answer was received at all.

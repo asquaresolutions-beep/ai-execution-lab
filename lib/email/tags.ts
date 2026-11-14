@@ -51,3 +51,17 @@ export function campaignTags(campaignId?: string): EmailTag[] | undefined {
   if (!value) return undefined
   return [{ name: 'campaignId', value }]
 }
+
+/** Tag name that carries a welcome-drip send's idempotency key back on the provider's webhook events. */
+export const WELCOME_KEY_TAG = 'welcomeKey'
+
+/**
+ * The tag for a welcome-drip send, or undefined without a usable key. The value is the send's idempotency key, so it is
+ * the SAME for every attempt made with that key: the request body stays identical, which the provider requires
+ * before it answers a repeated key with the first result.
+ */
+export function welcomeTags(key?: string): EmailTag[] | undefined {
+  const value = sanitizeTagValue(key)
+  if (!value) return undefined
+  return [{ name: WELCOME_KEY_TAG, value }]
+}

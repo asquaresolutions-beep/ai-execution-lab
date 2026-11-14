@@ -15,6 +15,8 @@ export interface NormalizedEmailEvent {
   email: string
   messageId?: string
   campaignId?: string
+  /** The welcome-drip idempotency key the provider echoed from the send's tags (asq-welcome-evidence-v1). */
+  welcomeKey?: string
   ts: number
   meta?: Record<string, unknown>
   // What the provider says about a bounce (data.bounce.type / subType, e.g. "Permanent" / "Suppressed")
@@ -89,6 +91,7 @@ export function parseResendEvent(body: unknown): NormalizedEmailEvent | null {
     ts: b.created_at ? Date.parse(b.created_at) || Date.now() : Date.now(),
     meta: tags ? { tags } : undefined,
     // Spread in only when present, so every other event keeps exactly the shape it had before.
+    ...(label(tags?.welcomeKey) ? { welcomeKey: String(tags?.welcomeKey).trim().slice(0, 256) } : {}),
     ...(bounceType ? { bounceType } : {}),
     ...(bounceSubType ? { bounceSubType } : {}),
     ...(suppressedType ? { suppressedType } : {}),

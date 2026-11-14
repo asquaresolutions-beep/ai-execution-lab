@@ -189,7 +189,9 @@ test('B2 — the address case of the queue row does not hide its events', async 
 test('B2 — the events cannot be read (store error): nothing is sent; the attempt is abandoned for a later run', async () => {
   const { store, ctl } = await queued(['a@example.test'])
   on()
-  ctl.fault = (call) => { if (call.op === 'query' && call.collection === EVENTS) throw new Error('store down') }
+  // The recipient's own events read (by address), after the claim. Since asq-shared-daily-quota-v1 the run also reads
+  // the day's events for the shared budget BEFORE the claim; a failure there is covered by eval/newsletter-daily-quota.test.mjs.
+  ctl.fault = (call, args) => { if (call.op === 'query' && call.collection === EVENTS && args[1]?.where?.some((w) => w.field === 'email')) throw new Error('store down') }
   await assert.rejects(() => C.drainCampaign('c1'))
   assert.equal(captured.length, 0, 'nothing handed to the provider')
   const row = (await store.query(CAMPAIGN_SENDS, { limit: 10 }))[0].data

@@ -48,7 +48,9 @@ ok('empty input safe', summarizeEmailEvents([]).total === 0 && summarizeEmailEve
 const r = read('app/api/webhooks/resend/route.ts')
 ok('route verifies signature before recording', /verifyResendSignature/.test(r) && /invalid_signature/.test(r) && /status: 401/.test(r))
 ok('route 503 when secret unset', /webhook_not_configured/.test(r) && /503/.test(r))
-ok('route records via recordEmailEvent', /recordEmailEvent\(evt\)/.test(r))
+// asq-webhook-store-v1: the route uses the throwing writer, and answers 503 when the write fails (never 200).
+ok('route records via storeEmailEvent', /storeEmailEvent\(evt\)/.test(r))
+ok('route does not acknowledge an unstored event', /event_not_stored/.test(r) && /status: 503/.test(r))
 const e = read('lib/email/events.ts')
 ok('events stored in email_events, append-only (no delete)', /EMAIL_EVENTS = 'email_events'/.test(e) && !/\.delete\(/.test(e))
 const u = read('app/api/newsletter/unsubscribe/route.ts')

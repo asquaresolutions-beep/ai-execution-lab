@@ -2,10 +2,10 @@
 // Ingests Resend delivery/engagement events (delivered, bounced, opened, clicked,
 // complained) into `email_events`. Svix-signed; rejects unverified payloads.
 // Requires env RESEND_WEBHOOK_SECRET (whsec_…). Read-only side effects = append-only
-// event records; no subscriber mutation here.
+// event records; no subscriber mutation here. A failed store write answers 503 so the provider retries.
 import { NextResponse } from 'next/server'
 import { verifyResendSignature, parseResendEvent } from '@/lib/email/webhook'
-import { recordEmailEvent } from '@/lib/email/events'
+import { storeEmailEvent } from '@/lib/email/events'
 import { reportError } from '@/lib/observability/errors'
 
 export const dynamic = 'force-dynamic'
@@ -30,10 +30,14 @@ export async function POST(req: Request) {
   const evt = parseResendEvent(body)
   if (!evt) return NextResponse.json({ ok: true, ignored: true }) // unsupported type → ack, don't retry
 
+  // asq-webhook-store-v1: an event that could not be stored is NOT acknowledged. The provider retries a non-2xx
+  // answer, so the event is delivered again instead of being lost. (The welcome drip and the daily send budget both
+  // read these events; a lost one could hide a send.) A retry after a failed write stores the event once.
   try {
-    await recordEmailEvent(evt)
+    await storeEmailEvent(evt)
   } catch (err) {
-    await reportError('webhook.resend', err, { severity: 'warning' })
+    try { await reportError('webhook.resend', err, { severity: 'warning' }) } catch { /* the store is down: nothing more to do here */ }
+    return NextResponse.json({ error: 'event_not_stored' }, { status: 503 })
   }
   return NextResponse.json({ ok: true, type: evt.type })
 }

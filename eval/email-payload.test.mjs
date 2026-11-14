@@ -177,7 +177,7 @@ test('recipient selection, idempotency and send ids are untouched by tagging', a
 })
 
 // ── 4 · Non-campaign senders are provably unchanged ─────────────────────────
-test('the welcome drip sends UNTAGGED mail', async () => {
+test('the welcome drip tags its mail with its own idempotency key and nothing else', async () => {
   reset()
   const store = new MemoryStore()
   setStore(store)
@@ -192,7 +192,7 @@ test('the welcome drip sends UNTAGGED mail', async () => {
   const res = await processWelcomeSequence()
   assert.equal(res.sent, 1, 'sanity: the drip must have actually sent, or this test proves nothing')
   const body = only()
-  assert.ok(!('tags' in body), 'welcome-drip mail must carry no campaign tag')
+  assert.deepEqual(body.tags, [{ name: 'welcomeKey', value: 'welcome-nl_w-step1' }], 'the idempotency key only: no campaign tag, no address')
   assert.equal(body.reply_to, EXPECTED_REPLY_TO, 'welcome-drip mail inherits the list-mail Reply-To')
   delete process.env.WELCOME_SEQUENCE_ENABLED
   delete process.env.WELCOME_SEQUENCE_SINCE

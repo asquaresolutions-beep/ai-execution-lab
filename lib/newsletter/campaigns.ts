@@ -70,6 +70,14 @@
 // Like the rest of this file, none of it deletes anything: a lock is marked released,
 // an abandoned attempt moves its row to the next attempt number.
 //
+// Shared daily budget (asq-shared-daily-quota-v1): both send loops read the budget they
+// share with the welcome drip (lib/email/daily-quota.ts) immediately before EVERY claim,
+// and stop before claiming when it is used up ('quota_exhausted') or cannot be read
+// ('quota_unknown'). The row stays 'queued' with its attempt number and key unchanged,
+// the campaign stays 'sending', and the next run after 00:00 UTC carries on. A refusal
+// from the provider (429) is still recorded exactly as before; the budget is there so
+// that, in normal operation, the provider's daily limit is never reached.
+//
 // Reuse: sendListEmail (PR#9 deliverability), trending_snapshots (composer source),
 // the daily cron, subscriberDocId (dedup). NOTE on publish_queue: that queue is
 // bundle→channel (publishToChannel(bundleId)); per-recipient email fan-out is a
@@ -85,6 +93,8 @@ import { latestTrendingSnapshot } from '@/lib/scam-intel/feed'
 import { composeScamDigest } from './digest-copy'
 import { composeNewsletterIssue, ISSUE_001 } from './issue-template'
 import { EMAIL_EVENTS } from '@/lib/email/events'
+import { readDailyQuota, quotaErrorText } from '@/lib/email/daily-quota'
+import { log } from '@/lib/observability/logger'
 import { deliverabilityBlock, type DeliveryEventLike } from './deliverability'
 
 /**
@@ -963,6 +973,21 @@ export async function composeCustomIssue(input: { id: string; subject: string; t
   return { created: true, id }
 }
 
+// ── Shared daily budget (asq-shared-daily-quota-v1) ──
+/** Why a send loop stopped for the day's budget: used up, or not readable (fail closed). */
+export type QuotaStop = 'quota_exhausted' | 'quota_unknown'
+
+/**
+ * Read afresh immediately before every claim. null: one more attempt may start. Never throws.
+ * An unreadable budget is logged (error class and message, no address): it stops every campaign send.
+ */
+async function quotaStop(): Promise<QuotaStop | null> {
+  try { return (await readDailyQuota()).remaining > 0 ? null : 'quota_exhausted' } catch (err) {
+    log.warn({ event: 'campaign.quota_unreadable', error: quotaErrorText(err) })
+    return 'quota_unknown'
+  }
+}
+
 // ── Manual drain (admin-triggered) of ONE approved+enqueued campaign ──
 export interface DrainResult {
   ok: boolean; processed: number; sent: number; failed: number; skipped: number; done: boolean; error?: string
@@ -973,7 +998,7 @@ export interface DrainResult {
   /** Rows still queued after this run. Present only when the campaign is not done. */
   remaining?: number
   /** Why the run ended before the end of its batch. */
-  stopped?: 'time_budget' | 'uncertain_outcome'
+  stopped?: 'time_budget' | 'uncertain_outcome' | QuotaStop
   /** With error 'run_in_progress': how long the current run may still hold the campaign. */
   retryAfterSeconds?: number
 }
@@ -1013,6 +1038,9 @@ export async function drainCampaign(id: string, maxBatch = 200): Promise<DrainRe
     for (let i = 0; i < queued.length; i++) {
       if (Date.now() - started > RUN_BUDGET_MS) { stopped = 'time_budget'; break }
       const row = queued[i]
+      // The shared daily budget, before the claim: when it is used up nothing is claimed and the row stays queued.
+      const quota = await quotaStop()
+      if (quota) { stopped = quota; break }
       // No claim, no delivery: only the run that creates this attempt's claim goes on.
       const claim = await claimAttempt(row, lock.runId)
       if (claim !== 'claimed') { if (claim === 'uncertain') uncertain++; else held++; continue }
@@ -1217,7 +1245,7 @@ export async function listCampaignSends(id: string, limit = 500): Promise<{ tota
 }
 
 // ── Drain (cron). Sends queued recipients; flag-gated; never auto-progresses a draft. ──
-export interface SendRunResult { enabled: boolean; processed: number; sent: number; failed: number; skipped: number; campaignsCompleted: number; uncertain?: number; sendsDisabled?: true }
+export interface SendRunResult { enabled: boolean; processed: number; sent: number; failed: number; skipped: number; campaignsCompleted: number; uncertain?: number; sendsDisabled?: true; stopped?: QuotaStop }
 
 export async function processCampaignSends(maxBatch = 80): Promise<SendRunResult> {
   const res: SendRunResult = { enabled: false, processed: 0, sent: 0, failed: 0, skipped: 0, campaignsCompleted: 0 }
@@ -1244,6 +1272,9 @@ export async function processCampaignSends(maxBatch = 80): Promise<SendRunResult
       if (!held) continue                           // an admin-triggered run has this campaign
       if (!queues.has(campaignId)) queues.set(campaignId, await queueRecordOf(campaignId))
       touched.set(campaignId, c)
+      // Same budget check as drainCampaign, before the claim.
+      const quota = await quotaStop()
+      if (quota) { res.stopped = quota; break }
       // Same gate as drainCampaign: no claim, no delivery.
       const claim = await claimAttempt(row, held.runId)
       if (claim !== 'claimed') { if (claim === 'uncertain') res.uncertain = (res.uncertain || 0) + 1; continue }
