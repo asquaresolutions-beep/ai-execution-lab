@@ -49,8 +49,11 @@ ok('inlineStart rtl→right, inlineEnd rtl→left', /dir === 'rtl' \? 'right' : 
 
 // ── A6: fonts ──
 const fonts = read('lib/trustseal/fonts.ts')
-ok('Arabic + Devanagari Noto faces via next/font', /Noto_Sans_Arabic/.test(fonts) && /Noto_Sans_Devanagari/.test(fonts) && /next\/font\/google/.test(fonts))
-ok('subset + display swap (perf budget)', /subsets: \['arabic'\]/.test(fonts) && /subsets: \['devanagari'\]/.test(fonts) && /display: 'swap'/.test(fonts))
+// Self-hosted since 16 Nov 2026 (next/font/local, see lib/trustseal/noto-fonts.ts): no build-time fetch from Google Fonts.
+const noto = read('lib/trustseal/noto-fonts.ts')
+ok('Arabic + Devanagari Noto faces via next/font/local', /from '\.\/noto-fonts'/.test(fonts) && /from 'next\/font\/local'/.test(noto) && !/next\/font\/google/.test(fonts + noto) && /value: 'Noto Sans Arabic'/.test(noto) && /value: 'Noto Sans Devanagari'/.test(noto))
+ok('subset files + display swap (perf budget)', /noto-sans-arabic-arabic\.woff2/.test(noto) && /noto-sans-devanagari-devanagari\.woff2/.test(noto) && !/display: '(?!swap)/.test(noto) && /unicode-range/.test(noto))
+ok('only the script subsets are preloaded', (noto.match(/preload: true/g) || []).length === 2)
 ok('localeFontClass maps ar/hi only (en/es Latin)', /locale === 'ar'/.test(fonts) && /locale === 'hi'/.test(fonts) && /return ''/.test(fonts))
 const lay = read('app/trustseal/[locale]/layout.tsx')
 ok('layout applies localeFontClass + localeFontFamily', /localeFontClass\(locale\)/.test(lay) && /fontFamily: localeFontFamily\(locale\)/.test(lay))

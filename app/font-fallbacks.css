@@ -1,0 +1,43 @@
+/*
+ * Metric-adjusted fallback faces for the self-hosted fonts (lib/fonts/, lib/trustseal/noto-fonts.ts).
+ * While a web font loads (font-display: swap), text renders in Arial scaled to the web font's metrics, which keeps
+ * layout shift low. The values are exactly those the next/font Google loader generated for production on
+ * 14 Nov 2026 (deployment dpl_9HgKCefK), so the fallback rendering is unchanged by the switch to local files.
+ * The family names are referenced through each font's `fallback` option ("<family> Fallback").
+ * Arial is a local system font: these rules download nothing.
+ */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial');
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0.00%;
+  size-adjust: 107.12%;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono Fallback';
+  src: local('Arial');
+  ascent-override: 75.79%;
+  descent-override: 22.29%;
+  line-gap-override: 0.00%;
+  size-adjust: 134.59%;
+}
+
+@font-face {
+  font-family: 'Noto Sans Arabic Fallback';
+  src: local('Arial');
+  ascent-override: 113.22%;
+  descent-override: 60.81%;
+  line-gap-override: 0.00%;
+  size-adjust: 121.35%;
+}
+
+@font-face {
+  font-family: 'Noto Sans Devanagari Fallback';
+  src: local('Arial');
+  ascent-override: 84.27%;
+  descent-override: 38.37%;
+  line-gap-override: 0.00%;
+  size-adjust: 106.33%;
+}
