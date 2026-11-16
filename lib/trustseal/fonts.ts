@@ -8,21 +8,13 @@
 //   • ar → Noto Sans Arabic
 //   • hi → Noto Sans Devanagari
 // `display:'swap'` + subsetting keep this within the performance budget.
+// The faces are self-hosted via next/font/local (./noto-fonts.ts), copied from
+// what the Google Fonts loader served, so builds no longer fetch from Google.
 // ─────────────────────────────────────────────────────────────────
-import { Noto_Sans_Arabic, Noto_Sans_Devanagari } from 'next/font/google'
+import { fontArabic, fontDevanagari } from './noto-fonts'
 import type { Locale } from './locales'
 
-export const fontArabic = Noto_Sans_Arabic({
-  subsets: ['arabic'],
-  variable: '--ts-font-arabic',
-  display: 'swap',
-})
-
-export const fontDevanagari = Noto_Sans_Devanagari({
-  subsets: ['devanagari'],
-  variable: '--ts-font-devanagari',
-  display: 'swap',
-})
+export { fontArabic, fontDevanagari }
 
 /** className that DEFINES the script-font CSS var for a locale (empty for Latin). */
 export function localeFontClass(locale: Locale): string {

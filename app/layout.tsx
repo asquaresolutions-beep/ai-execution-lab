@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { fontSans } from '@/lib/fonts/inter'
+import { fontMono } from '@/lib/fonts/jetbrains-mono'
+import './font-fallbacks.css'
 import './globals.css'
 import { Analytics } from '@/components/analytics'
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react'
@@ -21,18 +23,8 @@ try{var c=JSON.parse(localStorage.getItem('sc-consent-v1')||'null');if(c){gtag('
 `
 
 // ─── Fonts ───────────────────────────────────────────────────
-const fontSans = Inter({
-  subsets: ['latin'],
-  variable: '--font-geist-sans',
-  display: 'swap',
-})
-
-const fontMono = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-geist-mono',
-  display: 'swap',
-  weight: ['400', '500', '600'],
-})
+// Inter (--font-geist-sans) and JetBrains Mono (--font-geist-mono, 400/500/600) are self-hosted
+// via next/font/local in lib/fonts/ — same files, subsets and preloads Google served before.
 
 // ─── Base URL ────────────────────────────────────────────────
 const SITE_URL = 'https://lab.asquaresolution.com' // metadataBase = Lab host; ScamCheck/TrustSeal pages set absolute URLs via their own builders
