@@ -111,22 +111,15 @@ const nextConfig = {
           { key: 'Strict-Transport-Security',      value: 'max-age=31536000; includeSubDomains; preload' },
         ],
       },
-      // Sitemap + robots: short shared CDN cache (Nov 2026 usage work). Both routes read
-      // only the Host header (no cookies/session) and were MISS on every request
-      // (`public, max-age=0, must-revalidate`); /sitemap.xml was the top function.
-      // Safe across the three hosts: Vercel's CDN cache key includes the host domain and
-      // the unique deployment URL (docs: caching/cdn-cache/purge), so lab/scamcheck/
-      // trustseal keep separate entries and every new deployment starts fresh — Lab and
-      // ScamCheck sitemap content only changes with a deploy. The TrustSeal sitemap lists
-      // verified domains from Firestore, so it can lag by ~5 min (worst case one stale
-      // response inside the SWR hour). Vercel-CDN-Cache-Control is CDN-only: browsers and
+      // robots.txt: short shared CDN cache (Nov 2026 usage work). The route reads only the
+      // Host header (no cookies/session) and was MISS on every request
+      // (`public, max-age=0, must-revalidate`). Safe across the three hosts: Vercel's CDN
+      // cache key includes the host domain and the unique deployment URL (docs:
+      // caching/cdn-cache/purge), so lab/scamcheck/trustseal keep separate entries and every
+      // new deployment starts fresh. Vercel-CDN-Cache-Control is CDN-only: browsers and
       // crawlers still receive the original Cache-Control.
-      {
-        source: '/sitemap.xml',
-        headers: [
-          { key: 'Vercel-CDN-Cache-Control', value: 'max-age=300, stale-while-revalidate=3600' },
-        ],
-      },
+      // /sitemap.xml sets the same header in app/sitemap.xml/route.ts instead of here, so a
+      // degraded TrustSeal sitemap (Firestore query failed) is never CDN-cached.
       {
         source: '/robots.txt',
         headers: [

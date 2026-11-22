@@ -12,7 +12,7 @@
 //  • There is no allowlist of "public" path prefixes. Eligibility starts from
 //    sitemap membership (the site's own statement of what is public) and then
 //    subtracts. An allowlist would silently permit future private routes.
-//  • app/sitemap.ts stamps most entries with `lastModified: new Date()`, i.e.
+//  • lib/seo/sitemap.ts stamps most entries with `lastModified: new Date()`, i.e.
 //    request time, so a raw lastmod diff would mark every URL "changed" on every
 //    run. isVolatileLastmod() detects those synthetic stamps and the delta
 //    ignores them — only genuinely dated entries (Lab content frontmatter) can

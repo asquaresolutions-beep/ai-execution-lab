@@ -12,7 +12,7 @@ const NAV = [
   {
     group: null,
     items: [
-      { href: '/', label: 'Dashboard', exact: true },
+      { href: '/', label: 'Dashboard', exact: true, defaultPrefetch: true },
       { href: '/start-here', label: '▶ Start Here' },
     ],
   },
@@ -65,10 +65,12 @@ function NavItem({
   href,
   label,
   exact = false,
+  defaultPrefetch = false,
 }: {
   href: string
   label: string
   exact?: boolean
+  defaultPrefetch?: boolean
 }) {
   const pathname = usePathname()
   const isActive = exact ? pathname === href : pathname === href || pathname.startsWith(href + '/')
@@ -76,9 +78,10 @@ function NavItem({
   return (
     // prefetch={false}: the sidebar is on every Lab page, so viewport prefetch fetched
     // every section index (full RSC payload) on each page view. Pages now load on click.
+    // Dashboard (`/`) opts out and keeps Next's default prefetch (prop omitted).
     <Link
       href={href}
-      prefetch={false}
+      prefetch={defaultPrefetch ? undefined : false}
       className={cn(
         'flex items-center gap-2.5 rounded px-3 py-1.5 text-sm transition-colors relative',
         isActive

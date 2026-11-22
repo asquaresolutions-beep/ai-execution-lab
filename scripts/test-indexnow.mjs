@@ -86,7 +86,7 @@ console.log('— sitemap parsing')
   eq(e[2].lastmod, null, 'missing lastmod → null')
 }
 
-console.log('— volatile lastmod detection (app/sitemap.ts stamps request time)')
+console.log('— volatile lastmod detection (lib/seo/sitemap.ts stamps request time)')
 {
   const now = Date.parse('2026-09-16T12:00:00Z')
   ok(isVolatileLastmod('2026-09-16T11:59:30Z', now), 'stamp seconds before fetch → volatile')
