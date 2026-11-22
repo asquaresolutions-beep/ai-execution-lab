@@ -301,7 +301,7 @@ export default function PublishPage() {
                 { href: '/case-studies',   label: 'Case Studies',         badge: '' },
                 { href: '/pathways',       label: 'Pathways',             badge: '5' },
                 { href: '/playbooks',      label: 'Playbooks',            badge: '' },
-                { href: '/docs/operational-publishing-workflow', label: 'Publishing Playbook', badge: '' },
+                { href: '/playbooks/operational-publishing-workflow', label: 'Publishing Playbook', badge: '' },
                 { href: '/docs/content-velocity-system', label: 'Velocity System', badge: '' },
               ].map(({ href, label, badge }) => (
                 <Link
