@@ -184,6 +184,7 @@ export function LiveActivityBar({ status }: Props) {
             <Link
               key={i}
               href={sig.href}
+              prefetch={false}
               className="flex items-center gap-1.5 shrink-0 group"
             >
               <span className={`text-[10px] font-mono ${TYPE_STYLES[sig.type] ?? 'text-surface-600'}`}>

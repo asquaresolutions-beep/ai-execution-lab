@@ -61,8 +61,11 @@ function FailureCard({
   const sta = fm.failure_status ? STATUS_CONFIG[fm.failure_status as keyof typeof STATUS_CONFIG] : null
 
   return (
+    // prefetch={false}: the archive lists every failure record; viewport prefetch fetched
+    // each record's full RSC payload as the list scrolled. Records load on click.
     <Link
       href={`/failures/${slug}`}
+      prefetch={false}
       className="group flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-5 rounded-xl border border-white/[0.06] bg-white/[0.02] px-5 py-4 hover:border-red-500/20 hover:bg-red-500/[0.02] transition-all"
     >
       {/* Severity dot + date */}

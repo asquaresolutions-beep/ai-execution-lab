@@ -180,22 +180,25 @@ const DOC_GROUPS = [
 
 function DocItem({ item, dot }: { item: ContentMeta; dot: string }) {
   return (
+    // prefetch={false}: /docs lists every doc (~116); viewport prefetch fetched each
+    // doc's full RSC payload (~95 KB) as the list scrolled. Docs load on click instead.
     <Link
       href={`/docs/${item.slug}`}
-      className="group flex items-start gap-4 rounded-lg border border-white/[0.05] bg-white/[0.02] px-4 py-3 hover:border-white/[0.10] hover:bg-white/[0.04] transition-all"
+      prefetch={false}
+      className="group lab-row-card"
     >
       <span className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-surface-200 group-hover:text-surface-50 transition-colors truncate">
+        <p className="lab-row-title">
           {item.frontmatter.title}
         </p>
         {item.frontmatter.description && (
-          <p className="mt-0.5 text-xs text-surface-600 line-clamp-1 leading-snug">
+          <p className="lab-row-desc">
             {item.frontmatter.description}
           </p>
         )}
       </div>
-      <span className="shrink-0 text-[10px] font-mono text-surface-700 pt-0.5">
+      <span className="lab-row-meta">
         {item.readingTime}
       </span>
     </Link>

@@ -112,6 +112,63 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
+   Repeated list styles (payload reduction, Nov 2026)
+   These are exact @apply copies of utility strings that were repeated hundreds of
+   times per page on /tags, /tags/[tag] and /docs. Each long class string was sent
+   twice per view (HTML markup + the inline RSC payload) and again in every RSC
+   prefetch. Rendering is unchanged; only the class name in the markup is shorter.
+   Keep `group` in the markup itself: group-hover variants below depend on it.
+   ───────────────────────────────────────────────────────────── */
+
+@layer components {
+  /* /docs DocItem row */
+  .lab-row-card {
+    @apply flex items-start gap-4 rounded-lg border border-white/[0.05] bg-white/[0.02] px-4 py-3 hover:border-white/[0.10] hover:bg-white/[0.04] transition-all;
+  }
+  .lab-row-title {
+    @apply text-sm font-medium text-surface-200 group-hover:text-surface-50 transition-colors truncate;
+  }
+  .lab-row-desc {
+    @apply mt-0.5 text-xs text-surface-600 line-clamp-1 leading-snug;
+  }
+  .lab-row-meta {
+    @apply shrink-0 text-[10px] font-mono text-surface-700 pt-0.5;
+  }
+
+  /* Tag chip (/tags "All topics", /tags/[tag] "Related topics") */
+  .lab-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-white/[0.07] bg-white/[0.02] px-3 py-1 text-xs font-mono text-surface-500 hover:text-surface-200 hover:border-white/[0.14] transition-all;
+  }
+  /* /tags "Core topics" card */
+  .lab-tag-card {
+    @apply flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 hover:border-brand-500/20 hover:bg-brand-500/[0.03] transition-all;
+  }
+  .lab-tag-card-label {
+    @apply text-sm font-medium text-surface-300 group-hover:text-surface-100 transition-colors;
+  }
+  .lab-micro {
+    @apply text-[10px] font-mono text-surface-700;
+  }
+
+  /* /tags/[tag] item list */
+  .lab-item-card {
+    @apply flex items-start gap-4 rounded-xl border border-white/[0.05] bg-white/[0.02] px-5 py-4 hover:border-white/[0.10] hover:bg-white/[0.04] transition-all;
+  }
+  .lab-item-date {
+    @apply text-[11px] font-mono text-surface-700 shrink-0 w-20 pt-0.5 hidden sm:block;
+  }
+  .lab-item-desc {
+    @apply text-sm text-surface-500 line-clamp-1 leading-snug;
+  }
+  .lab-item-meta {
+    @apply shrink-0 text-[11px] font-mono text-surface-700 pt-0.5 hidden md:block;
+  }
+  .lab-item-tag {
+    @apply text-[10px] text-surface-700 hover:text-brand-400 transition-colors;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
    MDX prose overrides
    ───────────────────────────────────────────────────────────── */
 

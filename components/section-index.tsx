@@ -4,11 +4,13 @@ import { SECTION_META, ACCENT_CLASSES, formatDateMono, cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { FeaturedArticles } from '@/components/lab/featured-articles'
 
-// Tag pill — links to /tags/[tag]
+// Tag pill — links to /tags/[tag]. prefetch={false}: section indexes show every tag of
+// every item, so viewport prefetch fetched many tag pages (~140 KB RSC each) per view.
 function TagPill({ tag }: { tag: string }) {
   return (
     <Link
       href={`/tags/${tag}`}
+      prefetch={false}
       className="text-[11px] text-surface-700 bg-white/[0.03] rounded px-1.5 py-0.5 border border-white/[0.05] hover:text-brand-400 hover:border-brand-500/20 transition-colors"
     >
       #{tag}
@@ -77,9 +79,12 @@ export function SectionIndex({ section, items }: SectionIndexProps) {
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
+            // prefetch={false}: a section index lists every item in the section, so
+            // viewport prefetch fetched each item's full RSC payload as the list scrolled.
             <Link
               key={item.slug}
               href={`${meta.href}/${item.slug}`}
+              prefetch={false}
               className="group flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-5 rounded-xl border border-white/[0.05] bg-white/[0.02] px-5 py-4 hover:border-white/[0.10] hover:bg-white/[0.04] transition-all"
             >
               {/* Date */}

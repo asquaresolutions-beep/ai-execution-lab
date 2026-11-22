@@ -72,7 +72,6 @@ const NAV_SECTIONS = [
       { label: 'Execution Tracks', href: '/tracks' },
       { label: 'AI for Students',  href: '/tracks/ai-for-students' },
       { label: 'Start Here',       href: '/start-here' },
-      { label: 'Operations',       href: '/ops' },
     ],
   },
 ]
@@ -108,6 +107,7 @@ export function EcosystemFooter() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={false}
                   className="group flex items-start gap-1.5"
                 >
                   <div>
@@ -134,6 +134,7 @@ export function EcosystemFooter() {
                   <Link
                     key={link.href}
                     href={link.href}
+                    prefetch={false}
                     className="block text-xs text-surface-500 hover:text-surface-300 transition-colors"
                   >
                     {link.label}
@@ -152,10 +153,8 @@ export function EcosystemFooter() {
             not summaries, not retrospectives, operational records.
           </p>
           <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-mono text-surface-700 sm:text-right">
-            <Link href="/ops" className="hover:text-surface-400 transition-colors">Ops →</Link>
-            <Link href="/ops/retrieval" className="hover:text-surface-400 transition-colors">Retrieval →</Link>
-            <Link href="/ops/seo" className="hover:text-surface-400 transition-colors">SEO →</Link>
-            <Link href="/sitemap.xml" className="hover:text-surface-400 transition-colors">Sitemap →</Link>
+            {/* Plain anchor: the sitemap is XML, not a Next.js page, so it should not be prefetched as a route. */}
+            <a href="/sitemap.xml" className="hover:text-surface-400 transition-colors">Sitemap →</a>
             <a href="/feed.xml" className="hover:text-surface-400 transition-colors">RSS →</a>
           </div>
         </div>

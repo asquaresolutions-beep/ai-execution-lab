@@ -156,7 +156,7 @@ export default async function TagPage({ params }: Props) {
       <nav className="mb-6 flex items-center gap-1.5 text-xs text-surface-600">
         <Link href="/" className="hover:text-surface-400 transition-colors">Home</Link>
         <span>/</span>
-        <Link href="/tags" className="hover:text-surface-400 transition-colors">Topics</Link>
+        <Link href="/tags" prefetch={false} className="hover:text-surface-400 transition-colors">Topics</Link>
         <span>/</span>
         <span className="text-surface-500">{entity ? entity.name : `#${tag}`}</span>
       </nav>
@@ -228,6 +228,7 @@ export default async function TagPage({ params }: Props) {
                   <li key={f.slug}>
                     <Link
                       href={`/failures/${f.slug}`}
+                      prefetch={false}
                       className="flex items-center gap-2 group text-[11px] font-mono hover:text-surface-100 transition-colors"
                     >
                       <span className="h-1 w-1 rounded-full bg-rose-500/60 shrink-0" />
@@ -256,6 +257,7 @@ export default async function TagPage({ params }: Props) {
                   <li key={d.slug}>
                     <Link
                       href={`/logs/${d.slug}`}
+                      prefetch={false}
                       className="flex items-center gap-2 group text-[11px] font-mono hover:text-surface-100 transition-colors"
                     >
                       <span className="h-1 w-1 rounded-full bg-emerald-500/60 shrink-0" />
@@ -279,6 +281,7 @@ export default async function TagPage({ params }: Props) {
                       <Link
                         key={dep}
                         href={`/tags/${dep}`}
+                        prefetch={false}
                         className="inline-flex items-center rounded-full border border-white/[0.07] bg-white/[0.02] px-2.5 py-0.5 text-[11px] font-mono text-surface-500 hover:text-surface-200 hover:border-white/[0.14] transition-all"
                       >
                         {dep}
@@ -295,6 +298,7 @@ export default async function TagPage({ params }: Props) {
                       <Link
                         key={dep}
                         href={`/tags/${dep}`}
+                        prefetch={false}
                         className="inline-flex items-center rounded-full border border-white/[0.07] bg-white/[0.02] px-2.5 py-0.5 text-[11px] font-mono text-surface-500 hover:text-surface-200 hover:border-white/[0.14] transition-all"
                       >
                         {dep}
@@ -343,13 +347,17 @@ export default async function TagPage({ params }: Props) {
           const meta = SECTION_META[item.section]
           const ac   = ACCENT_CLASSES[meta.accent]
           return (
+            // prefetch={false} on every list link on tag pages: a tag page lists all
+            // tagged items plus their other tags, so viewport prefetch fetched dozens of
+            // full RSC payloads per view (the main source of 20 Nov prefetch traffic).
             <Link
               key={`${item.section}/${item.slug}`}
               href={`${meta.href}/${item.slug}`}
-              className="group flex items-start gap-4 rounded-xl border border-white/[0.05] bg-white/[0.02] px-5 py-4 hover:border-white/[0.10] hover:bg-white/[0.04] transition-all"
+              prefetch={false}
+              className="group lab-item-card"
             >
               {/* Date */}
-              <time className="text-[11px] font-mono text-surface-700 shrink-0 w-20 pt-0.5 hidden sm:block">
+              <time className="lab-item-date">
                 {formatDateMono(item.frontmatter.date)}
               </time>
 
@@ -359,12 +367,12 @@ export default async function TagPage({ params }: Props) {
                   <span className={`text-[10px] font-mono font-semibold uppercase shrink-0 ${ac.text}`}>
                     {meta.label}
                   </span>
-                  <span className="text-sm font-medium text-surface-200 group-hover:text-surface-50 transition-colors truncate">
+                  <span className="lab-row-title">
                     {item.frontmatter.title}
                   </span>
                 </div>
                 {item.frontmatter.description && (
-                  <p className="text-sm text-surface-500 line-clamp-1 leading-snug">
+                  <p className="lab-item-desc">
                     {item.frontmatter.description}
                   </p>
                 )}
@@ -378,7 +386,8 @@ export default async function TagPage({ params }: Props) {
                         <Link
                           key={t}
                           href={`/tags/${t}`}
-                          className="text-[10px] text-surface-700 hover:text-brand-400 transition-colors"
+                          prefetch={false}
+                          className="lab-item-tag"
                         >
                           #{t}
                         </Link>
@@ -388,7 +397,7 @@ export default async function TagPage({ params }: Props) {
               </div>
 
               {/* Reading time */}
-              <div className="shrink-0 text-[11px] font-mono text-surface-700 pt-0.5 hidden md:block">
+              <div className="lab-item-meta">
                 {item.readingTime}
               </div>
             </Link>
@@ -407,7 +416,8 @@ export default async function TagPage({ params }: Props) {
               <Link
                 key={t}
                 href={`/tags/${t}`}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.07] bg-white/[0.02] px-3 py-1 text-xs font-mono text-surface-500 hover:text-surface-200 hover:border-white/[0.14] transition-all"
+                prefetch={false}
+                className="lab-chip"
               >
                 #{t}
                 <span className="text-surface-700">{count}</span>

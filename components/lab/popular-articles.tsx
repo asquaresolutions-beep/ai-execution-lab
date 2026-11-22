@@ -14,7 +14,7 @@ export function PopularArticles({ limit = 6, heading = 'Popular' }: { limit?: nu
         {items.map((i, idx) => (
           <li key={`${i.section}/${i.slug}`} className="flex gap-3">
             <span className="text-sm font-bold text-surface-700 tabular-nums">{idx + 1}</span>
-            <Link href={`${SECTION_META[i.section].href}/${i.slug}`} className="text-sm text-surface-400 hover:text-brand-300 transition-colors line-clamp-2">
+            <Link href={`${SECTION_META[i.section].href}/${i.slug}`} prefetch={false} className="text-sm text-surface-400 hover:text-brand-300 transition-colors line-clamp-2">
               {i.frontmatter.title}
             </Link>
           </li>

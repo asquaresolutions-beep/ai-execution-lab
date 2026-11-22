@@ -29,7 +29,7 @@ ok('customers: fetches live verified domains', /getRecentVerifications/.test(cus
 const custView = read('components/trustseal/home/customers-view.tsx')
 ok('customers: verified list + use cases + testimonials framework', /verifiedHeading/.test(custView) && /useCases/.test(custView) && /testimonialsHeading/.test(custView))
 ok('customers: no fabricated testimonials (honest framework)', /testimonialsBody/.test(read('lib/trustseal/content/customers.ts')) && /share your story|अपनी कहानी|Comparte tu historia|شارك قصتك/i.test(read('lib/trustseal/content/customers.ts')))
-ok('customers: in sitemap', /\/customers/.test(read('app/sitemap.ts')))
+ok('customers: in sitemap', /\/customers/.test(read('lib/seo/sitemap.ts')))
 
 // 5. Dashboard upsell — Pro → Business
 const bs = read('components/trustseal/billing/billing-section.tsx')

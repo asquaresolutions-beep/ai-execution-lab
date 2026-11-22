@@ -18,7 +18,7 @@ ok('pricing: comparison table adds Monitoring + API rows', /tiers\.rows\.monitor
 ok('pricing: contact-sales CTAs (mailto)', /mailto:\$\{PRICING_CONTACT\}/.test(pv))
 
 // ── 2. SEO discovery: sitemap coverage + hreflang ──
-const sm = read('app/sitemap.ts')
+const sm = read('lib/seo/sitemap.ts')
 ok('sitemap: includes static marketing/authority pages', /\/pricing/.test(sm) && /\/verify/.test(sm) && /\/trust-center/.test(sm) && /\/security/.test(sm) && /\/docs/.test(sm) && /\/about/.test(sm))
 ok('sitemap: includes legal pages (LEGAL_SLUGS)', /LEGAL_SLUGS/.test(sm) && /\/legal\//.test(sm))
 ok('sitemap: per-locale entries (LOCALES loop)', /for \(const l of LOCALES\)|LOCALES\.map/.test(sm))

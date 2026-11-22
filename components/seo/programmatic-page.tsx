@@ -179,7 +179,9 @@ export function ProgrammaticPage({ model }: { model: PageModel }) {
             <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-500">{LINK_GROUP_LABEL[group as InternalLink['group']]}</h3>
             <div className="flex flex-wrap gap-2">
               {links.map((l) => (
-                <Link key={l.href + l.group} href={l.href} className="rounded-full border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:border-indigo-500/50 hover:text-white">
+                // prefetch={false}: every /scams page ends with this cross-link block; viewport
+                // prefetch fetched each linked /scams page (the top ISR route in Nov 2026).
+                <Link key={l.href + l.group} href={l.href} prefetch={false} className="rounded-full border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:border-indigo-500/50 hover:text-white">
                   {l.anchor}
                 </Link>
               ))}

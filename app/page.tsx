@@ -259,6 +259,7 @@ export default function HomePage() {
           </h2>
           <Link
             href="/tags"
+            prefetch={false}
             className="text-[10px] font-mono text-surface-600 hover:text-brand-400 transition-colors"
           >
             All topics →
@@ -280,6 +281,7 @@ export default function HomePage() {
             <Link
               key={tag}
               href={`/tags/${tag}`}
+              prefetch={false}
               className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-mono transition-all ${color}`}
             >
               #{label}
@@ -385,6 +387,7 @@ export default function HomePage() {
                 <Link
                   key={`${item.section}/${item.slug}`}
                   href={`${meta.href}/${item.slug}`}
+                  prefetch={false}
                   className="flex items-center gap-4 px-4 py-3 hover:bg-white/[0.025] transition-colors group"
                 >
                   <time className="text-[11px] font-mono text-surface-700 shrink-0 w-20 hidden sm:block">
