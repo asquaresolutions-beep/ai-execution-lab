@@ -72,6 +72,7 @@ function RelatedItem({
   return (
     <Link
       href={cfg.href(item.slug)}
+      prefetch={false}
       className={cn(
         'group flex items-start gap-3 rounded-lg border border-white/[0.06]',
         'bg-white/[0.03] px-4 py-3 transition-colors',

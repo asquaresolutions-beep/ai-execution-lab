@@ -15,6 +15,7 @@ export function FeaturedArticles({ limit = 6, heading = 'Featured' }: { limit?: 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {items.map((i) => (
           <Link key={`${i.section}/${i.slug}`} href={`${SECTION_META[i.section].href}/${i.slug}`}
+            prefetch={false}
             className="group rounded-xl border border-brand-500/20 bg-brand-500/[0.04] px-4 py-3.5 hover:border-brand-500/40 hover:bg-brand-500/[0.07] transition-all">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-brand-400">{SECTION_META[i.section].label}</span>

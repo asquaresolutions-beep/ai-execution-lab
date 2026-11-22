@@ -53,18 +53,8 @@ const NAV = [
       { href: '/tags',      label: 'Topics'       },
     ],
   },
-  {
-    group: 'Publish',
-    items: [
-      { href: '/syndicate', label: 'Syndication' },
-    ],
-  },
-  {
-    group: 'Ops',
-    items: [
-      { href: '/ops', label: 'Operations' },
-    ],
-  },
+  // '/syndicate' and '/ops' are internal tools (noindex, robots-disallowed). They are
+  // no longer linked from the public sidebar; the routes still work by direct URL.
 ]
 
 // ─────────────────────────────────────────────────────────────
@@ -84,8 +74,11 @@ function NavItem({
   const isActive = exact ? pathname === href : pathname === href || pathname.startsWith(href + '/')
 
   return (
+    // prefetch={false}: the sidebar is on every Lab page, so viewport prefetch fetched
+    // every section index (full RSC payload) on each page view. Pages now load on click.
     <Link
       href={href}
+      prefetch={false}
       className={cn(
         'flex items-center gap-2.5 rounded px-3 py-1.5 text-sm transition-colors relative',
         isActive

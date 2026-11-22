@@ -145,7 +145,9 @@ export async function ContentPage({ item, prev, next, afterContent }: ContentPag
             <nav aria-label="Breadcrumb" className="mb-7 flex items-center gap-1.5 text-xs text-surface-600">
               <Link href="/" className="hover:text-surface-400 transition-colors">Home</Link>
               <span>/</span>
-              <Link href={sectionMeta.href} className="hover:text-surface-400 transition-colors">
+              {/* prefetch={false} on the three section-index links: the index pages are the
+                  heaviest RSC payloads on the site (/docs ~155 KB) and every article linked them. */}
+              <Link href={sectionMeta.href} prefetch={false} className="hover:text-surface-400 transition-colors">
                 {sectionMeta.title}
               </Link>
               <span>/</span>
@@ -159,6 +161,7 @@ export async function ContentPage({ item, prev, next, afterContent }: ContentPag
               <div className="mb-4 flex items-center gap-2 flex-wrap">
                 <Link
                   href={sectionMeta.href}
+                  prefetch={false}
                   className={cn(
                     'inline-flex items-center text-[10px] font-mono font-bold uppercase tracking-widest rounded px-2 py-1 border transition-opacity hover:opacity-70',
                     ac.text, ac.bg, ac.border
@@ -264,6 +267,7 @@ export async function ContentPage({ item, prev, next, afterContent }: ContentPag
                     <Link
                       key={tag}
                       href={`/tags/${tag}`}
+                      prefetch={false}
                       className="text-xs text-surface-600 bg-white/[0.03] rounded-full px-2.5 py-0.5 border border-white/[0.06] hover:text-brand-400 hover:border-brand-500/20 transition-colors"
                     >
                       #{tag}
@@ -282,6 +286,7 @@ export async function ContentPage({ item, prev, next, afterContent }: ContentPag
                 />
                 <Link
                   href="/syndicate"
+                  prefetch={false}
                   className="text-[10px] font-mono text-surface-700 hover:text-brand-400 transition-colors"
                 >
                   Generate post copy →
@@ -327,6 +332,7 @@ export async function ContentPage({ item, prev, next, afterContent }: ContentPag
                     <Link
                       key={r.slug}
                       href={`${sectionMeta.href}/${r.slug}`}
+                      prefetch={false}
                       className="group flex items-center gap-3 rounded-lg border border-white/[0.05] bg-white/[0.015] px-4 py-3 hover:border-white/[0.10] hover:bg-white/[0.035] transition-all"
                     >
                       <div className="flex-1 min-w-0">
@@ -387,6 +393,7 @@ export async function ContentPage({ item, prev, next, afterContent }: ContentPag
             <div className="mt-6">
               <Link
                 href={sectionMeta.href}
+                prefetch={false}
                 className="inline-flex items-center gap-2 text-sm text-surface-600 hover:text-surface-300 transition-colors"
               >
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>

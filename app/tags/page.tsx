@@ -51,20 +51,23 @@ export default function TagsPage() {
             {primary.map(({ tag, count, items }) => {
               const spread = sectionSpread(items)
               return (
+                // prefetch={false}: this page links every tag (~140 KB RSC each); prefetching
+                // all of them on view is the largest fan-out on the site.
                 <Link
                   key={tag}
                   href={`/tags/${tag}`}
-                  className="group flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 hover:border-brand-500/20 hover:bg-brand-500/[0.03] transition-all"
+                  prefetch={false}
+                  className="group lab-tag-card"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-surface-300 group-hover:text-surface-100 transition-colors">
+                      <span className="lab-tag-card-label">
                         #{tag}
                       </span>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {spread.map(s => (
-                        <span key={s} className="text-[10px] font-mono text-surface-700">{s}</span>
+                        <span key={s} className="lab-micro">{s}</span>
                       ))}
                     </div>
                   </div>
@@ -89,7 +92,8 @@ export default function TagsPage() {
               <Link
                 key={tag}
                 href={`/tags/${tag}`}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.07] bg-white/[0.02] px-3 py-1 text-xs font-mono text-surface-500 hover:text-surface-200 hover:border-white/[0.14] transition-all"
+                prefetch={false}
+                className="lab-chip"
               >
                 #{tag}
                 <span className="text-surface-700">{count}</span>

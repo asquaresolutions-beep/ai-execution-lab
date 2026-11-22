@@ -73,6 +73,7 @@ export function FeaturedFailures() {
             <Link
               key={item.slug}
               href={`/failures/${item.slug}`}
+              prefetch={false}
               className="group flex items-center gap-3.5 px-4 py-3 bg-white/[0.01] hover:bg-red-500/[0.025] transition-colors"
             >
               {/* Severity dot */}
